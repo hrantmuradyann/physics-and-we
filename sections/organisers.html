@@ -1,8 +1,7 @@
 <!--
   ══════════════════════════════════════════════════════════════════════════
-  PARTNERS PAGE — layout only.
-  The words are NOT here. They are in  data/partners.json .
-  The page is intentionally just a title for now; the content comes later.
+  ORGANISERS PAGE — layout only.
+  The words are NOT here. They are in  data/organisers.json .
   ══════════════════════════════════════════════════════════════════════════
 -->
 
@@ -12,3 +11,19 @@
     <h1 class="page-head__title reveal" data-text="page.title"></h1>
   </div>
 </header>
+
+<!-- ░░ WHO ORGANISES THE PROGRAM ░░ -->
+<section class="band">
+  <div class="container">
+    <div class="grid grid--cards" data-list="organisers">
+      <template>
+        <article class="card card--partner reveal">
+          <span class="partner-logo">
+            <img data-image="logo" data-alt="name" loading="lazy" decoding="async">
+          </span>
+          <h3 class="card__title" data-text="name"></h3>
+        </article>
+      </template>
+    </div>
+  </div>
+</section>
