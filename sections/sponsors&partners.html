@@ -1,7 +1,7 @@
 <!--
   ══════════════════════════════════════════════════════════════════════════
-  SPONSORS PAGE — layout only.
-  The words are NOT here. They are in  data/sponsors.json .
+  SPONSORS & PARTNERS PAGE — layout only.
+  The words are NOT here. They are in  data/sponsors&partners.json .
   ══════════════════════════════════════════════════════════════════════════
 -->
 
@@ -12,10 +12,28 @@
   </div>
 </header>
 
-<!-- ░░ WHO SUPPORTS US ░░ -->
+<!-- ░░ SPONSORS ░░ -->
 <section class="band">
   <div class="container">
+    <h2 class="section-title reveal" data-text="sponsorsSection.title"></h2>
     <div class="grid grid--cards" data-list="sponsors">
+      <template>
+        <article class="card card--partner reveal">
+          <span class="partner-logo">
+            <img data-image="logo" data-alt="name" loading="lazy" decoding="async">
+          </span>
+          <h3 class="card__title" data-text="name"></h3>
+        </article>
+      </template>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ PARTNERS ░░ -->
+<section class="band band--alt">
+  <div class="container">
+    <h2 class="section-title reveal" data-text="partnersSection.title"></h2>
+    <div class="grid grid--cards" data-list="partners">
       <template>
         <article class="card card--partner reveal">
           <span class="partner-logo">

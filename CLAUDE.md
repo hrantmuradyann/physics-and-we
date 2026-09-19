@@ -6,7 +6,7 @@ Technical map of this repo for Claude Code (or any AI agent) starting a fresh se
 
 ## What this is
 
-Physics and We: a bilingual (Armenian `hy` / English `en`) static website for a physics-education program — home, summer camp, our story, interactive labs, research, news, sponsors, partners, FAQ, about. **No framework, no build step, no `package.json`/`node_modules`.** Plain HTML/CSS/JS, deployed as-is to **Cloudflare Pages**. Local dev: `npx wrangler pages dev .` (required for `/admin/` — see "Local dev" below).
+Physics and We: a bilingual (Armenian `hy` / English `en`) static website for a physics-education program — home, summer camp, our story, interactive labs, research, news, organisers, sponsors & partners, FAQ, about. **No framework, no build step, no `package.json`/`node_modules`.** Plain HTML/CSS/JS, deployed as-is to **Cloudflare Pages**. Local dev: `npx wrangler pages dev .` (required for `/admin/` — see "Local dev" below).
 
 ## Architecture
 
@@ -55,8 +55,8 @@ Instructions/            human docs (see "Pointers" below)
 sections/*.html          one layout fragment per page (no text, no <script> effect)
 data/*.json              one text file per page (bilingual, no markup); data/site.json = nav/footer/shared UI strings
 data/story.json          our story: the "years" list (text + one photo + photo-album link each)
-data/sponsors.json       sponsor logo grid (was data/partners.json before the rename)
-data/partners.json       the new, near-empty partners page — title only for now
+data/organisers.json     organisers logo grid (route "organisers"; was data/sponsors.json)
+data/sponsors&partners.json       "Sponsors & Partners" page: two logo grids, "partners" list + "sponsors" list
 data/labs.json           lab registry: simulations.items[].slug must match js/labs/<slug>.js + data/labs/<slug>.json
 data/labs/*.json         per-lab text (pendulum, refraction)
 

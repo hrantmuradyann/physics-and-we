@@ -1,7 +1,0 @@
-{
-  "_readme": "PARTNERS PAGE TEXT. For now this page shows only its title. When there is something to say, add the text here and the matching layout in sections/partners.html .",
-
-  "page": {
-    "title": { "hy": "Մեր գործընկերները", "en": "Our Partners" }
-  }
-}

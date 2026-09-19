@@ -29,12 +29,12 @@
       "label": { "hy": "Նորություններ", "en": "News" }
     },
     {
-      "route": "sponsors",
-      "label": { "hy": "Հովանավորներ", "en": "Sponsors" }
+      "route": "organisers",
+      "label": { "hy": "Կազմակերպիչներ", "en": "Organisers" }
     },
     {
-      "route": "partners",
-      "label": { "hy": "Գործընկերներ", "en": "Partners" }
+      "route": "sponsors&partners",
+      "label": { "hy": "Հովանավորներ և գործընկերներ", "en": "Sponsors & Partners" }
     },
     {
       "route": "faq",
@@ -71,8 +71,8 @@
         "label": { "hy": "Հաճախակի հարցեր", "en": "FAQ" }
       },
       {
-        "route": "sponsors",
-        "label": { "hy": "Հովանավորներ", "en": "Sponsors" }
+        "route": "sponsors&partners",
+        "label": { "hy": "Հովանավորներ և գործընկերներ", "en": "Sponsors & Partners" }
       }
     ]
   },

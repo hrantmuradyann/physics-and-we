@@ -1,0 +1,65 @@
+{
+  "_readme": "SPONSORS & PARTNERS PAGE TEXT. Two lists: \"partners\" and \"sponsors\" — copy a { ... } block to add one. Each one shows a logo and the name under it, nothing else. \"name\" is written the same way in every language, so it is one plain line, not hy/en. \"logo\" is a picture file inside images/ — put the file there and write its name here. Keep names short: they must fit on one line.",
+  "page": {
+    "title": {
+      "hy": "Հովանավորներ և գործընկերներ",
+      "en": "Sponsors & Partners"
+    }
+  },
+  "sponsorsSection": {
+    "title": {
+      "hy": "Հովանավորներ",
+      "en": "Sponsors"
+    }
+  },
+  "sponsors": [
+    {
+      "name": "Yerevan State University",
+      "logo": "images/ysu.jpg"
+    },
+    {
+      "name": "Thorlabs",
+      "logo": "images/thorlabs.png"
+    },
+    {
+      "name": "ARCS.ai",
+      "logo": "images/arcs-ai.png"
+    },
+    {
+      "name": "Advanced Technologies Group",
+      "logo": "images/advanced-tech-group.png"
+    },
+    {
+      "name": "RA MoESCS | Higher Education and Science Committee",
+      "logo": "images/ra-mescs-higher-ed.jpg"
+    },
+    {
+      "name": "SPIE Student Chapter",
+      "logo": "images/spie.png"
+    },
+    {
+      "name": "Optica",
+      "logo": "images/optica.png"
+    }
+  ],
+  "partnersSection": {
+    "title": {
+      "hy": "Գործընկերներ",
+      "en": "Partners"
+    }
+  },
+  "partners": [
+    {
+      "name": "Center for Optical Microsystems",
+      "logo": "images/center-for-optical-microsystems.jpg"
+    },
+    {
+      "name": "Photonics & AI Laboratories",
+      "logo": "images/photonics-ai-labs.svg"
+    },
+    {
+      "name": "OPTICA IPR Armenia Student Chapter",
+      "logo": "images/ipr.png"
+    }
+  ]
+}

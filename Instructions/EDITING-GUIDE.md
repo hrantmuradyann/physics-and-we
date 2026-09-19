@@ -28,8 +28,8 @@ touch `sections` or `css`.
 | the **summer camp** page | `data/camp.json` |
 | the **research** page | `data/research.json` |
 | the **our story** page (year by year) | `data/story.json` |
-| the **sponsors** page | `data/sponsors.json` |
-| the **partners** page | `data/partners.json` |
+| the **organisers** page | `data/organisers.json` |
+| the **sponsors & partners** page | `data/sponsors&partners.json` |
 | the **FAQ** questions and answers | `data/faq.json` |
 | the **about us** page | `data/about.json` |
 | the heading of the **news** page | `data/news.json` |
@@ -245,7 +245,7 @@ without getting in each other's way:
 | Labs coordinator | `data/labs.json` |
 | Camp coordinator | `data/camp.json` |x
 | Research mentor | `data/research.json` |
-| Partnerships | `data/sponsors.json`, `data/partners.json` |
+| Partnerships | `data/organisers.json`, `data/sponsors&partners.json` |
 | Anyone, via the admin page | news items |
 | Translator | the `en` and `ru` lines in every `data/*.json` |
 | Whoever maintains the site | `data/site.json`, `sections/`, `css/`, `js/` |

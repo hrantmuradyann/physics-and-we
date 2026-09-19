@@ -22,7 +22,7 @@ too, so it doesn't go stale.
 ## 1. What's built so far
 
 The whole public site works: home, summer camp, interactive labs, research,
-news, sponsors, partners, FAQ and about — in **two languages** (Armenian and
+news, organisers, sponsors & partners, FAQ and about — in **two languages** (Armenian and
 English), with a shared header, footer and design.
 
 Most of the **words** are still placeholders — short notes in asterisks saying
@@ -171,8 +171,8 @@ Physics-and-we/
 │   ├── research.html
 │   ├── news.html        → the news feed
 │   ├── post.html        → ONE news item, on its own page
-│   ├── sponsors.html
-│   ├── partners.html    → only a title for now
+│   ├── organisers.html
+│   ├── sponsors&partners.html → "Sponsors & Partners", two logo grids
 │   ├── faq.html
 │   └── about.html
 │
@@ -188,8 +188,8 @@ Physics-and-we/
 │   │   └── refraction.json
 │   ├── research.json
 │   ├── news.json        → only the heading of the news page
-│   ├── sponsors.json
-│   ├── partners.json
+│   ├── organisers.json
+│   ├── sponsors&partners.json
 │   ├── faq.json
 │   └── about.json
 │
