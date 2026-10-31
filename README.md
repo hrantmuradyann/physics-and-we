@@ -157,8 +157,9 @@ Physics-and-we/
 ├── images/
 │   ├── mainphoto.jpg    → the picture on the home page
 │   ├── history*.jpg     → the photographs on the inner pages
-│   ├── logo-light.png   → the logo on the dark public pages
-│   ├── logo-dark.png    → the logo on the light admin pages
+│   ├── logo-light.png   → the white logo, for the dark theme
+│   ├── logo-dark.png    → the navy logo, for the light theme and the admin pages
+│   ├── lab-lines.svg    → the silver lines behind the labs pages
 │   ├── logo-mark.png    → the browser-tab icon
 │   └── news/            → the main photo of each news item
 │
@@ -181,7 +182,7 @@ Physics-and-we/
 │   ├── home.json
 │   ├── camp.json
 │   ├── story.json       → our story: the list of years
-│   ├── labs.json        → the labs page: "simulations" + "cards"
+│   ├── labs.json        → the labs page: "simulations" + photo
 │   ├── lab.json         → almost empty on purpose (see the note inside)
 │   ├── labs/            → ONE FILE PER LAB — the words of that lab
 │   │   ├── pendulum.json

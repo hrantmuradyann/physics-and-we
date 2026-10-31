@@ -12,9 +12,9 @@
   align-items: center;
   overflow: hidden;
   background:
-    radial-gradient(1200px 600px at 72% 18%, rgba(47, 128, 237, 0.20), transparent 60%),
-    radial-gradient(900px 520px at 18% 82%, rgba(111, 92, 255, 0.18), transparent 60%),
-    linear-gradient(180deg, var(--dark-bg) 0%, var(--dark-bg-3) 100%);
+    radial-gradient(1200px 600px at 72% 18%, var(--glow-1), transparent 60%),
+    radial-gradient(900px 520px at 18% 82%, var(--glow-2), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-3) 100%);
 }
 
 /* A slow drifting glow, so the screen is never completely still */
@@ -25,7 +25,7 @@
   height: 60vw;
   top: -20%;
   right: -10%;
-  background: radial-gradient(circle, rgba(47, 128, 237, 0.16), transparent 65%);
+  background: radial-gradient(circle, var(--glow-1), transparent 65%);
   filter: blur(20px);
   animation: drift 18s ease-in-out infinite alternate;
   pointer-events: none;
@@ -51,7 +51,7 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 42%, transparent 38%, rgba(4, 7, 16, 0.65) 100%);
+  background: radial-gradient(circle at 50% 42%, transparent 38%, var(--vignette) 100%);
 }
 
 .hero__content {
@@ -71,7 +71,7 @@
   line-height: 1.03;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: var(--heading);
   max-width: 16ch;
 }
 
@@ -79,7 +79,7 @@
   margin-top: 1.4rem;
   font-size: clamp(1.05rem, 1.6vw, 1.3rem);
   line-height: 1.6;
-  color: var(--dark-muted);
+  color: var(--muted);
   max-width: 48ch;
 }
 
@@ -101,7 +101,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.7rem;
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 0.68rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -112,7 +112,7 @@
   margin-bottom: -4rem;
   width: 1px;
   height: 48px;
-  background: linear-gradient(var(--dark-accent), transparent);
+  background: linear-gradient(var(--accent), transparent);
   transform-origin: top;
   animation: scrollpulse 2s ease-in-out infinite;
 }

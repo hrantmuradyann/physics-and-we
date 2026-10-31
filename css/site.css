@@ -1,8 +1,14 @@
 /* ============================================================================
    site.css — how every public page looks.
 
-   The whole site is dark, and every page is built from the same few blocks,
-   so a new page automatically looks like the rest.
+   The site has two themes, dark and light (the visitor picks one with the
+   sun / moon button in the header). This file never names a colour itself:
+   it uses the variables in css/style.css — var(--heading), var(--bg-3), ...
+   — which hold the dark colours by default and the cream ones when <html>
+   has the class "theme-light". So a block written once works in both.
+
+   Every page is built from the same few blocks, so a new page
+   automatically looks like the rest.
 
    THE BLOCKS (the class names you see in sections/*.html)
      .page-head     the big title at the top of an inner page
@@ -22,10 +28,21 @@
    Everything below is scoped to  body.site  so the admin page stays light.
    ========================================================================== */
 
+/* The page colour is set on BOTH <html> and <body>, on purpose.
+   With only one of them coloured, the browser paints that colour as the
+   backdrop behind the whole page, and Chrome does not repaint that backdrop
+   when the theme is switched. It shows in the thin band between the menu
+   and the top of an inner page (#app's padding-top below), which kept the
+   OLD theme's colour. With <html> coloured too, <body> paints its own
+   colour like any other block, and that is repainted at once. */
+html.site {
+  background-color: var(--bg);
+}
+
 body.site {
   --header-h: 4.6rem;
-  background-color: var(--dark-bg);
-  color: var(--dark-text);
+  background-color: var(--bg);
+  color: var(--text);
 }
 
 /* The public pages run edge to edge; .container puts the text back in line. */
@@ -63,10 +80,11 @@ body.site #site-header {
   right: 0;
   z-index: 1000;
   padding: 1.1rem 2rem;
-  background: rgba(8, 11, 26, 0.82);
+  color: var(--heading);
+  background: var(--header-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--dark-line);
+  border-bottom: 1px solid var(--line);
   transition: background 0.4s ease, padding 0.3s ease, box-shadow 0.4s ease,
               border-color 0.4s ease;
 }
@@ -81,16 +99,16 @@ body.site.home #site-header {
 }
 
 body.site.home #site-header.scrolled {
-  background: rgba(8, 11, 26, 0.82);
-  border-bottom-color: var(--dark-line);
+  background: var(--header-bg);
+  border-bottom-color: var(--line);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 10px 30px -20px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 10px 30px -20px var(--shadow);
   padding: 0.8rem 2rem;
 }
 
 body.site #site-header nav a {
-  color: var(--dark-text);
+  color: var(--text);
   position: relative;
   padding-bottom: 2px;
 }
@@ -103,7 +121,7 @@ body.site #site-header nav a::after {
   bottom: 0;
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--dark-accent), var(--dark-accent-2));
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
   transition: right 0.28s ease;
 }
 
@@ -113,7 +131,54 @@ body.site #site-header nav a.current::after {
 }
 
 body.site #site-header nav a.current {
-  color: #fff;
+  color: var(--heading);
+}
+
+/* The language buttons and the theme button, side by side at the right. */
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+body.site .lang-switcher button.active-lang {
+  background-color: var(--heading);
+  border-color: var(--heading);
+  color: var(--bg);
+}
+
+/* The sun / moon button. It shows the theme you would switch TO.
+   Built by js/main.js; the switching itself is js/theme.js. */
+.theme-switch {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.2s ease, transform 0.3s ease;
+}
+
+.theme-switch:hover {
+  opacity: 1;
+  transform: rotate(20deg);
+}
+
+.theme-switch svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+/* For the instant the theme is switched (js/theme.js), nothing fades, so
+   every colour changes at the same moment. */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
 }
 
 /* ============================================================================
@@ -122,7 +187,7 @@ body.site #site-header nav a.current {
 .eyebrow {
   letter-spacing: 0.3em;
   font-size: 0.75rem;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   text-transform: uppercase;
   font-weight: 600;
 }
@@ -130,7 +195,7 @@ body.site #site-header nav a.current {
 .section-title {
   font-size: clamp(1.8rem, 3.4vw, 2.7rem);
   font-weight: 800;
-  color: #fff;
+  color: var(--heading);
   letter-spacing: -0.01em;
   line-height: 1.14;
   margin: 0.7rem 0 2.4rem;
@@ -138,14 +203,14 @@ body.site #site-header nav a.current {
 }
 
 .lead {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 1.08rem;
   line-height: 1.7;
   max-width: 52ch;
 }
 
 .prose {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 1.05rem;
   line-height: 1.8;
   max-width: 62ch;
@@ -156,12 +221,12 @@ body.site #site-header nav a.current {
 }
 
 .prose strong {
-  color: #fff;
+  color: var(--heading);
   font-weight: 700;
 }
 
 .link {
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -185,25 +250,25 @@ body.site #site-header nav a.current {
 
 .btn--primary {
   color: #fff;
-  background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-2));
-  box-shadow: 0 12px 34px -10px rgba(47, 128, 237, 0.7);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 12px 34px -10px var(--button-glow);
 }
 
 .btn--primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 18px 44px -10px rgba(47, 128, 237, 0.85);
+  box-shadow: 0 18px 44px -10px var(--button-glow-hover);
 }
 
 .btn--ghost {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.28);
+  color: var(--heading);
+  background: var(--ghost-bg);
+  border-color: var(--ghost-border);
 }
 
 .btn--ghost:hover {
   transform: translateY(-3px);
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: var(--ghost-bg-hover);
+  border-color: var(--ghost-border-hover);
 }
 
 .btn--lg {
@@ -219,15 +284,15 @@ body.site #site-header nav a.current {
   overflow: hidden;
   padding: clamp(3.5rem, 8vw, 6rem) 0 clamp(2.5rem, 5vw, 4rem);
   background:
-    radial-gradient(900px 460px at 20% 0%, rgba(47, 128, 237, 0.22), transparent 62%),
-    radial-gradient(700px 400px at 88% 20%, rgba(111, 92, 255, 0.18), transparent 60%),
-    linear-gradient(180deg, var(--dark-bg), var(--dark-bg-3));
+    radial-gradient(900px 460px at 20% 0%, var(--glow-1), transparent 62%),
+    radial-gradient(700px 400px at 88% 20%, var(--glow-2), transparent 60%),
+    linear-gradient(180deg, var(--bg), var(--bg-3));
 }
 
 .page-head__title {
   font-size: clamp(2.2rem, 5vw, 3.6rem);
   font-weight: 800;
-  color: #fff;
+  color: var(--heading);
   line-height: 1.08;
   letter-spacing: -0.02em;
   margin: 0.7rem 0 1.2rem;
@@ -239,13 +304,13 @@ body.site #site-header nav a.current {
    ========================================================================== */
 .band {
   padding: clamp(3.5rem, 8vw, 6rem) 0;
-  background: var(--dark-bg-3);
+  background: var(--bg-3);
 }
 
 .band--alt {
-  background: var(--dark-bg-2);
-  border-top: 1px solid var(--dark-line);
-  border-bottom: 1px solid var(--dark-line);
+  background: var(--bg-2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 .band--tight {
@@ -285,8 +350,8 @@ body.site #site-header nav a.current {
   padding: 2rem 1.7rem;
   border-radius: 18px;
   color: inherit;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-  border: 1px solid var(--dark-line);
+  background: var(--card-bg);
+  border: 1px solid var(--line);
   overflow: hidden;
   transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
               border-color 0.4s ease, box-shadow 0.4s ease;
@@ -294,8 +359,8 @@ body.site #site-header nav a.current {
 
 .card:hover {
   transform: translateY(-6px);
-  border-color: rgba(47, 128, 237, 0.5);
-  box-shadow: 0 26px 55px -22px rgba(0, 0, 0, 0.85);
+  border-color: var(--hover-line);
+  box-shadow: 0 26px 55px -22px var(--shadow);
 }
 
 /* The single, larger card of the "what we do" band */
@@ -351,8 +416,8 @@ body.site #site-header nav a.current {
   display: grid;
   place-items: center;
   border-radius: 13px;
-  color: #9db8ff;
-  background: linear-gradient(135deg, rgba(47, 128, 237, 0.28), rgba(111, 92, 255, 0.22));
+  color: var(--icon);
+  background: var(--icon-bg);
   margin-bottom: 1.2rem;
 }
 
@@ -364,13 +429,13 @@ body.site #site-header nav a.current {
 .card__title {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
   margin-bottom: 0.5rem;
   line-height: 1.3;
 }
 
 .card__text {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 0.95rem;
   line-height: 1.65;
 }
@@ -379,7 +444,7 @@ body.site #site-header nav a.current {
   margin-top: 1.1rem;
   font-size: 0.82rem;
   letter-spacing: 0.06em;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   opacity: 0.85;
 }
 
@@ -396,7 +461,7 @@ body.site #site-header nav a.current {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   font-weight: 600;
   font-size: 0.9rem;
   transition: gap 0.25s ease;
@@ -422,15 +487,15 @@ body.site #site-header nav a.current {
 .stat {
   text-align: center;
   padding: 1.7rem 1rem;
-  border: 1px solid var(--dark-line);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--faint-bg);
   transition: transform 0.35s ease, border-color 0.35s ease;
 }
 
 .stat:hover {
   transform: translateY(-4px);
-  border-color: rgba(47, 128, 237, 0.4);
+  border-color: var(--hover-line);
 }
 
 .stat__num {
@@ -438,7 +503,7 @@ body.site #site-header nav a.current {
   font-size: clamp(2.1rem, 4vw, 3.1rem);
   font-weight: 800;
   line-height: 1;
-  background: linear-gradient(135deg, #ffffff, #9db8ff);
+  background: linear-gradient(135deg, var(--heading), var(--icon));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -447,7 +512,7 @@ body.site #site-header nav a.current {
 .stat__label {
   display: block;
   margin-top: 0.6rem;
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 0.92rem;
 }
 
@@ -480,7 +545,7 @@ body.site #site-header nav a.current {
   font-weight: 700;
   font-size: 0.95rem;
   color: #fff;
-  background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-2));
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
 }
 
 .step::after {
@@ -490,7 +555,7 @@ body.site #site-header nav a.current {
   left: 2.9rem;
   right: -1.6rem;
   height: 1px;
-  background: var(--dark-line);
+  background: var(--line);
 }
 
 .step:last-child::after {
@@ -500,12 +565,12 @@ body.site #site-header nav a.current {
 .step__title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
   margin-bottom: 0.45rem;
 }
 
 .step__text {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 0.95rem;
   line-height: 1.65;
 }
@@ -527,7 +592,7 @@ body.site #site-header nav a.current {
   top: 0.6rem;
   bottom: 0.6rem;
   width: 1px;
-  background: linear-gradient(var(--dark-accent), transparent);
+  background: linear-gradient(var(--accent), transparent);
 }
 
 .timeline__item {
@@ -542,8 +607,8 @@ body.site #site-header nav a.current {
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 50%;
-  background: var(--dark-accent);
-  box-shadow: 0 0 0 4px rgba(47, 128, 237, 0.18);
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-ring);
 }
 
 .timeline__label {
@@ -551,18 +616,18 @@ body.site #site-header nav a.current {
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-weight: 600;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
 }
 
 .timeline__title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
   margin: 0.25rem 0 0.4rem;
 }
 
 .timeline__text {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 0.97rem;
   line-height: 1.7;
   max-width: 62ch;
@@ -577,15 +642,15 @@ body.site #site-header nav a.current {
 }
 
 .faq__item {
-  border: 1px solid var(--dark-line);
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--faint-bg);
   transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 .faq__item[open] {
-  border-color: rgba(47, 128, 237, 0.45);
-  background: rgba(47, 128, 237, 0.06);
+  border-color: var(--hover-line);
+  background: var(--hover-tint);
 }
 
 .faq__question {
@@ -593,7 +658,7 @@ body.site #site-header nav a.current {
   list-style: none;
   padding: 1.15rem 3rem 1.15rem 1.4rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--heading);
   font-size: 1.03rem;
   position: relative;
 }
@@ -611,7 +676,7 @@ body.site #site-header nav a.current {
   transform: translateY(-50%);
   font-size: 1.4rem;
   font-weight: 400;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   transition: transform 0.3s ease;
 }
 
@@ -621,7 +686,7 @@ body.site #site-header nav a.current {
 
 .faq__answer {
   padding: 0 1.4rem 1.3rem;
-  color: var(--dark-muted);
+  color: var(--muted);
   line-height: 1.75;
 }
 
@@ -633,7 +698,7 @@ body.site #site-header nav a.current {
    PICTURE NEXT TO TEXT
    ========================================================================== */
 .showcase {
-  background: linear-gradient(180deg, var(--dark-bg-2), var(--dark-bg-3));
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-3));
   padding: clamp(4rem, 9vw, 7rem) 0;
 }
 
@@ -642,7 +707,7 @@ body.site #site-header nav a.current {
   text-align: center;
   font-size: clamp(1.6rem, 3vw, 2.4rem);
   font-weight: 800;
-  color: #fff;
+  color: var(--heading);
   letter-spacing: -0.01em;
   margin: 0 0 clamp(2.2rem, 5vw, 3.4rem);
 }
@@ -667,7 +732,7 @@ body.site #site-header nav a.current {
   text-align: center;
   font-size: clamp(0.95rem, 1.6vw, 1.15rem);
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
   margin: 0 0 0.8rem;
 }
 
@@ -676,9 +741,9 @@ body.site #site-header nav a.current {
   aspect-ratio: 4 / 3;
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 24px 55px -24px rgba(0, 0, 0, 0.9);
-  background: var(--dark-bg-3);
+  border: 1px solid var(--frame-line);
+  box-shadow: 0 24px 55px -24px var(--shadow);
+  background: var(--bg-3);
 }
 
 .showcase__gallery-img {
@@ -840,16 +905,16 @@ body.gallery-lightbox-open {
   position: relative;
   aspect-ratio: 4 / 3;
   border-radius: 18px;
-  border: 2px dashed rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.03);
+  border: 2px dashed var(--ghost-border);
+  background: var(--faint-bg);
   overflow: hidden;
 }
 
 /* Once the year has a picture, the frame becomes the ordinary photo border. */
 .story-year__media:has(img[src]) {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--frame-line);
   background: none;
-  box-shadow: 0 34px 80px -28px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 34px 80px -28px var(--shadow);
 }
 
 .story-year__media img {
@@ -890,8 +955,8 @@ body.gallery-lightbox-open {
   text-align: center;
   padding: clamp(4rem, 9vw, 7rem) 0;
   background:
-    radial-gradient(820px 420px at 50% 25%, rgba(47, 128, 237, 0.22), transparent 62%),
-    linear-gradient(180deg, var(--dark-bg-3), var(--dark-bg));
+    radial-gradient(820px 420px at 50% 25%, var(--glow-1), transparent 62%),
+    linear-gradient(180deg, var(--bg-3), var(--bg));
 }
 
 .cta::before {
@@ -902,7 +967,7 @@ body.gallery-lightbox-open {
   left: 50%;
   top: -25%;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(111, 92, 255, 0.18), transparent 60%);
+  background: radial-gradient(circle, var(--glow-2), transparent 60%);
   filter: blur(10px);
   animation: pulseGlow 7s ease-in-out infinite;
   pointer-events: none;
@@ -922,13 +987,13 @@ body.gallery-lightbox-open {
 .cta__title {
   font-size: clamp(1.9rem, 4.4vw, 3rem);
   font-weight: 800;
-  color: #fff;
+  color: var(--heading);
   margin-bottom: 1rem;
   line-height: 1.14;
 }
 
 .cta__text {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 1.1rem;
   line-height: 1.65;
   margin-bottom: 2rem;
@@ -942,19 +1007,19 @@ body.gallery-lightbox-open {
 
 .photo-band {
   padding: 0 0 clamp(2.5rem, 6vw, 4rem);
-  background: var(--dark-bg-3);
+  background: var(--bg-3);
 }
 
 .photo-band--alt {
-  background: var(--dark-bg-2);
+  background: var(--bg-2);
 }
 
 .photo {
   margin: 0;
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 34px 80px -34px rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--frame-line);
+  box-shadow: 0 34px 80px -34px var(--shadow);
 }
 
 .photo img {
@@ -972,8 +1037,8 @@ body.gallery-lightbox-open {
 
 .photo__caption {
   padding: 0.85rem 1.3rem;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--dark-muted);
+  background: var(--faint-bg);
+  color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.55;
 }
@@ -1007,7 +1072,7 @@ body.gallery-lightbox-open {
 
 .band--article {
   padding-top: clamp(2rem, 5vw, 3.5rem);
-  background: var(--dark-bg-3);
+  background: var(--bg-3);
 }
 
 .news-list {
@@ -1020,16 +1085,16 @@ body.gallery-lightbox-open {
 .post-card {
   border-radius: 20px;
   overflow: hidden;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-  border: 1px solid var(--dark-line);
+  background: var(--card-bg);
+  border: 1px solid var(--line);
   transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
               border-color 0.4s ease, box-shadow 0.4s ease;
 }
 
 .post-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(47, 128, 237, 0.45);
-  box-shadow: 0 26px 55px -24px rgba(0, 0, 0, 0.85);
+  border-color: var(--hover-line);
+  box-shadow: 0 26px 55px -24px var(--shadow);
 }
 
 /* The whole card is one link, so the tap target is the entire card. */
@@ -1042,7 +1107,7 @@ body.gallery-lightbox-open {
   margin: 0;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--faint-bg);
 }
 
 .post-card__media img {
@@ -1070,7 +1135,7 @@ body.gallery-lightbox-open {
 
 .post-card__date {
   font-size: 0.78rem;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -1078,13 +1143,13 @@ body.gallery-lightbox-open {
 .post-card__title {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
   line-height: 1.28;
   margin-bottom: 0.6rem;
 }
 
 .post-card__excerpt {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 1rem;
   line-height: 1.65;
 }
@@ -1094,7 +1159,7 @@ body.gallery-lightbox-open {
   align-items: center;
   gap: 0.4rem;
   margin-top: 1.1rem;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   font-weight: 600;
   font-size: 0.92rem;
   transition: gap 0.25s ease;
@@ -1109,7 +1174,7 @@ body.gallery-lightbox-open {
 .post-card:hover .post-card__more::after { transform: translateX(3px); }
 
 .news-empty {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-style: italic;
 }
 
@@ -1125,21 +1190,21 @@ body.gallery-lightbox-open {
 .post__back {
   display: inline-block;
   margin-bottom: 1.6rem;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   font-size: 0.92rem;
   font-weight: 600;
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .post__back:hover {
-  color: #fff;
+  color: var(--heading);
   transform: translateX(-3px);
 }
 
 .post__date {
   display: block;
   font-size: 0.78rem;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   margin-bottom: 0.7rem;
@@ -1148,14 +1213,14 @@ body.gallery-lightbox-open {
 .post__title {
   font-size: clamp(1.9rem, 4.4vw, 3rem);
   font-weight: 800;
-  color: #fff;
+  color: var(--heading);
   line-height: 1.12;
   letter-spacing: -0.02em;
   margin-bottom: 1rem;
 }
 
 .post__lead {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 1.15rem;
   line-height: 1.7;
 }
@@ -1165,8 +1230,8 @@ body.gallery-lightbox-open {
   margin: 0 0 2.2rem;
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 34px 80px -34px rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--frame-line);
+  box-shadow: 0 34px 80px -34px var(--shadow);
 }
 
 .post__media img {
@@ -1176,14 +1241,14 @@ body.gallery-lightbox-open {
 
 .post__caption {
   padding: 0.8rem 1.2rem;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--dark-muted);
+  background: var(--faint-bg);
+  color: var(--muted);
   font-size: 0.86rem;
   line-height: 1.5;
 }
 
 .post__body {
-  color: var(--dark-text);
+  color: var(--text);
   font-size: 1.08rem;
   line-height: 1.85;
 }
@@ -1195,7 +1260,7 @@ body.gallery-lightbox-open {
 .post__foot {
   margin-top: 2.6rem;
   padding-top: 1.6rem;
-  border-top: 1px solid var(--dark-line);
+  border-top: 1px solid var(--line);
 }
 
 .post__foot .post__back {
@@ -1207,13 +1272,13 @@ body.gallery-lightbox-open {
 .post-related {
   margin-top: 3.5rem;
   padding-top: 2.5rem;
-  border-top: 1px solid var(--dark-line);
+  border-top: 1px solid var(--line);
 }
 
 .post-related__title {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
   margin-bottom: 1.4rem;
 }
 
@@ -1238,7 +1303,7 @@ body.gallery-lightbox-open {
 
 .post-missing__title {
   font-size: clamp(1.4rem, 3vw, 2rem);
-  color: #fff;
+  color: var(--heading);
   font-weight: 700;
   margin-bottom: 1.2rem;
 }
@@ -1253,9 +1318,9 @@ body.gallery-lightbox-open {
    FOOTER
    ========================================================================== */
 body.site footer {
-  background: var(--dark-bg);
-  color: var(--dark-muted);
-  border-top: 1px solid var(--dark-line);
+  background: var(--bg);
+  color: var(--muted);
+  border-top: 1px solid var(--line);
   padding: 2.2rem 1.5rem;
   display: grid;
   gap: 0.9rem;
@@ -1271,12 +1336,12 @@ body.site footer {
 
 .footer__links a {
   font-size: 0.9rem;
-  color: var(--dark-muted);
+  color: var(--muted);
   transition: color 0.2s ease;
 }
 
 .footer__links a:hover {
-  color: #fff;
+  color: var(--heading);
 }
 
 .footer__text {
@@ -1304,7 +1369,7 @@ body.site footer {
 /* Shown only if a page fails to load */
 .page__error {
   padding: 6rem 1.5rem;
-  color: var(--dark-muted);
+  color: var(--muted);
   text-align: center;
 }
 
@@ -1336,8 +1401,8 @@ body.site footer {
   body.site.home #site-header.scrolled {
     position: static;
     padding: 0.9rem 1.2rem;
-    background: rgba(8, 11, 26, 0.92);
-    border-bottom: 1px solid var(--dark-line);
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--line);
     box-shadow: none;
   }
 

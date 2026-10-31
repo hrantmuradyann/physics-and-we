@@ -129,7 +129,7 @@ second copy of the lab would share them.
 | `ctx.setValue("length", 2)` | move a slider from code |
 | `ctx.show("period", "1.98 s")` | write one of your readouts |
 | `ctx.word("hint")` | a word from this lab's JSON, in the visitor's language |
-| `ctx.color` | the site's palette: `accent`, `accent2`, `soft`, `muted`, `text`, `line`, `grid` |
+| `ctx.color` | the site's palette: `accent`, `accent2`, `soft`, `muted`, `text`, `line`, `grid`, `faint`, `glow`. The site has a **dark and a light theme**, and these follow it (light colours on dark, dark ink on cream). Use only these — never type a colour like `"#fff"` into a lab, or it will vanish on one of the two themes |
 | `ctx.pointer` | `{ x, y, down, inside }` — in the same pixels as `ctx.w` and `ctx.h` |
 | `ctx.t` | seconds since the lab started |
 | `ctx.lang` | `"hy"` or `"en"`, if you ever need to know |

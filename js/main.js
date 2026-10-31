@@ -48,6 +48,14 @@
 
   /* ---------- Header ---------- */
 
+  // The white logo for the dark theme, the navy one for the light theme.
+  function logoFile() {
+    return global.Theme.current === "light" ? "images/logo-dark.png" : "images/logo-light.png";
+  }
+
+  // A new theme needs the other logo and the other icon on the button.
+  global.addEventListener("theme:changed", function () { renderHeader(); });
+
   function renderHeader() {
     var host = document.getElementById("site-header");
     if (!host || !site) return;
@@ -61,11 +69,9 @@
     logoLink.setAttribute("data-goto", "home");
     logoLink.className = "logo__link";
 
-    // The mark itself. The white version is used because every public page is
-    // dark; the navy original is for the light admin pages.
     var mark = document.createElement("img");
     mark.className = "logo__img";
-    mark.src = "images/logo-light.png";
+    mark.src = logoFile();
     mark.alt = site.siteName || "Physics and We";
     mark.width = 852;
     mark.height = 204;
@@ -101,9 +107,26 @@
       switcher.appendChild(button);
     });
 
+    // The sun / moon button. It shows the theme you would switch TO: a sun
+    // while the site is dark, a moon while it is light.
+    var goingLight = global.Theme.current === "dark";
+    var themeButton = document.createElement("button");
+    themeButton.type = "button";
+    themeButton.className = "theme-switch";
+    themeButton.innerHTML = Content.icon(goingLight ? "sun" : "moon");
+    var themeLabel = Content.inLang((site.ui || {})[goingLight ? "themeLight" : "themeDark"], lang);
+    themeButton.setAttribute("aria-label", themeLabel);
+    themeButton.title = themeLabel;
+    themeButton.addEventListener("click", function () { global.Theme.toggle(); });
+
+    var tools = document.createElement("div");
+    tools.className = "header-tools";
+    tools.appendChild(switcher);
+    tools.appendChild(themeButton);
+
     host.appendChild(logo);
     host.appendChild(nav);
-    host.appendChild(switcher);
+    host.appendChild(tools);
 
     // The router re-marks the current page after the header is rebuilt.
     global.dispatchEvent(new CustomEvent("header:rendered"));
@@ -162,7 +185,7 @@
       var header = document.getElementById("site-header");
       if (header) {
         header.innerHTML = '<div class="logo"><a href="?view=home" class="logo__link">' +
-          '<img class="logo__img" src="images/logo-light.png" alt="Physics and We"></a></div>';
+          '<img class="logo__img" src="' + logoFile() + '" alt="Physics and We"></a></div>';
       }
       throw err;
     });

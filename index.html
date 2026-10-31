@@ -14,13 +14,14 @@
    a news item                                  the admin page at /admin/
    the order of the blocks on a page            sections/<page>.html
    the words of an interactive lab              data/labs/<lab>.json
-   colours, sizes, spacing                      css/site.css
+   colours (dark and light theme)               css/style.css
+   sizes, spacing, the look of the blocks       css/site.css
    ----------------------------------------------------------------------------
 
    Full instructions, in plain words:  Instructions/EDITING-GUIDE.md
   ══════════════════════════════════════════════════════════════════════════════
 -->
-<html lang="hy">
+<html lang="hy" class="site">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -34,6 +35,10 @@
   <link rel="stylesheet" href="css/site.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/labs.css">
+
+  <!-- Dark or light theme. Loaded here, before the page is drawn, so a
+       visitor who chose the light theme never sees a flash of dark. -->
+  <script src="js/theme.js"></script>
 </head>
 
 <body class="site home">
