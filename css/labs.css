@@ -13,6 +13,10 @@
      .lab-toggle      one on/off switch
      .lab-readout     one number the lab writes out
      .lab-chooser     shown at ?view=lab when no lab was named
+     .line-art        the silver lines behind the Labs page and a lab page
+
+   The colours are the theme variables from css/style.css, so the lab follows
+   the dark / light theme like the rest of the site.
 
    Everything is scoped to  body.site , like css/site.css .
    ========================================================================== */
@@ -25,7 +29,7 @@
 
 .band--lab {
   padding-top: clamp(2rem, 5vw, 3.5rem);
-  background: var(--dark-bg-3);
+  background: var(--bg-3);
 }
 
 /* On the Labs page a short paragraph sits between a section title and the
@@ -36,9 +40,68 @@
 }
 
 /* ============================================================================
+   THE SILVER LINES BEHIND THE LABS PAGES
+   sections/labs.html and sections/lab.html are wrapped in
+   <div class="line-art">. The lines are one picture, images/lab-lines.svg:
+   waves, orbits, field lines and a bending ray.
+   ========================================================================== */
+.line-art {
+  background-color: var(--bg-3);
+  /* On the dark theme a see-through layer of the page colour lies over the
+     lines (the first gradient), so they stay quiet on the dark background. */
+  background-image:
+    linear-gradient(rgba(10, 16, 36, 0.55), rgba(10, 16, 36, 0.55)),
+    url("../images/lab-lines.svg");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  /* The lines stay still while the page scrolls over them. */
+  background-attachment: fixed;
+}
+
+/* The light theme shows the lines as they are. */
+:root.theme-light .line-art {
+  background-image: url("../images/lab-lines.svg");
+}
+
+/* The stripes of the page let the lines show through. */
+.line-art .page-head,
+.line-art .band,
+.line-art .photo-band {
+  background: transparent;
+}
+
+.line-art .band--alt {
+  background: var(--faint-bg);
+}
+
+/* Cards get a solid colour under their own see-through one, so the lines
+   do not run through the words. */
+.line-art .card {
+  background-color: var(--bg-3);
+}
+
+/* Phones ignore "fixed", and "cover" would then stretch the picture over the
+   whole length of the page. So there it simply sits at the top. */
+@media (max-width: 860px) {
+  .line-art {
+    background-attachment: scroll;
+    background-position: center top;
+    background-size: 1100px auto;
+  }
+}
+
+/* ============================================================================
    HEADING
    ========================================================================== */
+
+/* This is a <header>, so it would also pick up the site's own header look
+   from css/style.css (blue bar, flex row, padding). It is just a heading. */
 .lab__head {
+  display: block;
+  padding: 0;
+  background: none;
+  color: inherit;
   margin-bottom: 1.8rem;
 }
 
@@ -46,28 +109,28 @@
 .lab__back {
   display: inline-block;
   margin-bottom: 1.2rem;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   font-size: 0.92rem;
   font-weight: 600;
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .lab__back:hover {
-  color: #fff;
+  color: var(--heading);
   transform: translateX(-3px);
 }
 
 .lab__title {
   font-size: clamp(1.8rem, 4vw, 2.7rem);
   font-weight: 800;
-  color: #fff;
+  color: var(--heading);
   line-height: 1.12;
   letter-spacing: -0.02em;
   margin-bottom: 0.8rem;
 }
 
 .lab__lead {
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 1.08rem;
   line-height: 1.7;
   max-width: 60ch;
@@ -88,11 +151,11 @@
   min-height: 240px;
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid var(--dark-line);
+  border: 1px solid var(--line);
   background:
-    radial-gradient(700px 340px at 50% 0%, rgba(47, 128, 237, 0.14), transparent 62%),
-    linear-gradient(180deg, var(--dark-bg-2), var(--dark-bg));
-  box-shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.9);
+    radial-gradient(700px 340px at 50% 0%, var(--glow-1), transparent 62%),
+    linear-gradient(180deg, var(--bg-2), var(--bg));
+  box-shadow: 0 30px 70px -34px var(--shadow);
 }
 
 .lab__canvas {
@@ -113,8 +176,11 @@
   gap: 1.3rem;
   padding: 1.3rem 1.2rem;
   border-radius: 18px;
-  border: 1px solid var(--dark-line);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--line);
+  /* A solid colour under the card's own see-through one, so the silver
+     lines of the page do not run through the sliders and numbers. */
+  background-color: var(--bg-3);
+  background-image: var(--card-bg);
 }
 
 /* ============================================================================
@@ -136,7 +202,7 @@
 .lab-control__name {
   font-size: 0.86rem;
   font-weight: 600;
-  color: var(--dark-text);
+  color: var(--text);
   line-height: 1.3;
 }
 
@@ -145,7 +211,7 @@
 .lab-control__value {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--dark-accent-soft);
+  color: var(--accent-soft);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -153,12 +219,12 @@
 .lab-control__input {
   width: 100%;
   height: 1.5rem;
-  accent-color: var(--dark-accent);
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
 .lab-control__input:focus-visible {
-  outline: 2px solid var(--dark-accent-soft);
+  outline: 2px solid var(--accent-soft);
   outline-offset: 3px;
   border-radius: 4px;
 }
@@ -171,7 +237,7 @@
   cursor: pointer;
   font-size: 0.86rem;
   font-weight: 600;
-  color: var(--dark-text);
+  color: var(--text);
 }
 
 .lab-toggle input {
@@ -186,8 +252,8 @@
   width: 2.4rem;
   height: 1.35rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid var(--dark-line);
+  background: var(--frame-line);
+  border: 1px solid var(--line);
   position: relative;
   transition: background 0.25s ease, border-color 0.25s ease;
 }
@@ -201,12 +267,13 @@
   height: 0.95rem;
   border-radius: 50%;
   background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transform: translateY(-50%);
   transition: transform 0.25s ease;
 }
 
 .lab-toggle input:checked + .lab-toggle__mark {
-  background: linear-gradient(135deg, var(--dark-accent), var(--dark-accent-2));
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-color: transparent;
 }
 
@@ -215,7 +282,7 @@
 }
 
 .lab-toggle input:focus-visible + .lab-toggle__mark {
-  outline: 2px solid var(--dark-accent-soft);
+  outline: 2px solid var(--accent-soft);
   outline-offset: 3px;
 }
 
@@ -226,7 +293,7 @@
   display: grid;
   gap: 0.55rem;
   padding-top: 1.1rem;
-  border-top: 1px solid var(--dark-line);
+  border-top: 1px solid var(--line);
 }
 
 .lab-readout {
@@ -238,14 +305,14 @@
 
 .lab-readout__label {
   font-size: 0.82rem;
-  color: var(--dark-muted);
+  color: var(--muted);
   line-height: 1.35;
 }
 
 .lab-readout__value {
   font-size: 1rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -258,7 +325,7 @@
   flex-wrap: wrap;
   gap: 0.6rem;
   padding-top: 1.1rem;
-  border-top: 1px solid var(--dark-line);
+  border-top: 1px solid var(--line);
 }
 
 /* A third size of the shared .btn, small enough for the panel. */
@@ -274,7 +341,7 @@
    ========================================================================== */
 .lab__hint {
   margin-top: 1rem;
-  color: var(--dark-muted);
+  color: var(--muted);
   font-size: 0.92rem;
   font-style: italic;
 }
@@ -282,20 +349,26 @@
 .lab__theory {
   margin-top: 2.6rem;
   padding-top: 2rem;
-  border-top: 1px solid var(--dark-line);
+  border-top: 1px solid var(--line);
 }
 
 .lab__theory-title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--heading);
   margin-bottom: 1rem;
 }
 
-.lab__foot {
+/* This is a <footer>, so  body.site footer  in css/site.css (the bar at the
+   bottom of every page) reaches it too. The extra "body.site" here makes
+   this rule the stronger one. */
+body.site .lab__foot {
+  display: block;
   margin-top: 2.4rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--dark-line);
+  padding: 1.5rem 0 0;
+  background: none;
+  color: inherit;
+  border-top: 1px solid var(--line);
 }
 
 .lab__foot .lab__back {
@@ -312,7 +385,7 @@
 .lab-chooser__title {
   font-size: clamp(1.5rem, 3.4vw, 2.2rem);
   font-weight: 800;
-  color: #fff;
+  color: var(--heading);
   margin-bottom: 1.8rem;
 }
 

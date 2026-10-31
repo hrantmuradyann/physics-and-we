@@ -82,21 +82,24 @@
   }
 
   // The colours of a lab come from the site's own palette, so a change in
-  // css/style.css moves the drawings too.
+  // css/style.css moves the drawings too. They are read again whenever the
+  // visitor switches between the dark and the light theme.
   function palette() {
     var style = getComputedStyle(document.documentElement);
     function read(name, fallback) {
       return (style.getPropertyValue(name) || "").trim() || fallback;
     }
     return {
-      accent: read("--dark-accent", "#2f80ed"),
-      accent2: read("--dark-accent-2", "#6f5cff"),
-      soft: read("--dark-accent-soft", "#7ea8ff"),
-      muted: read("--dark-muted", "#9aa6c4"),
-      text: read("--dark-text", "#e8ecf6"),
-      background: read("--dark-bg-3", "#0a1024"),
-      line: "rgba(255, 255, 255, 0.10)",
-      grid: "rgba(255, 255, 255, 0.05)"
+      accent: read("--accent", "#2f80ed"),
+      accent2: read("--accent-2", "#6f5cff"),
+      soft: read("--accent-soft", "#7ea8ff"),
+      muted: read("--muted", "#9aa6c4"),
+      text: read("--text", "#e8ecf6"),
+      background: read("--bg-3", "#0a1024"),
+      line: read("--canvas-line", "rgba(255, 255, 255, 0.10)"),
+      grid: read("--canvas-grid", "rgba(255, 255, 255, 0.05)"),
+      faint: read("--canvas-faint", "rgba(255, 255, 255, 0.22)"),
+      glow: read("--canvas-glow", "rgba(47, 128, 237, 0.75)")
     };
   }
 
@@ -478,6 +481,16 @@
     canvas.addEventListener("pointercancel", onPointerUp);
     canvas.addEventListener("pointerleave", onPointerLeave);
 
+    /* ---------- the dark / light theme ---------- */
+
+    // New colours for the drawing. A paused lab is drawn once more so the
+    // change shows straight away.
+    function onThemeChanged() {
+      api.color = palette();
+      if (rafId === null) drawOnce();
+    }
+    global.addEventListener("theme:changed", onThemeChanged);
+
     /* ---------- buttons ---------- */
 
     playButton.addEventListener("click", function () { setWantRun(!wantRun); });
@@ -533,6 +546,7 @@
       if (sizeWatcher) sizeWatcher.disconnect();
       if (seenWatcher) seenWatcher.disconnect();
       global.removeEventListener("resize", measure);
+      global.removeEventListener("theme:changed", onThemeChanged);
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerup", onPointerUp);

@@ -15,6 +15,7 @@ Physics and We: a bilingual (Armenian `hy` / English `en`) static website for a 
 - `data/*.json` hold **all text**, bilingual side by side per key (`{ "hy": "...", "en": "..." }`). One JSON file per page, paired 1:1 with its `sections/*.html`.
 - `js/content.js` binds `data/*.json` values into a fragment's `data-*` attributes (see table below) and defines the inline SVG icon set.
 - This layout/text split exists so non-programmers can edit `data/*.json` without touching HTML/CSS/JS (see `Instructions/EDITING-GUIDE.md`).
+- **Two themes, dark (default) and light (cream).** All public-site colours are CSS variables in `css/style.css` — dark values in `:root`, light values under `:root.theme-light`, same names (`--bg`, `--bg-3`, `--heading`, `--text`, `--muted`, `--line`, `--accent-2`, `--accent-soft`, `--card-bg`, `--shadow`, …); the light theme has no blue: terracotta replaces blue→violet in the gradients (`--accent` / `--accent-2`) and in small coloured text (`--accent-soft`). `js/theme.js` (loaded in `<head>` to avoid a flash) toggles `theme-light` on `<html>`, saves it to `localStorage.theme`, and fires `theme:changed`; `js/main.js` re-renders the header on it (logo swap + sun/moon button), `js/home.js` (star colours, `STAR_COLORS`) and `js/labs.js` (`palette()` → `ctx.color`) recolour their canvases. The page background is set on both `html.site` and `body.site` on purpose: with only one, it becomes the page backdrop, which Chrome doesn't repaint on a theme switch (the band under the menu on inner pages kept the old colour). Don't remove either.
 
 ### Data-binding attributes (`js/content.js`)
 
@@ -60,14 +61,16 @@ data/sponsors&partners.json       "Sponsors & Partners" page: two logo grids, "p
 data/labs.json           lab registry: simulations.items[].slug must match js/labs/<slug>.js + data/labs/<slug>.json
 data/labs/*.json         per-lab text (pendulum, refraction)
 
-css/style.css            reset, CSS vars, shared header/footer (also used by admin)
-css/site.css             design system for all public pages (.page-head, .band, .card, .grid--cards, ...)
+css/style.css            reset, CSS vars for BOTH themes (:root = dark, :root.theme-light = cream), shared header/footer (also used by admin)
+css/site.css             design system for all public pages (.page-head, .band, .card, .grid--cards, ...); colours only via the theme vars
 css/home.css             home hero only
-css/labs.css             lab page shell only
-css/admin.css            admin panel only (light theme)
+css/labs.css             lab page shell + .line-art (silver lines behind the labs list and lab pages, dimmed on dark)
+images/lab-lines.svg     the silver background lines used by .line-art
+css/admin.css            admin panel only (always light; ignores the site themes)
 
+js/theme.js              dark/light theme: class on <html>, localStorage, "theme:changed" event; loaded in <head>
 js/content.js            data-* attribute binder + icon set
-js/main.js               language switch (hy/en, localStorage) + header/footer build
+js/main.js               language switch (hy/en, localStorage) + header/footer build + theme button + per-theme logo
 js/router.js             SPA router (fetch section+data, swap views, prefetch)
 js/anim.js               scroll reveals, counting numbers
 js/home.js               animated particle background (home hero)
@@ -96,6 +99,9 @@ functions/admin/api/upload.js    one photo upload; magic-byte type sniffing; rej
 - **Multi-file additions must stay in lockstep.** New page = entry in `data/site.json` nav + `sections/<route>.html` + `data/<route>.json`. New lab = `js/labs/<slug>.js` (with matching `Labs.register("<slug>", …)` name) + `data/labs/<slug>.json` + a block in `data/labs.json` + a `<script>` line in `index.html`. Full walkthroughs: README §2 "Adding a new page" / "Adding a new interactive lab", and `Instructions/LABS-GUIDE.md`.
 - **No build step, no dependencies.** Don't introduce a bundler, npm package, or `package.json` casually — this is a deliberate project constraint, not an oversight.
 - **README may reference a third language, `ru` (Russian), in a couple of places** (e.g. the data-attribute/text-format section and the "how do new files connect" section). This looks stale after commit `f956d38` ("Deleted russian") — the site and `data/*.json` are currently hy/en only. Don't trust that specific detail in the README without checking the actual JSON files; fix the README wording if you're already editing that section.
+- **Never hard-code a colour.** Every colour must work in both themes: use the theme vars in CSS, `ctx.color.*` in labs, and a per-theme table in JS canvases (see `STAR_COLORS` in `js/home.js`). A literal `#fff` or `rgba(255,255,255,…)` vanishes on the light theme. Deliberate exceptions: white text on the accent gradients (`.btn--primary`, `.step::before`), the white `.partner-logo` tiles, and the always-dark `.gallery-lightbox`.
+- **Labs pages are wrapped in `<div class="line-art">`** (`sections/labs.html`, `sections/lab.html`) for the silver line background. Inside it bands go transparent and cards/the lab panel get a solid `background-color` so the lines don't run through text.
+- **`<header>` / `<footer>` inside a fragment inherit the site-wide rules** — `header {}` in `css/style.css` (blue bar, flex) and `body.site footer` in `css/site.css` (footer bar). A content block using those tags must reset them (see `.lab__head` / `.lab__foot` in `css/labs.css`).
 - **CSS lives in CSS files only** — no `style="..."` attributes or `<style>` blocks in HTML/fragments; reuse `css/site.css` blocks and `css/style.css` variables before adding new ones.
 
 ## Security-sensitive code

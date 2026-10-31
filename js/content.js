@@ -80,7 +80,15 @@
 
     calendar:
       '<rect x="3" y="5" width="18" height="16" rx="2.5"/>' +
-      '<path d="M8 2.5v4M16 2.5v4M3 10.5h18"/>'
+      '<path d="M8 2.5v4M16 2.5v4M3 10.5h18"/>',
+
+    // These two are the theme button in the header (js/main.js).
+    sun:
+      '<circle cx="12" cy="12" r="4"/>' +
+      '<path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
+
+    moon:
+      '<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/>'
   };
 
   function iconSVG(name) {

@@ -4,16 +4,17 @@
 
   The words are NOT here. They are in  data/labs.json .
 
-  There are TWO lists of labs on this page:
-    "simulations"  the interactive ones, that run in the browser. Each card
-                   opens its own page at  ?view=lab&id=<slug> .
-    "cards"        the hands-on ones we bring to a school in person.
+  The list of labs is "simulations": the interactive ones that run in the
+  browser. Each card opens its own page at  ?view=lab&id=<slug> .
 
-  To add or remove either kind you do NOT touch this file — you copy a
-  block inside data/labs.json. A new SIMULATION also needs its two files,
+  To add or remove a lab you do NOT touch this file — you copy a block
+  inside data/labs.json. A new lab also needs its two files,
   js/labs/<slug>.js and data/labs/<slug>.json — see Instructions/LABS-GUIDE.md.
   ══════════════════════════════════════════════════════════════════════════
 -->
+
+<!-- Silver lines behind the whole page — see .line-art in css/labs.css -->
+<div class="line-art">
 
 <!-- ░░ PAGE TITLE ░░ -->
 <header class="page-head">
@@ -50,48 +51,13 @@
   </div>
 </section>
 
-<!-- ░░ THE LABS WE BRING TO A SCHOOL IN PERSON ░░ -->
-<section class="band band--alt">
-  <div class="container">
-    <p class="eyebrow reveal" data-text="classroom.eyebrow"></p>
-    <h2 class="section-title reveal" data-text="classroom.title"></h2>
-
-    <div class="grid grid--cards" data-list="cards">
-      <template>
-        <article class="card reveal">
-          <span class="card__icon" data-icon="icon"></span>
-          <h3 class="card__title" data-text="title"></h3>
-          <p class="card__text" data-text="text"></p>
-          <p class="card__meta" data-text="meta"></p>
-        </article>
-      </template>
-    </div>
-  </div>
-</section>
-
 <!-- ░░ A PHOTOGRAPH ░░ -->
 <section class="photo-band">
   <div class="container">
     <figure class="photo reveal">
       <img data-image="photo.image" data-alt="photo.alt" loading="lazy" decoding="async">
-      <figcaption class="photo__caption" data-text="photo.caption"></figcaption>
     </figure>
   </div>
 </section>
 
-<!-- ░░ HOW A LAB IS RUN, STEP BY STEP ░░ -->
-<section class="band">
-  <div class="container">
-    <p class="eyebrow reveal" data-text="steps.eyebrow"></p>
-    <h2 class="section-title reveal" data-text="steps.title"></h2>
-
-    <ol class="steps" data-list="steps.items">
-      <template>
-        <li class="step reveal">
-          <h3 class="step__title" data-text="title"></h3>
-          <p class="step__text" data-text="text"></p>
-        </li>
-      </template>
-    </ol>
-  </div>
-</section>
+</div><!-- /.line-art -->

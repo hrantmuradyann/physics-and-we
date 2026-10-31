@@ -17,7 +17,7 @@
 /* ---------- The colours and sizes used everywhere -------------------------
    Change a value here and it changes across the whole site.                */
 :root {
-  /* Light theme — used by the admin page */
+  /* Admin colours — used by the admin page only */
   --color-primary: #1a3c6e;
   --color-secondary: #2f80ed;
   --color-accent: #f2994a;
@@ -26,21 +26,91 @@
   --color-text: #1c1c1c;
   --color-text-light: #666666;
 
-  /* Dark theme — used by every public page (see css/site.css) */
-  --dark-bg: #070b1a;
-  --dark-bg-2: #0b1228;
-  --dark-bg-3: #0a1024;
-  --dark-text: #e8ecf6;
-  --dark-muted: #9aa6c4;
-  --dark-line: rgba(255, 255, 255, 0.08);
-  --dark-accent: #2f80ed;
-  --dark-accent-2: #6f5cff;
-  --dark-accent-soft: #7ea8ff;
+  /* The public site has two themes, dark and light. These are the DARK
+     colours, the default. The light ones, under the same names, are in the
+     next block. js/theme.js switches between them. */
+  --bg: #070b1a;                              /* the darkest: hero, footer */
+  --bg-2: #0b1228;                            /* .band--alt */
+  --bg-3: #0a1024;                            /* .band */
+  --heading: #ffffff;                         /* titles */
+  --text: #e8ecf6;                            /* the main text */
+  --muted: #9aa6c4;                           /* quieter text: .lead, .card__text */
+  --line: rgba(255, 255, 255, 0.08);          /* every thin border */
+  --frame-line: rgba(255, 255, 255, 0.12);    /* the border round a photo */
+  --accent: #2f80ed;                          /* blue */
+  --accent-2: #6f5cff;                        /* violet */
+  --accent-soft: #7ea8ff;                     /* blue for small text: .eyebrow, links */
+  --icon: #9db8ff;                            /* card icons */
+  --icon-bg: linear-gradient(135deg, rgba(47, 128, 237, 0.28), rgba(111, 92, 255, 0.22));
+  --card-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  --faint-bg: rgba(255, 255, 255, 0.03);      /* a barely-there fill: captions, empty frames */
+  --shadow: rgba(0, 0, 0, 0.9);               /* the colour of every big shadow */
+  --glow-1: rgba(47, 128, 237, 0.22);         /* the soft lights in page heads: blue */
+  --glow-2: rgba(111, 92, 255, 0.18);         /* the second soft light: violet */
+  --vignette: rgba(4, 7, 16, 0.65);           /* the darkening round the home hero */
+  --header-bg: rgba(8, 11, 26, 0.82);
+  --button-glow: rgba(47, 128, 237, 0.7);     /* the light under .btn--primary */
+  --button-glow-hover: rgba(47, 128, 237, 0.85);
+  --accent-ring: rgba(47, 128, 237, 0.18);    /* the halo round a .timeline dot */
+  --hover-line: rgba(47, 128, 237, 0.45);     /* the border of a card under the mouse, an open FAQ */
+  --hover-tint: rgba(47, 128, 237, 0.06);     /* the fill of an open FAQ */
+  --ghost-bg: rgba(255, 255, 255, 0.04);      /* .btn--ghost */
+  --ghost-border: rgba(255, 255, 255, 0.28);
+  --ghost-bg-hover: rgba(255, 255, 255, 0.12);
+  --ghost-border-hover: rgba(255, 255, 255, 0.5);
+  /* The drawings of the interactive labs (read by js/labs.js) */
+  --canvas-line: rgba(255, 255, 255, 0.10);
+  --canvas-grid: rgba(255, 255, 255, 0.05);
+  --canvas-faint: rgba(255, 255, 255, 0.22);
+  --canvas-glow: rgba(47, 128, 237, 0.75);
 
   --font-main: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --max-width: 1100px;
   --radius: 16px;
   --radius-sm: 10px;
+}
+
+/* The LIGHT theme: creamy white, charcoal ink, silver lines and terracotta.
+   Same names as above. Every gradient (menu underline, buttons, step
+   numbers, switches) runs from a lighter to a darker terracotta here, not
+   blue to violet, and the small coloured text (links, .eyebrow, the slider
+   values) is terracotta too. There is no blue on this theme. */
+:root.theme-light {
+  --bg: #f1ebdf;
+  --bg-2: #fdfbf7;
+  --bg-3: #f6f1e7;
+  --heading: #1c1f24;                         /* charcoal, not navy */
+  --text: #33373d;
+  --muted: #62666d;
+  --line: rgba(28, 31, 36, 0.12);
+  --frame-line: rgba(28, 31, 36, 0.14);
+  /* --accent also colours the lab sliders. Keep it at least this dark: with
+     a lighter colour, Chrome draws the empty part of a slider almost black. */
+  --accent: #c0603a;                          /* terracotta */
+  --accent-2: #963b1c;                        /* burnt orange */
+  --accent-soft: #a1461f;                     /* terracotta for small text: links, .eyebrow */
+  --icon: #a1461f;
+  --icon-bg: linear-gradient(135deg, rgba(192, 96, 58, 0.14), rgba(150, 59, 28, 0.08));
+  --card-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(253, 251, 247, 0.75));
+  --faint-bg: rgba(255, 255, 255, 0.5);
+  --shadow: rgba(28, 31, 36, 0.28);
+  --glow-1: rgba(192, 96, 58, 0.07);
+  --glow-2: rgba(150, 156, 166, 0.10);        /* the second soft light: silver */
+  --vignette: rgba(241, 235, 223, 0.7);
+  --header-bg: rgba(246, 241, 231, 0.88);
+  --button-glow: rgba(150, 59, 28, 0.35);
+  --button-glow-hover: rgba(150, 59, 28, 0.5);
+  --accent-ring: rgba(192, 96, 58, 0.22);
+  --hover-line: rgba(161, 70, 31, 0.3);
+  --hover-tint: rgba(192, 96, 58, 0.06);
+  --ghost-bg: rgba(255, 255, 255, 0.6);
+  --ghost-border: rgba(28, 31, 36, 0.22);
+  --ghost-bg-hover: #ffffff;
+  --ghost-border-hover: rgba(28, 31, 36, 0.4);
+  --canvas-line: rgba(28, 31, 36, 0.30);
+  --canvas-grid: rgba(28, 31, 36, 0.10);
+  --canvas-faint: rgba(28, 31, 36, 0.30);
+  --canvas-glow: rgba(150, 59, 28, 0.30);
 }
 
 html,

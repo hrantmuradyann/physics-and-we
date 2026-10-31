@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <!--
+    The faint silver lines behind the labs pages (used by css/cream.css).
+    Pure decoration: a swing that dies away, orbits, field lines between two
+    charges, and a ray of light bending at a surface.
+  -->
+  <defs>
+    <linearGradient id="silver" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1600" y2="1000">
+      <stop offset="0" stop-color="#d9dde3"/>
+      <stop offset="0.35" stop-color="#a9afba"/>
+      <stop offset="0.6" stop-color="#e4e7ec"/>
+      <stop offset="1" stop-color="#9ca3af"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke="url(#silver)" stroke-linecap="round">
+
+    <!-- Damped waves across the lower half -->
+    <path stroke-width="1.4" opacity="0.9"
+          d="M -40 730 Q 15 550 70 730 Q 125 880 180 730 Q 235 606 290 730 Q 345 832 400 730
+             Q 455 646 510 730 Q 565 798 620 730 Q 675 674 730 730 Q 785 776 840 730
+             Q 895 692 950 730 Q 1005 760 1060 730 Q 1115 706 1170 730 Q 1225 750 1280 730
+             Q 1335 714 1390 730 Q 1445 744 1500 730 Q 1555 718 1610 730"/>
+    <path stroke-width="1.2" opacity="0.6"
+          d="M -95 770 Q -40 644 15 770 Q 70 875 125 770 Q 180 683 235 770 Q 290 841 345 770
+             Q 400 711 455 770 Q 510 818 565 770 Q 620 731 675 770 Q 730 802 785 770
+             Q 840 743 895 770 Q 950 791 1005 770 Q 1060 753 1115 770 Q 1170 784 1225 770
+             Q 1280 759 1335 770 Q 1390 780 1445 770 Q 1500 762 1555 770 Q 1610 778 1665 770"/>
+    <path stroke-width="1" opacity="0.4"
+          d="M -40 815 Q 15 743 70 815 Q 125 875 180 815 Q 235 765 290 815 Q 345 856 400 815
+             Q 455 781 510 815 Q 565 842 620 815 Q 675 793 730 815 Q 785 833 840 815
+             Q 895 800 950 815 Q 1005 827 1060 815 Q 1115 805 1170 815 Q 1225 823 1280 815
+             Q 1335 809 1390 815 Q 1445 821 1500 815 Q 1555 810 1610 815"/>
+
+    <!-- Orbits, running off the top-right corner -->
+    <g transform="translate(1360 150) rotate(-16)" stroke-width="1.1" opacity="0.7">
+      <circle cx="0" cy="0" r="6"/>
+      <ellipse cx="0" cy="0" rx="180" ry="64"/>
+      <ellipse cx="0" cy="0" rx="290" ry="104"/>
+      <ellipse cx="0" cy="0" rx="410" ry="148"/>
+      <ellipse cx="0" cy="0" rx="540" ry="196"/>
+      <g fill="url(#silver)" stroke="none">
+        <circle cx="-169" cy="-22" r="3.5"/>
+        <circle cx="-251" cy="52" r="4"/>
+        <circle cx="-140" cy="139" r="3"/>
+        <circle cx="-522" cy="51" r="5"/>
+      </g>
+    </g>
+
+    <!-- Field lines between two charges, top left -->
+    <g stroke-width="1" opacity="0.55">
+      <circle cx="140" cy="330" r="5"/>
+      <circle cx="520" cy="330" r="5"/>
+      <path d="M 140 330 Q 330 250 520 330"/>
+      <path d="M 140 330 Q 330 160 520 330"/>
+      <path d="M 140 330 Q 330 50 520 330"/>
+      <path d="M 140 330 Q 330 -80 520 330"/>
+      <path d="M 140 330 Q 330 430 520 330"/>
+      <path d="M 140 330 Q 330 550 520 330"/>
+    </g>
+
+    <!-- A ray of light bending as it crosses a surface -->
+    <g opacity="0.6">
+      <path stroke-width="1" stroke-dasharray="3 7" d="M 1180 520 L 1600 520"/>
+      <path stroke-width="1.3" d="M 1250 360 L 1380 520 L 1440 690"/>
+    </g>
+  </g>
+</svg>

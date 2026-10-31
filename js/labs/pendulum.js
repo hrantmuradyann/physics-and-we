@@ -249,32 +249,39 @@
     var spread = Math.min(state.amplitude, Math.PI * 0.95);
     if (spread < 0.05) return;
 
-    g.strokeStyle = "rgba(126, 168, 255, 0.22)";
+    g.save();
+    g.globalAlpha = 0.25;
+    g.strokeStyle = ctx.color.soft;
     g.lineWidth = 1.4;
     g.beginPath();
     // Canvas angles start at three o'clock; the pendulum's start straight
     // down, which is a quarter turn later.
     g.arc(view.pivotX, view.pivotY, rod, Math.PI / 2 - spread, Math.PI / 2 + spread);
     g.stroke();
+    g.restore();
   }
 
   function drawTrail(g, ctx, state) {
     var points = state.trail;
+    g.save();
+    g.strokeStyle = ctx.color.soft;
+    g.lineCap = "round";
     for (var i = 1; i < points.length; i++) {
+      // The newest part of the trail is the strongest.
       var fade = i / points.length;
-      g.strokeStyle = "rgba(126, 168, 255, " + (fade * 0.5).toFixed(3) + ")";
+      g.globalAlpha = fade * 0.5;
       g.lineWidth = 1 + fade * 2;
-      g.lineCap = "round";
       g.beginPath();
       g.moveTo(points[i - 1].x, points[i - 1].y);
       g.lineTo(points[i].x, points[i].y);
       g.stroke();
     }
+    g.restore();
   }
 
   function drawRod(g, ctx, view, bobX, bobY) {
     var line = g.createLinearGradient(view.pivotX, view.pivotY, bobX, bobY);
-    line.addColorStop(0, "rgba(255,255,255,0.20)");
+    line.addColorStop(0, ctx.color.faint);
     line.addColorStop(1, ctx.color.soft);
 
     g.strokeStyle = line;
@@ -295,7 +302,7 @@
     var r = view.bobRadius;
 
     g.save();
-    g.shadowColor = "rgba(47, 128, 237, 0.75)";
+    g.shadowColor = ctx.color.glow;
     g.shadowBlur = held ? 30 : 18;
 
     var ball = g.createRadialGradient(bobX - r * 0.35, bobY - r * 0.4, r * 0.15,
@@ -311,11 +318,14 @@
 
     // A ring while it is being held, so it is obvious the bob can be grabbed.
     if (held) {
-      g.strokeStyle = "rgba(255,255,255,0.7)";
+      g.save();
+      g.globalAlpha = 0.6;
+      g.strokeStyle = ctx.color.text;
       g.lineWidth = 2;
       g.beginPath();
       g.arc(bobX, bobY, r + 6, 0, Math.PI * 2);
       g.stroke();
+      g.restore();
     }
   }
 

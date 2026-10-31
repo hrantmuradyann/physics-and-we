@@ -201,15 +201,19 @@
 
   // A faint tint on each half, heavier for the material that slows light more.
   function drawMedia(g, ctx, view, phys) {
-    g.fillStyle = "rgba(126, 168, 255, " + (0.030 * (phys.n1 - 1) + 0.012).toFixed(4) + ")";
+    g.save();
+    g.fillStyle = ctx.color.soft;
+
+    g.globalAlpha = 0.04 * (phys.n1 - 1) + 0.014;
     g.fillRect(0, 0, ctx.w, view.oy);
 
-    g.fillStyle = "rgba(126, 168, 255, " + (0.030 * (phys.n2 - 1) + 0.012).toFixed(4) + ")";
+    g.globalAlpha = 0.04 * (phys.n2 - 1) + 0.014;
     g.fillRect(0, view.oy, ctx.w, ctx.h - view.oy);
+    g.restore();
   }
 
   function drawSurface(g, ctx, view) {
-    g.strokeStyle = "rgba(255, 255, 255, 0.28)";
+    g.strokeStyle = ctx.color.faint;
     g.lineWidth = 1.4;
     g.beginPath();
     g.moveTo(0, view.oy);
@@ -237,7 +241,7 @@
     g.lineWidth = width;
     g.lineCap = "round";
     g.shadowColor = color;
-    g.shadowBlur = 10;
+    g.shadowBlur = 8;
     g.beginPath();
     g.moveTo(x1, y1);
     g.lineTo(x2, y2);
@@ -262,7 +266,7 @@
       var s = (state.travel + (i * total) / PULSES) % total;
 
       if (s < r.inLen) {
-        dot(g, ctx.color.text,
+        dot(g, ctx,
             view.ox - r.inDir.x * (r.inLen - s),
             view.oy - r.inDir.y * (r.inLen - s), 1);
         continue;
@@ -271,13 +275,13 @@
       var past = s - r.inLen;   // time since it reached the boundary, in pixels
 
       if (r.showReflected && past <= r.refLen) {
-        dot(g, ctx.color.text,
+        dot(g, ctx,
             view.ox + r.refDir.x * past,
             view.oy + r.refDir.y * past,
             0.25 + 0.75 * r.phys.share);
       }
       if (r.outDir && past * ratio <= r.outLen) {
-        dot(g, "#cfe0ff",
+        dot(g, ctx,
             view.ox + r.outDir.x * past * ratio,
             view.oy + r.outDir.y * past * ratio,
             0.3 + 0.7 * (1 - r.phys.share));
@@ -285,12 +289,13 @@
     }
   }
 
-  function dot(g, color, x, y, alpha) {
+  // One dot of light, in the text colour with a blue glow round it.
+  function dot(g, ctx, x, y, alpha) {
     g.save();
     g.globalAlpha = Math.max(0, Math.min(1, alpha));
-    g.fillStyle = color;
-    g.shadowColor = color;
-    g.shadowBlur = 12;
+    g.fillStyle = ctx.color.text;
+    g.shadowColor = ctx.color.glow;
+    g.shadowBlur = 10;
     g.beginPath();
     g.arc(x, y, 3.4, 0, Math.PI * 2);
     g.fill();

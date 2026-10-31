@@ -11,6 +11,15 @@
   var active = null;         // the running star animation, so we never start two at once
   var activeGallery = null;  // the running photo rotation, same idea
 
+  // The colours of the stars, as "red, green, blue", one set per theme:
+  // blue light on the dark theme, silver on the light (cream) one.
+  //   star   the dots          link   the lines between two dots
+  //   mouse  the lines from the dots to the mouse pointer
+  var STAR_COLORS = {
+    dark:  { star: "160, 190, 255", link: "90, 130, 240",  mouse: "120, 160, 255" },
+    light: { star: "128, 136, 150", link: "140, 147, 161", mouse: "118, 126, 140" }
+  };
+
   function startParticles(canvas) {
     var parent = canvas.parentElement;
     var ctx = canvas.getContext("2d");
@@ -51,6 +60,9 @@
     function draw() {
       ctx.clearRect(0, 0, width, height);
 
+      // Read every frame, so switching the theme recolours the stars at once.
+      var colors = STAR_COLORS[global.Theme.current] || STAR_COLORS.dark;
+
       for (var i = 0; i < particles.length; i++) {
         var p = particles[i];
         p.x += p.vx;
@@ -60,7 +72,7 @@
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(160,190,255,0.75)";
+        ctx.fillStyle = "rgba(" + colors.star + ", 0.75)";
         ctx.fill();
 
         for (var j = i + 1; j < particles.length; j++) {
@@ -71,7 +83,7 @@
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
-            ctx.strokeStyle = "rgba(90,130,240," + (1 - distance / 130) * 0.35 + ")";
+            ctx.strokeStyle = "rgba(" + colors.link + ", " + (1 - distance / 130) * 0.35 + ")";
             ctx.lineWidth = 1;
             ctx.stroke();
           }
@@ -84,7 +96,7 @@
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(mouse.x, mouse.y);
-            ctx.strokeStyle = "rgba(120,160,255," + (1 - toMouse / 170) * 0.5 + ")";
+            ctx.strokeStyle = "rgba(" + colors.mouse + ", " + (1 - toMouse / 170) * 0.5 + ")";
             ctx.lineWidth = 1;
             ctx.stroke();
           }
@@ -128,7 +140,14 @@
       mouse.y = null;
     }
 
+    // A running animation picks up the new colours by itself. A still one
+    // (for visitors who asked for less motion) is drawn once more.
+    function onThemeChanged() {
+      if (reduceMotion && width) draw();
+    }
+
     global.addEventListener("resize", onResize);
+    global.addEventListener("theme:changed", onThemeChanged);
     parent.addEventListener("mousemove", onMouseMove);
     parent.addEventListener("mouseleave", onMouseLeave);
 
@@ -152,6 +171,7 @@
       pause();
       if (watcher) watcher.disconnect();
       global.removeEventListener("resize", onResize);
+      global.removeEventListener("theme:changed", onThemeChanged);
       parent.removeEventListener("mousemove", onMouseMove);
       parent.removeEventListener("mouseleave", onMouseLeave);
     };
