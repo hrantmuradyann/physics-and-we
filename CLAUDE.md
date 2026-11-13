@@ -53,6 +53,8 @@ news.json                (root) news ITEMS — written only by admin panel, neve
 data/news.json           only the news PAGE heading text — hand-edit this one
 
 Instructions/            human docs (see "Pointers" below)
+docs/laser-physics.md    physics reference (Sivukhin, Optics §§119–126) for the laser simulator
+docs/laser-plan.md       laser simulator architecture + 14 build stages, with which are done
 sections/*.html          one layout fragment per page (no text, no <script> effect)
 data/*.json              one text file per page (bilingual, no markup); data/site.json = nav/footer/shared UI strings
 data/story.json          our story: the "years" list (text + one photo + photo-album link each)
@@ -78,6 +80,7 @@ js/news.js               news feed + single-post render (root news.json); always
 js/labs.js               shared lab runtime: canvas sizing/retina, Play/Reset, anim-loop lifecycle, stops loop off-screen
 js/labs/pendulum.js       one lab's physics/drawing, via Labs.register(name, {...})
 js/labs/refraction.js
+js/laser/engine/*.js     laser simulator PHYSICS: pure functions, SI units, no DOM; one global LaserEngine (see "Laser simulator" below)
 js/admin.js              admin panel CRUD logic, talks to /admin/api/*
 js/admin-login.js        admin login form handling
 
@@ -90,6 +93,8 @@ functions/admin/api/publish.js   reads/writes root news.json via GitHub Contents
 functions/admin/api/upload.js    one photo upload; magic-byte type sniffing; rejects SVG; random filename
 
 .dev.vars.example        template for local secrets → copy to .dev.vars (gitignored)
+
+tests/laser/*.test.js    laser-engine tests, Node built-in runner (`node --test`); helpers.js loads the engine into a vm sandbox
 ```
 
 ## Critical gotchas
@@ -113,6 +118,44 @@ functions/admin/api/upload.js    one photo upload; magic-byte type sniffing; rej
 - Public site only: `python3 -m http.server 8000` → `http://localhost:8000`. Fine for iterating on `sections/`, `data/`, `css/`, `js/` (non-admin).
 - Anything involving `/admin/`: must use `npx wrangler pages dev .` — a plain static server doesn't run `functions/`, so the middleware never executes and `/admin/` is broken/unprotected. Requires a local `.dev.vars` (copy from `.dev.vars.example`); default localhost-only login is `admin` / `password` unless overridden.
 - Opening `index.html` directly via `file://` (double-click) always shows a blank page — everything loads via `fetch()`, which browsers block on `file://`.
+- Laser-engine tests: `node --test` from the repo root (needs only Node; no `package.json`, no npm install). It finds every `tests/**/*.test.js`.
+
+## Laser simulator (`docs/laser-physics.md`, `js/laser/`)
+
+`docs/laser-physics.md` is the physics spec for the laser simulator; `docs/laser-plan.md` is the architecture and the 14 build stages (with which ones are done). The simulator is one big lab on **its own hidden route `?view=laser`** (like `post` / `lab`), with a parts bench to play with and a "learn" section. It does **not** use the `js/labs.js` shell, whose single canvas and slider column are too small for it.
+
+Code layout, as planned:
+- `js/laser/engine/`: physics only (built so far: `constants.js`, `spectrum.js` (thermal part of §1 only), `media.js`).
+- `js/laser/ui/`: drawing and controls (not built yet).
+- `js/laser/page.js`: connects the two (not built yet).
+
+The page itself (`sections/laser.html`, `data/laser.json`, `css/laser.css`, nav entry, `<script>` lines in `index.html`) comes in build stage 5. Until then the engine is only loaded by the tests.
+
+**Engine rules.** `tests/laser/engine-rules.test.js` enforces the first three:
+- Each file is a plain script, `(function (root) { var E = root.LaserEngine = root.LaserEngine || {}; … })(this);`. The same file runs in the browser and in Node's `vm`.
+- Only plain numbers and objects go in and out, in SI. The engine must not use the page, network, clock, timers or random numbers. The test bans those globals as whole words (`window`, `document`, `self`, `globalThis`, `fetch`, `Date`, `setTimeout`, `Math.random`, …), with comments ignored, so a name like `brewsterWindowLoss` is fine.
+- The only global it adds is `LaserEngine`.
+- Load order is listed once in `ENGINE_FILES` in `tests/laser/helpers.js`; a new engine file must be added there. `index.html` must load the engine in the same order. That test is skipped until `index.html` loads any engine file (build stage 5), then it runs automatically.
+- The engine's objects (`constants`, `units`, `spectrum`, `media`) are frozen with `Object.freeze`; `media.get()` returns a copy.
+- Physics numbers live in the engine, written as handbook value × unit (`2.5e-20 * cm2`, `230 * us`, `50 * MHz`; units are in `LaserEngine.constants`). Words (medium names etc.) go in `data/laser.json`, never in the engine.
+- `I_sat` is hν/(στ) for four-level media but hν/(2στ) for three-level ruby (doc §2.2); `media.js` picks it by `scheme`.
+- Test gotchas: arrays and objects from the sandbox fail `assert.deepEqual` against literals because they come from a different realm, so wrap them in `plain()` from `helpers.js` (it uses `structuredClone`, which keeps `NaN`). To compare against an expected `0`, give `assertClose` its 5th argument, an absolute tolerance.
+
+- **Source:** D. V. Sivukhin, *General Course of Physics*, Vol. IV *Optics*, §§119–126, plus standard laser-physics formulas (Svelto, Siegman, Koechner) where the book only describes things in words. Formulas copied from the book keep its equation numbers, e.g. (120.2).
+- **Units:** all SI, so formulas can go straight into code. Sivukhin uses Gaussian/CGS units; §13 has the conversion.
+- **Symbol table (§0):** every quantity has a fixed **code name** (`N1`, `N2`, `dN`, `sigma`, `tau`, `g0`, `gth`, `refl1`/`refl2` = mirror reflectivities, `Rc1`/`Rc2` = mirror radii, `tau_c`, `w0`, `zR`, `q`, …). Use these names in the lab's JS. Some letters mean different things in different sections (`g`, `R`), and the code names keep them apart. Photons have two names: `phi` (φ) is the **count** in the laser mode (§4, §11), and `S` is the **density** in m⁻³ (§2, §5.7, §9.4), with φ = S·V. Mixing them is off by the mode volume.
+- **Section map:**
+  - §0: model overview and the layer table (quantum → medium → resonator → pump → beam → polarization → nonlinear). Also a key point: a lens cannot turn lamp light into a laser beam.
+  - §1–4: emission and cross section, 3- and 4-level inversion, resonator threshold/modes/power, rate equations (spiking, Q-switching, mode locking).
+  - §5: gain media, with a parameter table in §5.1 (ruby, Nd, CaF₂:Dy, He-Ne, Ar⁺, CO₂, diode, dye, Ti:sapphire).
+  - §6: pumping. §7: mirror stability, Gaussian mode, ABCD matrices. §8: lenses and beam optics. §9: polarization and Q-switches. §10: nonlinear optics.
+  - **§11: from physics to simulation.** The design to agree on before writing code: simulation state, dimensionless equations, numerical scheme, ray tracing, colour from wavelength, on-screen indicators.
+  - **§12: test values.** Inputs with expected outputs; use these to check the simulator.
+  - §13: constants and CGS ↔ SI conversion.
+- **Numerical traps called out in §11.3:** the rate equations are stiff (τ_c/τ goes down to ~10⁻⁶), so a fixed-step RK will not work; use an adaptive or implicit integrator. Integrate `ln p` instead of `p` to avoid overflow. Show time with a slow-motion factor and log axes.
+- **Colours:** §11.5 turns wavelength into RGB. Beam colours computed this way are physics, not theme colours, so they are allowed. Everything else on the canvas (background, axes, labels, mirrors) must still use the theme colours, read from the CSS variables as `palette()` in `js/labs.js` does (see "Never hard-code a colour"). Check that the beams can be seen in both themes; a yellow or green beam can disappear on the cream background.
+- The file is plain Markdown for developers. The site does not link to it, but it is deployed with everything else, so it is reachable at `/docs/laser-physics.md` (same as `Instructions/`).
+- Most medium numbers in §5.1 are textbook values not yet checked against printed sources (see the doc's "Sources"). Check them before the site goes public.
 
 ## Pointers (don't duplicate these — read them)
 
@@ -120,6 +163,7 @@ functions/admin/api/upload.js    one photo upload; magic-byte type sniffing; rej
 |---|---|
 | Write/translate content, no code | `Instructions/EDITING-GUIDE.md` |
 | Build an interactive lab | `Instructions/LABS-GUIDE.md` |
+| Physics and build plan for the laser lab | `docs/laser-physics.md`, `docs/laser-plan.md` (see section above) |
 | Touch HTML/CSS classes | `Instructions/HTML-CLASSES.md` |
 | Run/deploy the admin panel | `Instructions/ADMIN-SETUP.md` |
 | Deploy to production | `Instructions/SECURITY.md` — read before deploying |
