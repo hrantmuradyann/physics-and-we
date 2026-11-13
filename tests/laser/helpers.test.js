@@ -6,7 +6,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { assertClose, plain } = require("./helpers.js");
+const { assertClose, plain, deepFreeze } = require("./helpers.js");
 
 test("assertClose: within and outside the relative tolerance", () => {
   assertClose(101, 100, 0.01);
@@ -29,4 +29,51 @@ test("plain: keeps NaN apart from null", () => {
   assert.ok(Number.isNaN(copy.a));
   assert.equal(copy.b, null);
   assert.deepEqual(copy.c, [1, Infinity]);
+});
+
+test("deepFreeze: freezes nested objects and arrays, and returns the value", () => {
+  const value = { a: { b: [1, { c: 2 }] } };
+  assert.equal(deepFreeze(value), value);
+  assert.ok(Object.isFrozen(value.a));
+  assert.ok(Object.isFrozen(value.a.b));
+  assert.ok(Object.isFrozen(value.a.b[1]));
+  // This file is strict mode, like the engine: writing to a frozen object throws.
+  assert.throws(() => { value.a.b[1].c = 3; }, TypeError);
+  assert.throws(() => { value.a.b.push(4); }, TypeError);
+});
+
+test("deepFreeze: leaves plain numbers and null alone", () => {
+  assert.equal(deepFreeze(5), 5);
+  assert.equal(deepFreeze(null), null);
+});
+
+test("deepFreeze: goes inside objects that are already frozen at the top level", () => {
+  const inner = Object.freeze({ list: [1, 2] });   // Object.freeze is shallow
+  deepFreeze({ config: inner });
+  assert.ok(Object.isFrozen(inner.list));
+  assert.throws(() => { inner.list.push(3); }, TypeError);
+});
+
+test("deepFreeze: refuses typed arrays with a clear message", () => {
+  assert.throws(() => deepFreeze({ y: new Float64Array(3) }), /Float64Array.*plain arrays/);
+});
+
+test("deepFreeze: an object that refers back to itself does not loop forever", () => {
+  const value = { name: "loop" };
+  value.self = value;
+  deepFreeze(value);
+  assert.ok(Object.isFrozen(value));
+});
+
+test("LASER_TEST_ROOT without the mutation checker's marker stops the tests", () => {
+  // A child Node process loads helpers.js with only LASER_TEST_ROOT set, as
+  // if it had been left over in a terminal.
+  const { spawnSync } = require("node:child_process");
+  const env = Object.assign({}, process.env, { LASER_TEST_ROOT: "/some/old/copy" });
+  delete env.LASER_MUTATION_CHECK;
+  delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ["-e", "require(" + JSON.stringify(require.resolve("./helpers.js")) + ")"],
+    { env: env, encoding: "utf8" });
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /LASER_TEST_ROOT is set.*only for tests\/laser\/mutation-check\.js/);
 });

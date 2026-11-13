@@ -15,7 +15,25 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const ROOT = path.join(__dirname, "..", "..");
+const REAL_ROOT = path.join(__dirname, "..", "..");
+
+// Normally the tests read the real project. tests/laser/mutation-check.js
+// points them at a copy with one deliberate mistake in it, to prove the tests
+// notice that mistake: it sets LASER_TEST_ROOT to the copy and
+// LASER_MUTATION_CHECK=1. LASER_TEST_ROOT on its own — for example left over
+// in a terminal — would quietly test an old copy instead of the real files,
+// so it stops the tests with an error instead.
+function chooseRoot() {
+  const override = process.env.LASER_TEST_ROOT;
+  if (!override) return REAL_ROOT;
+  if (process.env.LASER_MUTATION_CHECK !== "1") {
+    throw new Error("LASER_TEST_ROOT is set to " + override + ". It is only for " +
+      "tests/laser/mutation-check.js; unset it (unset LASER_TEST_ROOT) to test the real files.");
+  }
+  return override;
+}
+
+const ROOT = chooseRoot();
 const ENGINE_DIR = path.join(ROOT, "js", "laser", "engine");
 
 // The order the files must load in. A file that uses another one comes after
@@ -54,6 +72,27 @@ function plain(value) {
   return structuredClone(value);
 }
 
+// Freezes an object and everything inside it, and returns it. Engine
+// functions must never change their inputs; a test that passes them a
+// deep-frozen input makes any such change throw an error (engine files run
+// in strict mode). It goes inside objects that are already frozen at the top,
+// because Object.freeze alone only freezes the top level.
+// Typed arrays (Float64Array, ...) cannot be frozen at all, so they are
+// refused: engine inputs and outputs must be plain arrays.
+function deepFreeze(value, seen) {
+  if (value === null || typeof value !== "object") return value;
+  if (ArrayBuffer.isView(value)) {
+    throw new TypeError("deepFreeze: a typed array (" + value.constructor.name + ") cannot be " +
+      "frozen. Engine inputs and outputs must be plain arrays (CLAUDE.md, engine rules).");
+  }
+  const visited = seen || new Set();
+  if (visited.has(value)) return value;     // already done (or a loop back to it)
+  visited.add(value);
+  Object.freeze(value);
+  for (const key of Object.keys(value)) deepFreeze(value[key], visited);
+  return value;
+}
+
 // Passes when actual is close to expected:
 //   |actual − expected| ≤ relTol·|expected|   (relTol 0.01 = 1 %)
 //   or ≤ absTol, if given — needed when expected is exactly 0, because no
@@ -73,11 +112,13 @@ function assertClose(actual, expected, relTol, message, absTol) {
 }
 
 module.exports = {
+  REAL_ROOT,
   ROOT,
   ENGINE_DIR,
   ENGINE_FILES,
   loadEngine,
   loadEngineWithSandbox,
   plain,
+  deepFreeze,
   assertClose
 };

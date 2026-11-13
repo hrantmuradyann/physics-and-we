@@ -52,12 +52,27 @@ test("long wavelengths: the ratio stays accurate when hν ≪ kT", () => {
 });
 
 test("a temperature or wavelength of zero or less is refused", () => {
-  assert.throws(() => S.stimulatedToSpontaneous(500 * C.nm, -300), /T must be a positive number/);
-  assert.throws(() => S.stimulatedToSpontaneous(500 * C.nm, 0), /T must be a positive number/);
-  assert.throws(() => S.stimulatedToSpontaneous(0, 300), /lam must be a positive number/);
-  assert.throws(() => S.crossoverLam(0), /T must be a positive number/);
-  assert.throws(() => S.crossoverT(-1), /lam must be a positive number/);
-  assert.throws(() => S.boltzmannRatio(694 * C.nm, NaN), /T must be a positive number/);
+  assert.throws(() => S.stimulatedToSpontaneous(500 * C.nm, -300), /T must be a positive finite number/);
+  assert.throws(() => S.stimulatedToSpontaneous(500 * C.nm, 0), /T must be a positive finite number/);
+  assert.throws(() => S.stimulatedToSpontaneous(0, 300), /lam must be a positive finite number/);
+  assert.throws(() => S.crossoverLam(0), /T must be a positive finite number/);
+  assert.throws(() => S.crossoverT(-1), /lam must be a positive finite number/);
+  assert.throws(() => S.boltzmannRatio(694 * C.nm, NaN), /T must be a positive finite number/);
+});
+
+test("infinite or non-number inputs are refused, not turned into 0 or Infinity", () => {
+  assert.throws(() => S.crossoverLam(Infinity), /T must be a positive finite number/);
+  assert.throws(() => S.stimulatedToSpontaneous(Infinity, 300), /lam must be a positive finite number/);
+  assert.throws(() => S.crossoverT("550e-9"), /lam must be a positive finite number/);
+  assert.throws(() => S.crossoverLam(true), /T must be a positive finite number/);
+  assert.throws(() => S.crossoverLam([300]), /T must be a positive finite number/);
+});
+
+test("Boltzmann ratio refuses degeneracies that are not positive numbers", () => {
+  const lam = 694 * C.nm;
+  assert.throws(() => S.boltzmannRatio(lam, 300, 0), /deg1 must be a positive finite number/);
+  assert.throws(() => S.boltzmannRatio(lam, 300, null), /deg1 must be a positive finite number/);
+  assert.throws(() => S.boltzmannRatio(lam, 300, 1, -2), /deg2 must be a positive finite number/);
 });
 
 test("the spectrum object cannot be changed by accident", () => {

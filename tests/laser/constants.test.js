@@ -74,13 +74,19 @@ test("nonlinear index n₂: esu -> m²/W", () => {
   assertClose(U.n2FromEsu(2e-11, 1.62), 1.035e-17, 0.001, "CS₂, rounded");
 });
 
-test("time and frequency units", () => {
+test("every unit factor equals its definition", () => {
+  // Typed here as plain powers of ten, independently of constants.js.
   // Compared with a tolerance: 230 * 1e-6 is 0.00022999999999999998 in
   // floating point, not exactly 230e-6.
-  assertClose(230 * C.us, 230e-6, 1e-12, "µs");
-  assertClose(3 * C.ms, 3e-3, 1e-12, "ms");
-  assertClose(10 * C.ns, 10e-9, 1e-12, "ns");
-  assertClose(50 * C.MHz, 50e6, 1e-12, "MHz");
-  assertClose(120 * C.GHz, 120e9, 1e-12, "GHz");
-  assertClose(10 * C.THz, 10e12, 1e-12, "THz");
+  const expected = {
+    ms: 1e-3, us: 1e-6, ns: 1e-9,
+    MHz: 1e6, GHz: 1e9, THz: 1e12,
+    nm: 1e-9, um: 1e-6, cm: 1e-2, cm2: 1e-4, cm3: 1e-6,
+    erg: 1e-7, dynPerCm2: 0.1, eV: 1.602176634e-19,
+    mmHg: 133.322387415, atm: 101325
+  };
+  for (const [name, value] of Object.entries(expected)) {
+    assertClose(C[name], value, 1e-12, name);
+  }
+  assertClose(230 * C.us, 230e-6, 1e-12, "230 µs");
 });

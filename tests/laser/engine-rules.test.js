@@ -14,13 +14,15 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { ROOT, ENGINE_DIR, ENGINE_FILES, loadEngineWithSandbox } = require("./helpers.js");
 
-// Removes /* ... */ and // ... comments, so a comment that mentions one of the
-// forbidden words is not mistaken for code that uses it. It walks the code one
-// character at a time so that a "//" inside a string ("http://...") is not
-// taken for a comment. Limitation: it does not understand regular-expression
-// literals — the engine has none; if one is ever added and contains a quote
-// or "//", check this function still reads the file correctly.
-function withoutComments(code) {
+// Removes /* ... */ and // ... comments AND the text inside strings, so a
+// comment or an error message that mentions one of the forbidden words
+// ("Brewster window", "waist location") is not mistaken for code that uses
+// it. The quote marks stay, so the code around them is unchanged. It walks
+// the code one character at a time, so a "//" inside a string ("http://...")
+// is not taken for a comment. Limitation: it does not understand
+// regular-expression literals — the engine has none; if one is ever added
+// and contains a quote or "//", check this function still reads it right.
+function withoutCommentsOrStrings(code) {
   let out = "";
   let quote = null;        // the quote character while inside a string
   let i = 0;
@@ -28,13 +30,14 @@ function withoutComments(code) {
     const ch = code[i];
     const next = code[i + 1];
     if (quote) {
-      out += ch;
-      if (ch === "\\") {               // an escaped character: keep both, skip on
-        out += next || "";
+      if (ch === "\\") {               // an escaped character: skip both
         i += 2;
         continue;
       }
-      if (ch === quote) quote = null;
+      if (ch === quote) {               // the closing quote stays
+        out += ch;
+        quote = null;
+      }
       i += 1;
     } else if (ch === "/" && next === "*") {
       const end = code.indexOf("*/", i + 2);
@@ -75,7 +78,7 @@ const FORBIDDEN = [
 
 // The forbidden words found in one piece of code, comments ignored.
 function forbiddenWordsIn(code) {
-  const bare = withoutComments(code);
+  const bare = withoutCommentsOrStrings(code);
   return FORBIDDEN.filter((pattern) => pattern.test(bare)).map((pattern) => pattern.source);
 }
 
@@ -87,6 +90,11 @@ test("the rules check itself: catches what it should, allows what it should", ()
   assert.equal(forbiddenWordsIn("globalThis.document.title = 1;").length, 2);
   assert.equal(forbiddenWordsIn('var u = "http://x"; window.y = 1;').length, 1);
   assert.equal(forbiddenWordsIn("fetch ('data.json');").length, 1);
+  // Words inside strings are text, not code.
+  assert.deepEqual(forbiddenWordsIn('throw new Error("loss at the Brewster window");'), []);
+  assert.deepEqual(forbiddenWordsIn("var label = 'waist location';"), []);
+  assert.deepEqual(forbiddenWordsIn('var s = "say \\"window\\" twice"; var t = 1;'), []);
+  assert.equal(forbiddenWordsIn('var s = "a"; self.x = 1;').length, 1);
 });
 
 test("every engine file is in the load list in tests/laser/helpers.js", () => {

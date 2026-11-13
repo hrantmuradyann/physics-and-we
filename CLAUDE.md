@@ -54,7 +54,7 @@ data/news.json           only the news PAGE heading text — hand-edit this one
 
 Instructions/            human docs (see "Pointers" below)
 docs/laser-physics.md    physics reference (Sivukhin, Optics §§119–126) for the laser simulator
-docs/laser-plan.md       laser simulator architecture + 14 build stages, with which are done
+docs/laser-plan.md       laser simulator architecture, the per-stage recipe, known doc problems, all build stages and which are done
 sections/*.html          one layout fragment per page (no text, no <script> effect)
 data/*.json              one text file per page (bilingual, no markup); data/site.json = nav/footer/shared UI strings
 data/story.json          our story: the "years" list (text + one photo + photo-album link each)
@@ -95,6 +95,7 @@ functions/admin/api/upload.js    one photo upload; magic-byte type sniffing; rej
 .dev.vars.example        template for local secrets → copy to .dev.vars (gitignored)
 
 tests/laser/*.test.js    laser-engine tests, Node built-in runner (`node --test`); helpers.js loads the engine into a vm sandbox
+tests/laser/mutations.js       deliberate mistakes the tests must catch; run by tests/laser/mutation-check.js
 ```
 
 ## Critical gotchas
@@ -119,10 +120,11 @@ tests/laser/*.test.js    laser-engine tests, Node built-in runner (`node --test`
 - Anything involving `/admin/`: must use `npx wrangler pages dev .` — a plain static server doesn't run `functions/`, so the middleware never executes and `/admin/` is broken/unprotected. Requires a local `.dev.vars` (copy from `.dev.vars.example`); default localhost-only login is `admin` / `password` unless overridden.
 - Opening `index.html` directly via `file://` (double-click) always shows a blank page — everything loads via `fetch()`, which browsers block on `file://`.
 - Laser-engine tests: `node --test` from the repo root (needs only Node; no `package.json`, no npm install). It finds every `tests/**/*.test.js`.
+- Laser mutation check: `node tests/laser/mutation-check.js`. It copies what the tests read (`index.html`, `js/`, `css/`, `data/`, `sections/`; never `.git`, `images/` or secrets) to a temp folder, checks that the tests pass on the unchanged copy, then applies each deliberate mistake from `tests/laser/mutations.js` (paths relative to the repo root) to a fresh copy and expects a test to fail. Outcomes: caught / MISSED / TIMED OUT / ERROR (bad entry, or a change that is not valid JS/JSON). The tests read the copy through `LASER_TEST_ROOT` plus `LASER_MUTATION_CHECK=1`; `LASER_TEST_ROOT` on its own makes every test stop with an error, so a leftover variable cannot silently test an old copy. The real files are never modified. Its own test is `tests/laser/mutation-check.test.js`.
 
 ## Laser simulator (`docs/laser-physics.md`, `js/laser/`)
 
-`docs/laser-physics.md` is the physics spec for the laser simulator; `docs/laser-plan.md` is the architecture and the 14 build stages (with which ones are done). The simulator is one big lab on **its own hidden route `?view=laser`** (like `post` / `lab`), with a parts bench to play with and a "learn" section. It does **not** use the `js/labs.js` shell, whose single canvas and slider column are too small for it.
+`docs/laser-physics.md` is the physics spec for the laser simulator; `docs/laser-plan.md` is the architecture and the build stages (with which ones are done). **Every stage follows the recipe in `docs/laser-plan.md` §3** (doc audit, tests first, mutation check, `/code-review`, docs, one commit), and that file's "Doc problems found in the pre-audit" table (D1–D10) lists known traps for later stages. The simulator is one big lab on **its own hidden route `?view=laser`** (like `post` / `lab`), with a parts bench to play with and a "learn" section. It does **not** use the `js/labs.js` shell, whose single canvas and slider column are too small for it.
 
 Code layout, as planned:
 - `js/laser/engine/`: physics only (built so far: `constants.js`, `spectrum.js` (thermal part of §1 only), `media.js`).
@@ -137,9 +139,10 @@ The page itself (`sections/laser.html`, `data/laser.json`, `css/laser.css`, nav 
 - The only global it adds is `LaserEngine`.
 - Load order is listed once in `ENGINE_FILES` in `tests/laser/helpers.js`; a new engine file must be added there. `index.html` must load the engine in the same order. That test is skipped until `index.html` loads any engine file (build stage 5), then it runs automatically.
 - The engine's objects (`constants`, `units`, `spectrum`, `media`) are frozen with `Object.freeze`; `media.get()` returns a copy.
+- Engine inputs and outputs use plain arrays, never typed arrays (`Float64Array`, …): typed arrays cannot be frozen, so tests could not prove the engine leaves them unchanged.
 - Physics numbers live in the engine, written as handbook value × unit (`2.5e-20 * cm2`, `230 * us`, `50 * MHz`; units are in `LaserEngine.constants`). Words (medium names etc.) go in `data/laser.json`, never in the engine.
 - `I_sat` is hν/(στ) for four-level media but hν/(2στ) for three-level ruby (doc §2.2); `media.js` picks it by `scheme`.
-- Test gotchas: arrays and objects from the sandbox fail `assert.deepEqual` against literals because they come from a different realm, so wrap them in `plain()` from `helpers.js` (it uses `structuredClone`, which keeps `NaN`). To compare against an expected `0`, give `assertClose` its 5th argument, an absolute tolerance.
+- Test gotchas: arrays and objects from the sandbox fail `assert.deepEqual` against literals because they come from a different realm, so wrap them in `plain()` from `helpers.js` (it uses `structuredClone`, which keeps `NaN`). To compare against an expected `0`, give `assertClose` its 5th argument, an absolute tolerance. Pass inputs through `deepFreeze()` from `helpers.js` so any engine function that changes its input throws (it also freezes inside already-frozen objects, and refuses typed arrays). A test file that spawns `node --test` must delete `NODE_TEST_CONTEXT` from the child's environment (see `mutation-check.js`).
 
 - **Source:** D. V. Sivukhin, *General Course of Physics*, Vol. IV *Optics*, §§119–126, plus standard laser-physics formulas (Svelto, Siegman, Koechner) where the book only describes things in words. Formulas copied from the book keep its equation numbers, e.g. (120.2).
 - **Units:** all SI, so formulas can go straight into code. Sivukhin uses Gaussian/CGS units; §13 has the conversion.

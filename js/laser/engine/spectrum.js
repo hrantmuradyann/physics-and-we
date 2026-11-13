@@ -23,13 +23,14 @@
   var c = E.constants.c;
   var k = E.constants.k;
 
-  // A temperature or wavelength of zero or less is a mistake in the caller
-  // (e.g. a slider that goes too far), not physics. Say so loudly instead of
-  // returning a number that looks real.
+  // A temperature, wavelength or degeneracy that is zero, negative, infinite
+  // or not a number at all is a mistake in the caller (e.g. a slider that
+  // goes too far), not physics. Say so loudly instead of returning a number
+  // that looks real.
   function checkPositive(name, value, functionName) {
-    if (!(value > 0)) {
+    if (typeof value !== "number" || !isFinite(value) || value <= 0) {
       throw new Error("LaserEngine.spectrum." + functionName + ": " + name +
-        " must be a positive number, got " + value + ".");
+        " must be a positive finite number, got " + value + ".");
     }
   }
 
@@ -73,6 +74,8 @@
       checkPositive("T", T, "boltzmannRatio");
       if (deg1 === undefined) deg1 = 1;
       if (deg2 === undefined) deg2 = 1;
+      checkPositive("deg1", deg1, "boltzmannRatio");
+      checkPositive("deg2", deg2, "boltzmannRatio");
       return (deg2 / deg1) * Math.exp(-energyOverKT(lam, T));
     }
   });
