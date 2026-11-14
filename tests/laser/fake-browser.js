@@ -15,6 +15,8 @@
                        resizeBox(box, 600) also tells the ResizeObservers
      window events     addEventListener is counted, so a test can check that
                        a teardown removed everything it added
+     elements          attributes, textContent, value, hidden, and their own
+                       listeners: fire("click") runs them, listenerCount counts
      colours           getComputedStyle reads the CSS variables of
                        css/style.css (dark theme unless the test sets others)
      2D context        records every method call and every property set
@@ -63,16 +65,40 @@ function themeVariables() {
 
 /* ---------- elements ---------- */
 
+// An element: attributes, text, a value (for sliders), `hidden`, and its
+// own event listeners. fire("input") or fire("click") calls them as the
+// browser would; listenerCount(type) lets a test check a teardown.
 function fakeElement(tag) {
   const attributes = new Map();
-  return {
+  const listeners = new Map();          // event type -> [listener]
+  const element = {
     tagName: String(tag).toUpperCase(),
     style: {},
+    textContent: "",
+    value: "",
+    hidden: false,
     setAttribute(name, value) { attributes.set(name, String(value)); },
     getAttribute(name) { return attributes.has(name) ? attributes.get(name) : null; },
     hasAttribute(name) { return attributes.has(name); },
-    removeAttribute(name) { attributes.delete(name); }
+    removeAttribute(name) { attributes.delete(name); },
+    // A listener added twice is kept once, as in a real browser.
+    addEventListener(type, listener) {
+      if (!listeners.has(type)) listeners.set(type, []);
+      const list = listeners.get(type);
+      if (!list.includes(listener)) list.push(listener);
+    },
+    removeEventListener(type, listener) {
+      const list = listeners.get(type) || [];
+      const index = list.indexOf(listener);
+      if (index !== -1) list.splice(index, 1);
+    },
+    fire(type) {
+      const event = { type: type, target: element, preventDefault() {} };
+      for (const listener of (listeners.get(type) || []).slice()) listener.call(element, event);
+    },
+    listenerCount(type) { return (listeners.get(type) || []).length; }
   };
+  return element;
 }
 
 // A 2D context that records what is done to it.

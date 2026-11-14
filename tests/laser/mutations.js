@@ -1144,8 +1144,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "var name = word(data, \"bench.alt\") || word(data, \"page.title\");",
-    replace: "var name = word(data, \"page.title\");",
+    find: "var label = word(data, name + \".alt\") || word(data, \"page.title\");",
+    replace: "var label = word(data, \"page.title\");",
     why: "the picture's description not used for screen readers"
   },
   {
@@ -1156,14 +1156,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      running: false,             // nothing moves yet (stage 6: Play)\n",
-    replace: "",
-    why: "a still picture redrawn 60 times a second"
+    find: "update: pauseOnError(update), running: state.playing });",
+    replace: "update: pauseOnError(update), running: true });",
+    why: "the loop started running whatever Play/Pause and the visitor's motion setting say"
   },
   {
     file: "js/laser/page.js",
-    find: "var canvas = container.querySelector('[data-laser-canvas=\"bench\"]');",
-    replace: "var canvas = container.querySelector('[data-laser-canvas=\"plot\"]');",
+    find: "found[name] = container.querySelector('[data-laser-canvas=\"' + name + '\"]');",
+    replace: "found[name] = container.querySelector('[data-laser-canvas=\"' + name + 's\"]');",
     why: "the wrong canvas name: the page builds nothing"
   },
   {
@@ -1200,8 +1200,8 @@ const MUTATIONS = [
   },
   {
     file: "sections/laser.html",
-    find: "<div class=\"laser-bench reveal\">",
-    replace: "<div class=\"laser-bench reveal\" style=\"margin: 0\">",
+    find: "<div class=\"lab__panel laser-dock reveal\">",
+    replace: "<div class=\"lab__panel laser-dock reveal\" style=\"margin: 0\">",
     why: "a style written in the layout"
   },
   {
@@ -1236,8 +1236,8 @@ const MUTATIONS = [
   },
   {
     file: "index.html",
-    find: "<script src=\"js/laser/ui/draw-bench.js\"></script>\n  <script src=\"js/laser/page.js\"></script>",
-    replace: "<script src=\"js/laser/page.js\"></script>\n  <script src=\"js/laser/ui/draw-bench.js\"></script>",
+    find: "<script src=\"js/laser/ui/draw-plots.js\"></script>\n  <script src=\"js/laser/page.js\"></script>",
+    replace: "<script src=\"js/laser/page.js\"></script>\n  <script src=\"js/laser/ui/draw-plots.js\"></script>",
     why: "page.js loaded before a drawing file"
   },
   {
@@ -1341,6 +1341,530 @@ const MUTATIONS = [
     find: "    } else {\n      resolve();\n    }\n  });",
     replace: "    }\n  });",
     why: "a router loaded after the page was read never starts"
+  },
+  /* ---------- stage 6: bench.js ---------- */
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var R_p = config.eta * config.pumpPower / (pumpPhoton * V_a);",
+    replace: "var R_p = config.pumpPower / (pumpPhoton * V_a);",
+    why: "the pump rate without η: every absorbed photon counted as reaching the upper level"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var pumpPhoton = U.photonEnergy(config.pumpLam);",
+    replace: "var pumpPhoton = U.photonEnergy(medium.lam);",
+    why: "the pump photon's energy taken at the laser wavelength"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var V_a = config.area * config.l_g;",
+    replace: "var V_a = config.area * L_e;",
+    why: "the pumped volume taken over the whole cavity instead of the rod"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var pumpThreshold = scales.R_c * pumpPhoton * V_a / config.eta;",
+    replace: "var pumpThreshold = scales.R_c * pumpPhoton * V_a;",
+    why: "the threshold pump power without /η"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var P_out = x > 1 ? scales.powerPerP * (x - 1) : 0;",
+    replace: "var P_out = x > 1 ? scales.powerPerP * x : 0;",
+    why: "the output as x instead of x − 1"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var P_out = x > 1 ? scales.powerPerP * (x - 1) : 0;",
+    replace: "var P_out = scales.powerPerP * (x - 1);",
+    why: "a negative output below threshold"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var L_i = 2 * config.alpha_i * config.l_g;",
+    replace: "var L_i = config.alpha_i * config.l_g;",
+    why: "the internal loss as one pass instead of a round trip"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (L_i > 0 && L_i < 1) {",
+    replace: "if (L_i < 1) {",
+    why: "a best coupler asked for with no internal loss"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var T_best = T_opt === null ? null : 1 - Math.exp(-T_opt);",
+    replace: "var T_best = T_opt;",
+    why: "the best coupler shown as §3.6's T_opt, which is not where this model's output peaks"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "period = 2 * Math.PI / relaxation.omegaDamped;",
+    replace: "period = 1 / relaxation.omegaDamped;",
+    why: "the period without 2π"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var g0 = medium.sigma * R_p * medium.tau;",
+    replace: "var g0 = medium.sigma * R_p;",
+    why: "the small-signal gain without τ"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "slope: scales.powerPerP / pumpThreshold,",
+    replace: "slope: pumpThreshold / scales.powerPerP,",
+    why: "the slope efficiency upside down"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "powerPerPhoton: scales.powerPerP * scales.pOnePhoton,",
+    replace: "powerPerPhoton: scales.powerPerP / scales.pOnePhoton,",
+    why: "the power of one photon divided instead of multiplied"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "state: [sim.N / d.N_c, sim.lnPhi + d.sOnePhoton],",
+    replace: "state: [sim.N / d.N_c, sim.lnPhi],",
+    why: "ln φ handed to the solver as s = ln p"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "lnPhi: run.state[1] - d.sOnePhoton",
+    replace: "lnPhi: run.state[1]",
+    why: "s = ln p kept as ln φ"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "t1: seconds / d.tau,",
+    replace: "t1: seconds,",
+    why: "simulated seconds passed to the solver as t′"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "N: Math.max(0, run.state[0]) * d.N_c,",
+    replace: "N: run.state[0] * d.N_c,",
+    why: "a step's tiny negative inversion passed on, so the next call refuses it"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (seconds === 0) {",
+    replace: "    if (false) {",
+    why: "a frame of no time handed to the solver, which refuses an empty interval"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (pumpLam >= medium.lam) {",
+    replace: "if (false) {",
+    why: "a pump photon weaker than the laser photon accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (eta === 0) check.fail(",
+    replace: "if (false) check.fail(",
+    why: "η = 0 accepted: the threshold divides by it"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (!(loss >= MIN_LOSS)) {",
+    replace: "if (false) {",
+    why: "a cavity with almost no loss accepted, so rates.js refuses it with its own name"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (l_g > L) {",
+    replace: "if (false) {",
+    why: "a rod longer than the cavity accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (medium.scheme !== \"four-level\" || medium.sigma === null) {",
+    replace: "if (medium.sigma === null) {",
+    why: "a three-level medium run with the four-level equations"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "T_oc: Object.freeze({ min: 0.005, max: 0.3, log: true })",
+    replace: "T_oc: Object.freeze({ min: 0.005, max: 0.3, log: false })",
+    why: "the coupler slider made linear: the small couplers crowd into its first few pixels"
+  },
+
+  /* ---------- stage 6: format.js ---------- */
+  {
+    file: "js/laser/ui/format.js",
+    find: "if (rounded >= Math.pow(10, PREFIXES[i].power)) chosen = PREFIXES[i];",
+    replace: "if (size >= Math.pow(10, PREFIXES[i].power)) chosen = PREFIXES[i];",
+    why: "the prefix chosen before rounding: 999.96 W written as 1000 W"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "var MINUS = \"−\";",
+    replace: "var MINUS = \"-\";",
+    why: "a hyphen for the minus sign"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "var NO_BREAK = \" \";",
+    replace: "var NO_BREAK = \" \";",
+    why: "a plain space between number and unit: the unit can wrap to the next line"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "if (range.log) return range.min * Math.pow(range.max / range.min, f);",
+    replace: "if (false) return range.min * Math.pow(range.max / range.min, f);",
+    why: "a log slider read as linear"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "if (Math.floor(Math.log10(rounded)) > size) size += 1;",
+    replace: "if (false) size += 1;",
+    why: "rounding that carries into the next power of ten not counted (9.9996 -> 10.00)"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "if (decimals <= 0) return String(Math.round(value));",
+    replace: "if (decimals <= 0) return String(rounded);",
+    why: "a whole number cut to 3 digits (1234.5 -> 1230)"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "if (f === 1) return range.max;",
+    replace: "if (false) return range.max;",
+    why: "the top of a slider computed, not exact"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "var v = clamp(value, range.min, range.max);",
+    replace: "var v = value;",
+    why: "a value outside the range put the slider outside 0..1"
+  },
+
+  /* ---------- stage 6: history.js ---------- */
+  {
+    file: "js/laser/ui/history.js",
+    find: "return (next - count + i + capacity) % capacity;",
+    replace: "return (i + capacity) % capacity;",
+    why: "the ring buffer read from slot 0 after it wrapped"
+  },
+  {
+    file: "js/laser/ui/history.js",
+    find: "if (count < capacity) count += 1;",
+    replace: "count += 1;",
+    why: "the count growing past the capacity"
+  },
+  {
+    file: "js/laser/ui/history.js",
+    find: "while (first > 0 && times[indexOf(first - 1)] >= fromTime) first -= 1;",
+    replace: "while (first > 0 && times[indexOf(first - 1)] > fromTime) first -= 1;",
+    why: "the point exactly at the window's edge left out"
+  },
+  {
+    file: "js/laser/ui/history.js",
+    find: "        next = 0;\n        count = 0;",
+    replace: "        next = 0;",
+    why: "clear() forgets nothing"
+  },
+
+  /* ---------- stage 6: draw-levels.js ---------- */
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "return Math.max(picture.x, picture.y, 1) * HEADROOM;",
+    replace: "return Math.max(picture.x, picture.y) * HEADROOM;",
+    why: "the scale forgets the loss: below threshold the loss line is off the gauge"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "return Math.max(picture.x, picture.y, 1) * HEADROOM;",
+    replace: "return Math.max(picture.x, 1) * HEADROOM;",
+    why: "the scale forgets the inversion: a spike runs off the bar"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "g.fillRect(G.gainX, G.bottom - gainHeight, G.gainW, gainHeight);",
+    replace: "g.fillRect(G.gainX, G.top, G.gainW, gainHeight);",
+    why: "the gain bar hanging from the top"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "var lossY = G.bottom - span / top;",
+    replace: "var lossY = G.bottom - span * picture.x / top;",
+    why: "the loss line drawn at the small-signal gain"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "var smallY = G.bottom - span * picture.x / top;",
+    replace: "var smallY = G.bottom - span * picture.y / top;",
+    why: "the small-signal gain drawn at the gain"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "var filled = picture.y / top * slot;",
+    replace: "var filled = picture.x / top * slot;",
+    why: "the upper-level bar showing the pump, not the inversion"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "var laserShare = clamp(picture.stim / ARROW_FULL, 0, 1);",
+    replace: "var laserShare = clamp(picture.x / ARROW_FULL, 0, 1);",
+    why: "the laser arrow drawn from the pump, so it shows before the laser starts"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "      g.strokeStyle = c.glow;",
+    replace: "      g.strokeStyle = c.glo;",
+    why: "a palette name misspelt: the colour is undefined"
+  },
+
+  /* ---------- stage 6: draw-plots.js ---------- */
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "var x = box.right - (tNow - shown[i].t) / shownTime * width;",
+    replace: "var x = box.left + (tNow - shown[i].t) / shownTime * width;",
+    why: "time running the wrong way: now on the left"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "    var top = Pfloor;",
+    replace: "    var top = 0;",
+    why: "the floor ignored: spontaneous emission blown up to fill the plot"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "if (point.t >= tNow - shownTime && point.t <= tNow) shown.push(point);",
+    replace: "if (point.t <= tNow) shown.push(point);",
+    why: "points older than the window drawn off the left edge"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "var thresholdY = level(g, L.inversion, 1, ytop);",
+    replace: "var thresholdY = level(g, L.inversion, picture.x, ytop);",
+    why: "the threshold line drawn at the pump level"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "    var top = Math.max(1, x);",
+    replace: "    var top = x;",
+    why: "the inversion axis forgets the threshold: below threshold its line is off the plot"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "text(g, F.si(Ptop, \"W\", 2),",
+    replace: "text(g, F.si(picture.Pfloor, \"W\", 2),",
+    why: "the power axis labelled with the floor, not its real top"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "var timeLabel = F.si(shownTime, \"s\", 2);",
+    replace: "var timeLabel = F.si(tNow, \"s\", 2);",
+    why: "the time label showing the time now, not the window's length"
+  },
+
+  /* ---------- stage 6: draw-bench.js ---------- */
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.globalAlpha = Math.min(1, Math.sqrt(beam));",
+    replace: "g.globalAlpha = Math.min(1, beam);",
+    why: "the beam's alpha linear in the power: a weak laser looks dark"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (beam > 0) {",
+    replace: "    if (beam >= 0) {",
+    why: "an invisible beam drawn with no light"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.fillRect(outLeft, L.axis.y - 0.35 * inside, view.w - outLeft, 0.7 * inside);",
+    replace: "g.fillRect(outLeft, L.axis.y - 0.35 * inside, view.w - outLeft - 10, 0.7 * inside);",
+    why: "the output beam stopping short of the edge"
+  },
+
+  /* ---------- stage 6: page.js ---------- */
+  {
+    file: "js/laser/page.js",
+    find: "var piece = dt / state.slowMotion / pieces;",
+    replace: "var piece = dt * state.slowMotion / pieces;",
+    why: "slow motion multiplied instead of divided"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "seconds: piece, maxSteps: stepsLeft });",
+    replace: "seconds: piece, maxSteps: FRAME_STEPS });",
+    why: "each piece given the whole frame's budget: a frame runs 8 times over"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "stepsLeft -= run.steps;",
+    replace: "stepsLeft -= 0;",
+    why: "the budget never spent"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (sinceReadout >= READOUT_EVERY) {",
+    replace: "if (true) {",
+    why: "the readouts rewritten every frame"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            showAll();                        // paused: show the exact moment\n",
+    replace: "",
+    why: "pausing leaves the readouts up to 0.1 s old"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (!state) state = newState();",
+    replace: "state = newState();",
+    why: "a language switch restarts the experiment"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "unhook.forEach(function (remove) { remove(); });",
+    replace: "",
+    why: "the old build's slider and button listeners left behind"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var HISTORY_SIZE = 16384;",
+    replace: "var HISTORY_SIZE = 4096;",
+    why: "a plot history too short for a fast screen (found on a 120 Hz Mac)"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (input) input.setAttribute(\"aria-valuetext\", text);",
+    replace: "",
+    why: "screen readers hear slider positions 0..1000 instead of watts"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "else if (name === \"coupler\") state.config.refl2 = 1 - value;",
+    replace: "else if (name === \"coupler\") state.config.refl2 = value;",
+    why: "the coupler's transmission used as its reflectivity"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (note) note.hidden = !state.behind;",
+    replace: "if (note) note.hidden = true;",
+    why: "the note never says the simulation fell behind"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var shownTime = WINDOW / state.slowMotion;",
+    replace: "var shownTime = WINDOW * state.slowMotion;",
+    why: "the plot's window multiplied by the slow motion"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "UI.bench.draw(view, labels, { beam: powerNow() / derived.powerPerP });",
+    replace: "UI.bench.draw(view, labels, { beam: 1 });",
+    why: "the beam drawn whatever the output"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "stim: y * p, words: levelWords",
+    replace: "stim: y, words: levelWords",
+    why: "the laser arrow drawn from the inversion alone, before there is any light"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        state.history.clear();\n",
+    replace: "",
+    why: "Reset keeps the old run on the plot"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            derived = bench.derive(state.config);\n            show();",
+    replace: "            show();",
+    why: "a slider changes the config but not the numbers derived from it"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "playing: !prefersLessMotion(),",
+    replace: "playing: true,",
+    why: "a visitor who asked for less motion gets it moving anyway"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var label = word(data, name + \".alt\") || word(data, \"page.title\");",
+    replace: "var label = word(data, name + \".alt\");",
+    why: "a picture with no description loses the page title as its name"
+  },
+  /* ---------- stage 6 review ---------- */
+  {
+    file: "js/laser/ui/format.js",
+    find: "    if (rounded < 1e-15) {",
+    replace: "    if (false) {",
+    why: "a power below 1 fW handed to toFixed(), which throws past 100 decimals and stopped the page"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "    if (size !== 0 && size < 1e-15) {",
+    replace: "    if (false) {",
+    why: "number() of a tiny value handed to toFixed()"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        draw: pauseOnError(draw)",
+    replace: "        draw: draw",
+    why: "a drawing error pauses the loop but the button still says Pause"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "update: pauseOnError(update), running: state.playing });",
+    replace: "update: update, running: state.playing });",
+    why: "a simulation error pauses the loop but the button still says Pause"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      takeDown();                             // a failed build leaves nothing behind\n",
+    replace: "",
+    why: "a build that fails part-way leaves its loop and listeners behind"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            showAll();                        // \"now\" depends on the bench too",
+    replace: "            showReadouts(DERIVED_READOUTS);",
+    why: "a slider moved while paused leaves the output now at its old number"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (judgedTime >= BEHIND_EVERY) setBehind(",
+    replace: "if (true) setBehind(",
+    why: "the note judged on every frame: it blinks with every dropped frame"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            setBehind(false);                 // paused: nothing is behind\n",
+    replace: "",
+    why: "the note stays up while paused"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            setBehind(false);                 // the new setting is judged afresh\n",
+    replace: "",
+    why: "the note stays up after a slider moved to a cheaper setting"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var pieces = Math.min(MAX_PIECES, Math.max(1, Math.round(dt * POINTS_PER_SECOND)));",
+    replace: "var pieces = MAX_PIECES;",
+    why: "8 plot points a frame whatever the refresh rate: a fast screen cuts the plot short"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "d.T_best === null || d.T_best <= 0 ?",
+    replace: "d.T_best === null ?",
+    why: "\"best output mirror 0 %\" when no mirror can make the laser run"
+  },
+  {
+    file: "js/laser/ui/history.js",
+    find: "for (var i = first; i < count; i++) list.push(pointAt(i));",
+    replace: "for (var i = 0; i < count; i++) list.push(pointAt(i));",
+    why: "points() hands out the whole buffer, older points included"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "if (thresholdWordY - L.fontSize < L.inversion.top) thresholdWordY =",
+    replace: "if (false) thresholdWordY =",
+    why: "the threshold word written over the box's title when the pump is off (found in the browser)"
   }
 ];
 

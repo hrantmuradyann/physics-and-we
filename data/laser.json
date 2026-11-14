@@ -1,5 +1,5 @@
 {
-  "_readme": "THE LASER LAB (?view=laser): every word of the page. Edit the text between the quotes only. hy = Armenian, en = English. The physics numbers are not here; they are in js/laser/engine/. The lab is still being built, so more words will be added here as it grows.",
+  "_readme": "THE LASER LAB (?view=laser): every word of the page. Edit the text between the quotes only. hy = Armenian, en = English. The physics numbers are not here; they are in js/laser/engine/. The Play, Pause and Reset buttons use the shared words labPlay, labPause and labReset in data/site.json. The lab is still being built, so more words will be added here as it grows.",
 
   "page": {
     "eyebrow": { "hy": "Ինտերակտիվ լաբորատորիա", "en": "Interactive lab" },
@@ -9,22 +9,79 @@
       "en": "A laser is made of a few parts: a medium that amplifies light, a pump that gives it energy, and two mirrors that send the light back and forth. Here you will put a laser together from these parts and see when, and why, it starts to shine."
     },
     "status": {
-      "hy": "Լաբորատորիան դեռ կառուցվում է։ Առայժմ ստորև միայն լազերի նկարն է․ կառավարման տարրերը կավելանան հաջորդ քայլում։",
-      "en": "This lab is still being built. For now there is only a picture of the laser below; the controls come next."
+      "hy": "Լաբորատորիան դեռ կառուցվում է։ Առայժմ այստեղ մեկ լազեր է՝ Nd:YAG, որն անընդհատ մղվում է լազերային դիոդներով։ Մյուս մասերը կավելանան հաջորդ քայլերում։",
+      "en": "This lab is still being built. For now it has one laser, Nd:YAG, pumped continuously by laser diodes; more parts come next."
     }
   },
 
   "bench": {
     "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short.",
     "alt": {
-      "hy": "Լազերի նկար․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, նրանց միջև՝ ակտիվ միջավայրի ձող, իսկ ձողի տակ՝ մղման լամպ։",
-      "en": "A drawing of a laser: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, between them a rod of gain medium, and under the rod a pump lamp."
+      "hy": "Լազերի նկար․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, նրանց միջև՝ ակտիվ միջավայրի ձող, իսկ ձողի տակ՝ մղման դիոդներ։ Երբ լազերն աշխատում է, ճառագայթը գնում է հայելիների միջև և դուրս է գալիս ելքային հայելու միջով։",
+      "en": "A drawing of a laser: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, between them a rod of gain medium, and under the rod the pump diodes. When the laser shines, a beam runs between the mirrors and out through the output mirror."
     },
     "parts": {
       "backMirror": { "hy": "Հետին հայելի", "en": "Back mirror" },
       "outputMirror": { "hy": "Ելքային հայելի", "en": "Output mirror" },
       "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
-      "pump": { "hy": "Մղման լամպ", "en": "Pump lamp" }
+      "pump": { "hy": "Մղման դիոդներ", "en": "Pump diodes" }
+    }
+  },
+
+  "controls": {
+    "_readme": "The names of the sliders under the drawing. Their values (W, %, µs) are written by the page.",
+    "pump": { "hy": "Մղման հզորություն (կլանված)", "en": "Pump power (absorbed)" },
+    "coupler": { "hy": "Ելքային հայելու թափանցելիություն", "en": "Output mirror transmission" },
+    "slowMotion": { "hy": "Դանդաղեցում", "en": "Slow motion" }
+  },
+
+  "readouts": {
+    "_readme": "The names of the numbers the page shows. 'Steady' means the value the laser settles to.",
+    "pumpThreshold": { "hy": "Շեմային մղման հզորություն", "en": "Threshold pump power" },
+    "x": { "hy": "Մղում ÷ շեմ", "en": "Pump ÷ threshold" },
+    "gth": { "hy": "Շեմային ուժեղացում", "en": "Threshold gain" },
+    "tau_c": { "hy": "Ֆոտոնի կյանքը ռեզոնատորում", "en": "Photon lifetime in the cavity" },
+    "P_out": { "hy": "Ելքային հզորություն (կայուն)", "en": "Output power (steady)" },
+    "powerNow": { "hy": "Ելքային հզորություն հիմա", "en": "Output power now" },
+    "T_best": { "hy": "Լավագույն ելքային հայելի", "en": "Best output mirror" },
+    "period": { "hy": "Ռելաքսացիոն տատանումների պարբերություն", "en": "Relaxation oscillation period" },
+    "time": { "hy": "Մոդելավորված ժամանակ", "en": "Simulated time" }
+  },
+
+  "notes": {
+    "behind": {
+      "hy": "Համակարգիչը չի հասցնում հաշվել այս դանդաղեցմամբ, ուստի մոդելը ընթանում է ավելի դանդաղ, քան ցույց է տալիս սահիչը։ Դանդաղեցման սահիչը տեղափոխեք աջ։",
+      "en": "The computer cannot keep up at this setting, so the simulation runs slower than the slow-motion slider says. Move that slider to the right."
+    }
+  },
+
+  "levels": {
+    "_readme": "The picture of the energy levels and the gain gauge. 'words' are written on the picture: keep them short.",
+    "alt": {
+      "hy": "Ակտիվ միջավայրի էներգետիկ մակարդակները․ մղումը ատոմները հիմնական մակարդակից բարձրացնում է մղման գոտի, որտեղից նրանք արագ իջնում են վերին լազերային մակարդակ, իսկ լազերային լույսը նրանց իջեցնում է ստորին մակարդակ։ Աջում՝ միջավայրի ուժեղացումը ռեզոնատորի կորստի համեմատ․ լազերը լույս է արձակում, երբ ուժեղացումը հասնում է կորստին։",
+      "en": "The energy levels of the gain medium: the pump lifts atoms from the ground level to the pump band, they drop quickly to the upper laser level, and the laser light takes them down to the lower level. On the right, the gain of the medium against the loss of the cavity: the laser shines when the gain reaches the loss."
+    },
+    "words": {
+      "pumpBand": { "hy": "Մղման գոտի", "en": "Pump band" },
+      "upper": { "hy": "Վերին մակարդակ", "en": "Upper level" },
+      "lower": { "hy": "Ստորին մակարդակ", "en": "Lower level" },
+      "ground": { "hy": "Հիմնական", "en": "Ground" },
+      "gain": { "hy": "Ուժեղացում", "en": "Gain" },
+      "loss": { "hy": "Կորուստ", "en": "Loss" }
+    }
+  },
+
+  "plots": {
+    "_readme": "The two graphs against time. 'time' comes before the length of time the graphs show, as in 'Last 500 µs'.",
+    "alt": {
+      "hy": "Երկու գրաֆիկ ըստ ժամանակի՝ լազերի ելքային հզորությունը և ինվերսիան՝ համեմատած իր շեմային արժեքի հետ (կետագիծ)։",
+      "en": "Two graphs against time: the output power of the laser, and the inversion compared with its threshold value (the dashed line)."
+    },
+    "words": {
+      "power": { "hy": "Ելքային հզորություն", "en": "Output power" },
+      "inversion": { "hy": "Ինվերսիա ÷ շեմ", "en": "Inversion ÷ threshold" },
+      "threshold": { "hy": "շեմ", "en": "threshold" },
+      "time": { "hy": "Վերջին", "en": "Last" }
     }
   }
 }

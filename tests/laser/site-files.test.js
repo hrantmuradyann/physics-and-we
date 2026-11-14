@@ -244,12 +244,43 @@ test("sections/laser.html: no styles, scripts, <header> or <footer>; the silver 
   assert.match(html.trim(), /^<div class="line-art">[\s\S]*<\/div>$/, "wrapped in <div class=\"line-art\">");
 });
 
-test("sections/laser.html: one bench canvas, described for screen readers", () => {
+test("sections/laser.html: the three canvases, each a picture for screen readers", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
   const canvases = html.match(/<canvas\b[^>]*>/g) || [];
-  assert.equal(canvases.length, 1);
-  assert.match(canvases[0], /\sdata-laser-canvas="bench"/);
-  assert.match(canvases[0], /\srole="img"/);
+  assert.deepEqual(canvases.map((tag) => (tag.match(/\sdata-laser-canvas="([^"]*)"/) || [])[1]),
+    ["bench", "levels", "plots"]);
+  for (const tag of canvases) assert.match(tag, /\srole="img"/);
+});
+
+// What js/laser/page.js looks for (tests/laser/page.test.js uses the same
+// names). A name missing from the layout would leave a control dead
+// without any error.
+const PAGE_CONTROLS = ["pump", "coupler", "slowMotion"];
+const PAGE_READOUTS = ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"];
+
+test("sections/laser.html: every slider, value, readout and button page.js needs, once each", () => {
+  const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
+  assert.deepEqual(attributeValues(html, "data-laser-control"), PAGE_CONTROLS);
+  assert.deepEqual(attributeValues(html, "data-laser-value"), PAGE_CONTROLS);
+  assert.deepEqual(attributeValues(html, "data-laser-readout"), PAGE_READOUTS);
+  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["play", "reset"]);
+  assert.deepEqual(attributeValues(html, "data-laser-note"), ["behind"]);
+  const page = read("js/laser/page.js");
+  for (const name of PAGE_CONTROLS.concat(PAGE_READOUTS)) {
+    assert.ok(page.includes('"' + name + '"'), "page.js uses " + name);
+  }
+  // Each slider is a range input, named by its own <label for="...">.
+  for (const name of PAGE_CONTROLS) {
+    const input = html.match(new RegExp('<input\\b[^>]*\\sdata-laser-control="' + name + '"[^>]*>'));
+    assert.ok(input, name);
+    assert.match(input[0], /\stype="range"/);
+    const id = (input[0].match(/\sid="([^"]+)"/) || [])[1];
+    assert.ok(id, name + " has an id");
+    assert.match(html, new RegExp('<label\\b[^>]*\\sfor="' + id + '"'), name + " has a label");
+  }
+  // Buttons are type="button"; the "behind" note starts hidden.
+  for (const tag of html.match(/<button\b[^>]*>/g) || []) assert.match(tag, /\stype="button"/);
+  assert.match(html, /<p\b[^>]*\sdata-laser-note="behind"[^>]*\shidden[\s>]/);
 });
 
 /* ---------- no colour written out ---------- */

@@ -696,7 +696,8 @@ so it does not appear in the header, but it can still be opened by link.
 The laser lab is one big lab with a page of its own, `?view=laser`
 ([sections/laser.html](sections/laser.html), words in [data/laser.json](data/laser.json)).
 It is not built by `js/labs.js`; its pictures are drawn by the scripts in `js/laser/`.
-It is still being built, stage by stage (`docs/laser-plan.md`).
+It is still being built, stage by stage (`docs/laser-plan.md`). The sliders and numbers
+use the labs' own `.lab__panel`, `.lab-control` and `.lab-readout` (from [css/labs.css](css/labs.css)), arranged by the `.laser-*` classes below.
 
 ```html
 <div class="line-art">
@@ -712,6 +713,18 @@ It is still being built, stage by stage (`docs/laser-plan.md`).
       <div class="laser-bench">
         <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
       </div>
+      <div class="lab__panel laser-dock">
+        <div class="laser-dock__left">
+          <div class="lab__controls"> … one .lab-control per slider (data-laser-control) … </div>
+          <div class="lab__buttons"> … Play (data-laser-action="play"), Reset … </div>
+          <p class="laser-note" data-laser-note="behind" hidden>…</p>
+        </div>
+        <div class="lab__readouts laser-dock__readouts"> … one .lab-readout per number … </div>
+      </div>
+      <div class="laser-panels">
+        <div class="laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="levels" role="img"></canvas></div>
+        <div class="laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="plots" role="img"></canvas></div>
+      </div>
     </div>
   </section>
 </div>
@@ -722,8 +735,13 @@ It is still being built, stage by stage (`docs/laser-plan.md`).
 | `.laser-head` | The title block of the laser page. It is a `.page-head` (the same big title as every inner page); this class only spaces the back link above the eyebrow. | [css/laser.css](css/laser.css) |
 | `.laser-status` | The small note under the lead that says the lab is still being built: muted text in a lightly filled box with a thin border and rounded corners. Delete its words in `data/laser.json` and it disappears. | [css/laser.css](css/laser.css) |
 | `.band--laser` | The stripe the bench sits in. Less padding on top than an ordinary `.band`, so the bench is on the first screen. | [css/laser.css](css/laser.css) |
-| `.laser-bench` | The box around the bench picture: rounded corners, a thin border, a soft glow at the top and a deep shadow — the same look as the frame of the other labs. It sets the width of the canvas inside it. | [css/laser.css](css/laser.css) |
-| `.laser-bench__canvas` | The canvas the bench is drawn on, as wide as its box. Its height is set by `js/laser/ui/loop.js`. | [css/laser.css](css/laser.css) |
+| `.laser-bench` | The box around a picture of the lab (the bench, the energy levels, the graphs): rounded corners, a thin border, a soft glow at the top and a deep shadow — the same look as the frame of the other labs. It sets the width of the canvas inside it. | [css/laser.css](css/laser.css) |
+| `.laser-bench__canvas` | A canvas the lab draws on, as wide as its box. Its height is set by `js/laser/ui/loop.js`. | [css/laser.css](css/laser.css) |
+| `.laser-dock` | The panel under the bench (also a `.lab__panel`): the sliders and buttons on the left, the numbers on the right. On screens 860 px wide or less, one column. | [css/laser.css](css/laser.css) |
+| `.laser-dock__left` | The left column of `.laser-dock`: sliders, buttons and the note, one under another. | [css/laser.css](css/laser.css) |
+| `.laser-dock__readouts` | The numbers (also a `.lab__readouts`). Beside the sliders they have no line above them; in one column they get the usual line and fill the width in as many columns as fit. | [css/laser.css](css/laser.css) |
+| `.laser-note` | A small note in the accent colour under the buttons. It starts `hidden`; `js/laser/page.js` shows it only while the computer cannot keep up with the chosen slow motion. Do not give it a `display` rule, or `hidden` stops working. | [css/laser.css](css/laser.css) |
+| `.laser-panels` | The two pictures under the panel (energy levels, graphs), side by side; one under the other on screens 860 px wide or less. | [css/laser.css](css/laser.css) |
 | `.lab-feature` | The big banner on the Labs page that leads to the laser lab. It is also a `.card .card--link`, so it answers the mouse like the other cards (border, shadow, the arrow moving); it is larger, has a blue-to-violet stripe down its left edge (terracotta on the light theme), and sits above the grid of the other labs. It is the one item of the list `featured.items` in `data/labs.json`: deleting that item removes the whole banner. Where it leads is written in the layout. | [css/laser.css](css/laser.css) |
 | `.lab-feature__title` | The banner's heading: larger than a card title (1.5–2.1rem), extra bold. | [css/laser.css](css/laser.css) |
 | `.lab-feature__text` | The banner's sentence: muted, 1.02rem, at most 62 characters wide. | [css/laser.css](css/laser.css) |
@@ -870,8 +888,13 @@ Classes are responsible for **the look**, and `data-*` attributes for **the cont
 | `data-number="number"` + `data-suffix="suffix"` | A number that counts up from zero when scrolled to, plus whatever follows it (`+`, `%`). |
 | `data-ui="learnMore"` | A word shared by every page (taken from `data/site.json`). |
 | `data-goto="labs"` | Set by the script; [js/router.js](js/router.js) uses it to catch the click and change page without a reload. It can also be written in the layout, when where a link leads is part of the layout (the lab cards, the laser banner). |
-| `data-laser-canvas="bench"` | Marks the canvas of the laser lab that [js/laser/page.js](js/laser/page.js) draws the bench on. |
-| `data-running="true"` / `"false"` | Set by the laser lab's drawing loop on each of its canvases: whether that picture is being redrawn frame after frame right now. It is `false` while the page is hidden, while that canvas is scrolled away, and while the lab is paused (for now always: the bench does not move yet). Useful for checking in the browser that nothing runs in the background. |
+| `data-laser-canvas="bench"` | Marks a canvas of the laser lab and what [js/laser/page.js](js/laser/page.js) draws on it: `bench`, `levels` (the energy levels and the gain gauge) or `plots` (the graphs). |
+| `data-laser-control="pump"` | A slider of the laser lab (`pump`, `coupler`, `slowMotion`). `page.js` sets its range and reads it. |
+| `data-laser-value="pump"` | Where the value of the slider of the same name is written ("5.00 W"). |
+| `data-laser-readout="P_out"` | Where one number of the laser lab is written; the names are the keys of `readouts` in `data/laser.json`. |
+| `data-laser-action="play"` | A button of the laser lab: `play` (Play / Pause) or `reset`. |
+| `data-laser-note="behind"` | The note `page.js` shows while the simulation cannot keep up. |
+| `data-running="true"` / `"false"` | Set by the laser lab's drawing loop on each of its canvases: whether that picture is being redrawn frame after frame right now. It is `false` while the page is hidden, while that canvas is scrolled away, and while the lab is paused. Useful for checking in the browser that nothing runs in the background. |
 | `data-keep` | Keep the wrapper visible even when there is no text for it in the JSON. On a `data-link` the wording stays visible too, as a button that does nothing until the address is written in — that is how the photo-album buttons on the our story page work. |
 
 If there is no text in the JSON for an element, the script **hides it by itself** so no empty holes are left on the page ([js/content.js:242](js/content.js#L242)).

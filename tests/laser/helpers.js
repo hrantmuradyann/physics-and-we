@@ -46,7 +46,8 @@ const ENGINE_FILES = [
   "media.js",
   "cavity.js",
   "ode.js",
-  "rates.js"
+  "rates.js",
+  "bench.js"
 ];
 
 // The drawing and page files (js/laser/ui/), in the order index.html loads
@@ -56,7 +57,11 @@ const ENGINE_FILES = [
 // that every file on disk is loaded (site-files.test.js).
 const UI_FILES = [
   "loop.js",
-  "draw-bench.js"
+  "format.js",
+  "history.js",
+  "draw-bench.js",
+  "draw-levels.js",
+  "draw-plots.js"
 ];
 
 // Loads the engine into a fresh, empty sandbox and returns

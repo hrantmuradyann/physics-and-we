@@ -15,10 +15,12 @@
      LaserUI.bench.layout(w, h)      where every part and label goes, in CSS
                                      pixels (plain arithmetic, tested for
                                      every width the page can have)
-     LaserUI.bench.draw(view, labels)
+     LaserUI.bench.draw(view, labels, light)
          view    what LaserUI.loop hands its draw function
          labels  { backMirror, outputMirror, medium, pump }: the words,
                  already in the visitor's language; an empty one is left out
+         light   optional { beam }: the output power over the output at
+                 twice threshold; no light (or 0) draws the still picture
 
    Colours come only from view.colors (the theme), so the picture follows
    the dark and the light theme.
@@ -80,7 +82,7 @@
     };
   }
 
-  function draw(view, labels) {
+  function draw(view, labels, light) {
     var g = view.g;
     var colors = view.colors;
     var L = layout(view.w, view.h);
@@ -112,6 +114,24 @@
     g.strokeStyle = colors.accent;
     g.lineWidth = 1.5;
     g.strokeRect(L.rod.x, L.rod.y, L.rod.w, L.rod.h);
+
+    // The beam, from mirror to mirror and out through the output mirror.
+    // Its strength is the output power over the output at twice threshold;
+    // the alpha is its square root, so a weak laser still shows while the
+    // spontaneous emission below threshold (about 10⁻⁸) does not. 1064 nm
+    // is invisible: the colour is the theme's, not the light's (§11.5
+    // comes in a later stage).
+    var beam = light && light.beam > 0 ? light.beam : 0;
+    if (beam > 0) {
+      var inside = Math.max(2, 0.3 * L.rod.h);
+      var leftEdge = L.backMirror.x + L.backMirror.w;
+      var outLeft = L.outputMirror.x + L.outputMirror.w;
+      g.globalAlpha = Math.min(1, Math.sqrt(beam));
+      g.fillStyle = colors.accent2;
+      g.fillRect(leftEdge, L.axis.y - inside / 2, L.outputMirror.x - leftEdge, inside);
+      g.fillRect(outLeft, L.axis.y - 0.35 * inside, view.w - outLeft, 0.7 * inside);
+      g.globalAlpha = 1;
+    }
 
     // The mirrors. The output mirror is drawn paler: it lets light through.
     g.fillStyle = colors.soft;

@@ -8,7 +8,13 @@
      .laser-head      the title block of the laser page (also a .page-head)
      .laser-status    the small "still being built" note under the lead
      .band--laser     the stripe the bench sits in
-     .laser-bench     the box the bench canvas sits in (it sets the width)
+     .laser-bench     the box a canvas sits in (it sets the width): the
+                      bench, and the two pictures under the controls
+     .laser-dock      the sliders, buttons and numbers (also a .lab__panel;
+                      the sliders and numbers inside are the labs' own
+                      .lab-control and .lab-readout of css/labs.css)
+     .laser-note      the note shown when the computer cannot keep up
+     .laser-panels    the two pictures under the controls, side by side
      .lab-feature     the big banner on the Labs page (sections/labs.html)
 
    Colours: only the theme variables of css/style.css, so everything follows
@@ -64,6 +70,57 @@
 .laser-bench__canvas {
   display: block;
   width: 100%;
+}
+
+/* ============================================================================
+   THE CONTROLS AND THE TWO PICTURES UNDER THEM
+   ========================================================================== */
+
+/* Sliders and buttons on the left, the numbers on the right. */
+.laser-dock {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.3rem 2.2rem;
+  align-items: start;
+  margin-top: 1.3rem;
+}
+
+.laser-dock__left {
+  display: grid;
+  gap: 1.1rem;
+}
+
+/* Beside the sliders the numbers need no line above them. */
+.laser-dock__readouts {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* No display rule here: the hidden attribute must keep it hidden. */
+.laser-note {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--accent-soft);
+}
+
+.laser-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.3rem;
+  margin-top: 1.3rem;
+}
+
+@media (max-width: 860px) {
+  .laser-dock,
+  .laser-panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .laser-dock__readouts {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--line);
+  }
 }
 
 /* ============================================================================

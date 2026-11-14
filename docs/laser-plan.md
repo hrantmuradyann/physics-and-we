@@ -94,7 +94,8 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 3: ODE solver (`ode.js`: adaptive Dormand–Prince 5(4)); the mutation check runs in parallel.
 - ✅ Stage 4: four-level rate equations (`rates.js`: scales, right-hand side, steady state, relaxation oscillations, the seed floor `liftToSeed`).
 - ✅ Stage 5: page skeleton (`?view=laser`, the Labs-page banner, `js/laser/ui/loop.js`, `draw-bench.js`, `page.js`; the engine is loaded by `index.html`).
-- Next: stage 6.
+- ✅ Stage 6: first playable laser (`bench.js`; `format.js`, `history.js`, `draw-levels.js`, `draw-plots.js`; sliders for pump, coupler and slow motion, Play/Pause, Reset, readouts, the level diagram with its gain/loss gauge, plots of power and inversion).
+- Next: stage 7.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking.
 
@@ -537,22 +538,63 @@ Also: f's values at a point by hand; f stays finite at s = −800 with β = 0 (t
 - The old load-order test in `engine-rules.test.js` still skipped itself when no engine line was there, and repeated `site-files.test.js`: removed. The part list was written in both `page.js` and `draw-bench.js`: now `LaserUI.bench.PARTS`. A dense one-line `valueAt` in a test became a plain loop.
 - Declined: loading the engine only from stage 6 (or lazily). Every page already loads both labs the same way; the engine is 22 KB gzipped; the browser check in this stage proved it loads without errors. Recorded above as an option for later.
 
-### Stage 6 — First playable laser: Nd:YAG, continuous
-- **Build:**
-  - `bench.js`: `derive(config)` (built from media + cavity) and `advance(sim, config, simSeconds, budget)` (built from ode + rates);
-  - pure UI helpers `ui/format.js` (SI prefixes: "66 ns", "2.4 MHz") and layout maths;
-  - sliders: pump, output coupler T, slow motion (log slider);
-  - readouts, level bars, a P(t) plot, a gain/loss gauge.
-- **Tests (Node):**
-  - `advance` is deterministic;
-  - running out of budget gives partial progress, never a freeze;
-  - steady state from `advance` = analytic P_out from `derive` within 1 %;
-  - formatting;
-  - slider → SI conversion done in one tested function.
-- **Browser:**
-  - the threshold readout equals stage 2's g_th;
-  - no output below threshold;
-  - P_out vs T shows its maximum at T_opt.
+### Stage 6 — First playable laser: Nd:YAG, continuous ✅
+
+**Scope card.** Physics: `docs/laser-physics.md` §3.2, §3.6, §4.1, §4.2, §6.3, §11.3, §11.6. One laser this stage: Nd:YAG, pumped by 808 nm diodes, running continuously.
+
+| Function | Inputs | Output | Doc |
+|---|---|---|---|
+| `LaserEngine.bench.defaultConfig()` | — | a new config object (below) | — |
+| `LaserEngine.bench.derive(config)` | config: `medium` (id, four-level with σ), `l_g` m, `area` m², `L` m, `refl1`, `refl2`, `alpha_i` m⁻¹, `pumpPower` W (absorbed), `pumpLam` m, `eta` (share of absorbed pump photons that reach the upper level), `beta` | `{ L_e, gamma, gth, N_c, R_c, tau_c, eps, R_p, x, g0, pumpThreshold, slope, powerPerP, P_out, T_opt, T_best, period, t_damp, … }`, SI | §3.2, §3.6, §4.1, §4.2, §6.3 |
+| `LaserEngine.bench.start()` | — | `{ t: 0, N: 0, lnPhi: 0 }`: the pump just switched on, one photon | §11.3 |
+| `LaserEngine.bench.advance({ sim, config, seconds, maxSteps })` | sim (s, m⁻³, ln of a photon count), config, s ≥ 0, integer ≥ 1 | `{ sim, reachedEnd, steps }` | §11.2, §11.3 |
+| `LaserEngine.bench.RANGES` | — | the sliders' physical ranges: pump 0–20 W, coupler T 0.5–30 % (log) | — |
+| `LaserUI.format.si(value, unit, digits)` | number, string, significant digits (3) | "66.2 ns", "2.41 MHz", "0 W", "—" for no number | — |
+| `LaserUI.format.number(value, digits)` | | the same without a prefix (for m⁻¹, %, ×) | — |
+| `LaserUI.format.fromSlider(range, fraction)`, `toSlider(range, value)` | `{ min, max, log }`, 0–1 | the one place a slider position becomes a value, and back | — |
+| `LaserUI.history.create(capacity)` | integer | a ring buffer of `{ t, P, y }` in simulated seconds: `push`, `points(fromTime)`, `clear`, `size` | — |
+| `LaserUI.levels.draw(view, picture)`, `LaserUI.plots.draw(view, picture)` | the loop's view; numbers and words | the level diagram with the upper-level bar and the gain/loss gauge; P(t) and y(t) | §11.6 items 1, 2, 5 |
+
+The model (decisions, below): R_p = η·P_pump/(hν_p·V_a), spread evenly over the active volume A·l (the plane-wave §4.1 model); x = R_p/R_c; g₀ = σR_pτ; pumpThreshold = hν_p·A·γ/(στη); P_out = (γ₂/2)·A·I_sat·(x − 1), 0 below threshold (§4.1, no seed); slope = powerPerP/pumpThreshold = η·(λ_p/λ)·γ₂/(2γ) (§3.6 with η); T_opt = `cavity.optimumCoupler({ g0, l_g, L_i: 2α_i·l_g })` (§3.6); T_best = 1 − e^(−T_opt), the transmission where this model's P_out(T) peaks; period = 2π/ω (damped, §4.2) and t_damp = 2τ/x, null at or below threshold.
+
+The default bench (stage 4's small Nd:YAG laser plus a pump): rod l = 5 cm, A = 1 mm², L = 0.3 m, R₁ = 1, R₂ = 0.95, α_i = 0.2 m⁻¹ (L_i = 2 %), β = 10⁻⁸, diodes at 808 nm with η = 0.9 (§6.3), 5 W absorbed.
+
+**Test values** (recomputed on the real engine in the audit):
+
+| Check | Expected | Source | Bound |
+|---|---|---|---|
+| Default bench | L_e 0.341 m, γ 0.035647, g_th 0.71293 m⁻¹, τ_c 31.91 ns, ε 1.3874×10⁻⁴, threshold 1.5120 W, x 3.3068, P_out 1.7151 W, slope 0.49173, T_opt 4.8667 %, T_best 4.7502 %, period 11.21 µs, t_damp 139.1 µs | audit | 1e-4 relative (5 digits printed) |
+| g_th = `cavity.thresholdGain`, γ, N_c, τ_c = `rates.fourLevel.scales`, N_c·σ·l = γ | identity | stage 2, 4 | 1e-12 |
+| x = pumpPower/pumpThreshold; g₀l = xγ; P_out = slope·(P_pump − threshold) | identity | §3.6, §4.1 | 1e-12 |
+| slope = η·(λ_p/λ)·γ₂/(2γ); ≈ §3.6's η·η_q·T/(T + L_i) | identity; within the small-loss difference | §3.6 | 1e-12; 3 % |
+| §6.3 Fan–Byer: A = π(200 µm)², log loss 0.05, η 0.9 | 0.1333 W ("≈ 0.13 W") | §6.3 | 1e-12 of the hand formula; [0.125, 0.135] |
+| Scan of T (2×10⁻⁶ steps) at 2, 5 and 20 W | the peak at T_best (0.023156, 0.047502, 0.110711) | derived in the audit | one scan step |
+| Below threshold (2 W, T 30 %; 0 W) | P_out 0, period null, T_opt 0 at 0 W | §3.6, §4.1 | exact |
+| Every slider corner (0 and 20 W × 0.5 and 30 %) | derive does not throw; all numbers finite or null | ranges | — |
+| advance from `start()`, default bench, 30τ | P = powerPerP·p equal to derive's P_out | plan: 1 % | 1 % (measured 3×10⁻⁵) |
+| advance twice with the same input | the same output, to the bit | plan | deepEqual |
+| advance with maxSteps 5 | `reachedEnd` false, t moved forward but short of the target, all finite; carrying on in 5-step calls reaches the state of one long call | plan | 10⁻⁴ (each call picks its own first step, so the steps differ; measured 1.2×10⁻⁶) |
+| advance with seconds = 0 | the sim unchanged, 0 steps | plan | deepEqual |
+| A config change mid-run (T 5 % → 20 %) | N and φ carried over: y and s are converted with the new scales | decision | 1e-12 |
+| Pump off for 750τ, then on again | lnPhi stays exact where φ would be a subnormal number (about 10⁻³¹⁹, with only a few significant bits); lasing comes back | §11.3 | finite; 1 % |
+| `format.si` | 3.19e-8 s → "31.9 ns"; 2.41e6 Hz, 2 digits → "2.4 MHz"; 0 → "0 W"; 999.96 → "1.00 kW"; NaN/Infinity/null → "—"; −0.0015 → "−1.50 mW" | plan | exact |
+| `fromSlider`/`toSlider` | ends exact; log midpoint = √(min·max); round trip | plan | 1e-12 |
+| history | keeps the newest `capacity` points in order; `points(from)` | plan | exact |
+
+**Decisions:**
+- The pump slider is **absorbed** pump power, spread evenly over the rod's mode area (§4.1's plane-wave model). With A = πw² this gives §6.3's Fan–Byer threshold for a pump spot matched to the mode, which is the test. η_p (absorbed share) and η_t (overlap) are 1 by construction; η = 0.9 is §6.3's.
+- Internal loss α_i = 0.2 m⁻¹ (L_i = 2 %, typical scattering in a YAG rod). With L_i = 0 there is no best coupler (§3.6), and the P_out(T) lesson needs one.
+- "Best coupler" shows T_best = 1 − e^(−T_opt), not §3.6's T_opt. The model's coupler loss is γ₂ = −ln(1 − T); in γ₂ its P_out is exactly the low-gain Rigrod curve, which peaks at γ₂ = T_opt. §3.6's T is the small-loss form of γ₂, so the two differ by 2–6 % here, which a visitor scanning the slider would see.
+- The simulation state is physical, `{ t, N, lnPhi }` (lnPhi = ln φ), not y and s: the scales change with every slider, while the atoms and photons do not. ln φ, because after a long time with the pump off φ falls to about 10⁻³¹⁹, a subnormal number with only a few significant bits, while ln φ keeps them all.
+- The solver's last step size is not carried from call to call: measured, it saved 2–8 % of the steps (lasing: 445 instead of 467 steps in 40 pieces, against 424 in one call; pump off at T = 30 %: 8169 instead of 8370), and no test could catch its loss.
+- Slow motion 10³–10⁶ (log), default 10⁴ (1 s on screen = 100 µs). §11.3's range starts at 10³; above 10⁶ nothing moves in this laser. The plot shows the last 5 s of screen time on a linear time axis (log axes are for ms and ns together, stage 8).
+- Each frame is split into pieces (one plot point each) sharing a budget of 1500 solver steps: about 480 points a second of screen time, so 8 a frame at 60 Hz, 2 at 240 Hz, at least 1 (review: 8 a frame made the plot depend on the refresh rate). Measured warm in Node: about 6.2 µs a step; the dearest corner (pump off, T = 30 %, slow motion 10³) needs about 900 steps a frame. When the budget runs out, simulated time falls behind; when that happens in more than a quarter of a second's frames, a note says so.
+- P(t) axis: from 0 to the larger of the window's highest point and powerPerP (the output at twice threshold), so the 10 nW of spontaneous emission below threshold sits on the axis instead of being blown up to fill it.
+- The state (config, sim, history) lives in `page.js` across rebuilds: a language switch keeps the experiment running.
+- Units are SI symbols in both languages, with a decimal point, as the other labs do (flagged for the Armenian review).
+
+**Doc fixes from the audit:** §3.6's η_s = η_p·η_q·η_c·η_t had no factor for the absorbed pump photons that do not reach the upper level (§6.3's η): added. Nd:YAG's σ, τ and n checked against RP Photonics and a vendor datasheet (Sources).
+
 - **Traps:**
   - `ode.dopri5`'s default `maxSteps` (100 000) is a safety limit, not a frame budget (about 65 ms for a 2-component f): pass a per-frame budget measured from the time a step takes;
   - pass the state through `rates.fourLevel.liftToSeed` before every solver call, or turning the pump back on after a long time off makes the solver give up (stage 4 review, §11.3);
@@ -561,6 +603,34 @@ Also: f's values at a point by hand; f stays finite at s = −800 with β = 0 (t
   - readouts updated at most ~10×/s;
   - frames with dt = 0 only draw;
   - reduced-motion visitors start paused (as `labs.js` does).
+
+**Found while building and testing:**
+- **The plot was cut short on a 120 Hz screen** (browser): 8 points a frame × 120 frames × 5 s = 4800 points, more than the 4096 the history kept. First fixed with a bigger history; after the review the points are counted per second of screen time instead (480), and the history keeps 16384 (enough up to 3000 Hz), tested at 240 and 1000 Hz.
+- **Level names squeezed** (browser): the level diagram's lines took most of its width. The two panels are now equal, the lines take 45 %, the words are shorter, and the "threshold" word next to the upper-level bar went (it sat on the level's name at a strong pump).
+- **The solver costs about 1 µs a step in Chrome**, 6 µs in Node's vm, so the 1500-step frame budget is about 1.5 ms in the browser.
+- **The inversion can end a step a hair below 0 with the pump off** (30 % coupler, 0.5τ pieces, after 35τ, measured with the clamp removed): below the solver's atol its error control no longer watches y. The next call would refuse N < 0, so `advance` passes on `max(0, y)`. Reproducing it costs 450 000 steps, so its test wraps the solver to return such an answer.
+- **hNext dropped** (decision above): measured savings 2–8 %, no test could see it.
+- φ does not reach 0 in a long pump-off run, as first written here: it falls to about 10⁻³¹⁹, a subnormal number. The test now checks that ln φ is below ln(2.2×10⁻³⁰⁸), where φ would have lost its precision.
+
+**Breaks** (85, all caught; 299 in all; 12 of them from the review): bench.js: η left out of R_p, the pump photon at the laser wavelength, the pumped volume over the cavity, the threshold without /η, P_out as x or negative below threshold, L_i as one pass, a best coupler with no internal loss, T_best = T_opt, the period without 2π, g₀ without τ, the slope upside down, the photon's power divided, ln φ handed over as s and back, seconds as t′, the N clamp, a zero-length run, the pumpLam / η / tiny-loss / rod-length / three-level checks, a linear coupler slider; format.js: prefix before rounding, hyphen minus, plain space, log slider read as linear, no carry, whole numbers cut, slider top computed, no clamp; history.js: index after wrapping, unbounded count, the edge point, `clear()`; draw-levels.js: the scale without the loss or the inversion, the gain bar from the top, the loss line at x, the small-signal line at y, the bar from the pump, the laser arrow from the pump, a palette typo; draw-plots.js: time reversed, the floor ignored, old points kept, the threshold at x, the inversion axis without 1, the power label, the time label; draw-bench.js: linear alpha, a beam with no light, a short output beam; page.js: slow motion multiplied, each piece the whole budget, the budget never spent, readouts every frame, Pause not writing them, a rebuild restarting the experiment, listeners left behind, a short history, no `aria-valuetext`, T used as R, the note never shown, the plot window multiplied, the beam always on, stimulated emission without photons, Reset keeping the plot, a slider not re-deriving, reduced motion ignored, no page-title fallback. Five stage-5 entries were brought up to date with the new code. The first run missed 9; the tests added for them: the inversion clamp (wrapped solver), slider tops for ranges where the formula misses by one rounding unit, the small-signal line, the laser arrow only with light, no beam drawn with no light, the steps a frame really uses (counted around `advance`), Pause after 32 frames (the throttle last wrote at frame 30), the levels picture before and after the light comes, the plot after Reset. From the review: tiny values handed to `toFixed()` (`si` and `number`), an error in a drawing or in the simulation leaving the button at Pause, a failed build left standing, a slider leaving "now" stale, the note judged on every frame or left up after Pause or a slider move, 8 points a frame whatever the refresh rate, "0 %" for no best mirror, `points()` handing out the whole buffer. From the browser check after the review: the threshold word over the plot's title.
+
+**Browser check** (Claude in Chrome, `http://127.0.0.1:5500`): the page lases with relaxation spikes after Reset; every readout equals `derive()` (g_th 0.713 m⁻¹ = `cavity.thresholdGain`); below threshold no output, period "—", no beam; scanning the coupler peaks at 4.75 % = the "best output mirror" readout; Reset gives time 0; two language switches leave one loop with the coupler and the run kept; leaving the page sets every `data-running` to `"false"`; light and dark themes; 375 px is one column with no sideways scroll; the pendulum and refraction labs still work; no console errors.
+
+**Browser check after the review:** the review's corner (lasing at 20 W and 30 %, then the pump off, slow motion 10³) runs on with "< 1 fW", the button at Pause, one loop after two language switches and no console errors. In the automated window Chrome ran at 33 frames a second (the mutation check was using the processor), so each frame needed more than its 1500 steps and the note rightly showed. Found: with the pump off the inversion axis ends at 1.1, and the "threshold" word sat on the box's title "Inversion ÷ threshold"; it now goes under its line there (a test at every width, and a break).
+
+**Review outcome** (`/code-review`, 13 findings: 9 fixed, 1 answered with a test, 3 declined):
+- **A tiny output power stopped the page.** `format.js` used `toFixed()`, which throws past 100 decimals. With the pump off at a 30 % coupler the output reaches about 10⁻¹⁷⁰ W, so the readout threw inside the frame, the loop paused, and every Pause click and rebuild threw again. Now "< 1 fW" (and e-notation in `number()`), with a test over every power of ten and a page test of that corner.
+- That error showed two more problems, both fixed. A build that threw part-way left its loop and listeners behind, so each language switch leaked one more loop: the build now takes down what it set up before passing the error on. After an error paused the loop the button still said Pause: `page.js` now sets it to Play, and Play tries again.
+- A slider moved while paused left "output now" at its old number (it depends on the mirror): a slider move now writes every readout.
+- The "cannot keep up" note blinked with every dropped frame and stayed up while paused: now judged once a second (more than a quarter of the frames behind) and cleared by Pause, Reset and a slider move.
+- The plot still ran out of history above about 400 Hz: about 480 points a second of screen time now, instead of 8 a frame.
+- `history.points()` copied the whole 16384-point buffer every frame: it now walks back from the newest point to the window's start.
+- "Best output mirror 0 %" with no pump: now "—", as no mirror can make the laser run.
+- Local variables named `window` (`page.js`, `draw-plots.js`) shadowed the browser's: renamed.
+- Answered with a test: `bench.js` writes γ out in its "almost no loss" check, a third copy of the formula. Kept, so the error names `bench.derive` and not `cavity.singlePassLoss`; a test now ties the two at the limit.
+- Declined: after N is clamped to 0, `liftToSeed`'s floor lifts ln φ on every call, so the leftover photon number depends on how the run is cut into calls. The floor is stage 4's protection against a seed that overflows when the pump comes back, and the light it leaves is below 10⁻²⁰ W: "< 1 fW", an invisible beam, a line on the plot's axis.
+- Declined: `advance` checks and re-derives the config for every piece. Measured: 23 µs a piece in Node, 9 µs of it `derive`, so about 30 µs a frame in Chrome; the checks are the engine's rule that every error names the function called.
+- Declined: the three-line `clamp`/`word`/`text` helpers repeated in the drawing files, and `page.js`'s own reduced-motion check. Each UI file stands alone; sharing them would need one more shared file for very little.
 
 ### Stage 7 — Swapping media, three levels, flashlamp
 - **Prep:** D6 for the media becoming selectable. Web-verify §5.1 values against published sources and record them in the doc. Then D2, D3, D4.

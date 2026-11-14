@@ -339,7 +339,7 @@ For small T it reduces to the previous one. Both formulas give zero output below
 P_{\text{out}} = \eta_s\,(P_p - P_{th}), \qquad \eta_s = \eta_p\,\eta_q\,\eta_c\,\eta_t, \qquad \eta_c = \frac{T}{T+L_i}
 ```
 
-η_p is the fraction of pump absorbed in the medium; η_q = λ_p/λ_l; η_c the fraction of the losses that is useful output; η_t the overlap between the mode and the pumped volume. The simulator should show the curve P_out(T) with its maximum at T_opt: at T → 0 the light is trapped inside, at large T the laser goes out.
+η_p is the fraction of pump absorbed in the medium; η the fraction of absorbed pump photons that reach the upper laser level (the η of Section 6.3, ≈ 0.9 for Nd:YAG at 808 nm); η_q = λ_p/λ_l; η_c the fraction of the losses that is useful output; η_t the overlap between the mode and the pumped volume. So in full η_s = η_p·η·η_q·η_c·η_t; the formula above leaves η out, as if every absorbed photon reached the upper level. In the rate equations of Section 4.1 with the pump spread evenly over the mode (η_p = η_t = 1 when P_p is the absorbed power) the slope is exactly η·η_q·γ₂/(2γ), and γ₂/(2γ) ≈ T/(T + L_i) for small losses. The simulator should show the curve P_out(T) with its maximum at T_opt: at T → 0 the light is trapped inside, at large T the laser goes out.
 
 ## 4. Dynamics: CW operation, spiking, giant pulse, mode locking (§121, items 5–9)
 
@@ -1080,4 +1080,5 @@ The code uses SI throughout; Sivukhin's formulas are written in Gaussian units a
 - [Gain saturation flux and stimulated emission cross section for the 10.6 µ line of CO₂, Appl. Phys. Lett. 11, 60 (1967)](https://scilit.net/publications/6975397fb93c07490d020427bd3be7be) — σ ≈ 3×10⁻¹⁸ cm² for CO₂.
 - [Pressley, Wittke, CaF₂:Dy²⁺ lasers, IEEE J. Quantum Electron. 3, 116 (1967)](https://manuscript.isc.ac/Inventory/49/1124735.htm) — lifetime and linewidth of CaF₂:Dy²⁺.
 - [HeNe laser lab report, Stanford](https://web.stanford.edu/~edwin98/HeNe.pdf) — measured He-Ne gain of 15.5%/m.
+- [RP Photonics, YAG lasers](https://www.rp-photonics.com/yag_lasers.html) and [Precision Micro-Optics, Nd:YAG](https://pmoptics.com/neodymium_doped_yag.html) — Nd:YAG (1 at.%) at 1064 nm: σ = 2.8×10⁻¹⁹ cm², τ ≈ 230 µs, n = 1.82 (1.8169), as in table 5.1 (checked for build stage 6, the first stage that shows Nd:YAG). One vendor sheet gives 7×10⁻²¹ cm², far from every other source; not used.
 - Other medium parameters, the Rigrod, Self, Marburger and Fan–Byer formulas, and the Sellmeier coefficients (Schott N-BK7, Malitson for fused silica, Zernike for KDP) are standard values from textbooks and handbooks (Svelto *Principles of Lasers*, Koechner *Solid-State Laser Engineering*, Siegman *Lasers*, Boyd *Nonlinear Optics*). They have not yet been checked against the printed sources and should be before the site is published.

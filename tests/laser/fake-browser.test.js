@@ -10,7 +10,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  themeVariables, fakeContext, fakeCanvas, fakeContainer, createBrowser
+  themeVariables, fakeElement, fakeContext, fakeCanvas, fakeContainer, createBrowser
 } = require("./fake-browser.js");
 
 test("theme variables: both themes come from css/style.css", () => {
@@ -170,4 +170,23 @@ test("a file run in the sandbox sees the fake window; addedGlobals names what it
   assert.equal(createBrowser({ reducedMotion: true }).window
     .matchMedia("(prefers-reduced-motion: reduce)").matches, true);
   assert.equal(createBrowser().window.matchMedia("(prefers-reduced-motion: reduce)").matches, false);
+});
+
+test("an element keeps its own listeners: fire() runs them, removing one stops it, twice is kept once", () => {
+  const element = fakeElement("button");
+  assert.equal(element.textContent, "");
+  assert.equal(element.value, "");
+  assert.equal(element.hidden, false);
+  const heard = [];
+  const listener = function (event) { heard.push([event.type, event.target === element, this === element]); };
+  element.addEventListener("click", listener);
+  element.addEventListener("click", listener);
+  assert.equal(element.listenerCount("click"), 1);
+  element.fire("click");
+  element.fire("input");
+  assert.deepEqual(heard, [["click", true, true]]);
+  element.removeEventListener("click", listener);
+  assert.equal(element.listenerCount("click"), 0);
+  element.fire("click");
+  assert.equal(heard.length, 1);
 });

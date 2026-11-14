@@ -11,7 +11,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { deepFreeze } = require("./helpers.js");
+const { deepFreeze, assertClose } = require("./helpers.js");
 const { createBrowser, fakeContext, themeVariables } = require("./fake-browser.js");
 
 function load() {
@@ -50,13 +50,13 @@ const LABELS = deepFreeze({
   pump: "Pump lamp"
 });
 
-function drawAt(w, labels, theme) {
+function drawAt(w, labels, theme, light) {
   const recorder = fakeContext();
   const view = {
     g: recorder.context, w: w, h: heightFor(w), dpr: 1,
     colors: deepFreeze(palette(theme || "dark")), font: "Test Sans", t: 0, dt: 0
   };
-  bench.draw(view, labels || LABELS);
+  bench.draw(view, labels || LABELS, light === undefined ? undefined : deepFreeze(light));
   return { recorder: recorder, view: view };
 }
 
@@ -227,4 +227,45 @@ test("draw: draws all four parts", () => {
   const moves = recorder.calls.filter((c) => c.name === "moveTo" || c.name === "lineTo").map((c) => c.args);
   assert.deepEqual(moves, [[L.axis.x1, L.axis.y], [L.axis.x2, L.axis.y]]);
   assert.ok(recorder.calls.some((c) => c.name === "setLineDash" && c.args[0].length > 0));
+});
+
+test("draw: the beam, between the mirrors and out through the output mirror, only when there is light", () => {
+  const still = drawAt(600).recorder.calls;
+  assert.deepEqual(drawAt(600, LABELS, "dark", { beam: 0 }).recorder.calls, still, "no light: the still picture");
+  // ... which has no beam at all, not an invisible one.
+  const L600 = bench.layout(600, drawAt(600).view.h);
+  assert.ok(!still.some((c) => c.name === "fillRect" && Math.abs(c.args[0] - (L600.backMirror.x + L600.backMirror.w)) < 1e-9),
+    "no beam drawn with no light");
+
+  for (const w of WIDTHS) {
+    const { recorder, view } = drawAt(w, LABELS, "dark", { beam: 1 });
+    const L = bench.layout(view.w, view.h);
+    const rects = recorder.calls.filter((c) => c.name === "fillRect").map((c) => c.args);
+    const inside = rects.find((r) => Math.abs(r[0] - (L.backMirror.x + L.backMirror.w)) < 1e-9 &&
+      Math.abs(r[0] + r[2] - L.outputMirror.x) < 1e-9);
+    assert.ok(inside, "a beam from mirror to mirror at " + w);
+    assertClose(inside[1] + inside[3] / 2, L.axis.y, 1e-9, "on the axis");
+    const out = rects.find((r) => Math.abs(r[0] - (L.outputMirror.x + L.outputMirror.w)) < 1e-9 &&
+      Math.abs(r[0] + r[2] - view.w) < 1e-9);
+    assert.ok(out, "the output beam reaches the edge at " + w);
+    assert.ok(out[3] > 0 && out[3] < inside[3] + 1e-9, "no wider than the beam inside");
+  }
+
+  // The alpha in effect when the beam between the mirrors is filled.
+  function strongest(light) {
+    const { recorder, view } = drawAt(600, LABELS, "dark", light);
+    const L = bench.layout(view.w, view.h);
+    let alpha = 1;
+    for (const entry of recorder.log) {
+      if (entry.set === "globalAlpha") alpha = entry.value;
+      if (entry.call === "fillRect" && Math.abs(entry.args[0] - (L.backMirror.x + L.backMirror.w)) < 1e-9) return alpha;
+    }
+    return 0;
+  }
+  assert.ok(strongest({ beam: 0.1 }) < strongest({ beam: 1 }), "weaker light, fainter beam");
+  assert.ok(strongest({ beam: 5 }) <= 1, "alpha never above 1");
+  // Below threshold the page passes the spontaneous emission into the
+  // mode, about 10⁻⁸ of the scale: that must not look like a beam.
+  assert.ok(strongest({ beam: 1e-8 }) < 0.01, "spontaneous emission: no visible beam");
+  assert.ok(strongest({ beam: 0.01 }) >= 0.1, "1 % of the scale already shows");
 });
