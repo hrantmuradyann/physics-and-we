@@ -38,7 +38,7 @@ A missing/empty JSON value **hides** that element rather than rendering empty �
 
 1. Browser loads `index.html` (only time it ever does a full load).
 2. `js/main.js` reads `data/site.json` → builds header nav + footer.
-3. `js/router.js` parses the route → fetches `sections/<route>.html` + `data/<route>.json`.
+3. `js/router.js` waits for `data/site.json` **and** `DOMContentLoaded` (by then every plain `<script>` at the bottom of `index.html` has run, so every page script is listening), parses the route → fetches `sections/<route>.html` + `data/<route>.json`.
 4. Fragment wrapped in `<section class="view" id="view-<route>">`, injected into `#app`; `js/content.js` fills in text via the attributes above.
 5. `js/anim.js` handles scroll reveals + counting numbers.
 6. Router idle-prefetches every other route so subsequent nav feels instant.
@@ -60,13 +60,16 @@ data/*.json              one text file per page (bilingual, no markup); data/sit
 data/story.json          our story: the "years" list (text + one photo + photo-album link each)
 data/organisers.json     organisers logo grid (route "organisers"; was data/sponsors.json)
 data/sponsors&partners.json       "Sponsors & Partners" page: two logo grids, "partners" list + "sponsors" list
-data/labs.json           lab registry: simulations.items[].slug must match js/labs/<slug>.js + data/labs/<slug>.json
+data/labs.json           lab registry: simulations.items[].slug must match js/labs/<slug>.js + data/labs/<slug>.json; "featured.items" = the laser banner's words (a list of one, so deleting it removes the banner)
+data/laser.json          every word of the laser lab page (hy/en), no numbers
+sections/laser.html      the laser lab page (hidden route ?view=laser): page head + bench canvas, inside .line-art
 data/labs/*.json         per-lab text (pendulum, refraction)
 
 css/style.css            reset, CSS vars for BOTH themes (:root = dark, :root.theme-light = cream), shared header/footer (also used by admin)
 css/site.css             design system for all public pages (.page-head, .band, .card, .grid--cards, ...); colours only via the theme vars
 css/home.css             home hero only
 css/labs.css             lab page shell + .line-art (silver lines behind the labs list and lab pages, dimmed on dark)
+css/laser.css            the laser page and the .lab-feature banner on the Labs page; theme vars only (tested)
 images/lab-lines.svg     the silver background lines used by .line-art
 css/admin.css            admin panel only (always light; ignores the site themes)
 
@@ -81,6 +84,8 @@ js/labs.js               shared lab runtime: canvas sizing/retina, Play/Reset, a
 js/labs/pendulum.js       one lab's physics/drawing, via Labs.register(name, {...})
 js/labs/refraction.js
 js/laser/engine/*.js     laser simulator PHYSICS: pure functions, SI units, no DOM; one global LaserEngine (see "Laser simulator" below)
+js/laser/ui/*.js         laser page DRAWING (no physics): loop.js (rAF loop lifecycle), draw-bench.js (the bench picture); one global LaserUI
+js/laser/page.js         builds the laser page on section:ready for "laser"; tears the previous build down first
 js/admin.js              admin panel CRUD logic, talks to /admin/api/*
 js/admin-login.js        admin login form handling
 
@@ -94,15 +99,16 @@ functions/admin/api/upload.js    one photo upload; magic-byte type sniffing; rej
 
 .dev.vars.example        template for local secrets → copy to .dev.vars (gitignored)
 
-tests/laser/*.test.js    laser-engine tests, Node built-in runner (`node --test`); helpers.js loads the engine into a vm sandbox
+tests/laser/*.test.js    laser tests, Node built-in runner (`node --test`); helpers.js loads the engine into a vm sandbox
+tests/laser/fake-browser.js   a tiny controllable browser (frames, observers, listeners, 2D context) for the UI/page tests
 tests/laser/mutations.js       deliberate mistakes the tests must catch; run by tests/laser/mutation-check.js
 ```
 
 ## Critical gotchas
 
 - **Two unrelated `news.json` files.** `news.json` (repo root) = actual news items, written only by the admin panel (`functions/admin/api/publish.js`). `data/news.json` = just the news page's heading/lead text. Never hand-edit the root one.
-- **Fragments have no working `<script>`.** Any JS for a `sections/*.html` page must live in `js/` and hook `section:ready`.
-- **Multi-file additions must stay in lockstep.** New page = entry in `data/site.json` nav + `sections/<route>.html` + `data/<route>.json`. New lab = `js/labs/<slug>.js` (with matching `Labs.register("<slug>", …)` name) + `data/labs/<slug>.json` + a block in `data/labs.json` + a `<script>` line in `index.html`. Full walkthroughs: README §2 "Adding a new page" / "Adding a new interactive lab", and `Instructions/LABS-GUIDE.md`.
+- **Fragments have no working `<script>`.** Any JS for a `sections/*.html` page must live in `js/` and hook `section:ready`. Load it with a plain `<script>` at the bottom of `index.html` (no `async`, never added later): the router builds the first page at `DOMContentLoaded`, and a script that runs after that misses the first `section:ready`. Before the router waited for it, a slow download of the laser scripts let it build the laser page before `page.js` listened, leaving the bench blank (`page.test.js`, "the router builds the first page only after every script on the page has run").
+- **Multi-file additions must stay in lockstep.** New page = entry in `data/site.json` nav + `sections/<route>.html` + `data/<route>.json`. New lab = `js/labs/<slug>.js` (with matching `Labs.register("<slug>", …)` name) + `data/labs/<slug>.json` + a block in `data/labs.json` + a `<script>` line in `index.html`. New laser file = the file + its name in `ENGINE_FILES` or `UI_FILES` (`tests/laser/helpers.js`) + a `<script>` line in `index.html` in that order (`site-files.test.js`, `engine-rules.test.js`). Full walkthroughs: README §2 "Adding a new page" / "Adding a new interactive lab", and `Instructions/LABS-GUIDE.md`.
 - **No build step, no dependencies.** Don't introduce a bundler, npm package, or `package.json` casually — this is a deliberate project constraint, not an oversight.
 - **README may reference a third language, `ru` (Russian), in a couple of places** (e.g. the data-attribute/text-format section and the "how do new files connect" section). This looks stale after commit `f956d38` ("Deleted russian") — the site and `data/*.json` are currently hy/en only. Don't trust that specific detail in the README without checking the actual JSON files; fix the README wording if you're already editing that section.
 - **Never hard-code a colour.** Every colour must work in both themes: use the theme vars in CSS, `ctx.color.*` in labs, and a per-theme table in JS canvases (see `STAR_COLORS` in `js/home.js`). A literal `#fff` or `rgba(255,255,255,…)` vanishes on the light theme. Deliberate exceptions: white text on the accent gradients (`.btn--primary`, `.step::before`), the white `.partner-logo` tiles, and the always-dark `.gallery-lightbox`.
@@ -119,25 +125,25 @@ tests/laser/mutations.js       deliberate mistakes the tests must catch; run by 
 - Public site only: `python3 -m http.server 8000` → `http://localhost:8000`. Fine for iterating on `sections/`, `data/`, `css/`, `js/` (non-admin).
 - Anything involving `/admin/`: must use `npx wrangler pages dev .` — a plain static server doesn't run `functions/`, so the middleware never executes and `/admin/` is broken/unprotected. Requires a local `.dev.vars` (copy from `.dev.vars.example`); default localhost-only login is `admin` / `password` unless overridden.
 - Opening `index.html` directly via `file://` (double-click) always shows a blank page — everything loads via `fetch()`, which browsers block on `file://`.
-- Laser-engine tests: `node --test` from the repo root (needs only Node; no `package.json`, no npm install). It finds every `tests/**/*.test.js`.
+- Laser tests: `node --test` from the repo root (needs only Node; no `package.json`, no npm install). It finds every `tests/**/*.test.js`.
 - Laser mutation check: `node tests/laser/mutation-check.js`. It copies what the tests read (`index.html`, `js/`, `css/`, `data/`, `sections/`; never `.git`, `images/` or secrets) to a temp folder, checks that the tests pass on the unchanged copy, then applies each deliberate mistake from `tests/laser/mutations.js` (paths relative to the repo root) to a fresh copy and expects a test to fail. It checks half the processor cores' worth of mistakes at once, each in its own copy, and prints the results in list order. Outcomes: caught / MISSED / TIMED OUT (a test's work is not bounded tightly enough; see the test gotchas below) / ERROR (bad entry, or a change that is not valid JS/JSON). The tests read the copy through `LASER_TEST_ROOT` plus `LASER_MUTATION_CHECK=1`; `LASER_TEST_ROOT` on its own makes every test stop with an error, so a leftover variable cannot silently test an old copy. The real files are never modified. Its own test is `tests/laser/mutation-check.test.js`.
 
 ## Laser simulator (`docs/laser-physics.md`, `js/laser/`)
 
 `docs/laser-physics.md` is the physics spec for the laser simulator; `docs/laser-plan.md` is the architecture and the build stages (with which ones are done). **Every stage follows the recipe in `docs/laser-plan.md` §3** (doc audit, tests first, mutation check, `/code-review`, docs, one commit), and that file's "Doc problems found in the pre-audit" table (D1–D10) lists known traps for later stages. The simulator is one big lab on **its own hidden route `?view=laser`** (like `post` / `lab`), with a parts bench to play with and a "learn" section. It does **not** use the `js/labs.js` shell, whose single canvas and slider column are too small for it.
 
-Code layout, as planned:
+Code layout:
 - `js/laser/engine/`: physics only (built so far: `check.js` (shared input checks); `constants.js`; `spectrum.js` (§1: thermal emission, lineshapes, cross section, gain and its saturation; §3.3: oscillating band, mode comb); `media.js`; `cavity.js` (§3: threshold, photon lifetime, Q, free spectral range, finesse, Rigrod output power, optimum coupler); `ode.js` (§11.3: the Dormand–Prince 5(4) adaptive solver, which knows nothing about lasers); `rates.js` (§4.1, §4.2, §11.2: the four-level rate equations in dimensionless form, their steady state, relaxation oscillations and the seed floor `liftToSeed`)).
-- `js/laser/ui/`: drawing and controls (not built yet).
-- `js/laser/page.js`: connects the two (not built yet).
+- `js/laser/ui/`: drawing, no physics (built so far: `loop.js`, `draw-bench.js`; see "Laser page rules" below).
+- `js/laser/page.js`: connects the two.
 
-The page itself (`sections/laser.html`, `data/laser.json`, `css/laser.css`, nav entry, `<script>` lines in `index.html`) comes in build stage 5. Until then the engine is only loaded by the tests.
+The page (build stage 5): hidden route `laser` in `data/site.json`, `sections/laser.html`, `data/laser.json`, `css/laser.css`, and a banner (`.lab-feature`, the template of `data-list="featured.items"`, words in `data/labs.json`) above the simulations grid in `sections/labs.html`. `index.html` loads the engine, then the UI, then `page.js`, after `js/labs.js`, on every page of the site like the other labs (engine 74 KB, 22 KB gzipped). So far the page shows a still drawing of the bench, so `page.js` creates its loop paused (`running: false`): it draws only on resize and theme change. Stage 6 adds Play, the controls and the simulation.
 
 **Engine rules.** `tests/laser/engine-rules.test.js` enforces the first three:
 - Each file is a plain script, `(function (root) { var E = root.LaserEngine = root.LaserEngine || {}; … })(this);`. The same file runs in the browser and in Node's `vm`.
 - Only plain numbers and objects go in and out, in SI. The engine must not use the page, network, clock, timers or random numbers. The test bans those globals as whole words (`window`, `document`, `self`, `globalThis`, `fetch`, `Date`, `setTimeout`, `Math.random`, …), with comments ignored, so a name like `brewsterWindowLoss` is fine.
 - The only global it adds is `LaserEngine`.
-- Load order is listed once in `ENGINE_FILES` in `tests/laser/helpers.js`; a new engine file must be added there. `index.html` must load the engine in the same order. That test is skipped until `index.html` loads any engine file (build stage 5), then it runs automatically.
+- Load order is listed once in `ENGINE_FILES` in `tests/laser/helpers.js`; a new engine file must be added there (`engine-rules.test.js`). `index.html` must load the engine in the same order (`site-files.test.js`).
 - The engine's objects (`check`, `constants`, `units`, `spectrum`, `media`, `cavity`, `ode` and its coefficient table `ode.tableau`, `rates` and `rates.fourLevel`) are frozen with `Object.freeze`; `media.get()` returns a copy.
 - **Calling convention:** a function with one input takes it as it is (`cavity.freeSpectralRange(0.3)`); a function with more than one takes **one object of code-named values** (`cavity.thresholdGain({ refl1, refl2, alpha_i, l_g })`), so two numbers cannot be swapped. Every input is checked with `LaserEngine.check` (`check.js`, loaded first): a missing or impossible value throws an error that starts with the function the caller called, and so does a name the function does not use (a typo, or a loss the formula would quietly ignore), even if its value is 0. Pass each function exactly its own inputs, not one shared description object. Tests: `check.test.js`, and the "refuses plain numbers" / "names the function" tests in `spectrum.test.js`, `constants.test.js`, `cavity.test.js`. New engine files use `check.js` too, not their own checks.
 - `gamma` is the single-pass loss; `T_oc` and `L_i` are round-trip fractions (γ ≈ (T_oc + L_i)/2 for small losses). A cavity with no loss at all throws (its τ_c, finesse and power would be infinite), and so does a loss too small to divide by (γ = 10⁻³²⁰ in `photonLifetime` and `rates.fourLevel.scales`, T_oc + L_i = 10⁻³²⁴ in `rigrodLowGain`); `rigrodExact` and `finesse` have no internal loss, so `alpha_i`/`L_i` are not among their inputs (`cavity.test.js`).
@@ -159,7 +165,19 @@ The page itself (`sections/laser.html`, `data/laser.json`, `css/laser.css`, nav 
 - Engine inputs and outputs use plain arrays, never typed arrays (`Float64Array`, …): typed arrays cannot be frozen, so tests could not prove the engine leaves them unchanged.
 - Physics numbers live in the engine, written as handbook value × unit (`2.5e-20 * cm2`, `230 * us`, `50 * MHz`; units are in `LaserEngine.constants`). Words (medium names etc.) go in `data/laser.json`, never in the engine.
 - `I_sat` is hν/(στ) for four-level media but hν/(2στ) for three-level ruby (doc §2.2); `media.js` picks it by `scheme`.
-- Test gotchas: arrays and objects from the sandbox fail `assert.deepEqual` against literals because they come from a different realm, so wrap them in `plain()` from `helpers.js` (it uses `structuredClone`, which keeps `NaN`). To compare against an expected `0`, give `assertClose` its 5th argument, an absolute tolerance. Pass inputs through `deepFreeze()` from `helpers.js` so any engine function that changes its input throws (it also freezes inside already-frozen objects, and refuses typed arrays). A test file that spawns `node --test` must delete `NODE_TEST_CONTEXT` from the child's environment (see `mutation-check.js`). A test that runs the solver must give each call a `maxSteps` near what it needs (about 1.5×, measured) and check `reachedEnd`: the mutation check gives a whole test run 60 s, and a deliberately broken solver otherwise spends 100 000 steps per call and makes the run time out instead of fail (`rates.test.js`, `integrate()`). A `{ timeout }` does not help: node:test cannot stop a synchronous test (measured on Node 24: a test busy for 2 s with a 300 ms timeout passes).
+- Test gotchas: arrays and objects from the sandbox fail `assert.deepEqual` against literals because they come from a different realm, so wrap them in `plain()` from `helpers.js` (it uses `structuredClone`, which keeps `NaN`). To compare against an expected `0`, give `assertClose` its 5th argument, an absolute tolerance. Pass inputs through `deepFreeze()` from `helpers.js` so any engine function that changes its input throws (it also freezes inside already-frozen objects, and refuses typed arrays). A test file that spawns `node --test` must delete `NODE_TEST_CONTEXT` from the child's environment (see `mutation-check.js`). A test that runs the solver must give each call a `maxSteps` near what it needs (about 1.5×, measured) and check `reachedEnd`: the mutation check gives a whole test run 60 s, and a deliberately broken solver otherwise spends 100 000 steps per call and makes the run time out instead of fail (`rates.test.js`, `integrate()`). A `{ timeout }` does not help: node:test cannot stop a synchronous test (measured on Node 24: a test busy for 2 s with a 300 ms timeout passes). UI and page tests run the real files in `createBrowser()` from `fake-browser.js`: frames run only on `runFrame(ms)` (a frame cancelled earlier in the same batch is skipped, as in a browser), a canvas is on screen only after `setOnScreen(canvas, true)`, `listenerCount(type)` checks a teardown, and the 2D context records every call and property set (`log` keeps both in order, plus a `{ reset: true }` whenever its canvas is resized, which, as in a browser, resets the context). `fake-browser.test.js` pins its behaviour. Arrays from the sandbox (`LaserUI.bench.PARTS`) need `Array.from` or `plain()` before `deepEqual`.
+
+**Laser page rules** (`js/laser/ui/`, `js/laser/page.js`; tested in Node with the fake browser of `tests/laser/fake-browser.js`):
+- UI files follow the engine's pattern, `(function (root) { var UI = root.LaserUI = root.LaserUI || {}; … })(this);`, and add only `LaserUI`; `page.js` adds no global (`loop.test.js`, `page.test.js`). Their order is `UI_FILES` in `tests/laser/helpers.js`; every file in `js/laser/ui/` must be listed there (`site-files.test.js`).
+- **One drawing loop per page build**, `LaserUI.loop.create({ canvases: [{ canvas, box, aspect, minHeight, maxHeight, draw }], update, running })` (`loop.test.js`):
+  - one `requestAnimationFrame` for all canvases; `update(dt)` once per frame, then `draw(view)` for each canvas on screen; dt is 0 after every (re)start and capped at 0.05 s;
+  - it runs only while wanted (`play`/`pause`; reduced-motion visitors start paused) and a canvas is on screen (`IntersectionObserver`); each canvas carries `data-running`, `"true"` only while the loop runs **and** that canvas is on screen, which is how to check in the browser that nothing runs in the background;
+  - the next frame is requested only after `update` and the draws have run: a `pause()`/`destroy()` made during a frame holds, and an error in `update` or a draw pauses the loop (thrown once, not 60 times a second; `play()` tries again). The first picture is drawn before any observer or listener is registered, so a draw that throws there leaves nothing behind;
+  - the canvas width is the box's **inner** width (`clientWidth`): measured with `getBoundingClientRect`, the box's 1 px border made the bitmap 2 px wider than the canvas on screen (found in the browser in stage 5; `js/labs.js` had the same bug and was fixed with it). Pixels × devicePixelRatio (at most 2), then `setTransform(dpr, …)`. A hidden page (width 0) keeps the last size;
+  - colours only from `LaserUI.loop.PALETTE` (palette name → CSS variable), read again on `theme:changed`; every variable must be set in both `:root` and `:root.theme-light` (`loop.test.js`). No colour literals in `css/laser.css`, `js/laser/ui/*.js` or `page.js`: hex, every CSS colour name, and `rgb()`/`hsl()`/`hwb()`/`lab()`/`lch()`/`oklab()`/`oklch()`/`color()`/`color-mix()`, in CSS values and in JS strings of all three quote kinds (`site-files.test.js`); a drawing must set colours only from `view.colors` (`draw-bench.test.js`);
+  - `destroy()` cancels the frame, disconnects both observers, removes its `resize` and `theme:changed` listeners and ignores late callbacks; `LaserUI.loop.liveCount()` counts loops not yet destroyed.
+- **`page.js` and the router:** the router fires `section:ready` for `laser` when it prefetches every page (hidden) and again on every language switch. `page.js` tears the previous build down first, builds nothing heavy, and ignores other routes; a `laser` section without its canvas (load error) just leaves nothing running (`page.test.js`). Its build is synchronous, so unlike `labs.js` it needs no generation counter; add one if a build ever waits for something.
+- Words on the canvas come from `data/laser.json` via `Content.inLang` (the label names are `LaserUI.bench.PARTS`), drawn with `fillText(text, x, y, maxWidth)` so a long word is squeezed, not overlapped; `layout(w, h)` is checked for every width from 280 to 1400 px, including that the picture is symmetric (`draw-bench.test.js`). The canvas's screen-reader name is `bench.alt`, else the page title, else the canvas is `aria-hidden` (`page.test.js`). Every `{ hy, en }` in `data/laser.json` must have both, and every `data-text` in `sections/laser.html` must exist in it (`site-files.test.js`).
 
 - **Source:** D. V. Sivukhin, *General Course of Physics*, Vol. IV *Optics*, §§119–126, plus standard laser-physics formulas (Svelto, Siegman, Koechner) where the book only describes things in words. Formulas copied from the book keep its equation numbers, e.g. (120.2).
 - **Units:** all SI, so formulas can go straight into code. Sivukhin uses Gaussian/CGS units; §13 has the conversion.

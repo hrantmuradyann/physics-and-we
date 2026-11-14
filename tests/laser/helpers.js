@@ -49,6 +49,16 @@ const ENGINE_FILES = [
   "rates.js"
 ];
 
+// The drawing and page files (js/laser/ui/), in the order index.html loads
+// them: after the engine, before js/laser/page.js, which comes last. Each
+// one only defines functions when it loads, so the order among them does
+// not matter yet; it is listed once here so the index.html test can check
+// that every file on disk is loaded (site-files.test.js).
+const UI_FILES = [
+  "loop.js",
+  "draw-bench.js"
+];
+
 // Loads the engine into a fresh, empty sandbox and returns
 // { engine: the LaserEngine object, sandbox: the sandbox's global object }.
 function loadEngineWithSandbox() {
@@ -120,6 +130,7 @@ module.exports = {
   ROOT,
   ENGINE_DIR,
   ENGINE_FILES,
+  UI_FILES,
   loadEngine,
   loadEngineWithSandbox,
   plain,

@@ -72,8 +72,9 @@ can work on different pages at the same time without touching the same file.
 
 1. The browser loads `index.html` — the only time it ever does.
 2. `js/main.js` reads `data/site.json` and builds the menu and the footer.
-3. `js/router.js` reads the address, then fetches `sections/<page>.html` and
-   `data/<page>.json`.
+3. Once the browser has read all of `index.html` (so every script listed in it
+   has run), `js/router.js` reads the address, then fetches
+   `sections/<page>.html` and `data/<page>.json`.
 4. It wraps the markup in `<section class="view" id="view-<page>">` inside
    `#app`, and `js/content.js` fills in the text.
 5. `js/anim.js` starts the fade-ins and the counting numbers.
@@ -169,6 +170,7 @@ Physics-and-we/
 │   ├── story.html       → our story, one block per year
 │   ├── labs.html        → the list of labs (both kinds)
 │   ├── lab.html         → ONE interactive lab, on its own page
+│   ├── laser.html       → the laser lab (hidden page, reached from the labs page)
 │   ├── research.html
 │   ├── news.html        → the news feed
 │   ├── post.html        → ONE news item, on its own page
@@ -182,7 +184,8 @@ Physics-and-we/
 │   ├── home.json
 │   ├── camp.json
 │   ├── story.json       → our story: the list of years
-│   ├── labs.json        → the labs page: "simulations" + photo
+│   ├── labs.json        → the labs page: the laser banner ("featured"), "simulations", photo
+│   ├── laser.json       → the laser lab (one big lab with its own page)
 │   ├── lab.json         → almost empty on purpose (see the note inside)
 │   ├── labs/            → ONE FILE PER LAB — the words of that lab
 │   │   ├── pendulum.json
@@ -199,6 +202,7 @@ Physics-and-we/
 │   ├── site.css         → the look of every public page — the design system
 │   ├── home.css         → only the big opening screen of the home page
 │   ├── labs.css         → only the page of one interactive lab
+│   ├── laser.css        → only the laser lab, and its banner on the labs page
 │   └── admin.css        → only the admin page
 │
 ├── js/
@@ -212,6 +216,8 @@ Physics-and-we/
 │   ├── labs/            → ONE FILE PER LAB — the physics of that lab
 │   │   ├── pendulum.js
 │   │   └── refraction.js
+│   ├── laser/           → the laser lab: engine/ (physics), ui/ (drawing),
+│   │                      page.js (connects them); see docs/laser-plan.md
 │   ├── admin.js         → the admin panel (not loaded by the public site)
 │   └── admin-login.js   → the login screen
 │
@@ -593,10 +599,10 @@ git checkout -b feature/camp-registration
 
 Nothing links automatically — every connection is something you write explicitly. Here's how each type of new addition plugs into what already exists:
 
-- **A new JS file** (e.g. `js/registration.js`) → add one `<script src="js/registration.js"></script>` tag at the bottom of `index.html`, next to the others. There is only one HTML shell, so you do this once. Have it listen for the `section:ready` event (see `js/news.js` for the pattern) so it runs when its page is put on screen. **A `<script>` written inside a `sections/*.html` file will never run** — that is a browser rule, not a project one.
+- **A new JS file** (e.g. `js/registration.js`) → add one `<script src="js/registration.js"></script>` tag at the bottom of `index.html`, next to the others, as a plain `<script>` (no `async`): the router waits for every such script before it builds the first page. There is only one HTML shell, so you do this once. Have it listen for the `section:ready` event (see `js/news.js` for the pattern) so it runs when its page is put on screen. **A `<script>` written inside a `sections/*.html` file will never run** — that is a browser rule, not a project one.
 - **A new interactive lab** → two files (`js/labs/<name>.js` and `data/labs/<name>.json`), one block in `data/labs.json`, one `<script>` line. See `Instructions/LABS-GUIDE.md`.
 - **New CSS rules** → typed into `css/site.css`. No linking needed — `index.html` already loads it, so the rule applies across the whole site immediately. Reuse the existing blocks (`.card`, `.band`, `.grid--cards`, …) before inventing new ones.
-- **New text** → add it to that page's file in `data/`, as an object with `hy`, `en` and `ru`. Then reference it from the layout with `data-text="your.key"`. If you only speak one of the languages, fill in the one you know and leave the others as empty strings — an empty value is hidden on the site, and whoever handles translations fills it in later.
+- **New text** → add it to that page's file in `data/`, as an object with `hy` and `en`. Then reference it from the layout with `data-text="your.key"`. If you only speak one of the languages, fill in the one you know and leave the other as an empty string — an empty value is hidden on the site, and whoever handles translations fills it in later.
 - **A brand-new page** → three small steps, no JavaScript: an entry in `"nav"` in `data/site.json`, a `sections/<route>.html` layout (copy an existing one), and a `data/<route>.json` with the text. It appears in the menu and matches the site's design automatically.
 
 In short: `index.html`, `data/site.json` and `css/site.css` are the **shared glue** that every page already plugs into. New work almost always means *adding to* these shared files, plus creating focused new files (a new section, a new data file, a new lab) rather than duplicating shared logic.

@@ -907,6 +907,440 @@ const MUTATIONS = [
     find: "if (overThreshold === Infinity) failLossless(where);",
     replace: "",
     why: "rigrodLowGain returns NaN or Infinity for T_oc + L_i = 10⁻³²⁴"
+  },
+
+  /* ---------- stage 5: js/laser/ui/loop.js ---------- */
+  {
+    file: "js/laser/ui/loop.js",
+    find: "var MAX_STEP = 0.05;",
+    replace: "var MAX_STEP = 0.5;",
+    why: "the time-step cap too loose: a tab back from the background jumps"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "lastTime = 0;\n        frameId = root.requestAnimationFrame(frame);",
+    replace: "frameId = root.requestAnimationFrame(frame);",
+    why: "a restart's first step counts the whole time the loop was stopped"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "var MAX_PIXEL_RATIO = 2;",
+    replace: "var MAX_PIXEL_RATIO = 3;",
+    why: "the pixel ratio not capped at 2"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "entry.canvas.width = Math.round(width * dpr);",
+    replace: "entry.canvas.width = Math.round(width);",
+    why: "canvas pixels not multiplied by the pixel ratio (blurry on retina)"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "var width = entry.box.clientWidth;",
+    replace: "var width = entry.box.getBoundingClientRect().width;",
+    why: "the box measured with its border: the picture drawn 2 px too wide and squeezed (found in the browser)"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "entry.g.setTransform(dpr, 0, 0, dpr, 0, 0);",
+    replace: "entry.g.setTransform(1, 0, 0, 1, 0, 0);",
+    why: "drawing not scaled to the pixel ratio"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "var height = Math.max(entry.minHeight, Math.min(width / entry.aspect, entry.maxHeight));",
+    replace: "var height = Math.min(width / entry.aspect, entry.maxHeight);",
+    why: "no minimum height: a phone gets a sliver of a canvas"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "if (width === entry.w && dpr === entry.dpr) return;",
+    replace: "",
+    why: "every resize report redraws, even when nothing changed"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "if (!width) return;",
+    replace: "if (width < 0) return;",
+    why: "a hidden page (width 0) shrinks the canvas to nothing"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "entry.onScreen = !!change.isIntersecting;",
+    replace: "entry.onScreen = entry.onScreen || !!change.isIntersecting;",
+    why: "scrolling away does not stop the loop"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "var run = !destroyed && wanted && anyOnScreen();",
+    replace: "var run = !destroyed && anyOnScreen();",
+    why: "pause does nothing"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "var wanted = options.running === undefined ? !reduceMotion : !!options.running;",
+    replace: "var wanted = options.running === undefined ? true : !!options.running;",
+    why: "a visitor who asked for less motion gets it moving anyway"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "root.removeEventListener(\"theme:changed\", onThemeChanged);",
+    replace: "",
+    why: "destroy leaves the theme listener behind (one more per language switch)"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "root.removeEventListener(\"resize\", onResize);",
+    replace: "",
+    why: "destroy leaves the resize listener behind"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "if (seenWatcher) seenWatcher.disconnect();",
+    replace: "",
+    why: "destroy leaves the visibility observer watching an old canvas"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "frameId = null;\n      if (destroyed) return;\n      var dt",
+    replace: "frameId = null;\n      var dt",
+    why: "a frame already queued at destroy brings the old loop back to life"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "destroyed = true;\n        live -= 1;",
+    replace: "destroyed = true;",
+    why: "a destroyed loop still counted as live"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "if (destroyed) return;\n        destroyed = true;",
+    replace: "destroyed = true;",
+    why: "a second destroy counts the loop down twice"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "style = readStyle();\n      // A running loop",
+    replace: "// A running loop",
+    why: "a theme switch keeps the old colours"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "if (frameId === null) drawAll();",
+    replace: "",
+    why: "a paused picture is not redrawn after a theme switch"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "return String(style.getPropertyValue(variable) || \"\").trim();",
+    replace: "return String(style.getPropertyValue(variable) || \"\");",
+    why: "a CSS variable read with its leading space"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "if (update) update(dt);\n        entries.forEach(function (entry) {\n          if (entry.onScreen) drawOne(entry, dt);\n        });",
+    replace: "entries.forEach(function (entry) {\n          if (entry.onScreen) drawOne(entry, dt);\n        });\n        if (update) update(dt);",
+    why: "drawn before the simulation step: every picture one frame late"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "if (entry.onScreen) drawOne(entry, dt);",
+    replace: "drawOne(entry, dt);",
+    why: "canvases off screen are drawn every frame too"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "entries.forEach(function (entry) { entry.onScreen = true; });",
+    replace: "",
+    why: "without IntersectionObserver the loop never starts"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "soft: \"--accent-soft\",",
+    replace: "soft: \"--color-secondary\",",
+    why: "a colour only the dark theme sets"
+  },
+
+  /* ---------- stage 5: js/laser/ui/draw-bench.js ---------- */
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.fillStyle = colors.soft;",
+    replace: "g.fillStyle = \"#7ea8ff\";",
+    why: "a colour written out: it stays blue on the light theme"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "backMirror: { x: pad, y: mirrorTop - 0.6 * fontSize, align: \"left\"",
+    replace: "backMirror: { x: pad, y: mirrorTop - 0.6 * fontSize, align: \"right\"",
+    why: "a label aligned the wrong way runs off the canvas"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.fillText(text, spot.x, spot.y, spot.maxWidth);",
+    replace: "g.fillText(text, spot.x, spot.y);",
+    why: "a long word not squeezed into its place"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "if (!text) return;",
+    replace: "",
+    why: "an empty label written anyway"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var lampY = rodY + rodHeight + 0.09 * h;",
+    replace: "var lampY = rodY + rodHeight;",
+    why: "the lamp drawn touching the rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var innerRight = w - pad - mirrorThickness;",
+    replace: "var innerRight = w - pad;",
+    why: "the output mirror out of line with the back mirror: a lopsided picture"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "medium: { x: w / 2, y: rodY - 0.6 * fontSize,",
+    replace: "medium: { x: w / 2, y: mirrorTop - 0.6 * fontSize,",
+    why: "the medium label in the mirror labels' row"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.restore();\n  }",
+    replace: "  }",
+    why: "the context's settings left changed for the next drawing"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var rodY = axisY - rodHeight / 2;",
+    replace: "var rodY = axisY - rodHeight;",
+    why: "the rod drawn off the axis"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.clearRect(0, 0, view.w, view.h);",
+    replace: "g.clearRect(0, 0, view.w, view.h / 2);",
+    why: "only part of the canvas cleared: old frames show through"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var fontSize = Math.max(11, Math.min(15, Math.round(0.055 * h)));",
+    replace: "var fontSize = Math.round(0.04 * h);",
+    why: "labels too small to read on a phone"
+  },
+
+  /* ---------- stage 5: js/laser/page.js ---------- */
+  {
+    file: "js/laser/page.js",
+    find: "teardown();\n      teardown = null;",
+    replace: "teardown = null;",
+    why: "a language switch leaves the old loop running (one more each time)"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (detail.route !== ROUTE) return;",
+    replace: "if (detail.route === \"\") return;",
+    why: "every page's section:ready rebuilds the laser page"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var name = word(data, \"bench.alt\") || word(data, \"page.title\");",
+    replace: "var name = word(data, \"page.title\");",
+    why: "the picture's description not used for screen readers"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      canvas.setAttribute(\"aria-hidden\", \"true\");\n",
+    replace: "",
+    why: "a picture with no name left as an unnamed image for screen readers"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      running: false,             // nothing moves yet (stage 6: Play)\n",
+    replace: "",
+    why: "a still picture redrawn 60 times a second"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var canvas = container.querySelector('[data-laser-canvas=\"bench\"]');",
+    replace: "var canvas = container.querySelector('[data-laser-canvas=\"plot\"]');",
+    why: "the wrong canvas name: the page builds nothing"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "    if (teardown) {\n      teardown();\n      teardown = null;\n    }\n    if (!detail.container) return;\n    teardown = build(detail.container, detail.data || {});",
+    replace: "    var next = detail.container ? build(detail.container, detail.data || {}) : null;\n    if (!next) return;\n    if (teardown) teardown();\n    teardown = next;",
+    why: "a section that failed to load leaves the old loop running"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "root.Site.lang);",
+    replace: "\"en\");",
+    why: "the words always in English"
+  },
+
+  /* ---------- stage 5: the page's own files ---------- */
+  {
+    file: "data/laser.json",
+    find: "\"outputMirror\": { \"hy\": \"Ելքային հայելի\",",
+    replace: "\"outputMirror\": { \"hy\": \"\",",
+    why: "a word with no Armenian"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"status\": {",
+    replace: "\"note\": {",
+    why: "a word renamed in the data but not in the layout"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"title\": { \"hy\": \"Լազերը\", \"en\": \"The Laser\" },",
+    replace: "\"title\": \"The Laser\",",
+    why: "a word in one language only"
+  },
+  {
+    file: "sections/laser.html",
+    find: "<div class=\"laser-bench reveal\">",
+    replace: "<div class=\"laser-bench reveal\" style=\"margin: 0\">",
+    why: "a style written in the layout"
+  },
+  {
+    file: "sections/laser.html",
+    find: "<div class=\"page-head laser-head\">",
+    replace: "<header class=\"page-head laser-head\">",
+    why: "a <header> in a fragment picks up the site's header bar"
+  },
+  {
+    file: "sections/laser.html",
+    find: "data-text=\"page.lead\"",
+    replace: "data-text=\"page.leed\"",
+    why: "a word name mistyped in the layout"
+  },
+  {
+    file: "sections/laser.html",
+    find: "data-laser-canvas=\"bench\" role=\"img\"",
+    replace: "data-laser-canvas=\"bench\"",
+    why: "the canvas not announced as a picture"
+  },
+  {
+    file: "css/laser.css",
+    find: "color: var(--muted);\n  font-size: 0.88rem;",
+    replace: "color: #9aa6c4;\n  font-size: 0.88rem;",
+    why: "a colour written out in the CSS"
+  },
+  {
+    file: "index.html",
+    find: "<script src=\"js/laser/engine/ode.js\"></script>\n  <script src=\"js/laser/engine/rates.js\"></script>",
+    replace: "<script src=\"js/laser/engine/rates.js\"></script>\n  <script src=\"js/laser/engine/ode.js\"></script>",
+    why: "engine files loaded out of order"
+  },
+  {
+    file: "index.html",
+    find: "<script src=\"js/laser/ui/draw-bench.js\"></script>\n  <script src=\"js/laser/page.js\"></script>",
+    replace: "<script src=\"js/laser/page.js\"></script>\n  <script src=\"js/laser/ui/draw-bench.js\"></script>",
+    why: "page.js loaded before a drawing file"
+  },
+  {
+    file: "index.html",
+    find: "  <script src=\"js/laser/ui/draw-bench.js\"></script>\n",
+    replace: "",
+    why: "a new UI file not added to index.html"
+  },
+  {
+    file: "index.html",
+    find: "  <link rel=\"stylesheet\" href=\"css/laser.css\">\n",
+    replace: "",
+    why: "the page's stylesheet not linked"
+  },
+  {
+    file: "data/site.json",
+    find: "\"route\": \"laser\",\n      \"hidden\": true,",
+    replace: "\"route\": \"laser\",\n      \"hidden\": false,",
+    why: "the unfinished page shown in the menu"
+  },
+  {
+    file: "sections/labs.html",
+    find: "href=\"?view=laser\" data-goto=\"laser\"",
+    replace: "href=\"?view=lab\" data-goto=\"laser\"",
+    why: "the banner's address wrong when opened in a new tab"
+  },
+  {
+    file: "sections/labs.html",
+    find: "<h3 class=\"lab-feature__title\" data-text=\"title\">",
+    replace: "<h3 class=\"lab-feature__title\" data-text=\"titel\">",
+    why: "the banner asks for a word that does not exist"
+  },
+  {
+    file: "sections/labs.html",
+    find: "data-list=\"featured.items\"",
+    replace: "data-list=\"featured.item\"",
+    why: "the banner's list named wrong: no banner at all"
+  },
+  {
+    file: "data/labs.json",
+    find: "\"title\": { \"hy\": \"Կառուցե՛ք ձեր լազերը\",",
+    replace: "\"title\": { \"hy\": \"\",",
+    why: "the banner's title with no Armenian"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "      seconds += dt;\n      try {\n        if (update) update(dt);\n        entries.forEach(function (entry) {\n          if (entry.onScreen) drawOne(entry, dt);\n        });\n      } catch (error) {\n        // Stop, rather than throw the same error again 60 times a second.\n        // The error still reaches the console once; play() tries again.\n        wanted = false;\n        sync();\n        throw error;\n      }\n      // The next frame is asked for only now, so a pause() or destroy()\n      // made during this one (by update or a draw) holds.\n      if (frameId === null && !destroyed && wanted && anyOnScreen()) {\n        frameId = root.requestAnimationFrame(frame);\n      }\n    }",
+    replace: "      seconds += dt;\n      if (update) update(dt);\n      entries.forEach(function (entry) {\n        if (entry.onScreen) drawOne(entry, dt);\n      });\n      frameId = root.requestAnimationFrame(frame);\n    }",
+    why: "an error in update or draw thrown again every frame (the next frame asked for first)"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "        wanted = false;\n        sync();\n        throw error;",
+    replace: "        throw error;",
+    why: "after an error the canvas still says data-running=\"true\""
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "entry.canvas.setAttribute(\"data-running\", run && entry.onScreen ? \"true\" : \"false\");",
+    replace: "entry.canvas.setAttribute(\"data-running\", run ? \"true\" : \"false\");",
+    why: "a canvas scrolled away still says data-running=\"true\""
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "    measureAll();\n\n    /* ---------- watching size and visibility ---------- */\n\n    var sizeWatcher = null;\n    if (typeof root.ResizeObserver === \"function\") {\n      sizeWatcher = new root.ResizeObserver(function (changes) {\n        changes.forEach(function (change) {\n          entries.forEach(function (entry) {\n            if (entry.box === change.target) measure(entry);\n          });\n        });\n      });\n      entries.forEach(function (entry) { sizeWatcher.observe(entry.box); });\n    }\n    root.addEventListener(\"resize\", onResize);\n    root.addEventListener(\"theme:changed\", onThemeChanged);\n",
+    replace: "\n    /* ---------- watching size and visibility ---------- */\n\n    var sizeWatcher = null;\n    if (typeof root.ResizeObserver === \"function\") {\n      sizeWatcher = new root.ResizeObserver(function (changes) {\n        changes.forEach(function (change) {\n          entries.forEach(function (entry) {\n            if (entry.box === change.target) measure(entry);\n          });\n        });\n      });\n      entries.forEach(function (entry) { sizeWatcher.observe(entry.box); });\n    }\n    root.addEventListener(\"resize\", onResize);\n    root.addEventListener(\"theme:changed\", onThemeChanged);\n    measureAll();\n",
+    why: "listeners registered before the first picture: a draw that throws leaves them behind for good"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "      entry.canvas.width = Math.round(width * dpr);\n      entry.canvas.height = Math.round(height * dpr);\n      entry.canvas.style.height = height + \"px\";\n      // A new canvas size resets the context, so the scale is set after it.\n      entry.g.setTransform(dpr, 0, 0, dpr, 0, 0);",
+    replace: "      entry.g.setTransform(dpr, 0, 0, dpr, 0, 0);\n      entry.canvas.width = Math.round(width * dpr);\n      entry.canvas.height = Math.round(height * dpr);\n      entry.canvas.style.height = height + \"px\";",
+    why: "the scale set before the resize, which resets it: half-size picture on retina"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\"]);",
+    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\"]);",
+    why: "a part left out of PARTS: its label never written"
+  },
+  {
+    file: "css/laser.css",
+    find: "  background: var(--faint-bg);\n  color: var(--muted);",
+    replace: "  background: var(--faint-bg);\n  color: crimson;",
+    why: "a colour name beyond the basic ones written in the CSS"
+  },
+  {
+    file: "js/router.js",
+    find: "Promise.all([Site.ready, documentRead])",
+    replace: "Promise.all([Site.ready])",
+    why: "the first page built before the later scripts listen: the laser bench never drawn"
+  },
+  {
+    file: "js/router.js",
+    find: "    if (document.readyState === \"loading\") {",
+    replace: "    if (false) {",
+    why: "the router never waits for the page to be read"
+  },
+  {
+    file: "js/router.js",
+    find: "    } else {\n      resolve();\n    }\n  });",
+    replace: "    }\n  });",
+    why: "a router loaded after the page was read never starts"
   }
 ];
 

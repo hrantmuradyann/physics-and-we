@@ -12,7 +12,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { ROOT, ENGINE_DIR, ENGINE_FILES, loadEngineWithSandbox } = require("./helpers.js");
+const { ENGINE_DIR, ENGINE_FILES, loadEngineWithSandbox } = require("./helpers.js");
 
 // Removes /* ... */ and // ... comments AND the text inside strings, so a
 // comment or an error message that mentions one of the forbidden words
@@ -114,16 +114,5 @@ test("the engine adds exactly one global, LaserEngine", () => {
   assert.deepEqual(Object.keys(sandbox), ["LaserEngine"]);
 });
 
-test("index.html loads the engine files in the same order as the tests", (t) => {
-  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
-  const loaded = [];
-  const pattern = /<script\s+src="js\/laser\/engine\/([^"]+)"/g;
-  let match;
-  while ((match = pattern.exec(html)) !== null) loaded.push(match[1]);
-
-  if (loaded.length === 0) {
-    t.skip("index.html does not load the engine yet (build stage 5)");
-    return;
-  }
-  assert.deepEqual(loaded, ENGINE_FILES);
-});
+// index.html's load order (engine, then UI, then page.js) is checked in
+// site-files.test.js.

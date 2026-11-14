@@ -29,7 +29,7 @@ js/laser/presets.js        ready-made bench setups (numbers only; their names ar
 tests/laser/*.test.js      engine tests, run with Node's built-in runner (no package.json)
 ```
 
-- **Getting there from the Labs page:** a large "featured lab" banner above the simulations grid in `sections/labs.html`, using `data-route="laser.route"` and text from `data/labs.json`. The current card template only links to `?view=lab&id=…`, and a flagship lab deserves a bigger entry anyway.
+- **Getting there from the Labs page:** a large "featured lab" banner (`.lab-feature`) above the simulations grid in `sections/labs.html`. Where it leads, `href="?view=laser" data-goto="laser"`, is written in the layout, like the cards' `data-goto="lab"`; its words are `featured` in `data/labs.json` (stage 5 decision: a typo in a text file cannot break the link). The card template only links to `?view=lab&id=…`, and a flagship lab deserves a bigger entry anyway.
 - **Why the layout lives in `sections/laser.html`:** the learn chapters can use `data-list` / `data-rich`, so editors can fix or translate the lessons in `data/laser.json` exactly like any other page (`Instructions/EDITING-GUIDE.md`).
 - **Lifecycle:** `js/laser/ui/loop.js` follows the same rules as `js/labs.js`:
   - one `requestAnimationFrame` loop for all of the page's canvases;
@@ -37,7 +37,7 @@ tests/laser/*.test.js      engine tests, run with Node's built-in runner (no pac
   - the loop stops while the page is off screen (`IntersectionObserver`);
   - canvases are resized with `ResizeObserver` and sharpened for the screen's pixel density (DPR);
   - colours are re-read on `theme:changed`;
-  - everything is torn down before a rebuild. A language switch fires `section:ready` again, so this needs the same `generation` guard `labs.js` uses.
+  - everything is torn down before a rebuild: a language switch fires `section:ready` again. `labs.js` also needs a `generation` guard because it fetches a lab's words before building; the laser page gets its words with the event and builds synchronously, so tearing down first is enough (stage 5).
 
   These ~100 lines are copied in on purpose rather than pulled out of `labs.js`, so the two working labs aren't put at risk. They can be merged later.
 - `index.html` gets one `<script>` line per laser file, after `js/labs.js`, with the engine files in the order of `ENGINE_FILES` in `tests/laser/helpers.js` (a test checks this). Keep the engine to about 9 files so the list stays short.
@@ -93,7 +93,8 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 2: static cavity and spectrum (`cavity.js`, `check.js`, lineshapes and mode comb in `spectrum.js`, `ng` in `media.js`).
 - ✅ Stage 3: ODE solver (`ode.js`: adaptive Dormand–Prince 5(4)); the mutation check runs in parallel.
 - ✅ Stage 4: four-level rate equations (`rates.js`: scales, right-hand side, steady state, relaxation oscillations, the seed floor `liftToSeed`).
-- Next: stage 5.
+- ✅ Stage 5: page skeleton (`?view=laser`, the Labs-page banner, `js/laser/ui/loop.js`, `draw-bench.js`, `page.js`; the engine is loaded by `index.html`).
+- Next: stage 6.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking.
 
@@ -159,7 +160,7 @@ Working agreement: every stage follows the recipe in section 3, ends with `/code
   - The checker copies `index.html`, `js/`, `css/`, `data/` and `sections/` to a temp folder and first runs the tests on the unchanged copy; they must pass. Then, for each entry, it makes the change in a fresh copy and runs every laser test.
   - Outcomes: caught, MISSED (add a test), TIMED OUT (bound the test's work, e.g. `maxSteps`; a `{ timeout }` cannot stop a synchronous test), ERROR (the text isn't found exactly once, the change isn't valid JS/JSON, or the path is outside the copy).
   - The replacement is inserted literally, so `$&` and `$$` aren't special.
-  - 28 entries at the end of stage 1b, all caught. A full run then took about 4 s; after stage 2 (70 entries) about 22 s. After stage 3 (94 entries) it took 44 s one at a time, so it now checks half the processor cores' worth of mistakes at once, each in its own copy: about 17 s on a 10-core machine; after stage 4 (143 entries) about 28 s.
+  - 28 entries at the end of stage 1b, all caught. A full run then took about 4 s; after stage 2 (70 entries) about 22 s. After stage 3 (94 entries) it took 44 s one at a time, so it now checks half the processor cores' worth of mistakes at once, each in its own copy: about 17 s on a 10-core machine; after stage 4 (143 entries) about 28 s; after stage 5 (214 entries) about 55 s.
 - `tests/laser/mutation-check.test.js` tests the checker itself on one small test file (to keep `node --test` fast):
   - an unchanged copy passes;
   - a harmless change is not caught;
@@ -205,8 +206,8 @@ Problems to handle in the named stage:
 | D9 | Sign conventions: mirror radius positive = concave (§7.1), lens surface radius positive = centre to the right (§8.1), mirror as a lens f = R/2 | Write one convention in the `optics.js` header; test a plane mirror (R = ∞), a concave mirror and a convex mirror | 10–11 |
 | D10 | A Gaussian beam in a medium: §7.3 replaces a slab by l/n, while §8.4 puts n into z_R. Mixing the two is off by a factor of n | Use the reduced (l/n) convention everywhere; test slab ≡ free space l/n | 10 |
 
-**Site trap found while reading `js/router.js`.** After the first page loads, the router renders **every** page in the background, which fires `section:ready` for `laser` while it's hidden. It also re-renders every loaded page on each language switch. So `page.js` must:
-- tear down the previous build, using a generation counter like `js/labs.js`;
+**Site trap found while reading `js/router.js`.** After the first page loads, the router renders **every** page in the background, which fires `section:ready` for `laser` while it's hidden. (A second trap was found in stage 5's browser check: the router could fire the first `section:ready` before the scripts after it had run. It now waits for `DOMContentLoaded`.) It also re-renders every loaded page on each language switch. So `page.js` must:
+- tear down the previous build (a generation counter like `js/labs.js`'s is only needed if the build waits for something; in stage 5 it does not);
 - remove its `window` listeners;
 - do no heavy computation when the section is built;
 - start the loop only while the page is visible (`IntersectionObserver`).
@@ -451,29 +452,90 @@ Also: f's values at a point by hand; f stays finite at s = −800 with β = 0 (t
 - Declined: making `scales` call `cavity.js` (exporting its internal `lossPerPass(where, params)`). That function takes the caller's name first, unlike every other engine function, and would be public only for `rates.js`. The repeated formulas are one line each; the identity test now checks each term of γ on its own (four loss settings instead of two), and mutations break each formula.
 - 15 more mutations for these fixes (143 in all, all caught; about 28 s).
 
-### Stage 5 — Page skeleton
-- **Read first:** `js/labs.js` (mount and loop, roughly lines 270–520), `js/router.js` (render and prefetch), `css/labs.css` `.line-art`, `Instructions/HTML-CLASSES.md`, the hidden routes in `data/site.json`.
-- **Build:**
-  - `data/site.json` hidden route `laser`;
-  - `sections/laser.html` inside `.line-art`;
-  - `data/laser.json`;
-  - `css/laser.css` (+ link in `index.html`);
-  - `js/laser/ui/loop.js` (palette read like `palette()` in `js/labs.js`);
-  - `js/laser/ui/draw-bench.js` (a still bench drawing);
-  - `js/laser/page.js`;
-  - `index.html` script lines: engine in `ENGINE_FILES` order, then UI, then `page.js`;
-  - a featured banner in `sections/labs.html` + `data/labs.json`.
-- **New static tests (Node):**
-  - every `{hy, en}` pair in `data/laser.json` has both languages filled;
-  - `sections/laser.html` has no `style=` or `<style>`;
-  - `css/laser.css` has no literal colours;
-  - the skipped load-order test now runs.
-- **Traps:**
-  - the router trap above;
-  - `<header>`/`<footer>` inside a fragment inherit site styles: avoid them or reset;
-  - `<script>` in fragments never runs;
-  - only `textContent` for words;
-  - the canvas exposes `data-running="true|false"` so loop state can be checked in the browser.
+### Stage 5 — Page skeleton ✅
+
+**Scope card.** No physics; the page, its lifecycle and the way in from the Labs page. Read first: `js/labs.js` (mount and loop), `js/router.js` (render, prefetch, language switch), `js/content.js`, `css/labs.css` (`.line-art`, `.lab__frame`), `css/site.css` (`.page-head`, `.band`, `.card`), `Instructions/HTML-CLASSES.md`, the hidden routes in `data/site.json`.
+
+| File | What it holds |
+|---|---|
+| `data/site.json` | hidden route `laser`, label "Լազեր" / "The Laser" |
+| `sections/laser.html` | inside `.line-art`: a page head (back link, eyebrow, title, lead, a "being built" note) and the bench band with one canvas `data-laser-canvas="bench"`. No `<header>`/`<footer>` (they inherit the site bar), no `style=`, no `<script>` |
+| `data/laser.json` | every word of the page, hy and en: page head, the canvas description, the four part labels |
+| `css/laser.css` (linked in `index.html`) | the page and the Labs-page banner `.lab-feature`; theme variables only |
+| `js/laser/ui/loop.js` | `LaserUI.loop.create({ canvases, update, running })` → `{ play, pause, isRunning, redraw, destroy }`; `LaserUI.loop.liveCount()`; `LaserUI.loop.PALETTE` (palette name → CSS variable) |
+| `js/laser/ui/draw-bench.js` | `LaserUI.bench.layout(w, h)` (pure: where each part goes, in CSS pixels), `LaserUI.bench.draw(view, labels)`, `SIZE` (canvas proportions) and `PARTS` (the labelled parts) |
+| `js/laser/page.js` | on `section:ready` for `laser`: tears down the previous build, then builds a paused loop for the bench canvas; nothing else |
+| `index.html` | `css/laser.css`; after `js/labs.js`: the engine in `ENGINE_FILES` order, then `js/laser/ui/*.js`, then `js/laser/page.js` |
+| `sections/labs.html` + `data/labs.json` | a featured banner above the simulations grid, linking to `?view=laser`; the template of `data-list="featured.items"` (review) |
+
+**The loop** (`loop.js`), the same rules as `js/labs.js`:
+- one `requestAnimationFrame` loop for all the page's canvases: each frame calls `update(dt)` once (the simulation, from stage 6), then `draw(view)` for every canvas on screen;
+- dt in seconds, 0 on the first frame after a start, capped at 0.05 s;
+- it runs only while it is wanted (`play`/`pause`; not at the start for reduced-motion visitors) **and** a canvas is on screen (`IntersectionObserver`); each canvas carries `data-running="true|false"`;
+- canvas size from its box's inner width, `clientWidth` (`ResizeObserver` + window `resize`), height = width/aspect clamped to [minHeight, maxHeight], pixels × devicePixelRatio (at most 2) and then `setTransform(dpr, …)`; a box of width 0 (hidden page) keeps the last size;
+- `data-running` is `"true"` only on a canvas that is on screen while the loop runs; the next frame is asked for after `update` and the draws, and an error in either pauses the loop (review);
+- colours read from the CSS variables in `PALETTE`, read again on `theme:changed`; a paused loop draws once after a resize or a theme change;
+- `destroy()` stops the frame, disconnects both observers, removes both window listeners and ignores any callback that still arrives.
+
+**Test values and checks** (Node, with a small fake browser in `tests/laser/fake-browser.js`, which has its own tests):
+
+| Check | Expected |
+|---|---|
+| `data/laser.json`: every `{ hy, en }` pair | both filled; no other language keys |
+| every `data-text`/`data-rich`/`data-alt` key in `sections/laser.html` and in the banner | exists in its JSON, both languages; every `data-ui` key exists in `data/site.json` |
+| `sections/laser.html` | no `style=`, `<style`, `<script`, `<header`, `<footer` |
+| `css/laser.css`, `js/laser/ui/*.js`, `js/laser/page.js` | no colour literals (hex, `rgb(`, `hsl(`, colour names) |
+| every `PALETTE` variable | defined in both `:root` and `:root.theme-light` of `css/style.css` |
+| `index.html` | engine in `ENGINE_FILES` order (the skipped test now runs), then every `js/laser/ui/*.js` on disk and only those, then `page.js`; all after `content.js`, `main.js` and `labs.js`; `css/laser.css` linked |
+| `data/site.json` | `laser` route present, hidden, both labels |
+| loop, built while hidden | no frame requested, `data-running="false"`, nothing drawn |
+| loop, canvas comes on screen | a frame is requested; box 600 px inside a 1 px border, aspect 2, dpr 2 → 1200 × 600 pixels, `setTransform(2, 0, 0, 2, 0, 0)` after the resize; first dt 0; a 1 s gap → dt 0.05; `update` once per frame before `draw` |
+| height clamp, dpr cap | width/aspect below minHeight → minHeight; dpr 3 → 2 |
+| loop, off screen / `pause()` / `play()` / reduced motion | stops / stops / restarts only if on screen / starts paused |
+| theme switch | palette read again; a paused loop draws once |
+| `destroy()` | frame cancelled, observers disconnected, window listener counts back to before, `liveCount()` back down; a late observer callback does nothing; a second `destroy()` is harmless |
+| `bench.layout` for widths 280–1400 px | every part inside the canvas; back mirror < rod < output mirror; the lamp under the rod without touching it; label rows do not overlap; the picture symmetric (added when a break slipped through) |
+| `bench.draw` | every colour it sets is a palette value; it writes exactly the four labels, each with a `maxWidth` |
+| `page.js`: `section:ready` for `laser` | one loop, paused (nothing moves yet); the canvas gets `aria-label` = `bench.alt` in the current language (else the page title, else `aria-hidden`); the drawn labels are that language's |
+| `section:ready` for `laser` again (language switch), twice | still one live loop; the old one destroyed; window listener counts unchanged |
+| `section:ready` for another route | nothing built or torn down |
+| a `laser` section with no canvas (load error) | the old build torn down, no error |
+
+**Decisions:**
+- The page's loop starts paused (`running: false`) until stage 6 has something that moves (review): a still picture redrawn 60 times a second only costs battery. The loop's running path is tested in `loop.test.js`.
+- The banner's link target is layout: `href="?view=laser" data-goto="laser"` is written in `sections/labs.html`, like the cards' `data-goto="lab"`; only its words come from `data/labs.json`. (The plan said `data-route="laser.route"`; that would let a typo in a text file break the link.)
+- No generation counter in `page.js`: the build is synchronous (the words arrive with `section:ready`), so tearing down the previous build first is enough. One is needed only if a build ever waits for something.
+- The bench drawing is still in this stage, but the loop runs it every frame anyway, so the lifecycle is real and testable now; stage 6 adds the Play/Pause button.
+- Canvas colours come only from `PALETTE` (no fallback colours as in `labs.js`): a test checks every variable exists in both themes instead.
+- The banner's CSS is in `css/laser.css`, so everything the laser adds is in one file under the no-colour-literal test.
+- The engine is loaded on every page, like the two other labs (they add 49 KB, 13 KB gzipped; the engine 74 KB, 22 KB gzipped). If that ever matters, load the laser scripts only when `?view=laser` is first opened.
+
+**Traps:**
+- The router renders `laser` while it is hidden (prefetch) and again on every language switch: tear down first, do nothing heavy at build time, run only while on screen.
+- `<header>`/`<footer>` inside a fragment pick up the site's bar styles: use `<div>`s.
+- `<script>` in a fragment never runs; words only through `textContent` / `Content.bind`.
+- A hidden section has width 0: keep the last size, do not shrink the canvas to nothing.
+- **A box's border is not the canvas's** (found in the browser): measured with `getBoundingClientRect`, `.laser-bench`'s 1 px border made the bitmap 1824 px for a canvas shown 910 px wide at dpr 2, so the picture was drawn slightly squeezed. Measure `clientWidth`. `js/labs.js` had the same bug (fixed in this stage too, checked in the browser on both labs).
+- Resizing a canvas resets its context, transform included: `setTransform` must come after the resize. The fake canvas now resets too, so the tests see the order.
+
+**Breaks** (71, all caught): the loop's step cap, restart step, pixel-ratio cap, pixels × dpr, scale, transform order, minimum height, the same-width guard, a hidden page's width 0, the border counted in the width, stopping off screen, pause, reduced motion, each teardown step (both listeners, the observer, a queued frame, the live count, a second destroy), theme colours not re-read or not redrawn, an untrimmed CSS value, update after draw, off-screen canvases drawn, no observer fallback, a dark-only palette colour, an error thrown every frame, a stale `data-running` after an error, one `data-running` for every canvas, listeners registered before the first picture; the bench's colours, label alignment, `maxWidth`, empty labels, the lamp touching the rod, a lopsided picture, the medium label's row, save/restore, the rod off the axis, a partial clear, a tiny font, a part missing from `PARTS`; `page.js`'s teardown, route check, screen-reader name (description and hidden), canvas selector, a failed section keeping the old loop, the language, a running still picture; the words (an empty one, a renamed key, a bare string), the layout (`style=`, `<header>`, a key typo, `role="img"`), CSS colours (hex and a colour name), `index.html` (engine order, `page.js` order, a missing UI file, the stylesheet), the route not hidden, the banner (address, a missing word, its list renamed, an empty Armenian title); the router building the first page before the page scripts listen, never waiting, or never starting when loaded late.
+
+**Browser check** (Claude in Chrome, `http://127.0.0.1:5500`): the banner on the Labs page opens the page; a direct `?view=laser` works; the router's background build stays `data-running="false"` until the page is opened; leaving the page sets it to `"false"`; two language switches leave one live loop with Armenian labels; dark and light themes recolour the bench; at 375 px (an iframe, as the window could not be resized) the bench fits with no sideways scroll, and scrolling it away sets `"false"`; no console errors; the pendulum and refraction labs still work.
+
+**Found in the last browser check, after the review: the router could build the page before `page.js` listened.** With the edited laser files downloaded fresh, the background build of the laser page had no loop at all (`liveCount()` 0, no screen-reader name), and the server log showed `sections/laser.html` fetched before `page.js` arrived. All scripts are plain `<script>` tags at the end of `<body>`, but between two of them the browser still runs other work, so `router.js` (loaded early) finished its fetches and fired `section:ready` while the laser scripts were still downloading. `labs.js`, `news.js` and `home.js` have the same exposure; the laser's ten files after the router made it likely. Fix, in `js/router.js`: build the first page only after `DOMContentLoaded` (which fires after every such script has run) as well as `data/site.json`. Tested in `page.test.js` (the router in a small sandbox: nothing built while the page is being read, built at `DOMContentLoaded`, built at once if loaded late), three breaks, and in the browser again (direct `?view=laser`, the home page, both labs, the background build live and paused).
+
+**Review outcome** (`/code-review`, 15 findings: 14 fixed, 1 declined):
+- The loop redrew an unchanging picture 60 times a second (nothing to update, no Pause button). The page now starts its loop paused; it draws on resize and theme change.
+- The fake canvas did not reset its context on resize, so the tests could not see `setTransform` placed before the resize (half-size picture on retina). It does now; a test and a break cover the order.
+- The no-colour test knew 25 colour names and two colour functions, and only quoted JS strings. It now knows every CSS colour name and colour function and template strings, and ignores theme-variable names (`var(--gold-line)`).
+- A draw throwing on the first picture left observers and listeners behind with no way to remove them: the first picture is now drawn before anything is registered. An error in `update` or a draw was thrown again every frame: the loop now pauses on it.
+- `js/labs.js` kept the border bug found in this stage: fixed (one line, `frame.clientWidth`), both labs checked in the browser.
+- With no description, the canvas was an unnamed image (`role="img"`, empty `aria-label`): now the page title, or `aria-hidden` if there is no word at all.
+- Deleting the banner's words left an empty card with "Open the lab →": the banner is now the one item of a list, so deleting it removes the card.
+- `data-running` was the same on every canvas: now `"true"` only on a canvas that is on screen. The fake browser ran a frame cancelled earlier in the same batch: fixed, with a test.
+- Docs: `HTML-CLASSES.md` said the banner lifts on hover. No card on the site does: `.reveal.is-visible { transform: none }` (`site.css`) has the same specificity as `.card:hover` and comes later. The doc now says what happens; the site-wide CSS is left alone (reported).
+- The old load-order test in `engine-rules.test.js` still skipped itself when no engine line was there, and repeated `site-files.test.js`: removed. The part list was written in both `page.js` and `draw-bench.js`: now `LaserUI.bench.PARTS`. A dense one-line `valueAt` in a test became a plain loop.
+- Declined: loading the engine only from stage 6 (or lazily). Every page already loads both labs the same way; the engine is 22 KB gzipped; the browser check in this stage proved it loads without errors. Recorded above as an option for later.
 
 ### Stage 6 — First playable laser: Nd:YAG, continuous
 - **Build:**

@@ -33,6 +33,7 @@ A class in the markup is only a name that CSS uses to find the element.
 16. [The closing invitation `.cta`](#16-the-closing-invitation-cta)
 17. [The opening screen of the home page `.hero`](#17-the-opening-screen-of-the-home-page-hero)
 18. [News: the feed and the item page](#18-news-the-feed-post-card-and-the-item-page-post)
+18b. [The laser lab `.laser-*` and its banner `.lab-feature`](#18b-the-laser-lab-laser--and-its-banner-lab-feature)
 19. [The appearing animation `.reveal`](#19-the-appearing-animation-reveal)
 20. [Admin panel classes `/admin/`](#20-admin-panel-classes-admin)
 21. [`data-*` attributes (not classes, but important)](#21-data--attributes-not-classes-but-important)
@@ -52,6 +53,7 @@ A class in the markup is only a name that CSS uses to find the element.
 | [css/site.css](css/site.css) | The look of every public page, in both themes. |
 | [css/home.css](css/home.css) | Only the opening screen of the home page (`.hero`). |
 | [css/labs.css](css/labs.css) | The labs pages: one lab, and the silver lines (`.line-art`). |
+| [css/laser.css](css/laser.css) | The laser lab (`?view=laser`) and the banner on the Labs page that leads to it. |
 | [css/admin.css](css/admin.css) | Only the admin panel `/admin/` (always light). |
 
 One important point: almost all of `site.css` is written as `body.site .something`.
@@ -160,7 +162,7 @@ body.site.home #site-header { background: transparent; }     /* home page */
 ### `.line-art`
 **What it is:** a wrapper around a whole page, written by hand as the first and last thing in the fragment. It puts faint silver lines behind that page.
 **How it looks:** waves, orbits, field lines and a bending ray (the picture [images/lab-lines.svg](images/lab-lines.svg)) behind all the bands of the page, which turn see-through so the lines show. On the dark theme the lines are dimmed; on the light theme they are shown as they are. On a computer they stay still while the page scrolls over them; on a phone they sit at the top of the page. Cards and the lab's panel keep a solid colour, so the lines never run through words.
-**Where:** the Labs page ([sections/labs.html](sections/labs.html)) and the page of one lab ([sections/lab.html](sections/lab.html)).
+**Where:** the Labs page ([sections/labs.html](sections/labs.html)), the page of one lab ([sections/lab.html](sections/lab.html)) and the laser lab ([sections/laser.html](sections/laser.html)).
 **CSS:** [css/labs.css](css/labs.css)
 
 ```html
@@ -689,6 +691,45 @@ so it does not appear in the header, but it can still be opened by link.
 
 ---
 
+## 18b. The laser lab `.laser-*` and its banner `.lab-feature`
+
+The laser lab is one big lab with a page of its own, `?view=laser`
+([sections/laser.html](sections/laser.html), words in [data/laser.json](data/laser.json)).
+It is not built by `js/labs.js`; its pictures are drawn by the scripts in `js/laser/`.
+It is still being built, stage by stage (`docs/laser-plan.md`).
+
+```html
+<div class="line-art">
+  <div class="page-head laser-head">            <!-- a <div>: a <header> would get the site's header bar -->
+    <div class="container container--lab">
+      <a class="lab__back" …>← All labs</a>
+      … eyebrow, title, lead …
+      <p class="laser-status">This lab is still being built …</p>
+    </div>
+  </div>
+  <section class="band band--laser">
+    <div class="container container--lab">
+      <div class="laser-bench">
+        <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
+      </div>
+    </div>
+  </section>
+</div>
+```
+
+| Class | How it looks | CSS |
+|---|---|---|
+| `.laser-head` | The title block of the laser page. It is a `.page-head` (the same big title as every inner page); this class only spaces the back link above the eyebrow. | [css/laser.css](css/laser.css) |
+| `.laser-status` | The small note under the lead that says the lab is still being built: muted text in a lightly filled box with a thin border and rounded corners. Delete its words in `data/laser.json` and it disappears. | [css/laser.css](css/laser.css) |
+| `.band--laser` | The stripe the bench sits in. Less padding on top than an ordinary `.band`, so the bench is on the first screen. | [css/laser.css](css/laser.css) |
+| `.laser-bench` | The box around the bench picture: rounded corners, a thin border, a soft glow at the top and a deep shadow — the same look as the frame of the other labs. It sets the width of the canvas inside it. | [css/laser.css](css/laser.css) |
+| `.laser-bench__canvas` | The canvas the bench is drawn on, as wide as its box. Its height is set by `js/laser/ui/loop.js`. | [css/laser.css](css/laser.css) |
+| `.lab-feature` | The big banner on the Labs page that leads to the laser lab. It is also a `.card .card--link`, so it answers the mouse like the other cards (border, shadow, the arrow moving); it is larger, has a blue-to-violet stripe down its left edge (terracotta on the light theme), and sits above the grid of the other labs. It is the one item of the list `featured.items` in `data/labs.json`: deleting that item removes the whole banner. Where it leads is written in the layout. | [css/laser.css](css/laser.css) |
+| `.lab-feature__title` | The banner's heading: larger than a card title (1.5–2.1rem), extra bold. | [css/laser.css](css/laser.css) |
+| `.lab-feature__text` | The banner's sentence: muted, 1.02rem, at most 62 characters wide. | [css/laser.css](css/laser.css) |
+
+---
+
 ## 19. The appearing animation `.reveal`
 
 The most general class of all: it can be added **to anything**.
@@ -828,7 +869,9 @@ Classes are responsible for **the look**, and `data-*` attributes for **the cont
 | `data-route="cta.button.route"` | Turns the element into a link to another page of the site. |
 | `data-number="number"` + `data-suffix="suffix"` | A number that counts up from zero when scrolled to, plus whatever follows it (`+`, `%`). |
 | `data-ui="learnMore"` | A word shared by every page (taken from `data/site.json`). |
-| `data-goto="labs"` | Set by the script; [js/router.js](js/router.js) uses it to catch the click and change page without a reload. |
+| `data-goto="labs"` | Set by the script; [js/router.js](js/router.js) uses it to catch the click and change page without a reload. It can also be written in the layout, when where a link leads is part of the layout (the lab cards, the laser banner). |
+| `data-laser-canvas="bench"` | Marks the canvas of the laser lab that [js/laser/page.js](js/laser/page.js) draws the bench on. |
+| `data-running="true"` / `"false"` | Set by the laser lab's drawing loop on each of its canvases: whether that picture is being redrawn frame after frame right now. It is `false` while the page is hidden, while that canvas is scrolled away, and while the lab is paused (for now always: the bench does not move yet). Useful for checking in the browser that nothing runs in the background. |
 | `data-keep` | Keep the wrapper visible even when there is no text for it in the JSON. On a `data-link` the wording stays visible too, as a button that does nothing until the address is written in — that is how the photo-album buttons on the our story page work. |
 
 If there is no text in the JSON for an element, the script **hides it by itself** so no empty holes are left on the page ([js/content.js:242](js/content.js#L242)).

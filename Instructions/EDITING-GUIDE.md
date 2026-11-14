@@ -25,6 +25,7 @@ touch `sections` or `css`.
 | any text on the **home** page | `data/home.json` |
 | any text on the **labs** page | `data/labs.json` |
 | the words of one **interactive lab** | `data/labs/<lab>.json` |
+| the words of the **laser lab** (its banner on the labs page is `featured` in `data/labs.json`) | `data/laser.json` |
 | the **summer camp** page | `data/camp.json` |
 | the **research** page | `data/research.json` |
 | the **our story** page (year by year) | `data/story.json` |

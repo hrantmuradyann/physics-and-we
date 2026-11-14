@@ -1,0 +1,113 @@
+/* ============================================================================
+   laser.css — the laser lab (?view=laser) and the banner that leads to it.
+
+   The bench itself is drawn on a canvas by js/laser/ui/, so there is little
+   here: the box around the canvas and a few blocks of text.
+
+   THE BLOCKS
+     .laser-head      the title block of the laser page (also a .page-head)
+     .laser-status    the small "still being built" note under the lead
+     .band--laser     the stripe the bench sits in
+     .laser-bench     the box the bench canvas sits in (it sets the width)
+     .lab-feature     the big banner on the Labs page (sections/labs.html)
+
+   Colours: only the theme variables of css/style.css, so everything follows
+   the dark / light theme. tests/laser/site-files.test.js checks that no
+   colour is written out in this file.
+   ========================================================================== */
+
+/* ============================================================================
+   THE TITLE BLOCK
+   ========================================================================== */
+
+/* "← All labs" above the eyebrow (.lab__back is in css/labs.css). */
+.laser-head .lab__back {
+  margin-bottom: 1.4rem;
+}
+
+.laser-status {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--line);
+  /* Not a round pill: in Armenian, and on a phone, it wraps to several lines. */
+  border-radius: var(--radius-sm);
+  background: var(--faint-bg);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ============================================================================
+   THE BENCH
+   ========================================================================== */
+
+/* The bench sits close under the title, so it is on the first screen. */
+.band--laser {
+  padding-top: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+/* The same look as the frame of the other labs (.lab__frame in
+   css/labs.css), so the laser lab feels like part of the same set. */
+.laser-bench {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(700px 340px at 50% 0%, var(--glow-1), transparent 62%),
+    linear-gradient(180deg, var(--bg-2), var(--bg));
+  box-shadow: 0 30px 70px -34px var(--shadow);
+}
+
+/* The width comes from the box; js/laser/ui/loop.js sets the height. */
+.laser-bench__canvas {
+  display: block;
+  width: 100%;
+}
+
+/* ============================================================================
+   THE BANNER ON THE LABS PAGE
+   A larger card (it is also .card .card--link), with a coloured stripe
+   down its left edge, above the grid of the other labs.
+   ========================================================================== */
+.lab-feature {
+  padding: clamp(1.8rem, 4vw, 2.6rem) clamp(1.5rem, 4vw, 2.6rem);
+  margin-bottom: 2.4rem;
+  border-color: var(--hover-line);
+}
+
+.lab-feature::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+}
+
+.lab-feature__title {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 800;
+  color: var(--heading);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0.6rem 0 0.8rem;
+}
+
+.lab-feature__text {
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.7;
+  max-width: 62ch;
+}
+
+/* ============================================================================
+   SMALL SCREENS
+   ========================================================================== */
+@media (max-width: 640px) {
+  .laser-bench {
+    border-radius: 14px;
+  }
+}

@@ -56,6 +56,12 @@
       "route": "lab",
       "hidden": true,
       "label": { "hy": "Լաբորատորիա", "en": "Lab" }
+    },
+    {
+      "_readme": "The laser lab: one big lab with a page of its own. Hidden: it is reached from the banner on the Labs page, never from the menu.",
+      "route": "laser",
+      "hidden": true,
+      "label": { "hy": "Լազեր", "en": "The Laser" }
     }
   ],
 

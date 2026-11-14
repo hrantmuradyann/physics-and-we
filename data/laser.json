@@ -1,0 +1,30 @@
+{
+  "_readme": "THE LASER LAB (?view=laser): every word of the page. Edit the text between the quotes only. hy = Armenian, en = English. The physics numbers are not here; they are in js/laser/engine/. The lab is still being built, so more words will be added here as it grows.",
+
+  "page": {
+    "eyebrow": { "hy": "Ինտերակտիվ լաբորատորիա", "en": "Interactive lab" },
+    "title": { "hy": "Լազերը", "en": "The Laser" },
+    "lead": {
+      "hy": "Լազերը կազմված է մի քանի մասից՝ միջավայր, որն ուժեղացնում է լույսը, մղում, որը նրան էներգիա է տալիս, և երկու հայելի, որոնք լույսը հետ ու առաջ են ուղարկում։ Այստեղ դուք կհավաքեք լազերը այդ մասերից և կտեսնեք, թե երբ և ինչու է այն սկսում լույս արձակել։",
+      "en": "A laser is made of a few parts: a medium that amplifies light, a pump that gives it energy, and two mirrors that send the light back and forth. Here you will put a laser together from these parts and see when, and why, it starts to shine."
+    },
+    "status": {
+      "hy": "Լաբորատորիան դեռ կառուցվում է։ Առայժմ ստորև միայն լազերի նկարն է․ կառավարման տարրերը կավելանան հաջորդ քայլում։",
+      "en": "This lab is still being built. For now there is only a picture of the laser below; the controls come next."
+    }
+  },
+
+  "bench": {
+    "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short.",
+    "alt": {
+      "hy": "Լազերի նկար․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, նրանց միջև՝ ակտիվ միջավայրի ձող, իսկ ձողի տակ՝ մղման լամպ։",
+      "en": "A drawing of a laser: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, between them a rod of gain medium, and under the rod a pump lamp."
+    },
+    "parts": {
+      "backMirror": { "hy": "Հետին հայելի", "en": "Back mirror" },
+      "outputMirror": { "hy": "Ելքային հայելի", "en": "Output mirror" },
+      "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
+      "pump": { "hy": "Մղման լամպ", "en": "Pump lamp" }
+    }
+  }
+}

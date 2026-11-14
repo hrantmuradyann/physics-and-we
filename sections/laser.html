@@ -1,0 +1,43 @@
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+  THE LASER LAB — layout only.                          ?view=laser
+
+  The words are NOT here. They are in  data/laser.json .
+
+  The picture on the bench is drawn by the scripts in js/laser/:
+  page.js builds the page, js/laser/ui/ draws, js/laser/engine/ is the
+  physics. The lab is built in stages: docs/laser-plan.md.
+
+  This page is not in the menu. The banner on the Labs page leads here
+  (sections/labs.html).
+  ══════════════════════════════════════════════════════════════════════════
+-->
+
+<!-- Silver lines behind the whole page — see .line-art in css/labs.css -->
+<div class="line-art">
+
+<!-- ░░ PAGE TITLE ░░
+     A <div>, not a <header>: a <header> would pick up the site's header
+     bar from css/style.css. -->
+<div class="page-head laser-head">
+  <div class="container container--lab">
+    <a class="lab__back reveal" href="?view=labs" data-goto="labs" data-ui="backToLabs"></a>
+    <p class="eyebrow reveal" data-text="page.eyebrow"></p>
+    <h1 class="page-head__title reveal" data-text="page.title"></h1>
+    <p class="lead reveal" data-text="page.lead"></p>
+    <p class="laser-status reveal" data-text="page.status"></p>
+  </div>
+</div>
+
+<!-- ░░ THE BENCH ░░
+     Drawn by js/laser/ui/draw-bench.js. Its description for screen readers
+     (bench.alt in data/laser.json) is put on the canvas by js/laser/page.js. -->
+<section class="band band--laser">
+  <div class="container container--lab">
+    <div class="laser-bench reveal">
+      <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
+    </div>
+  </div>
+</section>
+
+</div><!-- /.line-art -->

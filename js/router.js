@@ -255,7 +255,23 @@
 
   /* ---------- Start ---------- */
 
-  Site.ready.then(function (site) {
+  // The first page is built only once the browser has read all of
+  // index.html. The scripts after this one (labs.js, news.js, the laser
+  // page, ...) listen for "section:ready". While one of them is still
+  // downloading, the browser can already finish this file's fetches, and a
+  // page built then is never set up: no picture, no buttons (found with
+  // the laser page, whose scripts come last). DOMContentLoaded fires only
+  // after every <script> at the end of <body> has run.
+  var documentRead = new Promise(function (resolve) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () { resolve(); });
+    } else {
+      resolve();
+    }
+  });
+
+  Promise.all([Site.ready, documentRead]).then(function (results) {
+    var site = results[0];
     app = document.getElementById("app");
     if (!app) return;
 
