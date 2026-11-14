@@ -64,7 +64,15 @@ English-language textbooks (Svelto, Siegman, Koechner) reuse the letters g and R
 | T = 1 − R₂ | output-coupler transmission | — | `T_oc` |
 | L_i | all other losses per round trip, as a fraction | — | `L_i` |
 | γ | single-pass logarithmic loss | — | `gamma` |
-| x = g₀/g_th | how many times the pump exceeds threshold | — | `x` |
+| x = g₀/g_th | how many times the pump exceeds threshold; for a four-level medium also R_p/R_c (Section 4.1) | — | `x` |
+| N_c = γ/(σl) | threshold inversion of the rate equations, the same as ΔN_th of Section 3.1 | m⁻³ | `N_c` |
+| R_p, R_c = N_c/τ | pump rate into the upper laser level, and its value at threshold | m⁻³ s⁻¹ | `R_p`, `R_c` |
+| V = A·L_e, V_a = A·l | mode volume of the cavity, active (gain) volume | m³ | `V`, `V_a` |
+| B = σc/V (Sections 4, 11) | stimulated-emission rate per photon per unit inversion. Not the Einstein coefficients B₁₂, B₂₁ of Section 1, which the code does not use | s⁻¹ | `B` |
+| β (Section 4) | fraction of spontaneous emission that goes into the laser mode | — | `beta` |
+| t′ = t/τ, y = N/N_c, p = Bτφ, s = ln p (Section 11.2) | dimensionless time, inversion and photon number, and the logarithm the integrator uses | — | `tPrime`, `y`, `p`, `s` |
+| ε = τ_c/τ (Section 11.2) | how stiff the equations are. ε also stands for the permittivity (Section 13) and a mirror tilt angle (Section 7.5); those get other code names | — | `eps` |
+| ω_R, t_damp | relaxation-oscillation angular frequency, damping time | rad/s, s | `omegaR`, `t_damp` |
 | R₁, R₂ (Section 7) | mirror radii of curvature | m | `Rc1`, `Rc2` |
 | g₁, g₂ (Section 7) | resonator g-parameters, 1 − L/R | — | `g1`, `g2` |
 | τ_c | cavity photon lifetime | s | `tau_c` |
@@ -359,7 +367,7 @@ The equations give the same threshold as Section 3: N_c = 1/(V_aBτ_c) = γ/(σl
 N_0 = N_c, \qquad \phi_0 = \tau_c V_a\,(R_p - R_c), \quad R_c = \frac{N_c}{\tau}, \qquad P_{\text{out}} = \frac{c\,\gamma_2}{2L_e}\; h\nu\,\phi_0
 ```
 
-γ₂ = −ln R₂ is the logarithmic loss of the output coupler. A useful number for the interface is x = R_p/R_c, "how many times above threshold".
+γ₂ = −ln R₂ is the logarithmic loss of the output coupler. A useful number for the interface is x = R_p/R_c, "how many times above threshold". With I_sat = hν/(στ) the output power is also P_out = (γ₂/2)·A·I_sat·(x − 1); for small losses (γ₂ ≈ T, γ ≈ (T + L_i)/2) this is the low-gain Rigrod formula of Section 3.6, which differs from it by a relative T/(2(x − 1)) when R₁ = 1 and L_i = 0.
 
 ### 4.2 Spiking and relaxation oscillations
 
@@ -369,7 +377,9 @@ The book describes the ruby output as a train of spikes ~10⁻⁶ s long, separa
 \omega_R = \sqrt{\frac{x-1}{\tau\,\tau_c}}, \qquad t_{\text{damp}} = \frac{2\tau}{x}
 ```
 
-Ruby: τ = 3 ms, τ_c ≈ 5 ns, x = 3 → period 2π/ω_R ≈ 17 µs, damping ~2 ms — longer than the whole flash. So ruby spikes never die out, while He-Ne (τ ~ 10⁻⁷ s) shows no oscillations at all — a good contrast for the simulator. The simulator must reproduce spiking on its own from the equations of 4.1; the formula is for checking.
+ω_R is the small-ε limit. Exactly, the linearized equations oscillate at ω = √(ω_R² − (x/2τ)²) and decay at the rate x/2τ; for ruby the two frequencies agree to 10⁻⁶, for He-Ne they do not. The formulas hold for small oscillations only: a disturbance δy of the inversion is small when δy ≪ √(ε(x − 1)) (about 2×10⁻³ for ruby); a larger one gives full spikes, whose spacing is longer.
+
+Ruby: τ = 3 ms, τ_c ≈ 5 ns, x = 3 → period 2π/ω_R ≈ 17 µs, damping ~2 ms — longer than the whole flash: about 116 oscillations while the amplitude falls by a factor e, and about 535 before it falls to 1 %. So ruby spikes never die out, while He-Ne shows no oscillation that can be seen: with τ ≈ 10⁻⁷ s and τ_c ≈ 66 ns (ε ≈ 0.66) at x = 2 it is formally underdamped (ω ≈ 0.72/τ), but it loses a factor e^8.8 ≈ 6500 in amplitude per period. A good contrast for the simulator. The simulator must reproduce spiking on its own from the equations of 4.1; the formula is for checking.
 
 ### 4.3 Q-switching: the giant pulse
 
@@ -978,7 +988,8 @@ Dimensional quantities are restored only for display (P_out from the formula in 
 ### 11.3 Numerical scheme
 
 - **Stiffness.** ε = τ_c/τ is ~10⁻⁶ for ruby, ~10⁻³ for a diode, ~1 for He-Ne. A fixed-step Runge–Kutta will either blow up or be very slow. Use an adaptive step (Dormand–Prince RK45) or an implicit scheme (Rosenbrock). The adaptive step shrinks during a pulse and grows where the photon number changes slowly, but an explicit method like RK45 has a stability limit: while the photon number sits at its spontaneous-emission level (below threshold, or while the inversion builds up before the first spike), ∂ṡ/∂s = −(1 − y)/ε, so the step cannot grow past about 3.3ε/(1 − y) in t′, a few τ_c. It stays correct but pays many steps: for ε = 10⁻⁶ and x = 0.5, 3τ of pumping takes about 6×10⁵ steps. An implicit scheme has no such limit; whether ruby needs one is measured in build stage 7 (`docs/laser-plan.md`).
-- **Dynamic range.** It is convenient to integrate s = ln p: ds/dt′ = [(y − 1) + βy/p]/ε. Then growth from one photon to 10¹⁸ is linear growth of s, with no overflow and no loss of precision.
+- **Dynamic range.** It is convenient to integrate s = ln p: ds/dt′ = [(y − 1) + βy·e^(−s)]/ε. Then growth from one photon to 10¹⁸ is linear growth of s, with no overflow and no loss of precision. Start from one photon, p = Bτ (s ≈ −26 for a small Nd:YAG laser), since s = ln 0 does not exist. Compute the seed βy·e^(−s) as one exponential, e^(ln β + ln y − s): it is about 1 at the seed level, but e^(−s) on its own overflows once s < −709, which happens with the pump off (y falls and s follows ln(βy) down) and with a tiny β. With β = 0 the seed is simply 0 (written as β·y·e^(−s) it would be 0·∞ = NaN): below threshold s then falls without limit (one photon decays; for Nd:YAG to s ≈ −1600 before threshold is reached).
+- **Photons far below the seed.** ln p has its own trap: when p ≪ βy, ds/dt′ ≈ βy/(εp) is huge and changes as fast as p does, so the step must shrink below what floating-point time can hold and the solver gives up. A real laser leaves that state within about τ_c (spontaneous emission alone gives p ≈ βy after one τ_c), so the code may skip it: before each run, raise s to at least ln(β·max(y, 10⁻¹²)). Two moments need it: β turned on after a run with β = 0 (s may be −300), and the pump turned back on after a long time off (y ≈ e^(−t′) then starts so low that the photons have to climb hundreds of e-folds at once).
 - **On-screen time.** Real time cannot be shown. You need a "slow-motion" slider (10³–10¹² times) and logarithmic time axes on the plots. Otherwise a 1 ms flash and a 10 ns pulse cannot be seen on one plot.
 - **Multiple modes.** Each longitudinal mode q has its own φ_q and its own gain g(ν_q) = σ(ν_q)ΔN. With homogeneous broadening all modes share one ΔN, and competition comes out by itself. With inhomogeneous broadening ΔN is split into spectral classes (velocity classes for a gas); each mode burns its own classes, producing "holes" in the gain curve.
 - **Mode locking** does not enter the rate equations (they have no phases). It is easier to show as a separate scene using the formula of 4.5, with mode amplitudes taken from the gain curve.

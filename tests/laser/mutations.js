@@ -296,8 +296,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/cavity.js",
-    find: "return L_e / (c * gamma);",
-    replace: "return 2 * L_e / (c * gamma);",
+    find: "var tau_c = L_e / (c * gamma);\n    // A loss too small",
+    replace: "var tau_c = 2 * L_e / (c * gamma);\n    // A loss too small",
     why: "photon lifetime from the round-trip time instead of one pass"
   },
   {
@@ -320,8 +320,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/cavity.js",
-    find: "if (overThreshold <= 0) return 0;\n    return area * (T_oc * I_sat / 2) * overThreshold;",
-    replace: "return area * (T_oc * I_sat / 2) * overThreshold;",
+    find: "if (overThreshold <= 0) return 0;\n    // A loss too small to divide by (T_oc + L_i",
+    replace: "// A loss too small to divide by (T_oc + L_i",
     why: "low-gain Rigrod gives a negative power below threshold"
   },
   {
@@ -681,6 +681,232 @@ const MUTATIONS = [
     find: "    if (Array.isArray(value)) return \"an array of length \" + value.length;\n",
     replace: "",
     why: "a long array floods an error message"
+  },
+
+  /* ---------- stage 4: rates.js ---------- */
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [x - y - y * Math.exp(s), ((1 - y) + seed) / eps];",
+    why: "sign of (y − 1) flipped: gain becomes loss"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [x - y - y * Math.exp(s), ((y - 1) + seed)];",
+    why: "ε dropped: photons as slow as the inversion"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [x - y - Math.exp(s), ((y - 1) + seed) / eps];",
+    why: "stimulated emission y·p written as p"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "seed = Math.exp(logBeta + Math.log(y) - s);",
+    replace: "seed = Math.exp(logBeta - s);",
+    why: "seed β·y written as β"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "seed = Math.exp(logBeta + Math.log(y) - s);",
+    replace: "seed = Math.exp(logBeta + Math.log(y) + s);",
+    why: "seed β·y/p written as β·y·p"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "seed = Math.exp(logBeta + Math.log(y) - s);",
+    replace: "seed = beta * y * Math.exp(-s);",
+    why: "seed as β·y·e^(−s): e^(−s) overflows once s < −709 although the seed is about 1 (pump off)"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "if (beta > 0 && y > 0) {\n        seed = Math.exp(logBeta + Math.log(y) - s);",
+    replace: "if (y > 0) {\n        seed = beta * y * Math.exp(-s);",
+    why: "β = 0 seed multiplied by 0: 0·Infinity = NaN once s < −709"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "if (beta > 0 && y > 0) {",
+    replace: "if (beta > 0) {",
+    why: "a seed from y < 0 (a solver trial): ln of a negative number is NaN"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / (eps * (1 + eps))];",
+    why: "an error that grows with ε: the runs at ε ≤ 10⁻³ hardly see it, the He-Ne run (ε ≈ 0.66) does"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var outputRate = c * gammaOut / (2 * L_e);",
+    replace: "var outputRate = c * gammaOut / L_e;",
+    why: "output rate without the ½ (γ₂ is a round-trip loss)"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var gammaOut = Math.abs(Math.log(refl2));",
+    replace: "var gammaOut = -Math.log(refl2);",
+    why: "a perfect output mirror gives −0 W"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var V = area * L_e;",
+    replace: "var V = area * l_g;",
+    why: "mode volume from the rod length instead of L_e"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var N_c = gamma / (sigma * l_g);",
+    replace: "var N_c = gamma / sigma;",
+    why: "threshold inversion without the rod length"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "eps: tau_c / tau,",
+    replace: "eps: tau / tau_c,",
+    why: "ε upside down"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var pOnePhoton = B * tau;",
+    replace: "var pOnePhoton = B;",
+    why: "one photon as p = B instead of Bτ"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "powerPerP: h * nu * outputRate / pOnePhoton",
+    replace: "powerPerP: h * outputRate / pOnePhoton",
+    why: "output power without the photon energy hν"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var gamma = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2));",
+    replace: "var gamma = alpha_i - 0.5 * (Math.log(refl1) + Math.log(refl2));",
+    why: "internal loss α not multiplied by the rod length"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "if (!isFinite(tau_c / tau)) {",
+    replace: "if (false) {",
+    why: "a lossless cavity accepted: infinite photon lifetime"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "if (!isFinite(tau_c / tau)) {",
+    replace: "if (gamma === 0) {",
+    why: "only γ = 0 refused: γ = 10⁻³²⁰ gives τ_c = Infinity"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "if (l_g > L_e * (1 + 1e-9)) {",
+    replace: "if (l_g > L_e) {",
+    why: "a medium filling the cavity refused after float rounding"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "if (l_g > L_e * (1 + 1e-9)) {",
+    replace: "if (false) {",
+    why: "a rod longer than the cavity accepted"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var p = x >= 1 ? ((x - 1) + squareRoot) / 2 : 2 * beta * x / (squareRoot - (x - 1));",
+    replace: "var p = ((x - 1) + squareRoot) / 2;",
+    why: "steady state below threshold computed with cancellation"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return { y: x / (1 + p), p: p };",
+    replace: "return { y: x / p, p: p };",
+    why: "steady inversion x/p instead of x/(1 + p)"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var squared = omegaR * omegaR - dampingRate * dampingRate;",
+    replace: "var squared = omegaR * omegaR;",
+    why: "damped frequency without the (x/2τ)² correction"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "t_damp: 1 / dampingRate",
+    replace: "t_damp: 0.5 / dampingRate",
+    why: "damping time τ/x instead of 2τ/x"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "    if (x <= 1) {\n      check.fail(where, \"x must be above 1",
+    replace: "    if (x < 1) {\n      check.fail(where, \"x must be above 1",
+    why: "relaxation at exactly threshold accepted"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return [y, Math.max(s, seedLevel)];",
+    replace: "return [y, s];",
+    why: "liftToSeed does nothing: the solver gives up when β comes on or the pump comes back"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return [y, Math.max(s, seedLevel)];",
+    replace: "return [y, Math.min(s, seedLevel)];",
+    why: "liftToSeed lowers the photons of a laser that runs"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var seedLevel = Math.log(beta) + Math.log(Math.max(y, Y_FLOOR));",
+    replace: "var seedLevel = Math.log(beta) + Math.log(y);",
+    why: "no floor for y: after a long time with the pump off there is nothing to lift to"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var Y_FLOOR = 1e-12;",
+    replace: "var Y_FLOOR = 1e-40;",
+    why: "a floor so low that the solver cannot follow the photons up when the pump comes back"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "if (state.length !== 2) {",
+    replace: "if (false) {",
+    why: "liftToSeed takes a state that is not [y, s]"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "check.params(where, params, [\"x\", \"eps\", \"beta\"]);",
+    replace: "",
+    why: "derivatives ignores a name it does not use"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "check.params(where, params, [\"x\", \"beta\"]);",
+    replace: "",
+    why: "steadyState ignores a name it does not use"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "check.params(where, params, [\"x\", \"tau\", \"tau_c\"]);",
+    replace: "",
+    why: "relaxation ignores a name it does not use"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "check.params(where, params, [\"state\", \"beta\"]);",
+    replace: "",
+    why: "liftToSeed ignores a name it does not use"
+  },
+
+  /* ---------- stage 4 review: cavity.js, a loss too small to divide by ---------- */
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (!isFinite(tau_c)) failLossless(where);",
+    replace: "",
+    why: "photonLifetime returns Infinity for γ = 10⁻³²⁰"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (overThreshold === Infinity) failLossless(where);",
+    replace: "",
+    why: "rigrodLowGain returns NaN or Infinity for T_oc + L_i = 10⁻³²⁴"
   }
 ];
 

@@ -14,8 +14,11 @@
    Outcomes for each mistake:
      caught      a test failed — good
      MISSED      every test passed: the tests have a hole, add a test
-     TIMED OUT   the tests hung: give the relevant test a { timeout } so a
-                   mistake makes it fail instead of hang
+     TIMED OUT   the tests ran too long: a loop in a test (a solver run) has
+                   no small bound, so the mistake made it slow instead of
+                   failing. Bound the work (maxSteps near what the run needs);
+                   a { timeout } does not help, because node:test cannot stop
+                   a test that never gives up control
      ERROR       the entry itself is wrong (text not found, not valid
                    JavaScript after the change, path outside the copy, ...)
 
@@ -294,7 +297,8 @@ async function main() {
   console.log("");
   console.log((results.length - problems) + " of " + results.length + " deliberate mistakes caught.");
   if (problems > 0) {
-    console.log("Add a test for each MISSED mistake, a { timeout } for each TIMED OUT one, " +
+    console.log("Add a test for each MISSED mistake, bound the work of the tests a TIMED OUT one " +
+      "slowed down (maxSteps; a { timeout } cannot stop a synchronous test), " +
       "and fix each ERROR entry in tests/laser/mutations.js.");
     process.exitCode = 1;
   }

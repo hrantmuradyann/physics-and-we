@@ -349,6 +349,18 @@ test("a cavity with no loss at all is refused: its finesse, τ_c and power would
   assert.throws(() => call("rigrodLowGain", { g0: 1, l_g: 0.1, T_oc: 0, L_i: 0, I_sat: 1, area: 1 }), /no loss at all/);
 });
 
+test("a loss too small to divide by counts as none: an error, not Infinity or NaN", () => {
+  assert.throws(() => call("photonLifetime", { L_e: 0.3, gamma: 1e-320 }), /photonLifetime: this cavity has no loss at all/);
+  for (const [T_oc, L_i] of [[0, 5e-324], [5e-324, 0]]) {
+    assert.throws(() => call("rigrodLowGain", { g0: 1, l_g: 0.1, T_oc, L_i, I_sat: 1, area: 1 }),
+      /rigrodLowGain: this cavity has no loss at all/, "T_oc = " + T_oc + ", L_i = " + L_i);
+  }
+  // a tiny loss that still divides is fine: P → A·I_sat·g₀l as T → 0 with L_i = 0
+  assertClose(call("rigrodLowGain", { g0: 1, l_g: 0.1, T_oc: 1e-300, L_i: 0, I_sat: 1, area: 1 }), 0.1, 1e-12, "P");
+  // an absorbing medium is below threshold however small the loss: 0, not an error
+  assert.equal(call("rigrodLowGain", { g0: -1, l_g: 0.1, T_oc: 0, L_i: 5e-324, I_sat: 1, area: 1 }), 0);
+});
+
 test("effectiveLength takes nGroup, so the phase index n cannot be passed by mistake (D5)", () => {
   assert.throws(() => call("effectiveLength", { L: 300 * C.um, l_g: 300 * C.um, n: 3.6 }),
     /n is not one of its inputs \(L, l_g, nGroup\)/);

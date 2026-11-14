@@ -45,7 +45,8 @@ const ENGINE_FILES = [
   "spectrum.js",
   "media.js",
   "cavity.js",
-  "ode.js"
+  "ode.js",
+  "rates.js"
 ];
 
 // Loads the engine into a fresh, empty sandbox and returns

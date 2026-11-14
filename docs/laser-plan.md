@@ -92,7 +92,8 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 1b: safety tools (mutation checker, `deepFreeze`, engine-folder override).
 - ✅ Stage 2: static cavity and spectrum (`cavity.js`, `check.js`, lineshapes and mode comb in `spectrum.js`, `ng` in `media.js`).
 - ✅ Stage 3: ODE solver (`ode.js`: adaptive Dormand–Prince 5(4)); the mutation check runs in parallel.
-- Next: stage 4.
+- ✅ Stage 4: four-level rate equations (`rates.js`: scales, right-hand side, steady state, relaxation oscillations, the seed floor `liftToSeed`).
+- Next: stage 5.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking.
 
@@ -132,7 +133,7 @@ Working agreement: every stage follows the recipe in section 3, ends with `/code
 3. **Tests first.** Write the tests from the scope card and run them; they must fail, because the functions don't exist yet.
    - Per function, cover: a normal value; every doc example; boundaries and singular points; invalid input throws a clear error; a units sanity range for each new field; inputs left unchanged (tests pass **deep-frozen** inputs, so any change throws).
 4. **Implement**, following the engine rules in `CLAUDE.md`. Values are written as number × unit, and comments cite the doc.
-5. **Break it on purpose.** Add this stage's deliberate breaks to `tests/laser/mutations.js` and run `node tests/laser/mutation-check.js`. Every break must come back "caught": MISSED means a missing test, TIMED OUT means a test needs a `{ timeout }`, ERROR means a bad entry. Each break must leave the file valid JS/JSON; a typo that stops the file loading proves nothing.
+5. **Break it on purpose.** Add this stage's deliberate breaks to `tests/laser/mutations.js` and run `node tests/laser/mutation-check.js`. Every break must come back "caught": MISSED means a missing test, TIMED OUT means a test's work is not bounded tightly enough (give each solver call a `maxSteps` near what it needs: node:test cannot stop a synchronous test, so a `{ timeout }` does nothing), ERROR means a bad entry. Each break must leave the file valid JS/JSON; a typo that stops the file loading proves nothing.
    - Typical breaks: drop a factor of 2, flip a sign, forget a unit, use the wrong variable (`l` vs `L`, `n` vs `n_g`), an off-by-one, the wrong log.
 6. **Full checks.**
    - `node --test` must pass.
@@ -156,9 +157,9 @@ Working agreement: every stage follows the recipe in section 3, ends with `/code
 - `tests/laser/mutation-check.js` + `tests/laser/mutations.js`:
   - `mutations.js` holds `{ file, find, replace, why }` entries; `file` is relative to the repo root, so engine, UI, data and CSS files can all be checked.
   - The checker copies `index.html`, `js/`, `css/`, `data/` and `sections/` to a temp folder and first runs the tests on the unchanged copy; they must pass. Then, for each entry, it makes the change in a fresh copy and runs every laser test.
-  - Outcomes: caught, MISSED (add a test), TIMED OUT (give the test a `{ timeout }`), ERROR (the text isn't found exactly once, the change isn't valid JS/JSON, or the path is outside the copy).
+  - Outcomes: caught, MISSED (add a test), TIMED OUT (bound the test's work, e.g. `maxSteps`; a `{ timeout }` cannot stop a synchronous test), ERROR (the text isn't found exactly once, the change isn't valid JS/JSON, or the path is outside the copy).
   - The replacement is inserted literally, so `$&` and `$$` aren't special.
-  - 28 entries at the end of stage 1b, all caught. A full run then took about 4 s; after stage 2 (70 entries) about 22 s. After stage 3 (94 entries) it took 44 s one at a time, so it now checks half the processor cores' worth of mistakes at once, each in its own copy: about 17 s on a 10-core machine.
+  - 28 entries at the end of stage 1b, all caught. A full run then took about 4 s; after stage 2 (70 entries) about 22 s. After stage 3 (94 entries) it took 44 s one at a time, so it now checks half the processor cores' worth of mistakes at once, each in its own copy: about 17 s on a 10-core machine; after stage 4 (143 entries) about 28 s.
 - `tests/laser/mutation-check.test.js` tests the checker itself on one small test file (to keep `node --test` fast):
   - an unchanged copy passes;
   - a harmless change is not caught;
@@ -195,7 +196,7 @@ Problems to handle in the named stage:
 |---|---|---|---|
 | D1 | **Confocal resonator (g₁ = g₂ = 0) is 0/0 in every closed form of §7.2** (w₀², w₁², z₁), and its round-trip matrix is −I, so the ABCD method of §7.3 is also undetermined. It is the main test case | Use the symmetric formula w₀² = (λL/π)·√((1+g)/(4(1−g))), which is regular at g = 0. Test confocal against √(λL/2π), and test continuity at g = ±0.01 | 10 |
 | D2 | §4.1 says for three levels "N → ΔN in the second equation". The spontaneous seed β·V_a·ΔN/τ then goes **negative** while ΔN < 0 (ruby before half inversion), giving a negative photon number and a NaN log | The seed uses N₂ = (N_t + ΔN)/2. Fix the doc sentence | 7 |
-| D3 | §4.2 says He-Ne "shows no oscillations at all". At x = 2 it is weakly underdamped (ω_R = 1.23×10⁷ s⁻¹ > x/2τ = 1.0×10⁷ s⁻¹) and dies out within about one oscillation | Reword the doc; test "settles within a few τ" | 7 |
+| D3 | §4.2 says He-Ne "shows no oscillations at all". At x = 2 it is weakly underdamped (ω_R = 1.23×10⁷ s⁻¹ > x/2τ = 1.0×10⁷ s⁻¹) and dies out within about one oscillation | Done in stage 4: the doc now gives the exact damped frequency (0.72/τ) and the factor e^8.8 lost per period; `rates.test.js` checks ω·t_damp < 1 for He-Ne | 4 |
 | D4 | Ruby N_t is 1.6×10¹⁹ cm⁻³ in §3.1 but "~10¹⁹" in §5.2 and §12 | Use 1.6×10¹⁹ (the standard value for 0.05 wt % Cr₂O₃, and the one §3.1's 9 % needs); fix §5.2 | 7 (doc fix in 2) |
 | D5 | Diode free spectral range uses the group index n_g ≈ 4 (§3.3), but the media table's n = 3.6 is the phase index | Add `ng` to the diode entry; the cavity functions take the index explicitly | 2 |
 | D6 | §5.1 media numbers and the Sellmeier/KDP coefficients were "not checked against printed sources" | Web-verify the values each stage needs before it uses them; record sources in the doc | 7, 11, 13 |
@@ -382,26 +383,73 @@ Also: the last step lands exactly on t1; running out of `maxSteps` gives a corre
 - Declined: dropping the two array copies around each call of f. Measured outside the sandbox: they cost 18 % of a step for 2 components and 5 % for 65. They are what makes "an f that changes its input or reuses its output array cannot corrupt the solver" true, which `rates.js` and later f's rely on without having to know it.
 - 12 more mutations for these fixes (106 in all, all caught; about 19 s).
 
-### Stage 4 — Four-level rate equations (`rates.js`)
-- **Doc to audit:** §4.1, §4.2, §11.2, §11.3. The derivation of §11.2's dimensionless form is already checked and correct.
-- **Build:**
-  - `rates.fourLevel.derivatives(params)` → f(t′, [y, s]) with s = ln p;
-  - converters between physical and dimensionless form (N_c, ε, x, B, the starting photon, P_out);
-  - the steady state;
-  - the relaxation frequency ω_R.
-- **Tests:**
-  - §12 x = 2 → y → 1, p → 1;
-  - x < 1 → p stays at seed level, y → x;
-  - the identity N_c·σ·l = γ;
-  - the simulated relaxation period (peak spacing) matches ω_R within 5 %;
-  - decay time ≈ 2τ/x;
-  - growth from 1 photon to steady state with s staying finite;
-  - **cross-check with stage 2**: steady-state P_out from the equations equals the analytic §4.1 formula, and Rigrod in the low-gain limit.
-- **Traps:**
-  - p₀ must be > 0 (one photon, via B);
-  - the β·y/p term with p → 0 is written as β·y·e^(−s);
-  - simulated time vs. real time: t = t′·τ.
-- **Breaks:** flip the sign of (y − 1); drop ε; β·y → β.
+### Stage 4 — Four-level rate equations (`rates.js`) ✅
+
+**Scope card.** Physics: `docs/laser-physics.md` §4.1, §4.2, §11.2, §11.3. Everything in `LaserEngine.rates.fourLevel`; three levels come in stage 7.
+
+| Function | Inputs | Output | Doc |
+|---|---|---|---|
+| `scales({ sigma, tau, nu, l_g, area, L_e, refl1, refl2, alpha_i })` | m², s, Hz, m, m², m, —, —, m⁻¹ (`L_e` ≥ `l_g`) | `{ gamma, tau_c, N_c, R_c, V, V_a, B, eps, pOnePhoton, sOnePhoton, phiPerP, powerPerP }`: everything that turns the dimensionless state into physics. N = y·N_c, φ = p·phiPerP, P_out = p·powerPerP, t = t′·τ; one photon is p = Bτ | §4.1, §11.2 |
+| `derivatives({ x, eps, beta })` | —, —, — (x ≥ 0, ε > 0, β from 0 to 1) | f(t′, [y, s]) → [dy/dt′, ds/dt′], for `ode.dopri5`; no checks inside f (hot loop) | §11.2, §11.3 |
+| `steadyState({ x, beta })` | —, — | `{ y, p }`, exact with the seed: p = ((x − 1) + √((x − 1)² + 4βx))/2, y = x/(1 + p) | §11.2 |
+| `relaxation({ x, tau, tau_c })` | —, s, s (x > 1, else it throws: no oscillation below threshold) | `{ omegaR, omegaDamped, t_damp }`: √((x − 1)/(ττ_c)) rad/s; √(ω_R² − (x/2τ)²), or 0 if overdamped; 2τ/x s | §4.2 |
+| `liftToSeed({ state, beta })` (added in review) | [y, s], — | a new [y, s] with s ≥ ln(β·max(y, 10⁻¹²)); unchanged when β = 0 or s is already there. The bench calls it before every solver call | §11.3 |
+
+**Test values** (measured with a prototype on the real `ode.js`):
+
+| Check | Expected | Measured | Bound |
+|---|---|---|---|
+| N_c·σ·l = γ; N_c, γ, τ_c equal `cavity.thresholdInversion`, `singlePassLoss`, `photonLifetime` | identity | — | 1e-12 |
+| `powerPerP` = (γ₂/2)·A·I_sat with I_sat from `media.get("nd-yag")`, and p·`powerPerP` at p = x − 1 = §4.1's (cγ₂/2L_e)·hν·φ₀, φ₀ = τ_cV_a(R_p − R_c) | identity | — | 1e-12 |
+| Small Nd:YAG laser (A = 1 mm², l = 5 cm, L = 0.3 m, R₂ = 0.95): ε, Bτ, P_out at x = 2 | — | 1.928×10⁻⁴, 5.66×10⁻¹², 0.74 W | half a unit |
+| Steady P_out vs low-gain Rigrod (R₁ = 1, L_i = 0, small T, same x) | relative difference T/(2(x − 1)) (derived in the audit) | — | 2 % of that difference, T = 10⁻³ and 10⁻⁴ |
+| §12: x = 2 from one photon (Nd:YAG ε) | y → 1, p → 1 | rel. error 1×10⁻⁸ at t′ = 20 | 10⁻⁶ |
+| x = 0.5: p stays at the seed level | y → x, p → `steadyState` (≈ β) | 1×10⁻⁸ | 10⁻⁶ |
+| β = 0 from one photon (x = 2) | s falls to about −1600 and comes back; lasing still starts | p → 1 within 6×10⁻⁷ | 10⁻⁵ |
+| Small oscillation, ruby numbers (τ 3 ms, τ_c 5 ns, x = 3), kick δy = 10⁻³·√(ε(x − 1)) | period 2π/`omegaDamped` = 17.21 µs (doc "≈ 17 µs") | 1 + 1×10⁻⁶ of theory | 10⁻⁴; doc value ± 0.5 µs; doc ω_R within 5 % (plan) |
+| Damping, x = 2, ε = 10⁻³ | rate x/2 per τ (t_damp = 2τ/x) | 1 + 1×10⁻⁴ | 1 % |
+| `relaxation`: ruby, He-Ne (τ 100 ns, τ_c 66.15 ns, x = 2) | ruby 17.2 µs, 2 ms, ω·t_damp ≈ 730; He-Ne ω·t_damp = 0.715 (< 1: gone within a radian) | — | half a unit |
+| `steadyState` | §12 x = 2 → (1, 1); β = 0 → (min(x, 1), max(x − 1, 0)); f = 0 there; p(x = 1) = √β; x = 0.5, β = 10⁻¹⁵ → p = βx/(1 − x) to 10⁻¹² (no cancellation) | — | 1e-12 |
+| Seed where e^(−s) alone overflows (review): β = 10⁻³¹⁰, s = ln(βy) ≈ −714 | ds/dt′ = y/ε | exact | 1e-12 |
+| β turned on after a run with β = 0 (review): x = 2, ε = 10⁻³, s ≈ −313 at t′ = 0.5 | the solver gives up without `liftToSeed`; with it, the steady state | 6554 steps | 10⁻⁶ |
+| Pump off for 720τ, then back on at x = 2 (review; ε = 0.1 to keep it short) | s follows ln(βy) below −720; back on, the solver gives up without `liftToSeed` and settles with it | s − ln(βy) = 0.06; 855 steps | 0.2; 10⁻⁶ |
+| He-Ne kicked by δy = 10⁻⁶ (review, D3): ε = 0.66, x = 2, simulated to t′ = 9 (one period) | the linear solution built from `relaxation`'s ω and t_damp | within 4×10⁻⁶ of the envelope, 99 steps | 10⁻⁴ of the envelope |
+
+Also: f's values at a point by hand; f stays finite at s = −800 with β = 0 (the seed term is skipped, not multiplied by 0); every input checked; a lossless cavity and `L_e < l_g` throw; frozen objects; deep-frozen inputs.
+
+**Decisions:**
+- `scales` takes the mirrors and the internal loss, not γ, so γ and the output coupler cannot disagree. It repeats `cavity.js`'s one-line γ = αl − ½(ln R₁ + ln R₂) (calling across files would put the wrong function in error messages, as for `coldLinewidth` in stage 2); a test checks the two stay equal, one loss at a time and all together.
+- The seed βy·e^(−s) is computed as one exponential, e^(ln β + ln y − s) (review): e^(−s) alone overflows past s ≈ −709 while the seed is about 1.
+- `liftToSeed` (review) raises s to the seed level ln(β·max(y, 10⁻¹²)) before each solver call, because ln p is too stiff to integrate when p ≪ βy. The real photons get there within about τ_c, so the jump skips at most one photon lifetime. The y floor 10⁻¹² was measured: for ε from 10⁻⁶ to 2×10⁻⁴ and x from 1.01 to 50 the solver can start from 10⁻²⁰ but not from 10⁻³⁰.
+- Physical ↔ dimensionless conversions are multiplications by the `scales` numbers, not functions (as for x in stage 2).
+- `relaxation` returns SI values (the doc's formulas and numbers are in SI) and throws for x ≤ 1, where there is nothing to oscillate around.
+- `steadyState` includes the seed exactly, so it is also the below-threshold level the bench can show, and it uses the form without cancellation on each side of x = 1.
+- f is built once by `derivatives` (inputs checked there) and does no checks itself: the solver calls it ~10⁵ times a frame.
+- Doc: new code names in §0 (`N_c`, `R_p`, `R_c`, `V`, `V_a`, `B`, `beta`, `tPrime`, `y`, `p`, `s`, `eps`, `omegaR`, `t_damp`; B is not the Einstein B, ε not the permittivity or the tilt angle); §4.1 gains P_out = (γ₂/2)·A·I_sat·(x − 1) and its relation to Rigrod; §4.2 gains the exact damped frequency, when an oscillation counts as small, and D3 (He-Ne) is fixed; §11.3 gains the one-photon start and the β = 0 trap.
+
+**Traps:**
+- One photon, p = Bτ, as the start: s = ln 0 does not exist.
+- **β = 0:** below threshold s falls without limit (to −1600 for Nd:YAG); e^(−s) overflows and 0·∞ = NaN. Found by the prototype: the solver threw "step size fell below" at t′ = 0.15.
+- A "small" oscillation in ruby must be tiny: a 1 % kick of y is full spiking (period off by 2×). Found by the prototype.
+- Simulated time vs real time: t = t′·τ.
+- **Photons far below the seed** (review): with p ≪ βy, ds/dt′ ≈ βy/(εp), and the solver needs steps shorter than floating-point time can hold. It happens when β is turned on after a β = 0 run, and when the pump comes back after about 100τ or more off. Measured: both throw "the step size fell below" at once; both settle after `liftToSeed`.
+- **A `{ timeout }` does not stop a synchronous test** (review; checked on Node 24.14: a test that is busy for 2 s with a 300 ms timeout passes). Only `maxSteps` bounds a solver run.
+
+**Breaks** (37, all caught): sign of (y − 1); ε dropped; β·y → β; e^(−s) → e^s in the seed; the seed as β·y·e^(−s) (overflow), and as that with β = 0 (NaN); a seed from y < 0; an error that grows with ε (only the He-Ne run and f's hand values see it); dy without the y·p term's y; γ₂ without ½ in `powerPerP`; −0 W for a perfect mirror; V from l instead of L_e; N_c without l; ε upside down; one photon as B instead of Bτ; no hν in the power; α not multiplied by l; the lossless guard, and only γ = 0 refused; the `l_g ≤ L_e` check, too strict and missing; `steadyState` with the cancelling form below threshold; y = x/p; `relaxation` without (x/2τ)²; t_damp = τ/x; x = 1 accepted; `liftToSeed` doing nothing, lowering s, without the y floor, with a floor of 10⁻⁴⁰, taking a state that is not [y, s]; `check.params` removed from `derivatives`, `steadyState`, `relaxation`, `liftToSeed`; in `cavity.js`, the near-lossless checks of `photonLifetime` and `rigrodLowGain`.
+
+**Also in this stage:** the first mutation run had one TIMED OUT, a wrong error-estimate weight in `ode.js`. `smallOscillation`'s 1200 short solver calls had no step limit, so the broken solver spent 100 000 steps on each. Each call now has `maxSteps: 200` and checks `reachedEnd`.
+
+**Review outcome** (`/code-review`, 13 findings: 11 fixed, 2 declined):
+- The seed overflowed for β > 0: with the pump off, y falls, s follows ln(βy) below −709, and e^(−s) became Infinity although the seed was about 1 (the solver gave up near t′ = 700; with β = 10⁻³¹⁰ already by t′ = 0.14). Fixed with the one-exponential form (also the review's design finding); tested by f at β = 10⁻³¹⁰ and by a 720τ pump-off run.
+- A state from a β = 0 run could not go on with β > 0 (s ≈ −307: the solver gave up at once). Checking it, I found the same failure when the pump comes back after about 100τ off. Both fixed by `liftToSeed`, both tested with and without it.
+- The `{ timeout: 15000 }` on the solver tests did nothing (see Traps). Removed; each solver call now has a `maxSteps` about 1.5× its measured need (it was 200 000, 12× the need), and `integrate()` checks `reachedEnd` on every run (two tests did not). The same false advice was in `CLAUDE.md`, in the mutation checker's TIMED OUT text and in this plan's recipe; all corrected.
+- `check.params` in `derivatives`, `steadyState` and `relaxation` was untested (removing it passed every test). Now every function has an unknown-name test and a plain-number test, with a mutation for each.
+- `scales` returned τ_c = Infinity for a loss too small to divide by (α = 10⁻³²⁰ with perfect mirrors). It now refuses a τ_c/τ that is not finite. `cavity.js` had the same gap: `photonLifetime` returned Infinity and `rigrodLowGain` NaN; both now refuse it, tested. `finesse` and `rigrodExact` were checked and are safe (their R₁R₂ = 1 test covers it).
+- D3 was only checked through `relaxation`'s own formula. Now a He-Ne run (ε = 0.66, every other run has ε ≤ 10⁻³) is compared with the linear solution.
+- Docs: "116 oscillations before they die out" counted oscillations per damping time, after which the amplitude has only fallen by e. Now "116 while it falls by e, about 535 to 1 %", in the doc and the test names, and the test checks both numbers. A local `root` in `steadyState` hid the `root` of the file wrapper: renamed `squareRoot`.
+- Declined: one `Math.exp` fewer in f (seed = βy/p). Measured on the full x = 2 Nd:YAG run (30 000 calls of f): two exponentials 20.0 ms, exponential and division 20.0 ms, the one-exponential seed 20.9 ms. The saving does not show, and βy/p overflows at the same s as before; the 5 % for the safe form is kept.
+- Declined: making `scales` call `cavity.js` (exporting its internal `lossPerPass(where, params)`). That function takes the caller's name first, unlike every other engine function, and would be public only for `rates.js`. The repeated formulas are one line each; the identity test now checks each term of γ on its own (four loss settings instead of two), and mutations break each formula.
+- 15 more mutations for these fixes (143 in all, all caught; about 28 s).
 
 ### Stage 5 — Page skeleton
 - **Read first:** `js/labs.js` (mount and loop, roughly lines 270–520), `js/router.js` (render and prefetch), `css/labs.css` `.line-art`, `Instructions/HTML-CLASSES.md`, the hidden routes in `data/site.json`.
@@ -445,6 +493,8 @@ Also: the last step lands exactly on t1; running out of `maxSteps` gives a corre
   - P_out vs T shows its maximum at T_opt.
 - **Traps:**
   - `ode.dopri5`'s default `maxSteps` (100 000) is a safety limit, not a frame budget (about 65 ms for a 2-component f): pass a per-frame budget measured from the time a step takes;
+  - pass the state through `rates.fourLevel.liftToSeed` before every solver call, or turning the pump back on after a long time off makes the solver give up (stage 4 review, §11.3);
+  - below threshold with a seed, and with the pump off, the explicit solver is slow (∂ṡ/∂s = −(1 − y)/ε, §11.3). Measured for this Nd:YAG (ε = 1.9×10⁻⁴): about 1000 steps per τ at x = 0.5 and 1900 per τ with the pump off, so one real-time frame (16 ms ≈ 70τ) would need about 10⁵ steps. Choose the slow-motion range and budget with that in mind, or this is where stage 7b's implicit solver comes in;
   - plot history stored in simulated seconds, as a bounded ring buffer (no pixels: the resize rule);
   - readouts updated at most ~10×/s;
   - frames with dt = 0 only draw;

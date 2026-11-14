@@ -14,8 +14,8 @@
    A value that is missing, not a finite number, or impossible throws an
    error that names it, and so does a name the function does not use (an
    extra loss it would otherwise quietly ignore, or a misspelling). So does
-   a cavity with no loss at all: its finesse, photon lifetime and power
-   would be infinite.
+   a cavity with no loss at all, or with too little to divide by (10⁻³²⁰):
+   its finesse, photon lifetime and power would be infinite.
 
    Losses come in two kinds, and the names say which:
      gamma       single-pass logarithmic loss, γ = αl + ½·ln(1/(R₁R₂))
@@ -41,7 +41,8 @@
   }
 
   function failLossless(where) {
-    check.fail(where, "this cavity has no loss at all, so the answer would be infinite.");
+    check.fail(where, "this cavity has no loss at all (or too little to compute with), " +
+      "so the answer would be infinite.");
   }
 
   /* ---------- threshold (§3.1) ---------- */
@@ -112,7 +113,10 @@
     check.params(where, params, ["L_e", "gamma"]);
     var L_e = check.positive(where, "L_e", params.L_e);
     var gamma = check.positive(where, "gamma", params.gamma);
-    return L_e / (c * gamma);
+    var tau_c = L_e / (c * gamma);
+    // A loss too small to divide by (γ = 10⁻³²⁰) counts as no loss at all.
+    if (!isFinite(tau_c)) failLossless(where);
+    return tau_c;
   }
 
   // Quality factor Q = 2πν·τ_c.
@@ -189,6 +193,9 @@
 
     var overThreshold = 2 * g0 * l_g / (T_oc + L_i) - 1;
     if (overThreshold <= 0) return 0;
+    // A loss too small to divide by (T_oc + L_i = 10⁻³²⁴) counts as no loss
+    // at all: the answer would be Infinity, or 0·Infinity = NaN.
+    if (overThreshold === Infinity) failLossless(where);
     return area * (T_oc * I_sat / 2) * overThreshold;
   }
 
