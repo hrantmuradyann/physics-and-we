@@ -461,6 +461,226 @@ const MUTATIONS = [
     find: "check.finite(at(\"hzFromWavenumber\"), \"perCm\", perCm);",
     replace: "check.positive(at(\"hzFromWavenumber\"), \"perCm\", perCm);",
     why: "a wavenumber difference of 0 or below refused"
+  },
+
+  /* ---------- stage 3: ode.js ---------- */
+  {
+    file: "js/laser/engine/ode.js",
+    find: "[44 / 45, -56 / 15, 32 / 9],",
+    replace: "[44 / 45, -56 / 16, 32 / 9],",
+    why: "one coefficient of the table mistyped"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "393 / 640,",
+    replace: "393 / 641,",
+    why: "one weight of the 4th-order error estimate mistyped"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var stageTime = Math.min(t + TABLEAU.c[i] * h, t1);",
+    replace: "var stageTime = Math.min(t + h, t1);",
+    why: "every stage evaluated at the end of the step instead of at t + c_i·h"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var SAFETY = 0.9;",
+    replace: "var SAFETY = 1;",
+    why: "no safety factor: about half of all steps rejected"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var ERROR_EXPONENT = 1 / 5;",
+    replace: "var ERROR_EXPONENT = 1 / 4;",
+    why: "step control using the order of the wrong solution"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var MAX_FACTOR = 5;",
+    replace: "var MAX_FACTOR = 10;",
+    why: "step allowed to grow faster than planned"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var MIN_FACTOR = 0.2;",
+    replace: "var MIN_FACTOR = 0.1;",
+    why: "step allowed to shrink faster than planned"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var hTry = lastStep ? t1 - t : h;",
+    replace: "var hTry = h;",
+    why: "the last step overshoots t1 instead of landing on it"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "        rejected++;\n",
+    replace: "        rejected++;\n        k1 = step.kLast;\n",
+    why: "after a rejected step, the next try starts from the rejected step's last derivative"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "k1 = step.kLast;             // first same as last",
+    replace: "k1 = derivatives(lastStep ? t1 : t + hTry, step.state);",
+    why: "first same as last not used: 7 calls of f per step instead of 6"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "h = hTry < h ? Math.max(h, hProposed) : hProposed;",
+    replace: "h = hProposed;",
+    why: "a short last step shrinks the step for the next frame"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "while (accepted + rejected < maxSteps) {",
+    replace: "while (accepted + rejected <= maxSteps) {",
+    why: "the step budget off by one"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "if (justRejected) factor = Math.min(factor, 1);",
+    replace: "",
+    why: "the step grows right after a rejection"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "        justRejected = false;\n",
+    replace: "",
+    why: "after one rejection the step never grows again"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "    if (isNaN(err)) err = Infinity;\n",
+    replace: "",
+    why: "a NaN error makes the step NaN, and the solver spins until the budget runs out"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "    check.finiteArray(WHERE, \"f(t0, state0)\", k1);\n",
+    replace: "",
+    why: "NaN at the start not reported"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "return 16 * Number.EPSILON * Math.max(Math.abs(t), Math.abs(t1));",
+    replace: "return 16 * Number.EPSILON * Math.abs(t);",
+    why: "the smallest step is 0 at t = 0, so the step can shrink forever"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var result = f(t, state.slice());",
+    replace: "var result = f(t, state);",
+    why: "f gets the solver's own array and can change it"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "    return result.slice();\n",
+    replace: "    return result;\n",
+    why: "f's answer not copied: an f that reuses one array overwrites earlier stages"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var f1 = derivatives(Math.min(t0 + h, t1), probe);",
+    replace: "var f1 = derivatives(t0 + h, probe);",
+    why: "the first-step guess calls f after t1"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var scale = atol + rtol * Math.max(Math.abs(state[m]), Math.abs(newState[m]));",
+    replace: "var scale = atol + rtol * Math.abs(state[m]);",
+    why: "error scale from the old state only"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "if (t1 <= t0) check.fail",
+    replace: "if (t1 < t0) check.fail",
+    why: "a zero-length interval accepted"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "if (!isNumber(value) || Math.floor(value) !== value || value < min) {",
+    replace: "if (!isNumber(value) || value < min) {",
+    why: "a fraction of a step accepted as a count"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "      if (value.length === 0) fail(where, name + \" must not be an empty array.\");\n",
+    replace: "",
+    why: "an empty state accepted"
+  },
+
+  /* ---------- stage 3, review ---------- */
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var stageTime = Math.min(t + TABLEAU.c[i] * h, t1);",
+    replace: "var stageTime = t + TABLEAU.c[i] * h;",
+    why: "the last stages called one unit past t1 (a pump or Q-switch would switch early)"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "      if (!isFinite(newState[m])) {",
+    replace: "      if (false) {",
+    why: "a step into Infinity accepted: its error scale is Infinity, so its error looks like 0"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "0.01 * d0 / d1;",
+    replace: "0.1 * d0 / d1;",
+    why: "first-step guess: wrong size from d0/d1"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "Math.pow(0.01 / fastest, ERROR_EXPONENT)",
+    replace: "Math.pow(0.1 / fastest, ERROR_EXPONENT)",
+    why: "first-step guess: wrong size from how fast f changes"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "guess = Math.min(100 * h, h1);",
+    replace: "guess = Math.min(h, h1);",
+    why: "first-step guess: the 100·h limit replaced by h"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "? 1e-6 : 0.01",
+    replace: "? 1e-5 : 0.01",
+    why: "first-step guess: wrong fallback when state and f are 0"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "return Math.max(guess, smallestStep(t0, t1));",
+    replace: "return guess;",
+    why: "far from t = 0 the guess is below what t can resolve, and a smooth problem throws"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "    h = Math.min(h, hMax);           // a given h0 or the guess, never past hMax\n",
+    replace: "",
+    why: "a given h0 longer than hMax used as it is"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var hProposed = Math.min(hTry * factor, hMax);",
+    replace: "var hProposed = hTry * factor;",
+    why: "hMax ignored after the first step"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "h = hTry < h ? Math.max(h, hProposed) : hProposed;",
+    replace: "h = hTry < h ? Math.min(h, hTry * SAFETY * Math.pow(step.err, -ERROR_EXPONENT)) : hProposed;",
+    why: "the step passed on taken from a cut-short step's error, which on a very short step is mostly rounding (declined review suggestion)"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "    if (typeof value === \"string\") return JSON.stringify(value);\n",
+    replace: "",
+    why: "a string in an error message looks like a number"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "    if (Array.isArray(value)) return \"an array of length \" + value.length;\n",
+    replace: "",
+    why: "a long array floods an error message"
   }
 ];
 

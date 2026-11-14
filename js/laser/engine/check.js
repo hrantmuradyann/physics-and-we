@@ -33,9 +33,13 @@
 
   var E = root.LaserEngine = root.LaserEngine || {};
 
-  // The bad value as text for a message. String() fails on a few values
+  // The bad value as text for a message. A string is shown in quotes, so
+  // "1" cannot be mistaken for the number 1; an array by its length, so a
+  // long state does not flood the message. String() fails on a few values
   // (an object without a prototype); the message must still come out.
   function describe(value) {
+    if (typeof value === "string") return JSON.stringify(value);
+    if (Array.isArray(value)) return "an array of length " + value.length;
     try {
       return String(value);
     } catch (err) {
@@ -107,6 +111,39 @@
       return value;
     },
 
+    // A count, such as a number of steps: a whole number, min itself allowed.
+    integerAtLeast: function (where, name, value, min) {
+      if (!isNumber(value) || Math.floor(value) !== value || value < min) {
+        fail(where, name + " must be a whole number of at least " + min + ", got " + describe(value) + ".");
+      }
+      return value;
+    },
+
+    // A function the caller passes in, such as the right-hand side of an
+    // equation for ode.js.
+    func: function (where, name, value) {
+      if (typeof value !== "function") {
+        fail(where, name + " must be a function, got " + describe(value) + ".");
+      }
+      return value;
+    },
+
+    // A plain, non-empty array of finite numbers, such as the state of an
+    // equation. Typed arrays (Float64Array, ...) are refused: the engine
+    // uses plain arrays only.
+    finiteArray: function (where, name, value) {
+      if (!Array.isArray(value)) {
+        fail(where, name + " must be an array of finite numbers, got " + describe(value) + ".");
+      }
+      if (value.length === 0) fail(where, name + " must not be an empty array.");
+      for (var i = 0; i < value.length; i++) {
+        if (!isNumber(value[i])) {
+          fail(where, name + "[" + i + "] must be a finite number, got " + describe(value[i]) + ".");
+        }
+      }
+      return value;
+    },
+
     // The two kinds of line broadening, as written in media.js.
     broadening: function (where, value) {
       if (value !== "homogeneous" && value !== "inhomogeneous") {
@@ -116,6 +153,9 @@
     },
 
     // For anything else that is wrong with the inputs.
-    fail: fail
+    fail: fail,
+
+    // A value as text, for messages written outside these checks.
+    describe: describe
   });
 })(this);

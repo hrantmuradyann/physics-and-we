@@ -91,7 +91,8 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 1: constants, media table, tests (`2f8b190`).
 - ✅ Stage 1b: safety tools (mutation checker, `deepFreeze`, engine-folder override).
 - ✅ Stage 2: static cavity and spectrum (`cavity.js`, `check.js`, lineshapes and mode comb in `spectrum.js`, `ng` in `media.js`).
-- Next: stage 3.
+- ✅ Stage 3: ODE solver (`ode.js`: adaptive Dormand–Prince 5(4)); the mutation check runs in parallel.
+- Next: stage 4.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking.
 
@@ -157,7 +158,7 @@ Working agreement: every stage follows the recipe in section 3, ends with `/code
   - The checker copies `index.html`, `js/`, `css/`, `data/` and `sections/` to a temp folder and first runs the tests on the unchanged copy; they must pass. Then, for each entry, it makes the change in a fresh copy and runs every laser test.
   - Outcomes: caught, MISSED (add a test), TIMED OUT (give the test a `{ timeout }`), ERROR (the text isn't found exactly once, the change isn't valid JS/JSON, or the path is outside the copy).
   - The replacement is inserted literally, so `$&` and `$$` aren't special.
-  - 28 entries at the end of stage 1b, all caught. A full run then took about 4 s; after stage 2 (70 entries) it takes about 22 s. If it ever takes more than ~30 s, run the mutations in parallel.
+  - 28 entries at the end of stage 1b, all caught. A full run then took about 4 s; after stage 2 (70 entries) about 22 s. After stage 3 (94 entries) it took 44 s one at a time, so it now checks half the processor cores' worth of mistakes at once, each in its own copy: about 17 s on a 10-core machine.
 - `tests/laser/mutation-check.test.js` tests the checker itself on one small test file (to keep `node --test` fast):
   - an unchanged copy passes;
   - a harmless change is not caught;
@@ -318,25 +319,68 @@ Also: lineshapes integrate to 1 (the Lorentzian against its exact ±X integral (
 - `relativeGain` reuses the two lineshape formulas instead of a second copy.
 - Declined: "named values cost too much per pixel". Measured outside Node's `vm` sandbox, a checked `relativeGain` call takes 44 ns, so a 1000-px gain curve at 60 fps costs 0.26 % of one core (inside the test sandbox, where global lookups are slow, 820 ns). If a later stage calls a spectrum function inside the ODE right-hand side, measure again.
 
-### Stage 3 — ODE solver (`ode.js`)
-- **Build:** `ode.dopri5(f, t0, y0, t1, options)` → `{ t, y, steps, rejected, reachedEnd }`.
-  - Options: rtol, atol, initial and maximum step, `maxSteps` (the per-frame budget).
-  - Standard Hairer error norm and step control (safety 0.9, step change limited to 0.2×–5×).
-- **Tests:**
-  - every row of the coefficient table: c_i = Σ_j a_ij, and the b and b* weights each sum to 1;
-  - exponential decay and the harmonic oscillator after 10 periods match the exact solution;
-  - fixed-step error shrinks at 5th order;
-  - a stiff case (y′ = −10⁴(y − cos t)) finishes within a step bound;
-  - `maxSteps` reached → `reachedEnd: false` with a valid partial result;
-  - the last step lands exactly on t1;
-  - `y0` is unchanged (frozen).
-- **Traps:**
-  - **NaN makes every step "rejected" and the solver loops until `maxSteps`**: detect NaN and throw;
-  - step size underflow: throw;
-  - FSAL reuse bug (reusing the last stage's derivative as the next step's first);
-  - arrays shared between steps.
-  - Coefficients copied from Hairer's table and checked by the table tests.
-- **Breaks:** change one coefficient; drop the safety factor; don't clamp the last step.
+### Stage 3 — ODE solver (`ode.js`) ✅
+
+**Scope card.** `ode.js` knows nothing about lasers: t is in whatever unit f uses (the laser equations of §11.2 use t′ = t/τ). Sources: J. R. Dormand and P. J. Prince, "A family of embedded Runge–Kutta formulae", *J. Comput. Appl. Math.* 6 (1980) 19–26; E. Hairer, S. P. Nørsett and G. Wanner, *Solving Ordinary Differential Equations I*, 2nd ed. (Springer, 1993), §II.4 (step control, error norm, first step) and §II.5 (the Dormand–Prince 5(4) coefficients).
+
+| Function | Inputs | Output |
+|---|---|---|
+| `ode.dopri5({ f, t0, state0, t1, rtol, atol, h0, hMax, maxSteps })` | `f(t, state)` → array of derivatives, one per entry of `state`; `t0 < t1`; `state0` a non-empty array of finite numbers. Optional: `rtol` (default 10⁻⁶, from 0 to 1), `atol` (default 10⁻⁹, > 0), `h0` first step (default: Hairer's starting-step algorithm), `hMax` (leave it out for no limit, `Infinity` is refused; a default of t1 − t0 would cap every step at the frame's length), `maxSteps` (default 100 000, a whole number ≥ 1; only a safety limit, see the review) | `{ t, state, reachedEnd, hNext, accepted, rejected, evaluations }`: `t = t1` exactly and `reachedEnd: true`, or, when `maxSteps` attempts are used up first, the last accepted point with `reachedEnd: false`. `hNext` is the step to pass as `h0` to continue |
+| `ode.tableau` | — | the coefficients `{ c, a, b, bStar }` the solver itself loops over, deep-frozen |
+
+`check.js` gets three more checks: `func`, `finiteArray` (a non-empty array of finite numbers), `integerAtLeast`; and `describe`, made public for messages written outside the checks (strings in quotes, arrays by their length).
+
+**Test values** (measured with a prototype during the audit; the real file gives the same numbers):
+
+| Check | Expected | Measured | Bound |
+|---|---|---|---|
+| Order conditions: all 17 up to order 5 for b, all 8 up to order 4 for b* (and b* misses at least one of order 5, or the error estimate would be 0) | exact fractions | — | 1e-14 |
+| c_i = Σ_j a_ij; Σ b = Σ b* = 1; the last row of a equals b (what makes "first same as last" correct) | exact | — | 1e-15; equal |
+| y′ = t⁴ on [0, 1] in one step | 1/5 (the quadrature conditions up to c⁴; also checks the stage times t + c_i·h) | — | 1e-15 |
+| Fixed step (h0 = hMax, tolerances huge), oscillator over one period, h = T/64 → T/128 | error ratio 2⁵ = 32 | 32.1 | [30, 34] |
+| Decay y′ = −y to t = 10, and oscillator for 10 periods, tol 10⁻⁸ | error ∝ tol | 6.6×tol, 26×tol | ≤ 100×tol; 10⁴ times smaller tol → ≥ 10³ times smaller error |
+| Smooth problem (oscillator, tol 10⁻⁶) | few rejected steps | 0 of 230 (without the 0.9 safety factor: 654 of 210) | rejected ≤ 5 % of accepted |
+| Stiff y′ = −10⁴(y − cos t), t ∈ [0, 1] | finishes, accurate; about k/3.3 steps (stability limit of an explicit method, \|hλ\| ≲ 3.3) | 3052 accepted + 382 rejected, rel. error 3×10⁻⁷ | accepted ≥ 0.8·k/3.3; attempts ≤ 1.5·k/3.3; rel. error ≤ 10⁻⁵ |
+| Evaluations | 1 + (1 for the first-step guess) + 6 per attempt | — | exact |
+| One step done by hand in the test from the table (stages, b, b − b*, error norm): accepted and rejected | new state; next step h·0.9·err^(−1/5) | — | 1e-14; 1e-12 |
+| After a rejected step, the retried step equals a fresh step of the same length from the same point | bit for bit | — | equal |
+
+Also: the last step lands exactly on t1; running out of `maxSteps` gives a correct partial result, and continuing from it with `h0 = hNext` (no rejected step in between) reaches the same answer bit for bit; a last step cut short to land on t1 does not shrink `hNext`; 65 components at once; `f` that changes its input or returns the same array every time cannot corrupt the solver; frozen inputs; a blow-up (y′ = y²) and a NaN partway through throw quickly with t in the message; every input checked.
+
+**Decisions:**
+- Named inputs, like every engine function since stage 2 (the plan had `dopri5(f, t0, y0, t1, options)`). The state is called `state`, not `y`, because y is the inversion of §11.2 and stage 4 integrates `[y, s]`.
+- `hNext` is returned so the next frame continues with a good step instead of guessing again. A last step shortened to land on t1 says nothing against the longer step that was planned, so it does not shrink `hNext`.
+- `maxSteps` counts every attempt, accepted or rejected: each costs the same 6 evaluations, and the budget is about cost.
+- Non-finite values: if `f(t0, state0)` is not finite the call throws at once (no smaller step can fix the starting point). A trial step with a non-finite value is rejected and the step shrinks ×0.2, because a too-long step can overflow. A step below 16·ε_machine·max(\|t\|, \|t1\|) throws: the solution blows up, f gives NaN there, or the tolerances are tighter than the arithmetic allows.
+- `f` receives a copy of the state and its result is copied: an `f` that changes its input or reuses one output array cannot corrupt the stages.
+- Step control as in Hairer §II.4: error norm √(mean((e_i/sk_i)²)) with sk_i = atol + rtol·max(\|y_i\|, \|y_new,i\|), new step = old × 0.9·err^(−1/5) limited to 0.2×–5×, and no growth right after a rejection. No "last step up to 1 % longer" rule (Hairer has one): a sliver of a last step costs one step and, by the `hNext` rule, does not shrink the next frame's step; the extra rule would have needed its own cap against `hMax`.
+- No dense output (values between steps): a caller that needs points inside a frame splits the frame into shorter calls, at the cost of one evaluation per call.
+- t1 must be later than t0: no backward integration, and a paused frame does not call the solver.
+
+**Traps:**
+- NaN makes every step "rejected" and the solver loops until `maxSteps` (handled above).
+- A new state that overflows to Infinity has an error scale of Infinity, so its error looks like 0: the state itself must be checked (found in the review).
+- Step-size underflow: throw. A floor of 16·ε·\|t\| alone is 0 at t = 0, so the floor also uses \|t1\|.
+- FSAL reuse: after a rejected step the first derivative is the old one, not the rejected step's last one.
+- Arrays shared between steps or with `f`.
+- Coefficients copied from Hairer's table and checked by the order-condition tests.
+
+**Doc audit (§11.2, §11.3).** §11.3 said the adaptive step "grows automatically between pulses". It doesn't while the photon number sits at its spontaneous-emission level: there ∂ṡ/∂s = −(1 − y)/ε, so an explicit method's step stays below about 3.3ε/(1 − y). Measured with the prototype: ε = 10⁻⁶, x = 0.5, 3τ of pumping takes about 6×10⁵ steps. Fixed in the doc; stage 7 measures whether a ruby flash fits the frame budget, as already planned.
+
+**Breaks** (24, all caught): change one coefficient; a wrong b* weight (error estimate); stage times t + h instead of t + c_i·h; drop the safety factor; error exponent 1/4 instead of 1/5; growth limit 10× and shrink limit 0.1×; don't clamp the last step; FSAL after a rejection; recompute k1 every step; hNext from the shortened last step; budget check off by one; growth right after a rejection; no growth ever again after one rejection; NaN error → NaN step; NaN at the start not reported; underflow floor without \|t1\|; f gets the solver's own array; no copy of f's result; first-step guess probing past t1; error scale from the old state only; a zero-length interval accepted; `integerAtLeast` accepting fractions; `finiteArray` accepting an empty array.
+
+**Also in this stage:** the mutation check took 44 s one at a time, past the 30 s the stage-1b notes set, so `tests/laser/mutation-check.js` now runs half the processor cores' worth of mistakes at once (17 s). Its own tests became `async`, and a new one checks that results come back in list order.
+
+**Review outcome** (`/code-review`, 15 findings: 10 fixed, 3 fixed in the docs, 2 declined):
+- A step whose new state overflowed to Infinity was accepted (its error scale was Infinity, so its error looked like 0) and could return `state: [Infinity]` with `reachedEnd: true`. Now any value that is not finite makes the error Infinity: the step is retried 5× shorter. A NaN only in f at the new state is tested by an f that returns NaN on its 7th call.
+- On the last step, t + c_i·h could round one unit past t1, so f was called after t1 (an f that switches at t1 would see the other side). Stage times and the first-step probe are now kept at most t1, tested with the review's numbers.
+- The first-step guess was untested: now checked against Hairer's algorithm written out in the test, in four cases that each depend on a different part. Its absolute fallback (1e-6) was below what t can resolve far from t = 0 (t0 = 10¹¹ threw "the step size fell below"); the guess is now at least that floor. A given `h0` longer than `hMax` was untested.
+- The parallel checker had lost the 64 MB output limit of `spawnSync`; it is back (`maxOutput`), with a test.
+- `err === 0` in the step factor was dead code (removed); `kindOf()` repeated `check.js` and wrote "a undefined" (now `check.describe`, public); the k₁ check repeated `check.finiteArray` (now uses it); the error sum built two arrays per step only to add them up (now summed in the loop).
+- Docs: `maxSteps` was called "one animation frame's budget", but 100 000 steps take about 65 ms; it is now a safety limit, and stage 6 must pass a measured budget. "Carrying on repeats the very same steps" is not true right after a rejected step (a new call may let the next step grow sooner); the docs say so. `hMax: Infinity` is refused: leave it out for no limit. The plan still described a "1 % longer last step" rule the code does not have (removed, reason above).
+- Declined: passing on the step from a cut-short last step's own error (the reviewer's fix for a frame whose short step has err near 1). Measured: on a very short step the error is mostly rounding, and the rule shrank `hNext` 1700× (a frame 10⁻⁶ of the step at rtol 10⁻⁶; 0.15× even at 10⁻³), which is the common frame-by-frame case. The case it fixes costs one rejected try, and only when the problem changes suddenly inside a frame. Kept as a mutation, so the test that measures it stays.
+- Declined: dropping the two array copies around each call of f. Measured outside the sandbox: they cost 18 % of a step for 2 components and 5 % for 65. They are what makes "an f that changes its input or reuses its output array cannot corrupt the solver" true, which `rates.js` and later f's rely on without having to know it.
+- 12 more mutations for these fixes (106 in all, all caught; about 19 s).
 
 ### Stage 4 — Four-level rate equations (`rates.js`)
 - **Doc to audit:** §4.1, §4.2, §11.2, §11.3. The derivation of §11.2's dimensionless form is already checked and correct.
@@ -400,6 +444,7 @@ Also: lineshapes integrate to 1 (the Lorentzian against its exact ±X integral (
   - no output below threshold;
   - P_out vs T shows its maximum at T_opt.
 - **Traps:**
+  - `ode.dopri5`'s default `maxSteps` (100 000) is a safety limit, not a frame budget (about 65 ms for a 2-component f): pass a per-frame budget measured from the time a step takes;
   - plot history stored in simulated seconds, as a bounded ring buffer (no pixels: the resize rule);
   - readouts updated at most ~10×/s;
   - frames with dt = 0 only draw;

@@ -19,13 +19,13 @@ const { applyMutation, runBaseline, runMutation, checkMutations } = require("./m
 
 const SMALL = { testFiles: [path.join(__dirname, "media.test.js")] };
 
-test("the tests pass on an unchanged copy of the project", () => {
-  const result = runBaseline(SMALL);
+test("the tests pass on an unchanged copy of the project", async () => {
+  const result = await runBaseline(SMALL);
   assert.equal(result.outcome, "passed", result.output);
 });
 
-test("a harmless change (a comment) is not reported as caught", () => {
-  const result = runMutation({
+test("a harmless change (a comment) is not reported as caught", async () => {
+  const result = await runMutation({
     file: "js/laser/engine/media.js",
     find: "// 20–30 nm in the table: the middle",
     replace: "// a comment changed on purpose",
@@ -34,8 +34,8 @@ test("a harmless change (a comment) is not reported as caught", () => {
   assert.equal(result.outcome, "missed", result.output);
 });
 
-test("a real mistake is caught", () => {
-  const result = runMutation({
+test("a real mistake is caught", async () => {
+  const result = await runMutation({
     file: "js/laser/engine/media.js",
     find: "sigma: 2.5e-20 * cm2,",
     replace: "sigma: 2.5e-20,",
@@ -44,8 +44,8 @@ test("a real mistake is caught", () => {
   assert.equal(result.outcome, "caught");
 });
 
-test("a change that hangs the tests is reported as timed out, not caught", () => {
-  const result = runMutation({
+test("a change that hangs the tests is reported as timed out, not caught", async () => {
+  const result = await runMutation({
     file: "js/laser/engine/media.js",
     find: "var C = E.constants;",
     replace: "var C = E.constants; while (C) {}",
@@ -73,12 +73,31 @@ const BROKEN_ENTRIES = [
 ];
 
 for (const entry of BROKEN_ENTRIES) {
-  test("a broken entry is reported as an error: " + entry.why, () => {
-    const [result] = checkMutations([entry], SMALL);
+  test("a broken entry is reported as an error: " + entry.why, async () => {
+    const [result] = await checkMutations([entry], SMALL);
     assert.equal(result.outcome, "error");
     assert.match(result.error, entry.message);
   });
 }
+
+test("a run that prints too much is stopped and reported, not collected without end", async () => {
+  await assert.rejects(runBaseline(Object.assign({ maxOutput: 100 }, SMALL)),
+    /the tests printed more than 100 characters/);
+});
+
+test("several entries checked at once come back in the order of the list", async () => {
+  // The broken entry fails at once and the others take a test run each, so
+  // they finish out of order; the results must still follow the list.
+  const list = [
+    { file: "js/laser/engine/media.js", find: "sigma: 2.5e-20 * cm2,", replace: "sigma: 2.5e-20,", why: "real" },
+    { file: "js/laser/engine/media.js", find: "// 20–30 nm in the table: the middle",
+      replace: "// a comment changed on purpose", why: "harmless" },
+    { file: "js/laser/engine/media.js", find: "not in the file", replace: "x", why: "broken" }
+  ];
+  const results = await checkMutations(list, Object.assign({ parallel: 3 }, SMALL));
+  assert.deepEqual(results.map((result) => result.mutation.why), ["real", "harmless", "broken"]);
+  assert.deepEqual(results.map((result) => result.outcome), ["caught", "missed", "error"]);
+});
 
 test("the replacement is inserted literally ($& and $$ are not special)", () => {
   const changed = applyMutation("a = b;", { file: "x.js", find: "b", replace: "'$&$$'", why: "dollar signs" });

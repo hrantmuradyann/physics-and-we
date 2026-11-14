@@ -8,6 +8,8 @@
    2. Then, for each deliberate mistake in tests/laser/mutations.js: a fresh
       copy, the mistake made in the copy (the real files are never touched),
       every laser test run against it. At least one test must FAIL.
+      Several mistakes are checked at the same time (PARALLEL_RUNS below),
+      each in its own copy; the results are printed in the order of the list.
 
    Outcomes for each mistake:
      caught      a test failed — good
@@ -27,7 +29,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const vm = require("node:vm");
-const { spawnSync } = require("node:child_process");
+const { spawn } = require("node:child_process");
 
 const REAL_ROOT = path.join(__dirname, "..", "..");
 const TEST_DIR = __dirname;
@@ -38,6 +40,14 @@ const COPY_ENTRIES = ["index.html", "js", "css", "data", "sections"];
 
 // How long one run of the tests may take before it counts as hung.
 const DEFAULT_TIMEOUT_MS = 60 * 1000;
+
+// The most output one test run may print (in characters). A mistake that
+// makes a test print in a loop is stopped here, not when memory runs out.
+const DEFAULT_MAX_OUTPUT = 64 * 1024 * 1024;
+
+// How many mistakes are checked at once. Each run of `node --test` already
+// runs its test files side by side, so half the processor cores is plenty.
+const PARALLEL_RUNS = Math.max(1, Math.floor(os.cpus().length / 2));
 
 // This file's own test (mutation-check.test.js) runs this checker. If the
 // checker ran that test too, every run would start another run, forever.
@@ -117,7 +127,8 @@ function makeCopy() {
 }
 
 // Runs the given test files against the project copy at copyRoot.
-// Returns { outcome: "passed" | "failed" | "timed out", output }.
+// Resolves to { outcome: "passed" | "failed" | "timed out", output }; rejects
+// if the run cannot start or prints more than options.maxOutput characters.
 function runTests(copyRoot, options) {
   const env = Object.assign({}, process.env, {
     LASER_TEST_ROOT: copyRoot,
@@ -129,41 +140,74 @@ function runTests(copyRoot, options) {
   // code. Start the inner run clean.
   delete env.NODE_TEST_CONTEXT;
 
-  const run = spawnSync(process.execPath, ["--test"].concat(options.testFiles), {
-    env: env,
-    encoding: "utf8",
-    timeout: options.timeoutMs,
-    maxBuffer: 64 * 1024 * 1024
-  });
-  const output = (run.stdout || "") + (run.stderr || "");
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["--test"].concat(options.testFiles), { env: env });
+    let output = "";
+    let tooMuchOutput = false;
+    function collect(text) {
+      if (tooMuchOutput) return;
+      output += text;
+      if (output.length > options.maxOutput) {
+        tooMuchOutput = true;
+        child.kill();
+      }
+    }
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", collect);
+    child.stderr.on("data", collect);
 
-  if (run.error && run.error.code === "ETIMEDOUT") return { outcome: "timed out", output: output };
-  if (run.error) throw new Error("could not run the tests: " + run.error.message);
-  if (run.signal) throw new Error("the test run was killed by " + run.signal);
-  return { outcome: run.status === 0 ? "passed" : "failed", output: output };
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, options.timeoutMs);
+
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(new Error("could not run the tests: " + err.message));
+    });
+    child.on("close", (code, signal) => {
+      clearTimeout(timer);
+      if (timedOut) {
+        resolve({ outcome: "timed out", output: output });
+      } else if (tooMuchOutput) {
+        reject(new Error("the tests printed more than " + options.maxOutput +
+          " characters; a mistake probably makes a test print in a loop."));
+      } else if (signal) {
+        reject(new Error("the test run was killed by " + signal));
+      } else {
+        resolve({ outcome: code === 0 ? "passed" : "failed", output: output });
+      }
+    });
+  });
 }
 
 function withDefaults(options) {
-  return Object.assign({ testFiles: allTestFiles(), timeoutMs: DEFAULT_TIMEOUT_MS }, options || {});
+  return Object.assign({
+    testFiles: allTestFiles(),
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+    maxOutput: DEFAULT_MAX_OUTPUT
+  }, options || {});
 }
 
 /* ---------- the public functions ---------- */
 
-// The tests against an unchanged copy. Returns { outcome, output }; the
+// The tests against an unchanged copy. Resolves to { outcome, output }; the
 // outcome must be "passed" before any mistake can be judged.
-function runBaseline(options) {
+async function runBaseline(options) {
   const opts = withDefaults(options);
   const copyRoot = makeCopy();
   try {
-    return runTests(copyRoot, opts);
+    return await runTests(copyRoot, opts);
   } finally {
     fs.rmSync(copyRoot, { recursive: true, force: true });
   }
 }
 
-// One mistake. Returns { outcome: "caught" | "missed" | "timed out", output }.
-// Throws if the entry itself is wrong.
-function runMutation(mutation, options) {
+// One mistake. Resolves to { outcome: "caught" | "missed" | "timed out", output };
+// rejects if the entry itself is wrong.
+async function runMutation(mutation, options) {
   const opts = withDefaults(options);
   checkEntry(mutation);
   const copyRoot = makeCopy();
@@ -179,7 +223,7 @@ function runMutation(mutation, options) {
     checkStillValid(changed, mutation);
     fs.writeFileSync(target, changed);
 
-    const run = runTests(copyRoot, opts);
+    const run = await runTests(copyRoot, opts);
     const outcome = run.outcome === "failed" ? "caught"
       : run.outcome === "passed" ? "missed"
       : "timed out";
@@ -189,24 +233,42 @@ function runMutation(mutation, options) {
   }
 }
 
-// Every mistake in a list. One result per entry: { mutation, outcome, error }
-// where outcome is "caught", "missed", "timed out" or "error".
-function checkMutations(list, options) {
-  return list.map((mutation) => {
-    try {
-      return { mutation: mutation, outcome: runMutation(mutation, options).outcome, error: null };
-    } catch (err) {
-      return { mutation: mutation, outcome: "error", error: err.message };
+// Every mistake in a list, PARALLEL_RUNS at a time (options.parallel to
+// change that). Resolves to one result per entry, in the order of the list:
+// { mutation, outcome, error } where outcome is "caught", "missed",
+// "timed out" or "error".
+async function checkMutations(list, options) {
+  const parallel = (options && options.parallel) || PARALLEL_RUNS;
+  const results = new Array(list.length);
+  let next = 0;
+
+  // Each worker takes the next unchecked entry until none is left.
+  async function worker() {
+    while (next < list.length) {
+      const index = next;
+      next += 1;
+      const mutation = list[index];
+      try {
+        const run = await runMutation(mutation, options);
+        results[index] = { mutation: mutation, outcome: run.outcome, error: null };
+      } catch (err) {
+        results[index] = { mutation: mutation, outcome: "error", error: err.message };
+      }
     }
-  });
+  }
+
+  const workers = [];
+  for (let i = 0; i < Math.min(parallel, list.length); i++) workers.push(worker());
+  await Promise.all(workers);
+  return results;
 }
 
 /* ---------- running it from the command line ---------- */
 
 const LABELS = { caught: "caught", missed: "MISSED", "timed out": "TIMED OUT", error: "ERROR" };
 
-function main() {
-  const baseline = runBaseline();
+async function main() {
+  const baseline = await runBaseline();
   if (baseline.outcome !== "passed") {
     console.log(baseline.output);
     console.log("The tests do not pass on an unchanged copy of the project (" + baseline.outcome +
@@ -216,7 +278,7 @@ function main() {
   }
 
   const { MUTATIONS } = require("./mutations.js");
-  const results = checkMutations(MUTATIONS);
+  const results = await checkMutations(MUTATIONS);
   let problems = 0;
 
   for (const result of results) {
@@ -238,6 +300,11 @@ function main() {
   }
 }
 
-if (require.main === module) main();
+if (require.main === module) {
+  main().catch((err) => {
+    console.log(err.message);
+    process.exitCode = 1;
+  });
+}
 
 module.exports = { applyMutation, runBaseline, runMutation, checkMutations, COPY_ENTRIES };
