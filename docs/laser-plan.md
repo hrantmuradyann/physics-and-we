@@ -40,7 +40,7 @@ tests/laser/*.test.js      engine tests, run with Node's built-in runner (no pac
   - everything is torn down before a rebuild. A language switch fires `section:ready` again, so this needs the same `generation` guard `labs.js` uses.
 
   These ~100 lines are copied in on purpose rather than pulled out of `labs.js`, so the two working labs aren't put at risk. They can be merged later.
-- `index.html` gets one `<script>` line per laser file, after `js/labs.js`, with the engine files in the order of `ENGINE_FILES` in `tests/laser/helpers.js` (a test checks this). Keep the engine to about 7 files so the list stays short.
+- `index.html` gets one `<script>` line per laser file, after `js/labs.js`, with the engine files in the order of `ENGINE_FILES` in `tests/laser/helpers.js` (a test checks this). Keep the engine to about 9 files so the list stays short.
 
 ## 2. Separating the physics engine from rendering
 
@@ -56,6 +56,7 @@ tests/laser/*.test.js      engine tests, run with Node's built-in runner (no pac
 
 | File | Contents | Doc § |
 |---|---|---|
+| `check.js` | input checks shared by every engine file (loaded first) | — |
 | `constants.js` | h, c, k, ε₀…, units, CGS↔SI helpers | 13 |
 | `media.js` | table of media (ruby, Nd:YAG, Nd:glass, He-Ne, CO₂, diode, Ti:sapphire…): λ, σ, τ, n, scheme, linewidth, broadening type; derived ν, hν, I_sat | 5.1 |
 | `spectrum.js` | thermal emission; lineshapes, gain curve g₀(ν), longitudinal-mode comb | 1, 3.3 |
@@ -89,7 +90,8 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 
 - ✅ Stage 1: constants, media table, tests (`2f8b190`).
 - ✅ Stage 1b: safety tools (mutation checker, `deepFreeze`, engine-folder override).
-- Next: stage 2.
+- ✅ Stage 2: static cavity and spectrum (`cavity.js`, `check.js`, lineshapes and mode comb in `spectrum.js`, `ng` in `media.js`).
+- Next: stage 3.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking.
 
@@ -155,7 +157,7 @@ Working agreement: every stage follows the recipe in section 3, ends with `/code
   - The checker copies `index.html`, `js/`, `css/`, `data/` and `sections/` to a temp folder and first runs the tests on the unchanged copy; they must pass. Then, for each entry, it makes the change in a fresh copy and runs every laser test.
   - Outcomes: caught, MISSED (add a test), TIMED OUT (give the test a `{ timeout }`), ERROR (the text isn't found exactly once, the change isn't valid JS/JSON, or the path is outside the copy).
   - The replacement is inserted literally, so `$&` and `$$` aren't special.
-  - 28 entries; all 28 are caught. A full run takes about 4 s. If it ever takes more than ~30 s, run the mutations in parallel.
+  - 28 entries at the end of stage 1b, all caught. A full run then took about 4 s; after stage 2 (70 entries) it takes about 22 s. If it ever takes more than ~30 s, run the mutations in parallel.
 - `tests/laser/mutation-check.test.js` tests the checker itself on one small test file (to keep `node --test` fast):
   - an unchanged copy passes;
   - a harmless change is not caught;
@@ -213,27 +215,108 @@ Problems to handle in the named stage:
 
 Each stage follows the recipe. Below: what's specific to it.
 
-### Stage 2 — Static cavity and spectrum (`cavity.js`, `spectrum.js`)
-- **Doc to audit:** §1 (lineshapes, σ from A, gain, saturation), §3.1–3.6, §5.1, the §12 rows for He-Ne threshold, free spectral range, Rigrod, and ruby end face.
-- **Build:**
-  - `spectrum.js`: Lorentzian and Gaussian lineshapes, the Doppler width, σ from A₂₁, gain coefficient, saturated gain (homogeneous and inhomogeneous), mode comb, oscillating bandwidth.
-  - `cavity.js`: effective length L_e (index passed in), single-pass loss γ, g_th, ΔN_th, τ_c, Q, Δν_c, free spectral range, finesse, mode count, Rigrod (low-gain and exact), T_opt, end-face reflectivity.
-  - Data: add `ng` to the diode; doc fix D4.
-- **Tests:**
-  - every §3 example above;
-  - lineshapes integrate to 1 numerically;
-  - ĝ_G(ν₀)·Δν_D = 0.939;
-  - Ne at 400 K → Δν_D ≈ 1.5 GHz;
-  - ruby σ from A ≈ 4×10⁻²⁴ m²;
-  - gain at I_sat: g₀/2 for homogeneous, g₀/√2 for inhomogeneous;
-  - T_opt really maximises P_out (scan);
-  - exact Rigrod → low-gain Rigrod as T → 0;
-  - mode counts He-Ne 2–3, ruby ~10³, diode ~10².
-- **Traps:**
-  - mixing single-pass γ with round-trip T and L_i: names say which (`lossRoundTrip`), and a test checks γ ≈ (T + L_i)/2 for small losses;
-  - below threshold the bandwidth formulas take √ or log of a negative number: return 0;
-  - D5, D8.
-- **Breaks:** drop the ½ in γ; L instead of L_e; c/L instead of c/2L; Gaussian lineshape without its √(ln2/π); wrong sign in T_opt; n instead of n_g.
+### Stage 2 — Static cavity and spectrum (`cavity.js`, `spectrum.js`) ✅
+
+**Scope card.** Every value in SI. Doc sections refer to `docs/laser-physics.md`.
+
+Calling convention (decided in the review, below): a function with one input takes it as it is; a function with more than one takes **one object of code-named values**, so two numbers can never be swapped. Every input is checked by the shared `check.js`: a missing or impossible value throws an error that starts with the function the caller called, and so does a name the function does not use.
+
+`spectrum.js`:
+
+| Function | Inputs | Output | Doc |
+|---|---|---|---|
+| `lorentzian({ nu, nu0, dnu })` | Hz, Hz, FWHM Hz | ĝ_L, 1/Hz | §1 |
+| `gaussian({ nu, nu0, dnuD })` | Hz, Hz, FWHM Hz | ĝ_G, 1/Hz | §1 |
+| `lineshape({ broadening, nu, nu0, dnu })` | `"homogeneous"` → Lorentzian, `"inhomogeneous"` → Gaussian | 1/Hz | §1 |
+| `relativeGain({ broadening, nu, nu0, dnu })` | as above | g₀(ν)/g₀(ν₀): 1 at the centre, ½ at ν₀ ± Δν/2 | §1, §3.3 |
+| `naturalWidth(tau)` | s | 1/(2πτ), Hz | §1 |
+| `dopplerWidth({ nu0, T, M })` | Hz, K, kg | Δν_D, Hz | §1 |
+| `crossSection({ A21, lam0, n, lineshape })` | s⁻¹, m, —, 1/Hz | σ, m² | §1 |
+| `inversion({ N1, N2, deg1, deg2 })` | m⁻³, m⁻³, —, — | ΔN = N₂ − (g₂/g₁)N₁, m⁻³ | §1, symbol table |
+| `gainCoefficient({ sigma, dN })` | m², m⁻³ | g, m⁻¹ (negative = absorbs) | §1 |
+| `saturatedGain({ broadening, g0, I, I_sat })` | —, m⁻¹, W/m², W/m² | g, m⁻¹ | §1 |
+| `oscillatingBandwidth({ broadening, dnu, x })` | —, Hz, — | Δν_osc, Hz; 0 for x ≤ 1 | §3.3 |
+| `modeComb({ nuLow, nuHigh, fsr })` | Hz, Hz, Hz | ascending q·Δν_FSR (q ≥ 1) inside [nuLow, nuHigh], edges included; refuses more than 100 000 lines | §3.3 |
+
+The stage-1 functions follow the same convention: `stimulatedToSpontaneous({ lam, T })`, `boltzmannRatio({ lam, T, deg1, deg2 })` (degeneracies now required), `units.dnuFromDlam({ dlam, lam })`, `units.dlamFromDnu({ dnu, lam })`, `units.n2FromEsu({ n2esu, n0 })`; one-input functions are unchanged.
+
+`cavity.js`:
+
+| Function | Inputs | Output | Doc |
+|---|---|---|---|
+| `effectiveLength({ L, l_g, nGroup })` | m, m, — (`media.get(id).nGroup`: for the diode 4, not n = 3.6) | L_e = L + (n_g − 1)l, m | §3.2 |
+| `singlePassLoss({ refl1, refl2, alpha_i, l_g })` | —, —, m⁻¹, m | γ = αl + ½ln(1/(R₁R₂)); a lossless cavity throws | §3.2 |
+| `thresholdGain({ refl1, refl2, alpha_i, l_g })` | same | g_th = γ/l, m⁻¹ | §3.1 |
+| `thresholdInversion({ gth, sigma })` | m⁻¹, m² | ΔN_th, m⁻³ | §3.1 |
+| `photonLifetime({ L_e, gamma })` | m, — | τ_c = L_e/(cγ), s | §3.2 |
+| `qFactor({ nu, tau_c })` | Hz, s | Q = 2πντ_c | §3.2 |
+| `coldLinewidth(tau_c)` | s | Δν_c = 1/(2πτ_c), Hz | §3.2 |
+| `freeSpectralRange(L_e)` | m | c/(2L_e), Hz (as a wavelength: `units.dlamFromDnu`) | §3.3 |
+| `finesse({ refl1, refl2 })` | —, — | F of the mirrors only | §3.4 |
+| `modeCount({ bandwidth, fsr })` | Hz, Hz | N_modes ≈ bandwidth/Δν_FSR | §3.3 |
+| `rigrodLowGain({ g0, l_g, T_oc, L_i, I_sat, area })` | m⁻¹, m, —, —, W/m², m² | P_out, W; 0 below threshold | §3.6 |
+| `rigrodExact({ g0, l_g, refl1, refl2, I_sat, area })` | as `rigrodLowGain`, mirrors instead of T and L_i; α = 0 | P_out, W; 0 below threshold | §3.6 |
+| `optimumCoupler({ g0, l_g, L_i })` | m⁻¹, m, — | T_opt; 0 when 2g₀l ≤ L_i; throws for L_i = 0 (no optimum) and when the formula asks for T ≥ 1 (gain too high for it) | §3.6 |
+| `faceReflectivity(n)` | — | ((n − 1)/(n + 1))², normal incidence from air | §9.1, §12 |
+
+`check.js` (new, loaded first): `params`, `finite`, `positive`, `atLeast`, `between`, `reflectivity`, `broadening`, `fail`.
+
+`media.js`: a new field `ng` (group index; 4 for the diode, null = same as n for the rest), and a derived `nGroup` in `get()` (D5).
+
+**Test values** (recomputed in Node during the audit; doc value → computed):
+
+| Check | Doc | Computed | Tolerance |
+|---|---|---|---|
+| He-Ne g_th (R 0.99/0.98, l 0.3 m) | ≈ 0.05 m⁻¹ | 0.05042 | ±0.005 |
+| He-Ne τ_c, Δν_c, Q (L 0.3 m) | ≈ 66 ns, 2.4 MHz, 2.0×10⁸ | 66.15 ns, 2.406 MHz, 1.969×10⁸ | half a unit in the last digit |
+| He-Ne FSR, Δλ | 500 MHz, λ²/2L | 499.65 MHz, 0.6674 pm | ±1 %; Δλ half a unit of 0.667 pm |
+| Ruby g_th, ΔN_th (R 1/0.5, l 0.1 m) | ≈ 3.5 m⁻¹, 1.4×10¹⁸ cm⁻³, ~9 % of N_t | 3.466, 1.386×10¹⁸, 8.7 % | half a unit; [8.5 %, 9.5 %] |
+| Ruby L_e, FSR (10 cm rod, 0.5 m) | 0.58 m, 260 MHz | 0.576 m, 260.2 MHz | half a unit |
+| Diode L_e, FSR (300 µm, n_g 4) | 1.2 mm, ~125 GHz | 1.2 mm, 124.9 GHz | half a unit |
+| Modes under the gain curve | He-Ne ~3, ruby ~10³, diode ~10² | 3.0, 1268, 80 | [2.5, 3.5]; half a decade |
+| Ne Doppler width (20 u, 400 K) | ≈ 1.5 GHz | 1.5175 GHz | ±0.05 GHz |
+| ĝ_G(ν₀)·Δν_D | 0.939 | 2√(ln2/π) = 0.93944 | exact |
+| Ruby σ from A (Lorentzian peak) | ≈ 4×10⁻²⁴ m² | 3.98×10⁻²⁴ | ±0.5×10⁻²⁴ |
+| Ruby end face | 7.6 % | 7.582 % | ±0.05 % |
+| Gain at I = I_sat | — | g₀/2 hom., g₀/√2 inhom. | exact |
+| Exact Rigrod | — | equals a numerical two-way integration through the rod (in the test file) to < 1e-6 | |
+| Exact → low-gain Rigrod (R₁ = 1, L_i = 0) | Section 3.6, §12 | difference 8.5×10⁻⁶ at T = 10⁻³, shrinking as T² | |
+| T_opt (g₀l = 0.03, L_i = 0.02) | — | 0.014641 = argmax of a scan of P_out(T) | scan step 10⁻⁶ |
+
+Also: lineshapes integrate to 1 (the Lorentzian against its exact ±X integral (2/π)·atan(2X/Δν)); `relativeGain` × x = 1 at the edges of `oscillatingBandwidth`; γ ≈ (T + L_i)/2 for small losses; FSR/F ≈ Δν_c for small losses; Boltzmann populations (stage 1) give negative gain; every input checked; frozen inputs.
+
+**Decisions:**
+- Doc fixes: τ_c ≈ 66 ns (the doc rounded γ before dividing); Q ≈ 2.0×10⁸ added; He-Ne "2–3" modes → "~3" (1.5 GHz / 500 MHz = 3.0); L_e uses the group index; Rigrod: γ ≈ (T + L_i)/2, zero below threshold, and a caveat that both formulas assume a homogeneous line (He-Ne and CO₂ are Doppler-broadened, so for them it is an estimate); ruby N_t note in §5.2 (D4); new code names in the symbol table (`N_t`, `ng`, `A21`, `nu0`, `dnu`, `dnuD`, `M`, `L_i`, `x`, `Q`, `dnu_c`, `fsr`, `finesse`, `area`, `P_out`).
+- Below threshold, the bandwidth and Rigrod functions return 0, never NaN or a negative power. A cavity with no loss at all (R₁R₂ = 1, or T + L_i = 0) throws: its finesse, τ_c and power are infinite.
+- The pump ratio x = g₀/g_th is one division, so it has no function.
+
+**Traps:** mixing single-pass γ with round-trip T and L_i (the names say which, and a test checks γ ≈ (T + L_i)/2); √ or log of a negative number below threshold; D5; D8 (ruby's I_sat from `media.get()` already has the factor 2).
+
+**Breaks:** drop the ½ in γ; L instead of L_e; c/L instead of c/2L; τ_c from the round-trip time; Gaussian without √(ln2/π); Lorentzian Δν/π; Doppler without ln 2; inhomogeneous saturation without √; Lorentzian band without √; no zero below threshold (band and Rigrod); exact Rigrod without √R₁; T_opt sign; σ with n instead of n²; finesse with the wrong power; Q without 2π; face reflectivity without the square; degeneracies upside down; mode comb off by one line; Gaussian `relativeGain` without 4 ln 2; reflectivity > 1 accepted; n instead of n_g.
+
+**Review outcome** (`/code-review`, 15 findings; 14 fixed, 1 kept):
+- Mode comb: a line exactly on the window edge could be lost to rounding in q·fsr/fsr (now one extra q on each side, filtered); the line limit was off by one when q was clamped to start at 1; mode numbers past 2⁵³ made the loop endless (now refused); no mode at 0 Hz.
+- `optimumCoupler` could ask for more than 100 % (now at most 1), and answered 0 both for "cannot start" and for L_i = 0 (L_i = 0 now throws: there is no best coupler then).
+- `effectiveLength` refused a medium filling the cavity after float rounding (0.7 − 0.4 < 0.3); its index input is now named `nGroup`, so the phase index cannot be passed by mistake.
+- A lossless cavity now throws where γ is computed, not one function later with a misleading message.
+- `rigrodExact` and `finesse` refuse an internal loss they would otherwise ignore.
+- `nGroup` falls back to n when `ng` is missing, not only when it is null.
+- One calling convention and one input checker (`check.js`) for the whole engine, so errors read the same everywhere and name the function that was called (`lineshape` used to report `lorentzian`).
+- `fsrWavelength` removed: `units.dlamFromDnu` already does it.
+- Plan marked the stage done before the review: fixed (marked done only now).
+- Kept: `coldLinewidth` repeats the one-line 1/(2πτ) of `spectrum.naturalWidth`. Calling across files would make its errors name a function the caller never called, and the name says which lifetime it is.
+- New mutations for every fix; two old entries needed new text, and one became harmless (the comb loop now runs one q past the window on purpose) and was replaced.
+
+**Second review** (the fixes above rewrote a lot, so `/code-review` ran again; 15 findings; 13 fixed, 1 partly, 1 declined):
+- Mode comb: the 2⁵³ guard missed the extra q past the window (endless loop at q = 2⁵³ − 1); the 100 000 limit did not count the edge lines. The limit is now counted on the lines actually returned.
+- `check.params` takes the list of names each function reads and refuses any other: one rule instead of hand-written guards in two functions (`finesse` still ignored `L_i`; `rigrodLowGain` ignored `alpha_i`; `thresholdGain` ignored `L_i`), and typos (`alpha`) are caught too.
+- `optimumCoupler` returned 1 for very high gain, which as a mirror is R₂ = 0 and is refused by every other function; it now throws there (the low-gain formula does not hold). It now answers 0 ("cannot start") before refusing L_i = 0, as the doc says.
+- γ computed as −½(ln R₁ + ln R₂): the product R₁R₂ underflowed to 0 for tiny reflectivities. Partly: other overflows (g₀ = 10³⁰⁸) are not checked, since every result would need it and the bench's sliders keep inputs physical.
+- Error messages survived values that cannot become text (`Symbol`, objects without a prototype).
+- Wavenumber conversions accept 0 and negative values again (level differences).
+- Symbol table: `nGroup` and n_g in L_e; `check.js` header example fixed; `media.js` header and the plan's file count updated.
+- `relativeGain` reuses the two lineshape formulas instead of a second copy.
+- Declined: "named values cost too much per pixel". Measured outside Node's `vm` sandbox, a checked `relativeGain` call takes 44 ns, so a 1000-px gain curve at 60 fps costs 0.26 % of one core (inside the test sandbox, where global lookups are slow, 820 ns). If a later stage calls a spectrum function inside the ODE right-hand side, measure again.
 
 ### Stage 3 — ODE solver (`ode.js`)
 - **Build:** `ode.dopri5(f, t0, y0, t1, options)` → `{ t, y, steps, rejected, reachedEnd }`.

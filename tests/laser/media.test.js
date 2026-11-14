@@ -36,6 +36,9 @@ test("every medium has sensible numbers in SI units", () => {
 
     assert.ok(m.tau > 0 && m.tau < 1, id + ": tau " + m.tau);
     assert.ok(m.n >= 1 && m.n < 4, id + ": n " + m.n);
+    // The group index, where given, is above the phase index (normal
+    // dispersion) and below 5 for any real laser material.
+    if (m.ng !== null) assert.ok(m.ng > m.n && m.ng < 5, id + ": ng " + m.ng);
     assert.ok(m.cw || m.pulsed, id + ": neither cw nor pulsed");
     assert.ok(m.pumps.length > 0, id + ": no pump");
     for (const pump of m.pumps) assert.ok(PUMPS.includes(pump), id + ": pump " + pump);
@@ -84,39 +87,40 @@ test("only CaF₂:Dy has numbers the table leaves blank", () => {
 // for ANY medium — makes this test fail.
 //   lam, lamMin, lamMax, otherLines in nm · sigma, diffGain in cm² · tau in s
 //   dnu in Hz (Nd:glass: from 25 nm at 1.06 µm, the middle of 20–30 nm)
+//   ng: the group index, given only for the diode (§3.3: n_g ≈ 4)
 const NM = 1e-9;
 const CM2 = 1e-4;
 const TABLE = {
   "ruby":        { scheme: "three-level", lam: 694.3, lamMin: 694.3, lamMax: 694.3, otherLines: [],
                    sigma: 2.5e-20, diffGain: null, tau: 3e-3, dnu: 330e9, broadening: "homogeneous",
-                   n: 1.76, pumps: ["flashlamp"], cw: false, pulsed: true },
+                   n: 1.76, ng: null, pumps: ["flashlamp"], cw: false, pulsed: true },
   "nd-glass":    { scheme: "four-level", lam: 1060, lamMin: 1060, lamMax: 1060, otherLines: [],
                    sigma: 3e-20, diffGain: null, tau: 0.3e-3, dnu: 2.99792458e8 * 25e-9 / (1.06e-6 * 1.06e-6),
-                   broadening: "inhomogeneous", n: 1.5, pumps: ["flashlamp"], cw: false, pulsed: true },
+                   broadening: "inhomogeneous", n: 1.5, ng: null, pumps: ["flashlamp"], cw: false, pulsed: true },
   "nd-yag":      { scheme: "four-level", lam: 1064, lamMin: 1064, lamMax: 1064, otherLines: [],
                    sigma: 2.8e-19, diffGain: null, tau: 230e-6, dnu: 120e9, broadening: "homogeneous",
-                   n: 1.82, pumps: ["flashlamp", "diode"], cw: true, pulsed: true },
+                   n: 1.82, ng: null, pumps: ["flashlamp", "diode"], cw: true, pulsed: true },
   "caf2-dy":     { scheme: "four-level", lam: 2360, lamMin: 2360, lamMax: 2360, otherLines: [],
                    sigma: null, diffGain: null, tau: 20e-3, dnu: null, broadening: null,
-                   n: 1.43, pumps: ["lamp"], cw: true, pulsed: true },
+                   n: 1.43, ng: null, pumps: ["lamp"], cw: true, pulsed: true },
   "he-ne":       { scheme: "four-level", lam: 632.8, lamMin: 632.8, lamMax: 632.8, otherLines: [1150, 3390],
                    sigma: 3e-13, diffGain: null, tau: 0.1e-6, dnu: 1.5e9, broadening: "inhomogeneous",
-                   n: 1, pumps: ["discharge"], cw: true, pulsed: false },
+                   n: 1, ng: null, pumps: ["discharge"], cw: true, pulsed: false },
   "ar-ion":      { scheme: "four-level", lam: 514.5, lamMin: 514.5, lamMax: 514.5, otherLines: [488],
                    sigma: 2.5e-12, diffGain: null, tau: 10e-9, dnu: 3.5e9, broadening: "inhomogeneous",
-                   n: 1, pumps: ["discharge"], cw: true, pulsed: false },
+                   n: 1, ng: null, pumps: ["discharge"], cw: true, pulsed: false },
   "co2":         { scheme: "four-level", lam: 10600, lamMin: 10600, lamMax: 10600, otherLines: [9600],
                    sigma: 3e-18, diffGain: null, tau: 0.28e-3, dnu: 50e6, broadening: "inhomogeneous",
-                   n: 1, pumps: ["discharge"], cw: true, pulsed: true },
+                   n: 1, ng: null, pumps: ["discharge"], cw: true, pulsed: true },
   "diode":       { scheme: "semiconductor", lam: 850, lamMin: 780, lamMax: 870, otherLines: [],
                    sigma: null, diffGain: 3e-16, tau: 3e-9, dnu: 10e12, broadening: "homogeneous",
-                   n: 3.6, pumps: ["current"], cw: true, pulsed: false },
+                   n: 3.6, ng: 4, pumps: ["current"], cw: true, pulsed: false },
   "dye-r6g":     { scheme: "four-level", lam: 600, lamMin: 560, lamMax: 640, otherLines: [],
                    sigma: 2e-16, diffGain: null, tau: 5e-9, dnu: 30e12, broadening: "homogeneous",
-                   n: 1.36, pumps: ["laser"], cw: true, pulsed: true },
+                   n: 1.36, ng: null, pumps: ["laser"], cw: true, pulsed: true },
   "ti-sapphire": { scheme: "four-level", lam: 800, lamMin: 660, lamMax: 1100, otherLines: [],
                    sigma: 3.9e-19, diffGain: null, tau: 3.2e-6, dnu: 100e12, broadening: "homogeneous",
-                   n: 1.76, pumps: ["laser"], cw: true, pulsed: true }
+                   n: 1.76, ng: null, pumps: ["laser"], cw: true, pulsed: true }
 };
 
 // A number, or null meaning "not given", compared with a tolerance.
@@ -145,6 +149,7 @@ test("every value of every medium matches the §5.1 table", () => {
     sameNumber(m.dnu, want.dnu, id + " dnu");
     assert.equal(m.broadening, want.broadening, id + " broadening");
     sameNumber(m.n, want.n, id + " n");
+    sameNumber(m.ng, want.ng, id + " ng");
     assert.deepEqual(plain(m.pumps), want.pumps, id + " pumps");
     assert.equal(m.cw, want.cw, id + " cw");
     assert.equal(m.pulsed, want.pulsed, id + " pulsed");
@@ -153,6 +158,14 @@ test("every value of every medium matches the §5.1 table", () => {
 
 test("Nd:glass linewidth: 25 nm at 1.06 µm ≈ 6.7 THz", () => {
   assertClose(M.get("nd-glass").dnu, 6.67e12, 0.005, "Δν");
+});
+
+test("derived: nGroup is the group index where the table gives one, otherwise n (D5)", () => {
+  assertClose(M.get("diode").nGroup, 4, 1e-12, "diode: n_g, not n = 3.6");
+  for (const id of M.list()) {
+    const m = M.get(id);
+    if (id !== "diode") assertClose(m.nGroup, m.n, 1e-12, id);
+  }
 });
 
 test("derived: photon energy and frequency", () => {

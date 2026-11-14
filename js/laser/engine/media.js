@@ -2,7 +2,8 @@
    media.js — the gain media the visitor can put on the bench.
 
    PART OF THE LASER ENGINE (js/laser/engine/): plain numbers in and out, SI
-   units, nothing on the page. Needs constants.js to be loaded first.
+   units, nothing on the page. Needs check.js and constants.js to be loaded
+   first.
 
    Numbers: docs/laser-physics.md §5.1 (typical, rounded values). Each one is
    written as the handbook's number times its unit (2.5e-20 * cm2, 230 * us),
@@ -17,6 +18,9 @@
      LaserEngine.media.get("ruby") -> a fresh copy of one medium, plus:
          nu            laser frequency, Hz
          photonEnergy  energy of one laser photon, J
+         nGroup        the index that sets the round-trip time (cavity
+                         effectiveLength): ng where the table gives it,
+                         otherwise n
          I_sat         saturation intensity, W/m² (null if σ is not known):
                          hν/(στ)  for a four-level medium
                          hν/(2στ) for a three-level one (ruby): there one
@@ -28,8 +32,8 @@
   "use strict";
 
   var E = root.LaserEngine = root.LaserEngine || {};
-  if (!E.constants) {
-    throw new Error("media.js needs js/laser/engine/constants.js to be loaded first.");
+  if (!E.check || !E.constants) {
+    throw new Error("media.js needs js/laser/engine/check.js and constants.js to be loaded first.");
   }
 
   var C = E.constants;
@@ -61,6 +65,8 @@
        dnu         width of the gain line, Hz                (null: not known)
        broadening  "homogeneous" or "inhomogeneous"          (null: not known)
        n           refractive index
+       ng          group index, where it differs noticeably from n: only
+                     the diode (§3.3: n_g ≈ 4 against n = 3.6). null = use n
        pumps       how it can be pumped: "flashlamp", "diode", "lamp",
                      "discharge", "current", "laser"
        cw, pulsed  whether it runs continuously and/or in pulses
@@ -78,6 +84,7 @@
       dnu: 330 * GHz,
       broadening: "homogeneous",
       n: 1.76,
+      ng: null,
       pumps: ["flashlamp"],
       cw: false, pulsed: true
     },
@@ -89,9 +96,10 @@
       sigma: 3e-20 * cm2,
       diffGain: null,
       tau: 0.3 * ms,
-      dnu: U.dnuFromDlam(25 * nm, 1.06 * um),   // 20–30 nm in the table: the middle
+      dnu: U.dnuFromDlam({ dlam: 25 * nm, lam: 1.06 * um }),   // 20–30 nm in the table: the middle
       broadening: "inhomogeneous",
       n: 1.5,
+      ng: null,
       pumps: ["flashlamp"],
       cw: false, pulsed: true
     },
@@ -106,6 +114,7 @@
       dnu: 120 * GHz,
       broadening: "homogeneous",
       n: 1.82,
+      ng: null,
       pumps: ["flashlamp", "diode"],
       cw: true, pulsed: true
     },
@@ -124,6 +133,7 @@
       dnu: null,
       broadening: null,
       n: 1.43,
+      ng: null,
       pumps: ["lamp"],
       cw: true, pulsed: true
     },
@@ -138,6 +148,7 @@
       dnu: 1.5 * GHz,
       broadening: "inhomogeneous",              // Doppler
       n: 1,
+      ng: null,
       pumps: ["discharge"],
       cw: true, pulsed: false
     },
@@ -152,6 +163,7 @@
       dnu: 3.5 * GHz,
       broadening: "inhomogeneous",              // Doppler
       n: 1,
+      ng: null,
       pumps: ["discharge"],
       cw: true, pulsed: false
     },
@@ -170,6 +182,7 @@
       // inhomogeneous there (the table does not say so in words).
       broadening: "inhomogeneous",
       n: 1,
+      ng: null,
       pumps: ["discharge"],
       cw: true, pulsed: true
     },
@@ -186,6 +199,7 @@
       dnu: 10 * THz,
       broadening: "homogeneous",                // §1 lists semiconductors as homogeneous
       n: 3.6,
+      ng: 4,
       pumps: ["current"],
       cw: true, pulsed: false
     },
@@ -202,6 +216,7 @@
       dnu: 30 * THz,
       broadening: "homogeneous",
       n: 1.36,
+      ng: null,
       pumps: ["laser"],
       cw: true, pulsed: true
     },
@@ -218,6 +233,7 @@
       dnu: 100 * THz,
       broadening: "homogeneous",
       n: 1.76,
+      ng: null,
       pumps: ["laser"],
       cw: true, pulsed: true
     }
@@ -269,6 +285,8 @@
       var result = copyOf(medium);
       result.nu = U.nuFromLam(medium.lam);
       result.photonEnergy = U.photonEnergy(medium.lam);
+      // typeof, not !== null: an entry that leaves ng out must fall back to n too.
+      result.nGroup = typeof medium.ng === "number" ? medium.ng : medium.n;
       result.I_sat = saturationIntensity(medium, result.photonEnergy);
       return result;
     }

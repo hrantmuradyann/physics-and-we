@@ -40,9 +40,11 @@ const ENGINE_DIR = path.join(ROOT, "js", "laser", "engine");
 // it. index.html must load them in this same order — engine-rules.test.js
 // checks that as soon as index.html loads any of them.
 const ENGINE_FILES = [
+  "check.js",
   "constants.js",
   "spectrum.js",
-  "media.js"
+  "media.js",
+  "cavity.js"
 ];
 
 // Loads the engine into a fresh, empty sandbox and returns

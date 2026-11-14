@@ -7,6 +7,8 @@
      · nothing here draws, touches the page or remembers anything between calls
      · names follow the "code name" column of docs/laser-physics.md §0
 
+   Needs check.js to be loaded first.
+
    Values: docs/laser-physics.md §13 (CODATA 2018 — h, c, k and e are exact
    by definition since 2019).
    Tests:  tests/laser/constants.test.js   (run all engine tests:  node --test)
@@ -15,6 +17,9 @@
   "use strict";
 
   var E = root.LaserEngine = root.LaserEngine || {};
+  if (!E.check) {
+    throw new Error("constants.js needs js/laser/engine/check.js to be loaded first.");
+  }
 
   var h = 6.62607015e-34;        // Planck constant, J·s
   var c = 299792458;             // speed of light in vacuum, m/s
@@ -56,59 +61,89 @@
   });
 
   /* ---------- conversions ---------- */
-  // Every wavelength here is the wavelength in vacuum.
+  // Every wavelength here is the wavelength in vacuum. Inputs are checked
+  // (js/laser/engine/check.js): a missing or impossible value throws.
+
+  var check = E.check;
+
+  function at(functionName) {
+    return "LaserEngine.units." + functionName;
+  }
 
   E.units = Object.freeze({
 
     // Frequency of light of wavelength lam, Hz.
     nuFromLam: function (lam) {
+      check.positive(at("nuFromLam"), "lam", lam);
       return c / lam;
     },
 
     // Wavelength of light of frequency nu, m.
     lamFromNu: function (nu) {
+      check.positive(at("lamFromNu"), "nu", nu);
       return c / nu;
     },
 
     // Energy of one photon, J.
     photonEnergy: function (lam) {
+      check.positive(at("photonEnergy"), "lam", lam);
       return h * c / lam;
     },
 
     // λ [nm] = 1239.84 / E [eV], written in SI: photon energy in eV -> m.
     lamFromEV: function (energyEV) {
+      check.positive(at("lamFromEV"), "energyEV", energyEV);
       return h * c / (energyEV * e);
     },
 
     // Photon energy in eV for a wavelength in m.
     eVFromLam: function (lam) {
+      check.positive(at("eVFromLam"), "lam", lam);
       return h * c / (lam * e);
     },
 
     // Linewidth in frequency from linewidth in wavelength: Δν = c·Δλ/λ².
-    dnuFromDlam: function (dlam, lam) {
+    //   dnuFromDlam({ dlam: 1e-9, lam: 1e-6 })  ->  3.0e11 Hz
+    dnuFromDlam: function (params) {
+      var where = at("dnuFromDlam");
+      check.params(where, params, ["dlam", "lam"]);
+      var dlam = check.atLeast(where, "dlam", params.dlam, 0);
+      var lam = check.positive(where, "lam", params.lam);
       return c * dlam / (lam * lam);
     },
 
     // Linewidth in wavelength from linewidth in frequency: Δλ = λ²·Δν/c.
-    dlamFromDnu: function (dnu, lam) {
+    dlamFromDnu: function (params) {
+      var where = at("dlamFromDnu");
+      check.params(where, params, ["dnu", "lam"]);
+      var dnu = check.atLeast(where, "dnu", params.dnu, 0);
+      var lam = check.positive(where, "lam", params.lam);
       return dnu * lam * lam / c;
     },
 
     // Spectroscopists' wavenumber (cm⁻¹) -> frequency, Hz. 1 cm⁻¹ ≈ 30 GHz.
+    // Zero and negative values are allowed: a difference between two
+    // levels can be either.
     hzFromWavenumber: function (perCm) {
+      check.finite(at("hzFromWavenumber"), "perCm", perCm);
       return c * perCm * 100;
     },
 
     // Wavenumber (cm⁻¹) -> energy, eV. 1 cm⁻¹ ≈ 1.24×10⁻⁴ eV.
     eVFromWavenumber: function (perCm) {
+      check.finite(at("eVFromWavenumber"), "perCm", perCm);
       return h * c * perCm * 100 / e;
     },
 
     // The book's nonlinear index n₂ (Gaussian units, n = n₀ + n₂A²) -> the
     // intensity form used in SI, n = n₀ + n₂ᴵ·I, in m²/W.
     //   n₂ᴵ = 8π·n₂ / (c·n₀)  in cm²·s/erg, and 1 cm²·s/erg = 10³ m²/W.
-    n2FromEsu: function (n2esu, n0) {
+    // n2esu may be negative (a self-defocusing medium).
+    n2FromEsu: function (params) {
+      var where = at("n2FromEsu");
+      check.params(where, params, ["n2esu", "n0"]);
+      var n2esu = check.finite(where, "n2esu", params.n2esu);
+      var n0 = check.atLeast(where, "n0", params.n0, 1);
       var cCgs = c * 100;        // speed of light in cm/s
       return 8 * Math.PI * n2esu / (cCgs * n0) * 1e3;
     }

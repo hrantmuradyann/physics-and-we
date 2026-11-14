@@ -70,21 +70,21 @@ const MUTATIONS = [
     why: "degeneracy ratio upside down"
   },
   {
-    file: "js/laser/engine/spectrum.js",
-    find: "if (typeof value !== \"number\" || !isFinite(value) || value <= 0) {",
+    file: "js/laser/engine/check.js",
+    find: "if (!isNumber(value) || value <= 0) {",
     replace: "if (value < 0) {",
     why: "input check that lets 0, NaN and text through"
   },
   {
-    file: "js/laser/engine/spectrum.js",
-    find: "if (typeof value !== \"number\" || !isFinite(value) || value <= 0) {",
-    replace: "if (typeof value !== \"number\" || value <= 0) {",
+    file: "js/laser/engine/check.js",
+    find: "return typeof value === \"number\" && isFinite(value);",
+    replace: "return typeof value === \"number\";",
     why: "input check that lets Infinity through"
   },
   {
     file: "js/laser/engine/spectrum.js",
-    find: "checkPositive(\"deg1\", deg1, \"boltzmannRatio\");",
-    replace: "",
+    find: "var T = check.positive(where, \"T\", params.T);\n    var deg1 = check.positive(where, \"deg1\", params.deg1);",
+    replace: "var T = check.positive(where, \"T\", params.T);\n    var deg1 = params.deg1;",
     why: "degeneracy not checked"
   },
 
@@ -184,8 +184,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/media.js",
-    find: "n: 1.76,\n      pumps: [\"laser\"],",
-    replace: "n: 1.67,\n      pumps: [\"laser\"],",
+    find: "n: 1.76,\n      ng: null,\n      pumps: [\"laser\"],",
+    replace: "n: 1.67,\n      ng: null,\n      pumps: [\"laser\"],",
     why: "Ti:sapphire refractive index mistyped"
   },
   {
@@ -199,6 +199,268 @@ const MUTATIONS = [
     find: "cm3: 1e-6,",
     replace: "cm3: 1e-4,",
     why: "cm³ factor with the wrong exponent"
+  },
+
+  /* ---------- stage 2: spectrum.js (lineshapes, gain, mode comb) ---------- */
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "return (dnu / (2 * Math.PI)) / (detuning * detuning + halfWidth * halfWidth);",
+    replace: "return (dnu / Math.PI) / (detuning * detuning + halfWidth * halfWidth);",
+    why: "Lorentzian with Δν/π instead of Δν/2π: integrates to 2"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "return (2 / dnuD) * Math.sqrt(Math.LN2 / Math.PI) *",
+    replace: "return (2 / dnuD) *",
+    why: "Gaussian lineshape without its √(ln 2/π)"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "var halfWidth = dnu / 2;",
+    replace: "var halfWidth = dnu;",
+    why: "Lorentzian with Δν taken as the half width"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "Math.exp(-4 * Math.LN2 * detuning * detuning / (dnuD * dnuD));",
+    replace: "Math.exp(-Math.LN2 * detuning * detuning / (dnuD * dnuD));",
+    why: "Gaussian without the 4 in 4·ln 2: twice too wide"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "return nu0 * Math.sqrt(8 * k * T * Math.LN2 / (M * c * c));",
+    replace: "return nu0 * Math.sqrt(8 * k * T / (M * c * c));",
+    why: "Doppler width without ln 2"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "return A21 * lam0 * lam0 / (8 * Math.PI * n * n) * lineshapeValue;",
+    replace: "return A21 * lam0 * lam0 / (8 * Math.PI * n) * lineshapeValue;",
+    why: "cross section with n instead of n²"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "return N2 - (deg2 / deg1) * N1;",
+    replace: "return N2 - (deg1 / deg2) * N1;",
+    why: "inversion with the degeneracies upside down"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "return g0 / Math.sqrt(1 + I / I_sat);",
+    replace: "return g0 / (1 + I / I_sat);",
+    why: "inhomogeneous line saturating like a homogeneous one"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "if (broadening === \"homogeneous\") return dnu * Math.sqrt(x - 1);",
+    replace: "if (broadening === \"homogeneous\") return dnu * (x - 1);",
+    why: "Lorentzian oscillating band without the √"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "return dnu * Math.sqrt(Math.log(x) / Math.LN2);",
+    replace: "return dnu * Math.sqrt(Math.log(x));",
+    why: "Gaussian oscillating band without dividing by ln 2"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "if (x <= 1) return 0;",
+    replace: "",
+    why: "oscillating band below threshold: √ of a negative number gives NaN"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "for (var q = first; q <= last; q++) {",
+    replace: "for (var q = first; q < last - 1; q++) {",
+    why: "mode comb loop that stops one line early (the loop runs one q past the window on purpose)"
+  },
+
+  /* ---------- stage 2: cavity.js ---------- */
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "var gamma = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2));",
+    replace: "var gamma = alpha_i * l_g - (Math.log(refl1) + Math.log(refl2));",
+    why: "single-pass loss γ without the ½ (round trip taken for one pass)"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "return L + (nGroup - 1) * l_g;",
+    replace: "return L;",
+    why: "the mirror distance L used instead of the optical length L_e"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "return c / (2 * L_e);",
+    replace: "return c / L_e;",
+    why: "free spectral range c/L instead of c/2L"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "return L_e / (c * gamma);",
+    replace: "return 2 * L_e / (c * gamma);",
+    why: "photon lifetime from the round-trip time instead of one pass"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "return 2 * Math.PI * nu * tau_c;",
+    replace: "return nu * tau_c;",
+    why: "Q without 2π"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "return Math.PI * Math.pow(product, 0.25) / (1 - Math.sqrt(product));",
+    replace: "return Math.PI * Math.pow(product, 0.5) / (1 - Math.sqrt(product));",
+    why: "finesse with (R₁R₂)^½ instead of ^¼"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "var overThreshold = 2 * g0 * l_g / (T_oc + L_i) - 1;",
+    replace: "var overThreshold = g0 * l_g / (T_oc + L_i) - 1;",
+    why: "low-gain Rigrod with one pass of gain against round-trip losses"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (overThreshold <= 0) return 0;\n    return area * (T_oc * I_sat / 2) * overThreshold;",
+    replace: "return area * (T_oc * I_sat / 2) * overThreshold;",
+    why: "low-gain Rigrod gives a negative power below threshold"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (overThreshold <= 0) return 0;\n    var mirrors",
+    replace: "var mirrors",
+    why: "exact Rigrod gives a negative power below threshold"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "var mirrors = (1 - refl2) * root1 / ((root1 + root2) * (1 - rootBoth));",
+    replace: "var mirrors = (1 - refl2) / ((root1 + root2) * (1 - rootBoth));",
+    why: "exact Rigrod without √R₁"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "var T_opt = Math.sqrt(roundTripGain * L_i) - L_i;",
+    replace: "var T_opt = Math.sqrt(roundTripGain * L_i) + L_i;",
+    why: "optimum coupler with the wrong sign"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (roundTripGain <= L_i) return 0;",
+    replace: "",
+    why: "optimum coupler below threshold: negative T or NaN"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "return ratio * ratio;",
+    replace: "return ratio;",
+    why: "face reflectivity without the square"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "if (!isNumber(value) || value <= 0 || value > 1) {",
+    replace: "if (!isNumber(value) || value <= 0) {",
+    why: "a reflectivity above 1 accepted"
+  },
+
+  /* ---------- stage 2: media.js ---------- */
+  {
+    file: "js/laser/engine/media.js",
+    find: "result.nGroup = typeof medium.ng === \"number\" ? medium.ng : medium.n;",
+    replace: "result.nGroup = medium.n;",
+    why: "phase index n used where the group index n_g sets the round trip (D5)"
+  },
+
+  /* ---------- stage 2 review: shared checks, edge cases ---------- */
+  {
+    file: "js/laser/engine/check.js",
+    find: "if (params === null || typeof params !== \"object\" || Array.isArray(params)) {",
+    replace: "if (params === null) {",
+    why: "plain numbers accepted where named values are needed"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "if (!isNumber(value) || value < min) {",
+    replace: "if (!isNumber(value) || value <= min) {",
+    why: "atLeast refuses its own limit (n = 1, a face in air)"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "if (!isNumber(value) || value < min || value > max) {",
+    replace: "if (!isNumber(value) || value < min) {",
+    why: "a round-trip fraction above 1 accepted"
+  },
+  {
+    file: "js/laser/engine/constants.js",
+    find: "var n0 = check.atLeast(where, \"n0\", params.n0, 1);",
+    replace: "var n0 = params.n0;",
+    why: "n₀ not checked in the n₂ conversion"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "var first = Math.max(1, Math.ceil(nuLow / fsr) - 1);",
+    replace: "var first = Math.max(1, Math.ceil(nuLow / fsr));",
+    why: "mode comb drops a line on the lower edge after rounding"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "var last = Math.floor(nuHigh / fsr) + 1;",
+    replace: "var last = Math.floor(nuHigh / fsr);",
+    why: "mode comb drops a line on the upper edge after rounding"
+  },
+  {
+    file: "js/laser/engine/spectrum.js",
+    find: "if (lines.length === MAX_COMB_LINES) {",
+    replace: "if (lines.length === MAX_COMB_LINES + 1) {",
+    why: "mode comb limit off by one"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (gamma === 0) failLossless(where);",
+    replace: "",
+    why: "a lossless cavity passes on γ = 0 instead of saying so"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "if (names.indexOf(key) === -1) {",
+    replace: "if (names.indexOf(key) === -2) {",
+    why: "unknown names accepted: a loss quietly ignored, a typo unnoticed"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (T_opt >= 1) {",
+    replace: "if (T_opt >= 2) {",
+    why: "optimum coupler of 100 % or more handed on (refl2 = 1 − T would be 0)"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (L_i === 0) {",
+    replace: "if (L_i === -1) {",
+    why: "optimum coupler answers 0 (\"cannot start\") when there is no other loss"
+  },
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "if (l_g > L * (1 + 1e-9)) {",
+    replace: "if (l_g > L) {",
+    why: "a medium filling the cavity refused after float rounding"
+  },
+
+  /* ---------- stage 2, second review ---------- */
+  {
+    file: "js/laser/engine/cavity.js",
+    find: "var gamma = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2));",
+    replace: "var gamma = alpha_i * l_g + 0.5 * Math.log(1 / (refl1 * refl2));",
+    why: "loss from the product R₁R₂, which rounds to 0 for tiny reflectivities"
+  },
+  {
+    file: "js/laser/engine/check.js",
+    find: "return \"a value that cannot be shown as text\";",
+    replace: "throw err;",
+    why: "an odd value crashes the error message itself"
+  },
+  {
+    file: "js/laser/engine/constants.js",
+    find: "check.finite(at(\"hzFromWavenumber\"), \"perCm\", perCm);",
+    replace: "check.positive(at(\"hzFromWavenumber\"), \"perCm\", perCm);",
+    why: "a wavenumber difference of 0 or below refused"
   }
 ];
 

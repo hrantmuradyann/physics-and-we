@@ -40,27 +40,40 @@ English-language textbooks (Svelto, Siegman, Koechner) reuse the letters g and R
 | Symbol | Meaning | SI unit | Code name |
 | --- | --- | --- | --- |
 | N₁, N₂ | population densities of the lower and upper laser levels | m⁻³ | `N1`, `N2` |
+| N_t | total density of active atoms or ions | m⁻³ | `N_t` |
 | φ | number of photons in the laser mode, in the whole cavity (Sections 4, 11) | — | `phi` |
 | S = φ/V | photon density of the laser mode, V = mode volume (Sections 2, 5.7, 9.4) | m⁻³ | `S` |
 | g₁, g₂ (Sections 1–2) | level degeneracies | — | `deg1`, `deg2` |
 | ΔN = N₂ − (g₂/g₁)N₁ | population inversion | m⁻³ | `dN` |
 | λ, ν, ω = 2πν | wavelength, frequency, angular frequency | m, Hz, rad/s | `lam`, `nu`, `omega` |
 | n | refractive index | — | `n` |
+| n_g | group index: sets the round-trip time; differs noticeably from n only in a semiconductor | — | `ng` (given only where it differs); `nGroup` = n_g where given, otherwise n |
 | σ | stimulated-emission cross section | m² | `sigma` |
+| A₂₁ = 1/τ_rad | spontaneous-emission rate | s⁻¹ | `A21` |
 | τ | upper-laser-level lifetime | s | `tau` |
 | ĝ(ν) | normalized lineshape (often written g(ν)) | Hz⁻¹ | `lineshape` |
+| ν₀, Δν | centre and full width at half maximum of the gain line | Hz | `nu0`, `dnu` |
+| Δν_D | Doppler width (full width at half maximum) | Hz | `dnuD` |
+| M | mass of the emitting atom or molecule | kg | `M` |
 | g, g₀, g_th | gain coefficient: saturated, small-signal, threshold | m⁻¹ | `gain`, `g0`, `gth` |
 | α | distributed internal loss coefficient | m⁻¹ | `alpha_i` |
 | l | length of the gain medium | m | `l_g` |
 | L | cavity length (mirror separation) | m | `L` |
-| L_e = L + (n − 1)l | effective (optical) cavity length | m | `L_e` |
+| L_e = L + (n_g − 1)l | effective (optical) cavity length (n_g ≈ n except in a semiconductor, see 3.2) | m | `L_e` |
 | R₁, R₂ (Sections 3–4) | mirror power reflectivities | — | `refl1`, `refl2` |
 | T = 1 − R₂ | output-coupler transmission | — | `T_oc` |
+| L_i | all other losses per round trip, as a fraction | — | `L_i` |
 | γ | single-pass logarithmic loss | — | `gamma` |
+| x = g₀/g_th | how many times the pump exceeds threshold | — | `x` |
 | R₁, R₂ (Section 7) | mirror radii of curvature | m | `Rc1`, `Rc2` |
 | g₁, g₂ (Section 7) | resonator g-parameters, 1 − L/R | — | `g1`, `g2` |
 | τ_c | cavity photon lifetime | s | `tau_c` |
+| Q, Δν_c | quality factor and linewidth of the empty (cold) cavity | —, Hz | `Q`, `dnu_c` |
+| Δν_FSR | free spectral range, the spacing of the longitudinal modes | Hz | `fsr` |
+| F | finesse | — | `finesse` |
 | I, I_sat | intensity, saturation intensity | W/m² | `I`, `I_sat` |
+| A | mode area: cross-section of the beam in the gain medium | m² | `area` |
+| P_out | output power | W | `P_out` |
 | w, w₀, z_R | Gaussian beam radius, waist radius, Rayleigh range | m | `w`, `w0`, `zR` |
 | q | complex beam parameter | m | `q` |
 
@@ -104,7 +117,7 @@ In the simulator the cross section σ(ν) is more convenient than B₂₁: the s
 \sigma(\nu) = \frac{A_{21}\,\lambda_0^{2}}{8\pi n^{2}}\; \hat g(\nu), \qquad W_{21} = \frac{\sigma(\nu)\, I}{h\nu}
 ```
 
-λ₀ is the vacuum wavelength; ĝ(ν) is the normalized lineshape (its integral over ν equals 1, unit 1/Hz). Check for ruby: λ₀ = 694.3 nm, n = 1.76, τ = 3 ms and Δν ≈ 330 GHz give σ ≈ 4×10⁻²⁴ m²; the measured value is ≈ 2.5×10⁻²⁴ m². The simulator uses measured values from the table in Section 5 and this formula for the spectral shape σ(ν).
+λ₀ is the vacuum wavelength; ĝ(ν) is the normalized lineshape (its integral over ν equals 1, unit 1/Hz). Check for ruby at line centre, with the Lorentzian peak ĝ(ν₀) = 2/(πΔν) from below: λ₀ = 694.3 nm, n = 1.76, τ = 3 ms and Δν ≈ 330 GHz give σ ≈ 4×10⁻²⁴ m²; the measured value is ≈ 2.5×10⁻²⁴ m². The simulator uses measured values from the table in Section 5 and this formula for the spectral shape σ(ν).
 
 ### Lineshape and linewidth
 
@@ -248,13 +261,13 @@ Two examples for testing the code:
 
 ### 3.2 Photon lifetime and Q factor
 
-Single-pass logarithmic loss γ = αl + ½·ln(1/(R₁R₂)) (equivalently γ = γ_i + (γ₁ + γ₂)/2 with γ₁,₂ = −ln R₁,₂). Effective cavity length L_e = L + (n − 1)l.
+Single-pass logarithmic loss γ = αl + ½·ln(1/(R₁R₂)) (equivalently γ = γ_i + (γ₁ + γ₂)/2 with γ₁,₂ = −ln R₁,₂). Effective cavity length L_e = L + (n − 1)l. Strictly, the n here is the group index n_g, because L_e stands for the round-trip time; the two differ noticeably only in a semiconductor (n = 3.6, n_g ≈ 4, see 3.3).
 
 ```latex
 \tau_c = \frac{L_e}{c\,\gamma}, \qquad Q = 2\pi\nu\,\tau_c, \qquad \Delta\nu_c = \frac{1}{2\pi\tau_c}
 ```
 
-For the He-Ne example above (L = 0.3 m, γ ≈ 0.015): τ_c ≈ 67 ns, Δν_c ≈ 2.4 MHz. τ_c sets the time scale of pulse build-up in Section 4.
+For the He-Ne example above (L = 0.3 m, γ = 0.0151): τ_c ≈ 66 ns, Δν_c ≈ 2.4 MHz, Q ≈ 2.0×10⁸. τ_c sets the time scale of pulse build-up in Section 4.
 
 ### 3.3 Longitudinal modes
 
@@ -272,7 +285,7 @@ Modes lase if their small-signal gain g₀(ν) exceeds g_th. Let x = g₀(ν₀)
 
 | Laser | L_e | Δν_FSR | Gain linewidth | Modes under the gain curve |
 | --- | --- | --- | --- | --- |
-| He-Ne | 0.3 m | 500 MHz | 1.5 GHz (Doppler) | 2–3 |
+| He-Ne | 0.3 m | 500 MHz | 1.5 GHz (Doppler) | ~3 |
 | Ruby, 10 cm rod in a 0.5 m cavity | 0.58 m | 260 MHz | ~330 GHz | ~10³ |
 | Semiconductor, 300 µm, n_g ≈ 4 | 1.2 mm | ~125 GHz | ~10 THz | ~10² |
 
@@ -300,7 +313,7 @@ Oblique rays hit the side wall after a few reflections, and only rays along the 
 
 ### 3.6 Output power and the optimum output coupler
 
-Gain cannot grow indefinitely: as intensity rises the upper level is depleted (§120, item 7), and in steady state the saturated gain equals the threshold exactly. For low gain (He-Ne, CO₂, most CW lasers) use the Rigrod formula; T is the output-coupler transmission, L_i all other round-trip losses, A the mode area:
+Gain cannot grow indefinitely: as intensity rises the upper level is depleted (§120, item 7), and in steady state the saturated gain equals the threshold exactly. For low gain (He-Ne, CO₂, most CW lasers) use the Rigrod formula; T is the output-coupler transmission, L_i all other round-trip losses, A the mode area. For small losses the single-pass loss of 3.2 is γ ≈ (T + L_i)/2:
 
 ```latex
 P_{\text{out}} = A\,\frac{T\,I_{\text{sat}}}{2}\left(\frac{2g_0 l}{T+L_i} - 1\right), \qquad T_{\text{opt}} = \sqrt{2g_0 l\,L_i} - L_i
@@ -312,7 +325,7 @@ For high gain and low reflectivity (ruby with R₂ = 0.5; a semiconductor with c
 I_{\text{out}} = \frac{(1-R_2)\sqrt{R_1}}{(\sqrt{R_1}+\sqrt{R_2})(1-\sqrt{R_1R_2})}\; I_{\text{sat}}\left[g_0 l + \ln\sqrt{R_1R_2}\right]
 ```
 
-For small T it reduces to the previous one. In practical form the output power is linear in pump power above threshold:
+For small T it reduces to the previous one. Both formulas give zero output below threshold (where the bracket would be negative), and T_opt is zero when 2g₀l ≤ L_i: then the laser cannot start at any T. Both are derived for a homogeneous line, whose gain saturates as g₀/(1 + I/I_sat). He-Ne and CO₂ are inhomogeneous (Doppler), where the gain falls more slowly (Section 1), so for them the formulas are an estimate, which is enough for the simulator. In practical form the output power is linear in pump power above threshold:
 
 ```latex
 P_{\text{out}} = \eta_s\,(P_p - P_{th}), \qquad \eta_s = \eta_p\,\eta_q\,\eta_c\,\eta_t, \qquad \eta_c = \frac{T}{T+L_i}
@@ -432,7 +445,7 @@ Sources of the verified numbers: for CO₂, a measured saturation flux of 22 W/c
 ### 5.2 Ruby (§121)
 
 - **Levels:** ground state E₁; narrow metastable levels E₂ (lines 694.3 and 692.9 nm; only the stronger 694.3 nm line lases); broad bands E₃ (green, ~550 nm) and E₄ (blue, ~400 nm). From the bands the ion relaxes to E₂ non-radiatively in ~10⁻⁸ s.
-- **Concentration:** ~0.05% of Al atoms replaced by chromium, N_t ~ 10¹⁹ cm⁻³. Rod diameter 0.1–2 cm, length 2–20 cm.
+- **Concentration:** ~0.05% of Al atoms replaced by chromium, N_t ~ 10¹⁹ cm⁻³ (the book's round figure). The simulator uses N_t = 1.6×10¹⁹ cm⁻³: the usual handbook value for 0.05% Cr₂O₃ by weight, and the one the 9% estimate of Section 3.1 needs. Like the other numbers in 5.1, it still has to be checked against a printed source. Rod diameter 0.1–2 cm, length 2–20 cm.
 - **Pumping:** xenon flashlamp, ~1 ms, capacitor bank at 2–3 kV. 10–15% of the lamp radiation goes into exciting the bands — precisely because the bands are broad.
 - **Polarization:** ruby is uniaxial (n_o = 1.7653, n_e = 1.7573 at 656 nm). If the optic axis is tilted by 60–90° to the rod axis, the output is fully linearly polarized (Section 9).
 - **Output per the book:** free-running — tens of kW peak for a 20–30 cm × 1.5 cm rod; Q-switched — 1–2 J in 10⁻⁸ s, 10–200 MW. Damage threshold: (3–4)×10³ MW per cm² of cross section.
