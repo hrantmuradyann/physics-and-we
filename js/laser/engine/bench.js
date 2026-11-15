@@ -25,11 +25,10 @@
                                           config's energy fired now
      LaserEngine.bench.advance({ sim, config, seconds, maxSteps })
                                           -> { sim, reachedEnd, steps }
+     LaserEngine.bench.pumpNow({ sim, config })   the pump at the moment
+                                          of sim: { x, w, smallSignal }
      LaserEngine.bench.flashThreshold(config)   the smallest flash energy
                                           that reaches threshold (J), or null
-     LaserEngine.bench.RANGES             the stage-6 page's pump and
-                                          coupler sliders, until stage 7c
-                                          moves the page to controls()
 
    THE CONFIG (all SI)
      medium     an id from media.js       pump   "diode", "laser" (both
@@ -120,8 +119,6 @@
   var FLASH_SHARE = 0.12;    // the book's 10–15 % of the lamp's light (§6.1)
   var BETA = 1e-8;           // §4.1's range, 10⁻⁸–10⁻⁴
 
-  // The diode slider's range, also the page's RANGES.pumpPower until 7c.
-  var DIODE_RANGE = { min: 0, max: 20, log: false };     // W, absorbed
   // The output coupler's slider, T = 1 − R₂, for every setup: up to
   // ruby's 50 % (§3.1) and a little more.
   var COUPLER_RANGE = { min: 0.005, max: 0.6, log: true };
@@ -145,7 +142,7 @@
     // Stage 4's small Nd:YAG laser (stage 6): rod 5 cm, mode area 1 mm²,
     // a 5 % output coupler, scattering 0.2 m⁻¹ (L_i = 2 %: with none there
     // is no best coupler, §3.6), 808 nm diodes with η = 0.9 (§6.3).
-    { medium: "nd-yag", pump: "diode", max: DIODE_RANGE.max,
+    { medium: "nd-yag", pump: "diode", max: 20,
       config: { l_g: 5 * cm, area: 1 * mm2, L: 30 * cm, refl1: 1, refl2: 0.95, alpha_i: 0.2,
         pumpPower: 5, pumpLam: 808 * nm, eta: 0.9 } },
     // Rod 7.5 cm, 6 mm across. Threshold about 1.3 J.
@@ -450,8 +447,7 @@
       var peak = pumpLevel(d, config, config.flashShare * d.flashPeak);
       if (fourLevel) d.xPeak = peak;
       else if (d.wThreshold !== null) d.xPeak = peak / d.wThreshold;
-      else d.xPeak = 0;
-      return d;
+      return d;                                         // two levels: no threshold, xPeak null
     }
 
     if (setup.pump === "discharge") {
@@ -469,8 +465,7 @@
 
     // Continuous light: diodes or another laser.
     if (medium.scheme === "two-level") {
-      d.w = pumpLevel(d, config, config.pumpPower);
-      d.x = 0;                                           // no threshold
+      d.w = pumpLevel(d, config, config.pumpPower);     // x stays null: no threshold
       d.P_out = 0;
       d.ySteady = E.rates.twoLevel.steadyState({ w: d.w, n_t: d.n_t, beta: config.beta }).y;
       return d;
@@ -500,10 +495,11 @@
   //   (W); for four levels also g0, T_opt and T_best (null with no internal
   //   loss), period and t_damp (null at or below threshold); light also
   //   R_p, pumpThreshold (W) and slope, a discharge currentThreshold (A,
-  //   null if the tube never reaches threshold). The two-level atom: x = 0,
-  //   w = W_p·τ, ySteady < 0, P_out = 0.
+  //   null if the tube never reaches threshold). The two-level atom, which
+  //   has no threshold: x null, w = W_p·τ, ySteady < 0, P_out = 0.
   //   a flashlamp: flashPeak (the lamp's peak, W) and xPeak (the pump then
-  //   in units of threshold; 0 for two levels). Its steady numbers are null.
+  //   in units of threshold; null for two levels). Its steady numbers are
+  //   null.
   //   Every number a bench does not have is null.
   function derive(config) {
     var where = at("derive");
@@ -546,6 +542,15 @@
       check.fail(where, "sim.flash.at (" + flash.at + " s) cannot be later than sim.t (" + sim.t + " s).");
     }
     return sim;
+  }
+
+  // A flash in a simulation of a bench without a lamp (a page that kept
+  // the simulation of its last bench) is refused, not ignored.
+  function refuseStrayFlash(where, sim, read) {
+    if (sim.flash !== null && read.setup.pump !== "flashlamp") {
+      check.fail(where, "sim.flash is a flash fired at " + sim.flash.at + " s, but this bench has no " +
+        "flashlamp (its pump is " + read.setup.pump + "). Start the simulation again for a new bench.");
+    }
   }
 
   // fire({ sim, config }) -> a copy of sim with a flash fired now, of the
@@ -601,10 +606,7 @@
     // The lowest inversion there is: none, or every ion down.
     var lowest = read.medium.scheme === "four-level" ? 0 : -read.medium.N_t;
     check.atLeast(where, "sim.N", sim.N, lowest);
-    if (sim.flash !== null && read.setup.pump !== "flashlamp") {
-      check.fail(where, "sim.flash is a flash fired at " + sim.flash.at + " s, but this bench has no " +
-        "flashlamp (its pump is " + read.setup.pump + "). Start the simulation again for a new bench.");
-    }
+    refuseStrayFlash(where, sim, read);
     var seconds = check.atLeast(where, "seconds", params.seconds, 0);
     var maxSteps = check.integerAtLeast(where, "maxSteps", params.maxSteps, 1);
     if (seconds === 0) {
@@ -659,6 +661,45 @@
       reachedEnd: run.reachedEnd,
       steps: run.accepted + run.rejected
     };
+  }
+
+  // pumpNow({ sim, config }) -> { x, w, smallSignal }
+  // The pump at the moment of sim: steady, or the flash fired last (none
+  // before Fire), with the energy and t_p it was fired with.
+  //   x            the pump in units of threshold: R_p/R_c for four levels
+  //                (a discharge: its x), w/w_th for three; null for the
+  //                two-level atom, which has no threshold
+  //   w            W_p·τ for three and two levels; null for four
+  //   smallSignal  the small-signal gain over the threshold gain, g₀/g_th:
+  //                the inversion y this pump would hold with no light
+  //                (§2.2, §11.2): x for four levels, n_t(w − 1)/(w + 1) for
+  //                three, −n_t/(1 + 2w) for two (below 0, the medium absorbs)
+  function pumpNow(params) {
+    var where = at("pumpNow");
+    check.params(where, params, ["sim", "config"]);
+    var sim = readSim(where, params.sim);
+    var config = params.config;
+    var read = readConfig(where, config);
+    refuseStrayFlash(where, sim, read);
+    var d = compute(where, config, read.medium, read.setup);
+    // The pump as advance runs it: x for four levels, w for three and two.
+    var level;
+    if (d.pump === "flashlamp") {
+      var flash = sim.flash;
+      if (flash === null) level = 0;
+      else level = flashPump(d, config, flash.flashEnergy, flash.flashTime, sim.t - flash.at)(0);
+    } else {
+      level = d.scheme === "four-level" ? d.x : d.w;
+    }
+    if (d.scheme === "four-level") return { x: level, w: null, smallSignal: level };
+    if (d.scheme === "three-level") {
+      return {
+        x: d.wThreshold === null ? null : level / d.wThreshold,
+        w: level,
+        smallSignal: d.n_t * (level - 1) / (level + 1)
+      };
+    }
+    return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level) };
   }
 
   /* ---------- the flash threshold ---------- */
@@ -742,10 +783,6 @@
   }
 
   E.bench = Object.freeze({
-    RANGES: Object.freeze({
-      pumpPower: Object.freeze({ min: DIODE_RANGE.min, max: DIODE_RANGE.max, log: DIODE_RANGE.log }),
-      T_oc: Object.freeze({ min: 0.005, max: 0.3, log: true })       // output coupler
-    }),
     pumpsFor: pumpsFor,
     configFor: configFor,
     controls: controls,
@@ -754,6 +791,7 @@
     start: start,
     fire: fire,
     advance: advance,
+    pumpNow: pumpNow,
     flashThreshold: flashThreshold
   });
 })(this);

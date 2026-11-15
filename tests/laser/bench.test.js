@@ -163,9 +163,9 @@ test("the best coupler: T_opt of §3.6, and where this model's P_out(T) really p
 });
 
 test("every corner of the sliders gives finite numbers (or null), never an error", () => {
-  const R = B.RANGES;
-  for (const pumpPower of [R.pumpPower.min, R.pumpPower.max]) {
-    for (const T of [R.T_oc.min, R.T_oc.max]) {
+  const R = B.controls(config());
+  for (const pumpPower of [R.pump.min, R.pump.max]) {
+    for (const T of [R.coupler.min, R.coupler.max]) {
       const d = derive({ pumpPower: pumpPower, refl2: 1 - T });
       for (const [name, value] of Object.entries(d)) {
         if (typeof value === "number") assert.ok(Number.isFinite(value), name + " at " + pumpPower + " W, T " + T);
@@ -174,10 +174,9 @@ test("every corner of the sliders gives finite numbers (or null), never an error
     }
   }
   assert.deepEqual(plain(R), {
-    pumpPower: { min: 0, max: 20, log: false },
-    T_oc: { min: 0.005, max: 0.3, log: true }
+    pump: { name: "pumpPower", min: 0, max: 20, log: false },
+    coupler: { min: 0.005, max: 0.6, log: true }
   });
-  assert.ok(Object.isFrozen(R) && Object.isFrozen(R.pumpPower) && Object.isFrozen(R.T_oc));
 });
 
 /* ---------- advance: the simulation ---------- */

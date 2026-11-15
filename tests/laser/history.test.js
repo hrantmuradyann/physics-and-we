@@ -24,18 +24,18 @@ test("loads as LaserUI.history, frozen, adding only LaserUI", () => {
   assert.deepEqual(browser.addedGlobals(), ["LaserUI"]);
 });
 
-test("keeps the points in time order, as plain { t, P, y } objects", () => {
+test("keeps the points in time order, as plain { t, P } objects", () => {
   const h = H.create(10);
-  h.push(1, 0.5, 0.9);
-  h.push(2, 0.7, 1.1);
+  h.push(1, 0.5);
+  h.push(2, 0.7);
   assert.equal(h.size(), 2);
-  assert.deepEqual(plain(h.points(-Infinity)), [{ t: 1, P: 0.5, y: 0.9 }, { t: 2, P: 0.7, y: 1.1 }]);
-  assert.deepEqual(plain(h.last()), { t: 2, P: 0.7, y: 1.1 });
+  assert.deepEqual(plain(h.points(-Infinity)), [{ t: 1, P: 0.5 }, { t: 2, P: 0.7 }]);
+  assert.deepEqual(plain(h.last()), { t: 2, P: 0.7 });
 });
 
 test("a full buffer drops the oldest point, whatever the number of laps", () => {
   const h = H.create(4);
-  for (let i = 1; i <= 11; i++) h.push(i, i, i);
+  for (let i = 1; i <= 11; i++) h.push(i, i);
   assert.equal(h.size(), 4);
   assert.deepEqual(times(h.points(-Infinity)), [8, 9, 10, 11]);
   assert.equal(h.last().t, 11);
@@ -43,7 +43,7 @@ test("a full buffer drops the oldest point, whatever the number of laps", () => 
 
 test("points(from): only the points at or after that time", () => {
   const h = H.create(8);
-  for (let i = 1; i <= 11; i++) h.push(i, 0, 0);
+  for (let i = 1; i <= 11; i++) h.push(i, 0);
   assert.deepEqual(times(h.points(9)), [9, 10, 11]);
   assert.deepEqual(times(h.points(9.5)), [10, 11]);
   assert.deepEqual(times(h.points(100)), []);
@@ -51,7 +51,7 @@ test("points(from): only the points at or after that time", () => {
 
 test("points() hands out copies: changing them does not change the history", () => {
   const h = H.create(3);
-  h.push(1, 2, 3);
+  h.push(1, 2);
   const points = h.points(-Infinity);
   points[0].P = 99;
   points.length = 0;
@@ -60,12 +60,12 @@ test("points() hands out copies: changing them does not change the history", () 
 
 test("clear() empties it; last() of an empty history is null", () => {
   const h = H.create(3);
-  h.push(1, 2, 3);
+  h.push(1, 2);
   h.clear();
   assert.equal(h.size(), 0);
   assert.deepEqual(times(h.points(-Infinity)), []);
   assert.equal(h.last(), null);
-  h.push(5, 0, 0);
+  h.push(5, 0);
   assert.deepEqual(times(h.points(-Infinity)), [5]);
 });
 

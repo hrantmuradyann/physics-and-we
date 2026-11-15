@@ -9,9 +9,11 @@
    heavy while hidden, and ignore every other page (docs/laser-plan.md,
    "Site trap"). It also wires the controls (sliders with their number
    boxes, Play, Reset, the readouts), runs the simulation in the loop and
-   hands the five pictures what they draw (stages 6 and 6b). Runs the real
-   files, with the real data/laser.json, in the fake browser of
-   fake-browser.js.
+   hands the four pictures what they draw (stages 6 and 6b), here on the
+   default bench, Nd:YAG with diodes. Choosing another bench (stage 7c) is
+   tested in page-choose.test.js. Runs the real files, with the real
+   data/laser.json, in the fake browser of fake-browser.js; the helpers
+   are in page-helpers.js.
    ========================================================================== */
 "use strict";
 
@@ -20,269 +22,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { ROOT, ENGINE_FILES, UI_FILES, assertClose } = require("./helpers.js");
-const { createBrowser, fakeCanvas, fakeContainer, fakeElement } = require("./fake-browser.js");
-
-const WORDS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "laser.json"), "utf8"));
-const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission"];
-const CANVASES = ["bench", "power", "photons", "levels", "inversion"];
-const CONTROLS = ["pump", "coupler", "slowMotion"];
-const READOUTS = ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"];
-const UI_WORDS = { labPlay: "Play", labPause: "Pause", labReset: "Reset" };
-const NB = " ";
-const FRAME = 1000 / 60;      // ms
-
-// A fake browser with the site's content.js, the laser engine, UI and
-// page.js loaded, in the given language.
-function setup(lang, options) {
-  const browser = createBrowser(options);
-  browser.load("js/content.js");
-  for (const file of ENGINE_FILES) browser.load("js/laser/engine/" + file);
-  for (const file of UI_FILES) browser.load("js/laser/ui/" + file);
-  browser.window.Site = {
-    lang: lang || "en",
-    word: function (key) { return UI_WORDS[key] || ""; }
-  };
-  const before = browser.addedGlobals();
-  browser.load("js/laser/page.js");
-  return { browser: browser, globalsBeforePage: before };
-}
-
-// A laser section as the router builds it, with everything the layout
-// has. The boxes have width 0 by default: the router builds pages while
-// they are hidden.
-function laserSection(boxWidth) {
-  const width = boxWidth === undefined ? 0 : boxWidth;
-  const by = {};
-  const section = { canvases: {}, recorders: {}, boxes: {}, controls: {}, inputs: {}, units: {}, readouts: {} };
-  for (const name of CANVASES) {
-    const parts = fakeCanvas(width);
-    by['[data-laser-canvas="' + name + '"]'] = parts.canvas;
-    section.canvases[name] = parts.canvas;
-    section.recorders[name] = parts.recorder;
-    section.boxes[name] = parts.box;
-  }
-  for (const name of CONTROLS) {
-    section.controls[name] = fakeElement("input");      // the slider
-    section.inputs[name] = fakeElement("input");        // its number box
-    section.units[name] = fakeElement("span");
-    by['[data-laser-control="' + name + '"]'] = section.controls[name];
-    by['[data-laser-input="' + name + '"]'] = section.inputs[name];
-    by['[data-laser-unit="' + name + '"]'] = section.units[name];
-  }
-  section.hint = fakeElement("p");                      // "1 s = 100 µs"
-  by['[data-laser-value="slowMotion"]'] = section.hint;
-  for (const name of READOUTS) {
-    section.readouts[name] = fakeElement("span");
-    by['[data-laser-readout="' + name + '"]'] = section.readouts[name];
-  }
-  section.play = fakeElement("button");
-  section.reset = fakeElement("button");
-  section.learn = fakeElement("button");
-  section.theory = fakeElement("section");
-  section.note = fakeElement("p");
-  section.note.hidden = true;
-  by['[data-laser-action="play"]'] = section.play;
-  by['[data-laser-action="reset"]'] = section.reset;
-  by['[data-laser-action="learn"]'] = section.learn;
-  by["[data-laser-learn]"] = section.theory;
-  by['[data-laser-note="behind"]'] = section.note;
-  section.by = by;
-  section.container = fakeContainer(by);
-  section.canvas = section.canvases.bench;
-  section.recorder = section.recorders.bench;
-  return section;
-}
-
-// Only the bench canvas. A page whose controls failed to come must still
-// build what it can.
-function benchOnlySection(boxWidth) {
-  const parts = fakeCanvas(boxWidth === undefined ? 0 : boxWidth);
-  const by = {};
-  by['[data-laser-canvas="bench"]'] = parts.canvas;
-  return Object.assign({ container: fakeContainer(by) }, parts);
-}
-
-function sectionReady(browser, route, container, data) {
-  browser.window.dispatchEvent(new browser.window.CustomEvent("section:ready", {
-    detail: { route: route, id: null, container: container, data: data }
-  }));
-}
-
-function texts(recorder) {
-  return recorder.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
-}
-
-// A theme switch makes every live loop draw its pictures again, so it
-// shows which builds are still alive.
-function switchTheme(browser) {
-  browser.window.dispatchEvent(new browser.window.CustomEvent("theme:changed", { detail: { theme: "light" } }));
-}
-
-// Builds a laser page on screen.
-//   options.watch    true: page.seen records what page.js hands on (watch())
-//   options.prepare  function (browser), run just before the build
-//   options.show     the canvases to put on screen (default: all five)
-function built(lang, options) {
-  const { browser } = setup(lang, options);
-  const seen = options && options.watch ? watch(browser) : null;
-  if (options && options.prepare) options.prepare(browser);
-  const section = laserSection(600);
-  sectionReady(browser, "laser", section.container, WORDS);
-  for (const name of (options && options.show) || CANVASES) browser.setOnScreen(section.canvases[name], true);
-  return { browser: browser, section: section, clock: 0, seen: seen };
-}
-
-// Puts recorders around what page.js calls, before it builds (it takes
-// LaserEngine.bench at build time). The engine's and UI's own objects are
-// frozen, so the globals get copies.
-//   seen.steps     the solver steps of every advance() call
-//   seen.configs   the config of every derive() call (a slider moved)
-//   seen.levels    every picture given to the level diagram
-//   seen.bench     every { labels, light } given to the bench drawing
-//   seen.chart     the latest chart given to draw-plots, by its key: { P, y }
-//   seen.charts    how many charts were drawn
-//   seen.drives    every { dt, drive } the photon cartoon was stepped with
-//   seen.cartoons  every cartoon given to the photon drawing
-function watch(browser) {
-  const seen = { steps: [], configs: [], levels: [], bench: [], chart: {}, charts: 0, drives: [], cartoons: [] };
-  const engineNow = browser.window.LaserEngine;
-  const advance = engineNow.bench.advance;
-  const derive = engineNow.bench.derive;
-  browser.window.LaserEngine = Object.assign({}, engineNow, {
-    bench: Object.assign({}, engineNow.bench, {
-      advance: function (params) {
-        const run = advance(params);
-        seen.steps.push(run.steps);
-        return run;
-      },
-      derive: function (config) {
-        seen.configs.push(Object.assign({}, config));
-        return derive(config);
-      }
-    })
-  });
-  const UI = browser.window.LaserUI;
-  const levels = UI.levels.draw;
-  UI.levels = Object.assign({}, UI.levels, {
-    draw: function (view, picture) {
-      seen.levels.push(picture);
-      return levels(view, picture);
-    }
-  });
-  const plots = UI.plots.draw;
-  UI.plots = Object.assign({}, UI.plots, {
-    draw: function (view, chart) {
-      seen.chart[chart.key] = chart;
-      seen.charts += 1;
-      return plots(view, chart);
-    }
-  });
-  const bench = UI.bench.draw;
-  UI.bench = Object.assign({}, UI.bench, {
-    draw: function (view, labels, light) {
-      seen.bench.push({ labels: Object.assign({}, labels), light: light });
-      return bench(view, labels, light);
-    }
-  });
-  const photons = UI.photons;
-  UI.photons = Object.assign({}, photons, {
-    create: function (options) {
-      const model = photons.create(options);
-      const step = model.step;
-      model.step = function (dt, drive) {
-        seen.drives.push({ dt: dt, drive: drive });
-        return step(dt, drive);
-      };
-      return model;
-    },
-    draw: function (view, model, words) {
-      seen.cartoons.push(model);
-      return photons.draw(view, model, words);
-    }
-  });
-  return seen;
-}
-
-function last(list) {
-  return list[list.length - 1];
-}
-
-// Makes the solver cost `price.perSecond` steps per second of simulated
-// time (0, the start, passes the real solver through): a call that would
-// cost more than its maxSteps runs only that share of its time and
-// reports reachedEnd false, as a solver out of steps does. price.charged
-// lists what page.js was charged, call by call. The tests of the frame
-// budget use it: since stage 7a's implicit solver no corner of the Nd:YAG
-// bench needs more than about 700 steps in a 60 Hz frame at the slowest
-// slow motion, and a settled laser costs one to a few steps per plot
-// point however long the frame is, so nothing falls behind on its own
-// (stage 7c's ruby flash will).
-function dearer(browser) {
-  const price = { perSecond: 0, charged: [] };
-  const engineNow = browser.window.LaserEngine;
-  const advance = engineNow.bench.advance;
-  browser.window.LaserEngine = Object.assign({}, engineNow, {
-    bench: Object.assign({}, engineNow.bench, {
-      advance: function (params) {
-        if (price.perSecond === 0) {
-          const real = advance(params);
-          price.charged.push(real.steps);
-          return real;
-        }
-        const cost = Math.ceil(params.seconds * price.perSecond);
-        if (cost <= params.maxSteps) {
-          const whole = advance(params);
-          price.charged.push(cost);
-          return Object.assign({}, whole, { steps: cost });
-        }
-        const part = advance(Object.assign({}, params, { seconds: params.seconds * params.maxSteps / cost }));
-        price.charged.push(params.maxSteps);
-        return Object.assign({}, part, { steps: params.maxSteps, reachedEnd: false });
-      }
-    })
-  });
-  return price;
-}
-
-function sum(numbers) {
-  let total = 0;
-  for (const n of numbers) total += n;
-  return total;
-}
-
-// Runs `count` frames, FRAME ms apart. The recording contexts keep every
-// call, and a chart is thousands of calls a frame: a record that has grown
-// long is emptied before the next frame, so the latest picture is always
-// whole.
-function runFrames(page, count, gap) {
-  for (let i = 0; i < count; i++) {
-    for (const recorder of Object.values(page.section.recorders)) {
-      if (recorder.calls.length > 20000) {
-        recorder.calls.length = 0;
-        recorder.sets.length = 0;
-        recorder.log.length = 0;
-      }
-    }
-    page.clock += gap || FRAME;
-    page.browser.runFrame(page.clock);
-  }
-}
-
-function slide(section, name, position) {
-  section.controls[name].value = String(position);
-  section.controls[name].fire("input");
-}
-
-// Types into a number box and leaves it.
-function type(section, name, text) {
-  section.inputs[name].value = text;
-  section.inputs[name].fire("change");
-}
-
-function engine(browser) {
-  return browser.window.LaserEngine;
-}
+const { ROOT, assertClose } = require("./helpers.js");
+const { fakeCanvas, fakeContainer } = require("./fake-browser.js");
+const {
+  WORDS, PARTS, CANVASES, CONTROLS, NB, FRAME, setup, laserSection, benchOnlySection, sectionReady, texts,
+  switchTheme, built, last, dearer, sum, runFrames, slide, type, engine, assertNoListeners, shownRows
+} = require("./page-helpers.js");
 
 /* ---------- building ---------- */
 
@@ -303,7 +48,6 @@ test("the words page.js needs are in data/laser.json, in both languages", () => 
       assert.ok(WORDS.levels.words[name][lang].trim(), "levels.words." + name + "." + lang);
     }
     for (const name of ["title", "steady"]) assert.ok(WORDS.power.words[name][lang].trim(), "power.words." + name + "." + lang);
-    for (const name of ["title", "threshold"]) assert.ok(WORDS.inversion.words[name][lang].trim(), "inversion.words." + name + "." + lang);
     for (const name of UI.photons.WORDS) assert.ok(WORDS.photons.words[name][lang].trim(), "photons.words." + name + "." + lang);
   }
 });
@@ -331,13 +75,14 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
       assert.equal(section.canvases[name].getAttribute("data-running"), "true", name);
       assert.equal(section.canvases[name].getAttribute("aria-label"), WORDS[name].alt[lang], name);
     }
-    // The bench: the four names, and the output mirror's transmission
-    // with its number.
-    const expected = ["backMirror", "outputMirror", "medium", "pump"].map((part) => WORDS.bench.parts[part][lang]);
+    // The bench: the four names (the pump's is the chosen pump's, the
+    // diodes), and the output mirror's transmission with its number.
+    const expected = ["backMirror", "outputMirror", "medium"].map((part) => WORDS.bench.parts[part][lang]);
+    expected.push(WORDS.bench.pumps.diode[lang]);
     expected.push(WORDS.bench.parts.transmission[lang] + " 5.00" + NB + "%");
     assert.deepEqual(texts(section.recorder).sort(), expected.sort(), lang);
     // Each canvas has the height its drawing asks for.
-    const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE, levels: UI.levels.SIZE, inversion: UI.plots.SIZE_SMALL };
+    const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE, levels: UI.levels.SIZE };
     for (const name of CANVASES) {
       const size = sizes[name];
       const height = Math.max(size.minHeight, Math.min(600 / size.aspect, size.maxHeight));
@@ -346,8 +91,6 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     assert.ok(texts(section.recorders.levels).includes(WORDS.levels.words.upper[lang]));
     assert.ok(texts(section.recorders.power).includes(WORDS.power.words.title[lang]));
     assert.ok(texts(section.recorders.power).includes(WORDS.power.words.steady[lang]));
-    assert.ok(texts(section.recorders.inversion).includes(WORDS.inversion.words.title[lang]));
-    assert.ok(texts(section.recorders.inversion).includes(WORDS.inversion.words.threshold[lang]));
     for (const name of UI.photons.WORDS) {
       assert.ok(texts(section.recorders.photons).includes(WORDS.photons.words[name][lang]), "photons: " + name);
     }
@@ -368,16 +111,20 @@ test("a visitor who asked for less motion: it starts paused, and the button says
 test("the controls start at the default bench: sliders, number boxes with their units, the slow-motion line", () => {
   const { browser, section } = built("en");
   const F = browser.window.LaserUI.format;
-  const R = engine(browser).bench.RANGES;
+  const R = engine(browser).bench.controls(engine(browser).bench.defaultConfig());
   for (const name of CONTROLS) {
     const slider = section.controls[name];
     assert.equal(slider.min, "0");
     assert.equal(slider.max, "1000");
     assert.equal(slider.step, "1");
   }
-  assert.equal(section.controls.pump.value, String(Math.round(1000 * F.toSlider(R.pumpPower, 5))));
-  assert.equal(section.controls.coupler.value, String(Math.round(1000 * F.toSlider(R.T_oc, 0.05))));
-  assert.equal(section.controls.slowMotion.value, "333");
+  assert.equal(section.controls.pump.value, "250", "5 of 20 W");
+  assert.equal(section.controls.coupler.value, String(Math.round(1000 * F.toSlider(R.coupler, 0.05))));
+  assert.equal(section.controls.coupler.value, "481", "5 % between 0.5 % and 60 %, by equal factors");
+  // Slow motion from 10³ to 10⁹ by equal factors: 10⁴ is a sixth of the way.
+  assert.equal(section.controls.slowMotion.value, "167");
+  // The pump slider is named for this bench's pump.
+  assert.equal(section.pumpName.textContent, WORDS.controls.pump.diode.en);
   // The number boxes: the same values, the output mirror in %.
   assert.equal(section.inputs.pump.value, "5");
   assert.equal(section.inputs.coupler.value, "5");
@@ -408,6 +155,10 @@ test("the readouts show derive()'s numbers for the bench, formatted", () => {
   assert.equal(r.T_best.textContent, F.number(100 * d.T_best) + NB + "%");
   assert.equal(r.period.textContent, F.si(d.period, "s"));
   assert.equal(r.time.textContent, "0" + NB + "s");
+  // Only the numbers of a bench with steady light are shown (each bench's
+  // are tested in page-choose.test.js).
+  assert.deepEqual(shownRows(section),
+    ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"]);
 });
 
 test("moving a slider while paused also rewrites the output now (it depends on the mirror)", () => {
@@ -416,8 +167,8 @@ test("moving a slider while paused also rewrites the output now (it depends on t
   const F = browser.window.LaserUI.format;
   // One photon at the start: the output now is the power of one photon,
   // which the output mirror sets.
-  slide(section, "coupler", 1000);
-  const d = B.derive(Object.assign(B.defaultConfig(), { refl2: 0.7 }));
+  slide(section, "coupler", 1000);                    // 60 %
+  const d = B.derive(Object.assign(B.defaultConfig(), { refl2: 0.4 }));
   assert.equal(section.readouts.powerNow.textContent, F.si(d.powerPerPhoton, "W"));
 });
 
@@ -430,10 +181,10 @@ test("moving a slider changes the bench at once, even paused: below threshold th
   assert.equal(section.readouts.P_out.textContent, "0" + NB + "W");
   assert.equal(section.readouts.period.textContent, "—");
   assert.equal(section.readouts.x.textContent, F.number(1 / 1.5120135480795136));
-  // The coupler: 30 % at the top of its slider.
+  // The coupler: 60 % at the top of its slider.
   slide(section, "coupler", 1000);
-  assert.equal(section.inputs.coupler.value, "30");
-  const d = engine(browser).bench.derive(Object.assign(engine(browser).bench.defaultConfig(), { pumpPower: 1, refl2: 0.7 }));
+  assert.equal(section.inputs.coupler.value, "60");
+  const d = engine(browser).bench.derive(Object.assign(engine(browser).bench.defaultConfig(), { pumpPower: 1, refl2: 0.4 }));
   assert.equal(section.readouts.pumpThreshold.textContent, F.si(d.pumpThreshold, "W"));
   // With no pump the gain cannot beat even the internal loss: no output
   // mirror is best, and the readout says so with a dash, not "0 %".
@@ -442,7 +193,7 @@ test("moving a slider changes the bench at once, even paused: below threshold th
   // Paused, the pictures were drawn again with the new numbers.
   assert.equal(browser.pendingFrames(), 0);
   assert.ok(section.recorders.levels.calls.length > 0);
-  assert.ok(texts(section.recorder).includes(WORDS.bench.parts.transmission.en + " 30.0" + NB + "%"), "the bench shows the new mirror");
+  assert.ok(texts(section.recorder).includes(WORDS.bench.parts.transmission.en + " 60.0" + NB + "%"), "the bench shows the new mirror");
 });
 
 test("a slider gives round values, which the number box shows exactly", () => {
@@ -452,11 +203,11 @@ test("a slider gives round values, which the number box shows exactly", () => {
   assert.equal(last(seen.configs).pumpPower, 13.46);
   assert.equal(section.inputs.pump.value, "13.46");
   // The output mirror moves by equal factors: position 300 of 1000 is
-  // 0.5 % × 60^0.3 = 1.7078… %, used as 1.708 %.
+  // 0.5 % × 120^0.3 = 2.1024… %, used as 2.102 %.
   slide(section, "coupler", 300);
-  assertClose(1 - last(seen.configs).refl2, 0.01708, 1e-12, "T");
-  assert.equal(section.inputs.coupler.value, "1.708");
-  slide(section, "slowMotion", 500);                  // 10^4.5 = 31 622.8, used as 31 620
+  assertClose(1 - last(seen.configs).refl2, 0.02102, 1e-12, "T");
+  assert.equal(section.inputs.coupler.value, "2.102");
+  slide(section, "slowMotion", 250);                  // 10^4.5 = 31 622.8, used as 31 620
   assert.equal(section.inputs.slowMotion.value, "31620");
   assert.equal(section.hint.textContent, "1" + NB + "s = 31.6" + NB + "µs");
   // The ends of a slider are the ends of its range, exactly.
@@ -485,14 +236,14 @@ test("a number typed into a box sets the bench, the slider and the readouts", ()
   type(section, "coupler", "12.5");
   assertClose(1 - last(seen.configs).refl2, 0.125, 1e-12, "T");
   assert.equal(section.inputs.coupler.value, "12.5");
-  assert.equal(section.controls.coupler.value, String(Math.round(1000 * F.toSlider(B.RANGES.T_oc, 0.125))));
+  assert.equal(section.controls.coupler.value, "672", "12.5 % between 0.5 % and 60 %");
   const d2 = B.derive(Object.assign(B.defaultConfig(), { pumpPower: 7.25, refl2: 0.875 }));
   assert.equal(section.readouts.pumpThreshold.textContent, F.si(d2.pumpThreshold, "W"));
 
   // The slow motion is typed as its factor.
   type(section, "slowMotion", "50000");
   assert.equal(section.hint.textContent, "1" + NB + "s = 20.0" + NB + "µs");
-  assert.equal(section.controls.slowMotion.value, String(Math.round(1000 * Math.log(50) / Math.log(1000))));
+  assert.equal(section.controls.slowMotion.value, String(Math.round(1000 * Math.log(50) / Math.log(1e6))));
   // Paused, the pictures were drawn again.
   assert.ok(texts(section.recorder).includes(WORDS.bench.parts.transmission.en + " 12.5" + NB + "%"));
 });
@@ -511,7 +262,7 @@ test("a typed number outside the range is held at its end; text that is no numbe
   assertClose(1 - last(seen.configs).refl2, 0.005, 1e-12, "held at 0.5 %");
   assert.equal(section.inputs.coupler.value, "0.5");
   type(section, "coupler", "95");
-  assert.equal(section.inputs.coupler.value, "30");
+  assert.equal(section.inputs.coupler.value, "60");
 
   type(section, "pump", "6");
   const derives = seen.configs.length;
@@ -568,9 +319,9 @@ test("frames move the simulation by dt / slow motion; the first frame (dt = 0) o
   section.play.fire("click");                         // pausing writes the readouts at once
   const F = browser.window.LaserUI.format;
   assert.equal(section.readouts.time.textContent, F.si(32 * FRAME / 1000 / 1e4, "s"));
-  // Slower: 1 s = 1 µs.
+  // The slowest: 1 s = 1 ns.
   slide(section, "slowMotion", 1000);
-  assert.equal(section.hint.textContent, "1" + NB + "s = 1.00" + NB + "µs");
+  assert.equal(section.hint.textContent, "1" + NB + "s = 1.00" + NB + "ns");
 });
 
 test("the readouts are written at most 10 times a second, the derived ones at once on a change", () => {
@@ -592,7 +343,8 @@ test("the laser lases: after enough frames the live output matches the steady ou
   // One photon at the start: the bench is told of no light worth drawing.
   assert.ok(last(seen.bench).light.beam < 1e-8, "no beam at the start: " + last(seen.bench).light.beam);
   assert.equal(last(seen.bench).light.transmission, 1 - 0.95);
-  assert.equal(last(seen.bench).light.pump, 5 / 20, "the pump over its strongest setting");
+  // The pump glows as the cartoon's pump: x/4, full from 4 × threshold.
+  assertClose(last(seen.bench).light.pump, 3.3068 / 4, 1e-4, "the pump's glow");
   // 10 frames at 1 s = 100 µs: the inversion builds up, the light has not
   // come yet (the first spike is about 170 µs in), so no stimulated emission.
   runFrames(page, 10);
@@ -616,7 +368,7 @@ test("the laser lases: after enough frames the live output matches the steady ou
   assertClose(late.stim, d.x - 1, 0.01, "stimulated emission");
 });
 
-test("the charts: the output power with its steady line, the inversion with its threshold and pump level", () => {
+test("the chart: the output power with its steady line, up to now, from the history", () => {
   const page = built("en", { watch: true });
   const { browser, section, seen } = page;
   page.clock = 1000;
@@ -624,38 +376,29 @@ test("the charts: the output power with its steady line, the inversion with its 
   runFrames(page, 30);
   const d = engine(browser).bench.derive(engine(browser).bench.defaultConfig());
   const power = seen.chart.P;
+  assert.equal(power.key, "P");
   assert.equal(power.unit, "W");
   assert.equal(power.color, "accent");
   assert.equal(power.title, WORDS.power.words.title.en);
   assert.equal(power.floor, d.powerPerP, "at least the output at twice threshold on the axis");
+  assert.equal(power.floor, d.powerAtTwiceThreshold);
   assert.equal(power.shownTime, 5 / 1e4, "5 s of screen time at 1 s = 100 µs");
   assert.equal(power.lines.length, 1);
   assert.equal(power.lines[0].value, d.P_out);
   assert.equal(power.lines[0].word, WORDS.power.words.steady.en);
   assert.equal(power.cursor, null);
-  const inversion = seen.chart.y;
-  assert.equal(inversion.unit, "");
-  assert.equal(inversion.color, "accent2");
-  assert.equal(inversion.title, WORDS.inversion.words.title.en);
-  assert.equal(inversion.floor, 1);
-  assert.deepEqual(Array.from(inversion.lines, (line) => [line.value, line.word]),
-    [[1, WORDS.inversion.words.threshold.en], [d.x, WORDS.inversion.words.pump.en]]);
-  // The threshold stretches the axis; the pump level does not (at a strong
-  // pump it would press the curve near 1 flat on the bottom).
-  assert.equal(inversion.lines[0].stretch, undefined);
-  assert.equal(inversion.lines[1].stretch, false);
-  // Both show the same stretch of time, up to now, from one list of points.
-  assert.equal(inversion.tNow, power.tNow);
-  assert.equal(inversion.shownTime, power.shownTime);
-  assert.equal(inversion.points, power.points, "the two charts share the points of the frame");
   section.play.fire("click");
   assert.equal(section.readouts.time.textContent, browser.window.LaserUI.format.si(power.tNow, "s"));
   // The points are the history: time in order, the latest at now.
   assert.equal(last(power.points).t, power.tNow);
   for (let i = 1; i < power.points.length; i++) assert.ok(power.points[i].t >= power.points[i - 1].t);
-  // Below threshold there is no steady line to draw (its value is 0).
+  // The history keeps the time and the power only (the inversion chart is
+  // gone since stage 7c; the level picture shows the inversion).
+  assert.deepEqual(Object.keys(last(power.points)).sort(), ["P", "t"]);
+  // Below threshold the steady output is 0: no line is drawn for it.
   slide(section, "pump", 50);
-  assert.equal(seen.chart.P.lines[0].value, 0);
+  assert.equal(engine(browser).bench.derive(last(seen.configs)).P_out, 0);
+  assert.deepEqual(Array.from(seen.chart.P.lines), [], "no line at 0");
 });
 
 test("Play / Pause and Reset", () => {
@@ -677,12 +420,10 @@ test("Play / Pause and Reset", () => {
   // only then, and the first frame after Play has dt = 0): the new start
   // first, nothing from the old run.
   runFrames(page, 2);
-  for (const key of ["P", "y"]) {
-    const chart = page.seen.chart[key];
-    assert.ok(chart.tNow > 0 && chart.tNow < 1e-5, "one frame since Reset: " + chart.tNow);
-    assert.equal(chart.points[0].t, 0);
-    for (const point of chart.points) assert.ok(point.t <= chart.tNow, "a point from the old run: " + point.t);
-  }
+  const chart = page.seen.chart.P;
+  assert.ok(chart.tNow > 0 && chart.tNow < 1e-5, "one frame since Reset: " + chart.tNow);
+  assert.equal(chart.points[0].t, 0);
+  for (const point of chart.points) assert.ok(point.t <= chart.tNow, "a point from the old run: " + point.t);
   assert.equal(section.readouts.powerNow.textContent, browser.window.LaserUI.format.si(
     engine(browser).bench.derive(engine(browser).bench.defaultConfig()).powerPerPhoton, "W"), "one photon again");
 });
@@ -701,7 +442,6 @@ test("a paused change of slow motion shows the new stretch of time at once", () 
   assert.equal(after.shownTime, 5e-3);
   assert.equal(after.points[0].t, 0, "the whole run fits now");
   assert.ok(after.points.length > before.points.length);
-  assert.equal(seen.chart.y.points, after.points);
 });
 
 test("the charts' points are taken again after every new point, even one at the same time (Reset twice)", () => {
@@ -714,9 +454,9 @@ test("the charts' points are taken again after every new point, even one at the 
   section.reset.fire("click");
   assert.equal(seen.chart.P.points.length, 1);
   const before = seen.chart.P.points[0].P;
-  slide(section, "coupler", 1000);                    // 30 %
+  slide(section, "coupler", 1000);                    // 60 %
   section.reset.fire("click");
-  const expected = B.derive(Object.assign(B.defaultConfig(), { refl2: 0.7 })).powerPerPhoton;
+  const expected = B.derive(Object.assign(B.defaultConfig(), { refl2: 0.4 })).powerPerPhoton;
   assert.equal(seen.chart.P.points.length, 1);
   assertClose(seen.chart.P.points[0].P, expected, 1e-12, "the new start point");
   assert.ok(Math.abs(seen.chart.P.points[0].P - before) > 0.1 * before, "and not the old one");
@@ -889,10 +629,10 @@ test("on a touch screen the crosshair goes where the finger comes down, and stay
   section.canvases.power.fire("pointermove", { offsetX: 140, pointerType: "touch" });
   assert.equal(seen.chart.P.cursor, 140, "a sideways drag moves it");
   // A mouse that comes down and leaves takes it away.
-  section.canvases.inversion.fire("pointerdown", { offsetX: 50, pointerType: "mouse" });
-  assert.equal(seen.chart.y.cursor, 50);
-  section.canvases.inversion.fire("pointerleave", { pointerType: "mouse" });
-  assert.equal(seen.chart.y.cursor, null);
+  section.canvases.power.fire("pointerdown", { offsetX: 50, pointerType: "mouse" });
+  assert.equal(seen.chart.P.cursor, 50);
+  section.canvases.power.fire("pointerleave", { pointerType: "mouse" });
+  assert.equal(seen.chart.P.cursor, null);
 });
 
 test("the pointer over a paused chart draws that chart again, not the other pictures", () => {
@@ -901,12 +641,12 @@ test("the pointer over a paused chart draws that chart again, not the other pict
   for (const recorder of Object.values(section.recorders)) recorder.calls.length = 0;
   section.canvases.power.fire("pointermove", { offsetX: 200 });
   assert.ok(section.recorders.power.calls.length > 0, "the chart under the pointer");
-  for (const name of ["bench", "photons", "levels", "inversion"]) {
+  for (const name of ["bench", "photons", "levels"]) {
     assert.equal(section.recorders[name].calls.length, 0, name + " is not drawn again");
   }
 });
 
-test("the pointer over a chart: its crosshair follows, on that chart only; leaving takes it away", () => {
+test("the pointer over the chart: its crosshair follows; leaving takes it away; the other pictures do not listen", () => {
   const page = built("en", { reducedMotion: true, watch: true });
   const { browser, section, seen } = page;
   assert.equal(seen.chart.P.cursor, null);
@@ -915,13 +655,10 @@ test("the pointer over a chart: its crosshair follows, on that chart only; leavi
   // Paused: drawn again at once.
   assert.ok(seen.charts > drawn, "drawn again");
   assert.equal(seen.chart.P.cursor, 200);
-  assert.equal(seen.chart.y.cursor, null, "the other chart has its own pointer");
-  section.canvases.inversion.fire("pointermove", { offsetX: 77 });
-  assert.equal(seen.chart.y.cursor, 77);
-  assert.equal(seen.chart.P.cursor, 200);
+  section.canvases.power.fire("pointermove", { offsetX: 77 });
+  assert.equal(seen.chart.P.cursor, 77);
   section.canvases.power.fire("pointerleave");
   assert.equal(seen.chart.P.cursor, null);
-  assert.equal(seen.chart.y.cursor, 77);
   // The other pictures do not listen for the pointer.
   for (const name of ["bench", "photons", "levels"]) {
     assert.equal(section.canvases[name].listenerCount("pointermove"), 0, name);
@@ -1055,33 +792,18 @@ test("a build that fails part-way leaves no loop and no listener behind", () => 
   assert.equal(UI.loop.liveCount(), 1);
 });
 
-// Every listener page.js adds to a section's own elements is gone.
-function assertNoListeners(section, label) {
-  for (const name of CONTROLS) {
-    assert.equal(section.controls[name].listenerCount("input"), 0, label + ": slider " + name);
-    assert.equal(section.inputs[name].listenerCount("change"), 0, label + ": number box " + name);
-  }
-  assert.equal(section.play.listenerCount("click"), 0, label + ": Play");
-  assert.equal(section.reset.listenerCount("click"), 0, label + ": Reset");
-  assert.equal(section.learn.listenerCount("click"), 0, label + ": the theory button");
-  for (const name of ["power", "inversion"]) {
-    assert.equal(section.canvases[name].listenerCount("pointermove"), 0, label + ": pointer over " + name);
-    assert.equal(section.canvases[name].listenerCount("pointerleave"), 0, label + ": pointer leaving " + name);
-  }
-}
-
 /* ---------- rebuilds ---------- */
 
-test("a built page has one listener on each control, so a teardown has something to remove", () => {
+test("a built page has one listener on each control, dropdown and button, so a teardown has something to remove", () => {
   const { section } = built("en");
   for (const name of CONTROLS) {
     assert.equal(section.controls[name].listenerCount("input"), 1, name);
     assert.equal(section.inputs[name].listenerCount("change"), 1, name);
   }
-  for (const button of [section.play, section.reset, section.learn]) assert.equal(button.listenerCount("click"), 1);
-  for (const name of ["power", "inversion"]) {
-    assert.equal(section.canvases[name].listenerCount("pointermove"), 1, name);
-    assert.equal(section.canvases[name].listenerCount("pointerleave"), 1, name);
+  for (const name of ["play", "reset", "fire", "learn"]) assert.equal(section[name].listenerCount("click"), 1, name);
+  for (const name of ["medium", "pump"]) assert.equal(section.choose[name].listenerCount("change"), 1, name);
+  for (const type of ["pointerdown", "pointermove", "pointerleave"]) {
+    assert.equal(section.canvases.power.listenerCount(type), 1, type);
   }
 });
 
@@ -1164,7 +886,7 @@ test("only one canvas (the rest failed to come): the page still builds and draws
   browser.runFrame(1000);
   browser.runFrame(1000 + FRAME);
   assert.ok(texts(section.recorder).includes(WORDS.bench.parts.medium.en));
-  // Any one of the five is enough to build.
+  // Any one of the four is enough to build.
   for (const name of CANVASES) {
     const one = setup("en");
     const parts = fakeCanvas(600);

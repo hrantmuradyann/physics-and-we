@@ -246,9 +246,9 @@ test("sections/laser.html: no styles, scripts, <header> or <footer>; the silver 
 
 // The pictures js/laser/page.js draws, by their data-laser-canvas names
 // (tests/laser/page.test.js uses the same list).
-const PAGE_CANVASES = ["bench", "power", "photons", "levels", "inversion"];
+const PAGE_CANVASES = ["bench", "power", "photons", "levels"];
 
-test("sections/laser.html: the five canvases, each a picture for screen readers, each described in the data", () => {
+test("sections/laser.html: the four canvases, each a picture for screen readers, each described in the data", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
   const canvases = html.match(/<canvas\b[^>]*>/g) || [];
   assert.deepEqual(canvases.map((tag) => (tag.match(/\sdata-laser-canvas="([^"]*)"/) || [])[1]).sort(),
@@ -262,11 +262,11 @@ test("sections/laser.html: the five canvases, each a picture for screen readers,
   }
 });
 
-test("the two chart canvases, and only they, carry the class that lets a finger move the crosshair", () => {
+test("the chart canvas, and only it, carries the class that lets a finger move the crosshair", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
   for (const tag of html.match(/<canvas\b[^>]*>/g) || []) {
     const name = (tag.match(/\sdata-laser-canvas="([^"]*)"/) || [])[1];
-    const chart = name === "power" || name === "inversion";
+    const chart = name === "power";
     assert.equal(/\sclass="[^"]*\blaser-bench__canvas--chart\b/.test(tag), chart, name);
   }
   // A sideways drag goes to the page (the crosshair), an up-and-down drag
@@ -282,7 +282,9 @@ test("the two chart canvases, and only they, carry the class that lets a finger 
 // names). A name missing from the layout would leave a control dead
 // without any error.
 const PAGE_CONTROLS = ["pump", "coupler", "slowMotion"];
-const PAGE_READOUTS = ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"];
+const PAGE_READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "P_out", "peak",
+  "powerNow", "T_best", "period", "time"];
+const PAGE_CHOICES = ["medium", "pump"];
 
 test("sections/laser.html: every slider, number box, readout and button page.js needs, once each", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
@@ -291,12 +293,39 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
   assert.deepEqual(attributeValues(html, "data-laser-unit"), PAGE_CONTROLS);
   assert.deepEqual(attributeValues(html, "data-laser-value"), ["slowMotion"]);
   assert.deepEqual(attributeValues(html, "data-laser-readout"), PAGE_READOUTS);
-  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["learn", "play", "reset"]);
+  // Each readout in a row of its own, which page.js hides on a bench that
+  // does not have that number.
+  assert.deepEqual(attributeValues(html, "data-laser-row"), PAGE_READOUTS);
+  const rows = html.split(/(?=<div\b[^>]*\sdata-laser-row=")/).slice(1);
+  rows.forEach((row, i) => {
+    const inside = row.slice(0, row.indexOf("</div>"));
+    assert.ok(inside.includes('data-laser-readout="' + PAGE_READOUTS[i] + '"'), PAGE_READOUTS[i] + " is in its own row");
+    assert.ok(inside.includes('data-text="readouts.' + PAGE_READOUTS[i] + '"'), PAGE_READOUTS[i] + " is named in its row");
+  });
+  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["fire", "learn", "play", "reset"]);
+  // Fire starts hidden: the default bench has no flashlamp.
+  assert.match(html, /<button\b[^>]*\sdata-laser-action="fire"[^>]*\shidden[\s>]/);
+  // The two dropdowns, each a <select> named by its own <label for="...">;
+  // page.js fills in their options.
+  assert.deepEqual(attributeValues(html, "data-laser-choose"), PAGE_CHOICES);
+  for (const name of PAGE_CHOICES) {
+    const select = html.match(new RegExp('<select\\b[^>]*\\sdata-laser-choose="' + name + '"[^>]*>\\s*</select>'));
+    assert.ok(select, name + " is an empty <select>");
+    const id = (select[0].match(/\sid="([^"]+)"/) || [])[1];
+    assert.ok(id, name + " has an id");
+    assert.match(html, new RegExp('<label\\b[^>]*\\sfor="' + id + '"'), name + " has a label");
+  }
+  // The pump slider's name is written by page.js (it depends on the pump):
+  // its label has data-laser-name, not data-text.
+  assert.deepEqual(attributeValues(html, "data-laser-name"), ["pump"]);
+  const pumpName = html.match(/<label\b[^>]*\sdata-laser-name="pump"[^>]*>/);
+  assert.match(pumpName[0], /\sfor="laser-pump"/);
+  assert.doesNotMatch(pumpName[0], /\sdata-text=/);
   assert.deepEqual(attributeValues(html, "data-laser-note"), ["behind"]);
   // The theory the "learn" button scrolls to is on the page, once.
   assert.equal((html.match(/\sdata-laser-learn[\s>]/g) || []).length, 1);
   const page = read("js/laser/page.js");
-  for (const name of PAGE_CONTROLS.concat(PAGE_READOUTS)) {
+  for (const name of PAGE_CONTROLS.concat(PAGE_READOUTS, PAGE_CHOICES, ["fire"])) {
     assert.ok(page.includes('"' + name + '"'), "page.js uses " + name);
   }
   // Each slider is a range input, named by its own <label for="...">.
@@ -324,6 +353,17 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
   // Buttons are type="button"; the "behind" note starts hidden.
   for (const tag of html.match(/<button\b[^>]*>/g) || []) assert.match(tag, /\stype="button"/);
   assert.match(html, /<p\b[^>]*\sdata-laser-note="behind"[^>]*\shidden[\s>]/);
+});
+
+test("css/laser.css: whatever page.js hides on the stage stays hidden, whatever its own display rule", () => {
+  // .lab-readout (display: flex) and .btn (display: inline-flex) would
+  // otherwise show a readout or the Fire button that page.js hid.
+  const css = read("css/laser.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const rule = css.match(/(^|\})\s*\.laser-stage \[hidden\]\s*\{([^}]*)\}/);
+  assert.ok(rule, "css/laser.css has a rule for .laser-stage [hidden]");
+  assert.match(rule[2], /display:\s*none\s*;/);
+  // Nothing in the laser stylesheet is more specific and shows them again.
+  assert.doesNotMatch(css, /\.laser-stage[^{]*\.(lab-readout|btn)\b[^{]*\{[^}]*display:/);
 });
 
 /* ---------- no colour written out ---------- */

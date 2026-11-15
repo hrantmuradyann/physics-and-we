@@ -16,11 +16,13 @@
                         __photons   the cartoon of atoms and photons
                         __side      the big chart with the numbers under it
      .laser-bench     the box a canvas sits in (it sets the width)
+     .laser-choose    the two dropdowns that choose the laser; __item is
+                      one with its name, __select the dropdown itself
      .laser-field     a number box with its unit, beside a slider's name
      .laser-hint      the line under the slow-motion slider
      .laser-readouts  the numbers, in a panel of their own
      .laser-note      the note shown when the computer cannot keep up
-     .laser-panels    the two pictures under the stage, side by side
+     .laser-panels    the picture of the levels under the stage
      .laser-learn     the theory at the bottom; .laser-chapter is one chapter
      .lab-feature     the big banner on the Labs page (sections/labs.html)
 
@@ -160,6 +162,60 @@
   }
 }
 
+/* js/laser/page.js hides the numbers and the Fire button a bench does not
+   have. Their own display rules (.lab-readout is flex, .btn inline-flex)
+   would beat the hidden attribute and show them again. */
+.laser-stage [hidden] {
+  display: none;
+}
+
+/* ---------- the choice of laser ---------- */
+
+/* Two dropdowns side by side when the panel is wide, one under the other
+   when it is not. A column is at least 15rem: the longest name a visitor
+   can choose, "Ներկանյութ (ռոդամին 6G)", needs about 14.5rem with the
+   dropdown's padding and arrow (at 160px the Armenian names were cut).
+   min(…, 100%): on a 320 px phone the panel is narrower than 15rem. */
+.laser-choose {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: 0.8rem 1.1rem;
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.laser-choose__item {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.laser-choose__select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-2);
+  color: var(--heading);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* The list that opens: some browsers draw it with the select's colours,
+   others with their own; set both so it reads in either theme. */
+.laser-choose__select option {
+  background-color: var(--bg-2);
+  color: var(--heading);
+}
+
+.laser-choose__select:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
 /* ---------- a slider's number box ---------- */
 
 .laser-field {
@@ -219,17 +275,11 @@
 
 /* ---------- under the stage ---------- */
 
+/* One picture now (the inversion chart beside it went in stage 7c): not
+   stretched over the whole page, where its levels would be far apart. */
 .laser-panels {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.3rem;
-  margin-top: 1.3rem;
-}
-
-@media (max-width: 860px) {
-  .laser-panels {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  max-width: 760px;
+  margin: 1.3rem auto 0;
 }
 
 /* ============================================================================

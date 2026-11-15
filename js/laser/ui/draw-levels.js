@@ -4,8 +4,13 @@
 
      LaserUI.levels.draw(view, picture)
        view     what loop.js passes to a draw: { g, w, h, colors, font, … }
-       picture  { x, y, stim, words }
-                x     pump rate / threshold rate (R_p/R_c)
+       picture  { x, smallSignal, y, stim, words }
+                x     pump rate / threshold rate (R_p/R_c): the pump
+                      arrow's width
+                smallSignal  the small-signal gain over the loss
+                      (g₀/g_th), where the gain would be with no light:
+                      the gauge's dashed line. For four levels it is x;
+                      for three it is not (bench.pumpNow gives both)
                 y     inversion / threshold inversion (N/N_c), now
                 stim  stimulated emission now, in the same units (y·p):
                       x − 1 once the laser runs steadily
@@ -38,10 +43,11 @@
     return Math.min(high, Math.max(low, value));
   }
 
-  // Holds x, y and the loss (1) with room above, so nothing drawn on the
-  // scale needs clamping (a clamp would only hide a wrong scale).
+  // Holds x, the small-signal gain, y and the loss (1) with room above, so
+  // nothing drawn on the scale needs clamping (a clamp would only hide a
+  // wrong scale).
   function scaleMax(picture) {
-    return Math.max(picture.x, picture.y, 1) * HEADROOM;
+    return Math.max(picture.x, picture.smallSignal, picture.y, 1) * HEADROOM;
   }
 
   function layout(w, h) {
@@ -214,7 +220,7 @@
       g.fillRect(G.gainX, G.bottom - gainHeight, G.gainW, gainHeight);
     }
     // The small-signal gain: where the gain would be with no light at all.
-    var smallY = G.bottom - span * picture.x / top;
+    var smallY = G.bottom - span * picture.smallSignal / top;
     g.strokeStyle = c.muted;
     g.setLineDash([4, 3]);
     g.beginPath();

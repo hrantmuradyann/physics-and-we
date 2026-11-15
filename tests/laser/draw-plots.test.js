@@ -1,7 +1,9 @@
 /* ============================================================================
    draw-plots.test.js — js/laser/ui/draw-plots.js: the chart of a quantity
    against time, drawn like a measuring instrument's (docs/laser-plan.md,
-   stage 6b). The page uses it for the output power and for the inversion.
+   stage 6b). The page uses it for the output power; these tests also draw
+   a plain number against time (an inversion over its threshold, as the
+   page did until stage 7c), so nothing in it is tied to watts.
 
    The chart only draws what it is given: points { t, P, y } in simulated
    seconds, W and units of the threshold. What these tests pin is that
@@ -94,16 +96,15 @@ function hasLine(recorder, x1, y1, x2, y2) {
     Math.abs(recorder.calls[i + 1].args[0] - x2) < 1e-6 && Math.abs(recorder.calls[i + 1].args[1] - y2) < 1e-6);
 }
 
-test("loads frozen, with the two canvas sizes the page uses", () => {
+test("loads frozen, with the canvas size the page uses", () => {
   assert.ok(Object.isFrozen(PLOTS));
-  for (const size of [PLOTS.SIZE, PLOTS.SIZE_SMALL]) {
-    assert.ok(Object.isFrozen(size));
-    assert.ok(size.aspect > 0 && size.minHeight > 0 && size.minHeight <= size.maxHeight);
-  }
-  assert.ok(PLOTS.SIZE.maxHeight > PLOTS.SIZE_SMALL.maxHeight, "the big chart is the bigger one");
+  assert.ok(Object.isFrozen(PLOTS.SIZE));
+  assert.ok(PLOTS.SIZE.aspect > 0 && PLOTS.SIZE.minHeight > 0 && PLOTS.SIZE.minHeight <= PLOTS.SIZE.maxHeight);
+  // The small size of the inversion chart went with it (stage 7c).
+  assert.equal(PLOTS.SIZE_SMALL, undefined);
 });
 
-for (const [sizeName, size] of [["large", PLOTS.SIZE], ["small", PLOTS.SIZE_SMALL]]) {
+for (const [sizeName, size] of [["large", PLOTS.SIZE]]) {
   commonDrawingTests("chart (" + sizeName + ")", UI, size, CHARTS.map((chart) => (view) => PLOTS.draw(view, deepFreeze(chart))));
 
   test("layout (" + sizeName + "): the plot inside the canvas with room for the title, the labels and the tag", () => {
@@ -350,17 +351,15 @@ test("a reference line's word stays inside the plot: under its line when the lin
   // 1.5 and the word fits above its line.
   for (const value of [1.9, 1]) {
     let under = 0;
-    for (const size of [PLOTS.SIZE, PLOTS.SIZE_SMALL]) {
-      for (const w of WIDTHS) {
-        const chart = inversionChart({ points: [{ t: 2.5e-3, P: 0, y: 0 }], lines: [{ value: value, word: "threshold", tone: "soft" }] });
-        const { recorder, view } = drawChart(chart, w, size);
-        const { L, P, yOf } = geometry(chart, view);
-        const word = texts(recorder).find((c) => c.args[0] === "threshold");
-        const where = value + " at " + w + " px: the word at " + word.args[2];
-        assert.ok(word.args[2] - L.fontSize >= P.top - 1e-9 && word.args[2] <= P.bottom, where);
-        if (word.args[2] > yOf(value)) under += 1;
-        else assert.ok(word.args[2] <= yOf(value), where + ", above its line");
-      }
+    for (const w of WIDTHS) {
+      const chart = inversionChart({ points: [{ t: 2.5e-3, P: 0, y: 0 }], lines: [{ value: value, word: "threshold", tone: "soft" }] });
+      const { recorder, view } = drawChart(chart, w);
+      const { L, P, yOf } = geometry(chart, view);
+      const word = texts(recorder).find((c) => c.args[0] === "threshold");
+      const where = value + " at " + w + " px: the word at " + word.args[2];
+      assert.ok(word.args[2] - L.fontSize >= P.top - 1e-9 && word.args[2] <= P.bottom, where);
+      if (word.args[2] > yOf(value)) under += 1;
+      else assert.ok(word.args[2] <= yOf(value), where + ", above its line");
     }
     if (value === 1) assert.equal(under, 0, "at 1 the word is always above its line");
     else assert.ok(under > 0, "at 1.9 the word goes under its line");

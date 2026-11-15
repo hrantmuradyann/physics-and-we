@@ -1,6 +1,6 @@
 # The laser simulator: what is done and what is left
 
-*Last updated: 15 November 2026, at the end of stage 7b.*
+*Last updated: 15 November 2026, at the end of stage 7c.*
 
 This page explains, in plain words, how far the laser simulator has got. The technical details are in `docs/laser-plan.md` (the build plan) and `docs/laser-physics.md` (the physics).
 
@@ -16,8 +16,8 @@ The page lives at the hidden address `?view=laser`. A banner on the Labs page li
 
 The work is split into numbered **stages**. Each stage adds one piece, and is not counted as finished until it passes four checks:
 
-1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 533 of them, and all of them pass.
-2. **Deliberate mistakes.** A tool makes about 515 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added.
+1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 567 of them, and all of them pass.
+2. **Deliberate mistakes.** A tool makes 575 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes under 3 minutes (it took 25 before stage 7c made it faster; see below).
 3. **A code review.** A separate careful reading of the whole change, looking for bugs. What it finds is fixed before the stage is finished.
 4. **A check in the browser**, for stages that change the page: both themes, both languages, a phone-sized screen, no errors.
 
@@ -40,29 +40,42 @@ The simulator has two halves:
 | 6 | **The first laser you can play with:** Nd:YAG pumped by laser diodes, running continuously. Sliders for the pump power, the output mirror and the slow-motion speed; Play/Pause and Reset; live numbers; charts of the output power and of the excited atoms. |
 | 6b | The page in the owner's design: mirrors that look like mirrors, separate light rays, a cartoon of atoms and photons, a large scientific chart, a number box beside each slider, and a "dig deeper" button that scrolls down to a short explanation. |
 | 7a | A sturdier time-stepper for "stiff" cases, where some things happen a million times faster than others (ruby is like this). The old one would have needed far too many steps per frame. |
-| 7b | **The engine for every other material and pump** (see below). |
+| 7b | **The engine for every other material and pump:** ruby, Nd:glass and Nd:YAG with a flashlamp; helium-neon, argon and CO₂ with an electric current; dye and titanium-sapphire with another laser; and the "two-level atom", which never lases. |
+| 7c | **Choosing the laser on the page** (see below). |
 
 ### What you can see on the page today
 
-Only the Nd:YAG laser with diodes. You can change the pump power, the output mirror and the slow motion. You can see the laser start up with a few spikes and settle, see it stop below threshold, and find the output mirror that gives the most power. The light and dark themes and both languages work, on a phone too.
+Every laser the engine can run. Two dropdowns at the top of the controls choose it: first the material, then its pump (the second list shows only the pumps that material can use). CaF₂:Dy and the semiconductor diode laser are listed but greyed out, "coming later".
 
-### Stage 7b, just finished
+For each laser the page sets itself up to suit it:
+- **the pump slider** becomes pump power (W), flash energy (J) or electric current (A, or mA for small currents);
+- **a "Fire" button** appears with a flashlamp: each press fires one flash, and the chart shows the light it makes, spikes and all;
+- **the slow motion** starts at a speed that suits the laser: one second on screen is 1 ms of the two-level atom, 100 µs of ruby, but only 100 ns of the argon and dye lasers, which change within nanoseconds;
+- **the numbers under the chart** are the ones that laser has: a flashlamp shows the smallest flash that makes it lase and the highest output since Fire; a gas laser shows its threshold current; the two-level atom says its threshold is "never reached";
+- **the energy-level picture** shows how strongly each material is pumped, and its gauge shows its own gain without light. For ruby it rises faster than the pump once the pump is past threshold (at the flash's peak, 8.6 times the loss for a pump 5.7 times its threshold); for the two-level atom it stays at zero.
 
-This stage teaches the **engine** every other material and pump. The page does not show them yet; that is stage 7c.
+The small chart of the excited atoms is gone (the owner's choice): the bar in the energy-level picture shows the same thing.
 
-- **Ruby, Nd:glass and Nd:YAG with a flashlamp:** one flash of about 1 ms. Ruby is a *three-level* material: it needs more than half of its atoms excited before it gives any light, so it needs a big flash. The engine works out the smallest flash that makes each one lase: about 640 J for ruby, 1.3 J for Nd:YAG and 29 J for Nd:glass. With a 1000 J flash, ruby first lights up after about half a millisecond and then fires a train of spikes about 6 microseconds apart. This matches the book.
-- **Helium-neon, argon-ion and CO₂ lasers, pumped by an electric current:** the gain rises with the current and, for helium-neon and CO₂, falls again past a best current (§6.4 of the physics doc). Argon gains as the square of the current, up to the tube's rated current.
-- **Dye and titanium-sapphire lasers, pumped by another laser.**
-- **The "two-level atom",** a teaching example: whatever you do to it, it never gets more atoms up than down, so it never lases. This is the reason real lasers need three or four levels.
+Ruby fired with a 1000 J flash lights up after a fraction of a millisecond and fires spikes reaching about 460 kW, as in stage 7b. The light and dark themes and both languages work, and the dropdowns fit on a 320 px phone.
 
-The code review found 14 things to improve, and all 14 were fixed. The two that matter most for the page: ruby's output mirror (it lets out 50 % of the light) did not fit the old mirror slider, which stopped at 30 %; and a flash already fired changed when a slider was moved, instead of only the next flash.
+**Not yet:** every laser is still drawn with laser diodes and four energy levels, though the drawing writes the right pump's name. Drawing each pump as itself is stage 7d.
+
+### Stage 7c, just finished
+
+This stage put the choice of laser on the page (above). Two other things came with it:
+
+- **The deliberate-mistakes check is about 10 times faster.** With 575 mistakes it had grown to 25 minutes, because each mistake ran every test. One failing test is enough to show a mistake was noticed, so the tool now runs the tests one file at a time and stops at the first file that fails, starting with the tests most likely to notice. It now takes under 3 minutes and gives exactly the same answers.
+- **The code review found 13 things, and all 13 were fixed.** The ones you could see on the page:
+  - the gauge's dashed line was drawn at the pump level for every material, which is only right for four-level materials like Nd:YAG;
+  - dragging the output-mirror slider on a flashlamp laser stuttered, because the page worked out the smallest flash that lases at every step of the drag. Now it shows "…" while you drag and works it out once when you let go;
+  - on a 320 px phone the dropdowns stuck out of their panel;
+  - the drawing called the pump "pump diodes" for every laser.
 
 ## What is left
 
 | Stage | What it will add |
 |---|---|
-| 7c | **Choosing the laser on the page** (being started): a dropdown for the material; a second dropdown showing only the pumps that material can use; with a flashlamp, a flash-energy slider and a "Fire" button; with a gas laser, an electric-current slider; the slow motion set to suit each laser; the numbers under the chart chosen for each kind of pump; all new words in Armenian and English. The small chart of the inversion goes (the owner's choice): the level picture already shows it. CaF₂:Dy and the semiconductor diode laser will be listed as "coming later". |
-| 7d | **The drawings for the new lasers:** each pump drawn as itself on the bench (diodes, a flashlamp beside the rod, a gas tube with electrodes, a pump laser's beam), and the energy-level picture and the atoms cartoon for three and two levels. Until then ruby is drawn with diodes and four levels. |
+| 7d | **The drawings for the new lasers** (next): each pump drawn as itself on the bench (diodes, a flashlamp beside the rod, a gas tube with electrodes, a pump laser's beam), and the energy-level picture and the atoms cartoon for three and two levels. Until then ruby is drawn with diodes and four levels. |
 | 8 | **Q-switching:** a shutter between the mirrors that stores energy and then releases it as one giant, very short pulse. Rotating prism, electro-optic shutter, and a dye that bleaches. |
 | 9 | **Several laser frequencies at once,** with a spectrum panel showing which ones lase. |
 | 10 | **Mirror shapes:** curved mirrors, and which mirror pairs keep the light inside (stable) or lose it (unstable); the width of the beam. |

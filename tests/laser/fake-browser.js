@@ -15,8 +15,10 @@
                        resizeBox(box, 600) also tells the ResizeObservers
      window events     addEventListener is counted, so a test can check that
                        a teardown removed everything it added
-     elements          attributes, textContent, value, hidden, and their own
-                       listeners: fire("click") runs them, listenerCount counts;
+     elements          attributes, textContent, value, hidden, children
+                       (appendChild, removeChild, firstChild; made with
+                       document.createElement), and their own listeners:
+                       fire("click") runs them, listenerCount counts;
                        scrollIntoView() is recorded, not done
      colours           getComputedStyle reads the CSS variables of
                        css/style.css (dark theme unless the test sets others)
@@ -66,12 +68,14 @@ function themeVariables() {
 
 /* ---------- elements ---------- */
 
-// An element: attributes, text, a value (for sliders), `hidden`, and its
-// own event listeners. fire("input") or fire("click") calls them as the
-// browser would; fire("pointermove", { offsetX: 200 }) adds what the
-// browser would put on that event; listenerCount(type) lets a test check
-// a teardown. scrollIntoView() is only counted: `scrolledTo` holds the
-// options of every call.
+// An element: attributes, text, a value (for sliders and dropdowns),
+// `hidden`, children, and its own event listeners. fire("input") or
+// fire("click") calls them as the browser would; fire("pointermove",
+// { offsetX: 200 }) adds what the browser would put on that event;
+// listenerCount(type) lets a test check a teardown. scrollIntoView() is
+// only counted: `scrolledTo` holds the options of every call. A dropdown's
+// value is only what was last set: unlike a browser, it does not check
+// that one of its options has it (the tests check the options).
 function fakeElement(tag) {
   const attributes = new Map();
   const listeners = new Map();          // event type -> [listener]
@@ -102,7 +106,23 @@ function fakeElement(tag) {
     },
     scrolledTo: [],
     scrollIntoView(options) { element.scrolledTo.push(options); },
-    listenerCount(type) { return (listeners.get(type) || []).length; }
+    listenerCount(type) { return (listeners.get(type) || []).length; },
+    children: [],
+    get firstChild() { return element.children.length ? element.children[0] : null; },
+    appendChild(child) {
+      if (child.parentNode) child.parentNode.removeChild(child);
+      element.children.push(child);
+      child.parentNode = element;
+      return child;
+    },
+    // As in a browser, removing an element that is not a child throws.
+    removeChild(child) {
+      const index = element.children.indexOf(child);
+      if (index === -1) throw new Error("fake-browser: removeChild of an element that is not a child");
+      element.children.splice(index, 1);
+      child.parentNode = null;
+      return child;
+    }
   };
   return element;
 }
@@ -171,7 +191,7 @@ function fakeCanvas(boxWidth) {
       }
     });
   }
-  canvas.parentNode = box;
+  box.appendChild(canvas);
   canvas.getContext = function (kind) { return kind === "2d" ? recorder.context : null; };
   return { canvas: canvas, box: box, recorder: recorder };
 }
@@ -221,7 +241,10 @@ function createBrowser(options) {
 
   const window = {
     devicePixelRatio: opts.devicePixelRatio || 1,
-    document: { documentElement: fakeElement("html") },
+    document: {
+      documentElement: fakeElement("html"),
+      createElement(tag) { return fakeElement(tag); }
+    },
 
     // A listener added twice is kept once, as in a real browser.
     addEventListener(type, listener) {

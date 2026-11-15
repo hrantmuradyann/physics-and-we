@@ -204,3 +204,32 @@ test("fire() can carry what the browser puts on an event; scrollIntoView is reco
   // Each element has its own record.
   assert.deepEqual(fakeElement("div").scrolledTo, []);
 });
+
+test("children: document.createElement, appendChild, removeChild and firstChild, as in a browser", () => {
+  const browser = createBrowser();
+  const select = browser.window.document.createElement("select");
+  assert.equal(select.tagName, "SELECT");
+  assert.equal(select.firstChild, null);
+  const a = browser.window.document.createElement("option");
+  const b = browser.window.document.createElement("option");
+  assert.equal(select.appendChild(a), a);
+  select.appendChild(b);
+  assert.deepEqual(select.children, [a, b]);
+  assert.equal(select.firstChild, a);
+  assert.equal(a.parentNode, select);
+  // Each element has its own list of children.
+  assert.deepEqual(a.children, []);
+  // Moving an element to another parent takes it from the first.
+  const other = fakeElement("select");
+  other.appendChild(a);
+  assert.deepEqual(select.children, [b]);
+  assert.equal(a.parentNode, other);
+  // Emptying one, the way page.js does.
+  while (select.firstChild) select.removeChild(select.firstChild);
+  assert.deepEqual(select.children, []);
+  assert.equal(b.parentNode, null);
+  assert.throws(() => select.removeChild(b), /not a child/);
+  // A canvas is its box's child.
+  const parts = fakeCanvas(300);
+  assert.deepEqual(parts.box.children, [parts.canvas]);
+});

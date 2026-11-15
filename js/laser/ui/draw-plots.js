@@ -1,14 +1,15 @@
 /* ============================================================================
    draw-plots.js — one chart of a quantity against time, drawn the way a
    measuring instrument draws it (docs/laser-plan.md, stage 6b). The page
-   uses it twice: the output power (large) and the inversion (small).
+   uses it for the output power; until stage 7c it also drew the
+   inversion, and the chart still takes any value of a point (`key`).
 
      LaserUI.plots.draw(view, chart)
        view    what loop.js passes to a draw: { g, w, h, colors, font, … }
        chart   { points, key, tNow, shownTime, floor, unit, title, color,
                  lines, cursor }
                points     [{ t, … }] from history.js, in time order
-               key        which value of a point to plot: "P" or "y"
+               key        which value of a point to plot (the page: "P")
                tNow       the simulation's time now (the right edge), s
                shownTime  how much simulated time the chart shows, s
                floor      the least the value axis reaches (see below)
@@ -25,7 +26,7 @@
                           of the canvas, or null
      LaserUI.plots.layout(w, h)    the plot box and where the labels go
      LaserUI.plots.scale(chart)    the points shown and the two axes
-     LaserUI.plots.SIZE, SIZE_SMALL    the two canvas proportions
+     LaserUI.plots.SIZE            the canvas proportions
 
    WHAT IS ON IT
    · Time runs from the left edge (shownTime ago) to the right edge (now),
@@ -50,7 +51,6 @@
   var UI = root.LaserUI = root.LaserUI || {};
 
   var SIZE = Object.freeze({ aspect: 1.15, minHeight: 300, maxHeight: 460 });
-  var SIZE_SMALL = Object.freeze({ aspect: 1.6, minHeight: 220, maxHeight: 320 });
   var VALUE_TICKS = 4;            // about this many ticks on the value axis
   var TIME_TICKS = 5;
   var HEADROOM = 1.05;            // the axis ends a little above the highest point
@@ -296,7 +296,6 @@
 
   UI.plots = Object.freeze({
     SIZE: SIZE,
-    SIZE_SMALL: SIZE_SMALL,
     layout: layout,
     scale: scale,
     draw: draw

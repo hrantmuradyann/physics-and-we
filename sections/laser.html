@@ -15,7 +15,8 @@
   they stand one under another, in the order written here):
     more      the button that leads to the theory at the bottom of the page
     bench     the drawing of the laser
-    controls  the sliders, each with a box to type a number in, and the buttons
+    controls  the choice of laser (two dropdowns), the sliders, each with a
+              box to type a number in, and the buttons
     side      the chart of the output power, and the numbers under it
     photons   the cartoon of atoms and photons inside the medium
   ══════════════════════════════════════════════════════════════════════════
@@ -41,9 +42,9 @@
      Every canvas here is drawn by js/laser/ui/ (draw-bench.js, draw-plots.js,
      draw-photons.js, draw-levels.js). Their descriptions for screen readers
      (bench.alt, power.alt, ... in data/laser.json) are put on the canvases
-     by js/laser/page.js, which also connects the sliders, number boxes,
-     buttons and numbers below through their data-laser-* names: keep those
-     names as they are. -->
+     by js/laser/page.js, which also connects the dropdowns, sliders, number
+     boxes, buttons and numbers below through their data-laser-* names: keep
+     those names as they are. -->
 <section class="band band--laser">
   <div class="container container--laser">
     <div class="laser-stage">
@@ -57,14 +58,27 @@
         <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
       </div>
 
-      <!-- The controls. A slider and its number box show the same value;
-           the units, the Play/Pause word and the line under the slow-motion
-           slider are written by js/laser/page.js. -->
+      <!-- The controls. The two dropdowns choose the laser; js/laser/page.js
+           fills in their options (the names are media.* and pumps.* in
+           data/laser.json). A slider and its number box show the same value;
+           the pump slider's name, the units, the Play/Pause word and the line
+           under the slow-motion slider are written by js/laser/page.js. Fire
+           is shown only when the pump is a flashlamp. -->
       <div class="laser-stage__controls lab__panel reveal">
+        <div class="laser-choose">
+          <div class="laser-choose__item">
+            <label class="lab-control__name" for="laser-medium" data-text="choose.medium"></label>
+            <select class="laser-choose__select" id="laser-medium" data-laser-choose="medium"></select>
+          </div>
+          <div class="laser-choose__item">
+            <label class="lab-control__name" for="laser-pump-kind" data-text="choose.pump"></label>
+            <select class="laser-choose__select" id="laser-pump-kind" data-laser-choose="pump"></select>
+          </div>
+        </div>
         <div class="lab__controls">
           <div class="lab-control">
             <div class="lab-control__label">
-              <label class="lab-control__name" for="laser-pump" id="laser-pump-name" data-text="controls.pump"></label>
+              <label class="lab-control__name" for="laser-pump" id="laser-pump-name" data-laser-name="pump"></label>
               <span class="laser-field">
                 <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-pump-name" data-laser-input="pump">
                 <span class="laser-field__unit" data-laser-unit="pump"></span>
@@ -95,6 +109,7 @@
           </div>
         </div>
         <div class="lab__buttons">
+          <button class="btn btn--primary btn--sm" type="button" data-laser-action="fire" data-text="buttons.fire" hidden></button>
           <button class="btn btn--ghost btn--sm" type="button" data-laser-action="play"></button>
           <button class="btn btn--ghost btn--sm" type="button" data-laser-action="reset" data-ui="labReset"></button>
         </div>
@@ -107,40 +122,54 @@
           <canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="power" role="img"></canvas>
         </div>
         <div class="lab__panel reveal">
+          <!-- One row per number. Each pump shows some of them; js/laser/page.js
+               hides the others (data-laser-row). -->
           <div class="lab__readouts laser-readouts">
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="pumpThreshold">
               <span class="lab-readout__label" data-text="readouts.pumpThreshold"></span>
               <span class="lab-readout__value" data-laser-readout="pumpThreshold">—</span>
             </div>
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="currentThreshold">
+              <span class="lab-readout__label" data-text="readouts.currentThreshold"></span>
+              <span class="lab-readout__value" data-laser-readout="currentThreshold">—</span>
+            </div>
+            <div class="lab-readout" data-laser-row="flashThreshold">
+              <span class="lab-readout__label" data-text="readouts.flashThreshold"></span>
+              <span class="lab-readout__value" data-laser-readout="flashThreshold">—</span>
+            </div>
+            <div class="lab-readout" data-laser-row="x">
               <span class="lab-readout__label" data-text="readouts.x"></span>
               <span class="lab-readout__value" data-laser-readout="x">—</span>
             </div>
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="gth">
               <span class="lab-readout__label" data-text="readouts.gth"></span>
               <span class="lab-readout__value" data-laser-readout="gth">—</span>
             </div>
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="tau_c">
               <span class="lab-readout__label" data-text="readouts.tau_c"></span>
               <span class="lab-readout__value" data-laser-readout="tau_c">—</span>
             </div>
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="P_out">
               <span class="lab-readout__label" data-text="readouts.P_out"></span>
               <span class="lab-readout__value" data-laser-readout="P_out">—</span>
             </div>
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="peak">
+              <span class="lab-readout__label" data-text="readouts.peak"></span>
+              <span class="lab-readout__value" data-laser-readout="peak">—</span>
+            </div>
+            <div class="lab-readout" data-laser-row="powerNow">
               <span class="lab-readout__label" data-text="readouts.powerNow"></span>
               <span class="lab-readout__value" data-laser-readout="powerNow">—</span>
             </div>
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="T_best">
               <span class="lab-readout__label" data-text="readouts.T_best"></span>
               <span class="lab-readout__value" data-laser-readout="T_best">—</span>
             </div>
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="period">
               <span class="lab-readout__label" data-text="readouts.period"></span>
               <span class="lab-readout__value" data-laser-readout="period">—</span>
             </div>
-            <div class="lab-readout">
+            <div class="lab-readout" data-laser-row="time">
               <span class="lab-readout__label" data-text="readouts.time"></span>
               <span class="lab-readout__value" data-laser-readout="time">—</span>
             </div>
@@ -154,14 +183,10 @@
 
     </div>
 
-    <!-- Under the stage: the energy levels with the gain gauge, and the
-         inversion against time. -->
+    <!-- Under the stage: the energy levels with the gain gauge. -->
     <div class="laser-panels">
       <div class="laser-bench reveal">
         <canvas class="laser-bench__canvas" data-laser-canvas="levels" role="img"></canvas>
-      </div>
-      <div class="laser-bench reveal">
-        <canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="inversion" role="img"></canvas>
       </div>
     </div>
   </div>

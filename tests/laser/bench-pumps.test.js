@@ -161,9 +161,13 @@ test("controls: the field the pump slider sets and both sliders' ranges, with th
   const smaller = configFor("he-ne", "discharge", { currentPeak: 4e-3, current: 4e-3 });
   assertClose(B.controls(smaller).pump.max, 12e-3, 1e-12, "the top for a 4 mA peak");
   assert.doesNotThrow(() => B.derive(configFor("he-ne", "discharge", { currentPeak: 4e-3, current: B.controls(smaller).pump.max })));
-  // Until stage 7c moves the page to controls, RANGES.pumpPower is the diode's.
-  assert.deepEqual(plain(B.controls(configFor("nd-yag", "diode")).pump),
-    Object.assign({ name: "pumpPower" }, plain(B.RANGES.pumpPower)));
+  // The stage-6 bench: 0–20 W of diode light, 0.5–60 % (RANGES, which the
+  // stage-6 page used, is gone since stage 7c).
+  assert.deepEqual(plain(B.controls(configFor("nd-yag", "diode"))), {
+    pump: { name: "pumpPower", min: 0, max: 20, log: false },
+    coupler: { min: 0.005, max: 0.6, log: true }
+  });
+  assert.equal(B.RANGES, undefined);
   assert.throws(() => B.controls(Object.assign({}, B.configFor({ medium: "he-ne", pump: "discharge" }), { pump: "laser" })),
     /^Error: LaserEngine\.bench\.controls: pump must be one of discharge/);
 });
@@ -253,7 +257,7 @@ test("derive with a flashlamp: the flash's peak and the pump at the peak, no ste
     } else if (d.scheme === "three-level") {
       assertClose(d.xPeak, absorbedPeak * d.tau / (hnuP * d.N_t * V_a) / d.wThreshold, 1e-12, label + "w/w_th at the peak");
     } else {
-      assert.equal(d.xPeak, 0, label + "two levels have no threshold");
+      assert.equal(d.xPeak, null, label + "two levels have no threshold");
     }
     for (const name of ["x", "P_out", "pumpThreshold", "slope", "T_opt", "T_best", "period", "t_damp", "ySteady", "currentThreshold"]) {
       assert.equal(d[name], null, label + name);
@@ -261,11 +265,11 @@ test("derive with a flashlamp: the flash's peak and the pump at the peak, no ste
   }
 });
 
-test("derive with the two-level atom: no threshold, x = 0, a negative steady inversion and no output", () => {
+test("derive with the two-level atom: no threshold, no x, a negative steady inversion and no output", () => {
   const c = configFor("two-level", "laser");
   const d = B.derive(c);
   assert.equal(d.scheme, "two-level");
-  assert.equal(d.x, 0);
+  assert.equal(d.x, null, "there is no threshold to measure the pump by");
   assert.equal(d.P_out, 0);
   assert.equal(d.wThreshold, null);
   assert.equal(d.pumpThreshold, null);
@@ -577,6 +581,147 @@ test("a ruby flash on the page (slow motion 10⁴, 60 Hz) fits a frame's 1500 st
   assert.ok(run.worst > 300, "the spikes cost something: " + run.worst + " steps");
 });
 
+/* ---------- the pump now ---------- */
+
+// A simulation state written out, flash and all (pumpNow reads only t and
+// the flash; N and lnPhi are any allowed values).
+function simAt(cfg, t, flash) {
+  return deepFreeze({ t, N: B.start(cfg).N, lnPhi: 0, flash: flash || null });
+}
+
+function pumpNow(sim, cfg) {
+  return B.pumpNow(deepFreeze({ sim, config: cfg }));
+}
+
+test("pumpNow with a steady pump: derive's x, and the small-signal gain g₀/g_th = x; the two-level atom's w", () => {
+  for (const [medium, pump] of [["nd-yag", "diode"], ["dye-r6g", "laser"], ["ti-sapphire", "laser"],
+    ["he-ne", "discharge"], ["ar-ion", "discharge"], ["co2", "discharge"]]) {
+    const c = configFor(medium, pump);
+    const d = B.derive(c);
+    const now = pumpNow(simAt(c, 2e-6), c);
+    assert.deepEqual(Object.keys(now).sort(), ["smallSignal", "w", "x"], medium);
+    assert.equal(now.x, d.x, medium + ": x");
+    assert.equal(now.w, null, medium + ": four levels have no w");
+    assert.equal(now.smallSignal, d.x, medium + ": four levels hold y = x with no light");
+  }
+  // A stronger setting, the same way.
+  const strong = configFor("nd-yag", "diode", { pumpPower: 12 });
+  assertClose(pumpNow(simAt(strong, 0), strong).x, B.derive(strong).x, 1e-12, "12 W");
+  // The two-level atom has no threshold: no x, its w = W_p·τ, and with no
+  // light y = −n_t/(1 + 2w) (dy/dt′ = −2w·y − (n_t + y) = 0): below 0
+  // however hard it is pumped.
+  const atom = configFor("two-level", "laser");
+  const a = B.derive(atom);
+  const now = pumpNow(simAt(atom, 1e-3), atom);
+  assert.equal(now.x, null);
+  assert.equal(now.w, a.w);
+  assert.ok(now.w > 6, "pumped hard: w = " + now.w);
+  assertClose(now.smallSignal, -a.n_t / (1 + 2 * a.w), 1e-12, "two levels without light");
+  assert.ok(now.smallSignal < 0, "it absorbs");
+});
+
+test("pumpNow with a flashlamp: nothing before Fire; at the flash's peak, derive's xPeak; three levels' small-signal gain", () => {
+  // Before Fire: no pump. Four levels hold y = 0; three and two levels
+  // have every ion down, y = −n_t.
+  for (const medium of ["ruby", "nd-glass", "nd-yag", "two-level"]) {
+    const c = configFor(medium, "flashlamp");
+    const d = B.derive(c);
+    const nothing = d.scheme === "four-level" ? { x: 0, w: null, smallSignal: 0 }
+      : d.scheme === "three-level" ? { x: 0, w: 0, smallSignal: -d.n_t }
+      : { x: null, w: 0, smallSignal: -d.n_t };
+    assert.deepEqual(plain(pumpNow(simAt(c, 0), c)), nothing, medium + " before Fire");
+    assert.deepEqual(plain(pumpNow(simAt(c, 5e-3), c)), nothing, medium + " later, still no flash");
+  }
+  // At t_p after Fire the lamp is at its peak, E/(e·t_p): derive's xPeak
+  // (four levels: x; three levels: w over its threshold w_th).
+  for (const medium of ["ruby", "nd-glass", "nd-yag"]) {
+    const c = configFor(medium, "flashlamp");
+    const d = B.derive(c);
+    const flash = { at: 1e-3, flashEnergy: c.flashEnergy, flashTime: c.flashTime };
+    const now = pumpNow(simAt(c, 1e-3 + c.flashTime, flash), c);
+    assertClose(now.x, d.xPeak, 1e-12, medium + ": the pump at the peak");
+  }
+  // Ruby by hand: w at the peak = η·share·P/(hν_p·N_t·V_a)·τ, over w_th =
+  // (n_t + 1)/(n_t − 1); with no light it would hold y = n_t(w − 1)/(w + 1)
+  // (§2.2), more than its x: g₀/g_th is not w/w_th for three levels.
+  const ruby = configFor("ruby", "flashlamp");
+  const d = B.derive(ruby);
+  const medium = E.media.get("ruby");
+  const lampPeak = 1000 / (Math.E * 0.3e-3);
+  const w = 0.7 * 0.12 * lampPeak / (E.units.photonEnergy(550e-9) * medium.N_t * ruby.area * ruby.l_g) * medium.tau;
+  const wTh = (d.n_t + 1) / (d.n_t - 1);
+  const peak = pumpNow(simAt(ruby, 0.3e-3, { at: 0, flashEnergy: 1000, flashTime: 0.3e-3 }), ruby);
+  assertClose(peak.w, w, 1e-12, "ruby's w at the peak, by hand");
+  assertClose(peak.x, w / wTh, 1e-12, "ruby's pump at the peak, by hand");
+  assertClose(peak.x, 5.7229, 1e-4, "about 5.72 times threshold (the audit's xPeak)");
+  assertClose(peak.smallSignal, d.n_t * (w - 1) / (w + 1), 1e-12, "ruby's small-signal gain at the peak");
+  assertClose(peak.smallSignal, 8.5855, 1e-4, "about 8.59 times the loss");
+  // The two-level atom: w itself, and no gain whatever the flash.
+  const atom = configFor("two-level", "flashlamp");
+  const a = B.derive(atom);
+  const atomPeak = pumpNow(simAt(atom, 0.3e-3, { at: 0, flashEnergy: 2, flashTime: 0.3e-3 }), atom);
+  const wAtom = 0.12 * (2 / (Math.E * 0.3e-3)) / (E.units.photonEnergy(atom.pumpLam) * a.N_t * atom.area * atom.l_g) * a.tau;
+  assert.equal(atomPeak.x, null, "two levels: no threshold");
+  assertClose(atomPeak.w, wAtom, 1e-12, "two levels: w at the peak");
+  assertClose(atomPeak.smallSignal, -a.n_t / (1 + 2 * wAtom), 1e-12, "two levels: below 0");
+});
+
+test("pumpNow follows the flash's shape, with the energy and t_p it was fired with, not the sliders'", () => {
+  const c = configFor("ruby", "flashlamp");
+  const flash = { at: 2e-3, flashEnergy: 1000, flashTime: 0.3e-3 };
+  const atPeak = pumpNow(simAt(c, 2.3e-3, flash), c);
+  // The flash just fired: no pump yet. The lamp goes as (t/t_p)·e^(−t/t_p),
+  // so two t_p on it is 2/e of its peak, and the pump with it.
+  assert.equal(pumpNow(simAt(c, 2e-3, flash), c).x, 0, "at the moment of Fire");
+  const later = pumpNow(simAt(c, 2.6e-3, flash), c);
+  assertClose(later.x / atPeak.x, 2 / Math.E, 1e-12, "x follows the lamp: 2/e of the peak at 2 t_p");
+  assertClose(later.w / atPeak.w, 2 / Math.E, 1e-12, "and so does w");
+  // Sliders moved after Fire: the flash that runs is unchanged.
+  const moved = configFor("ruby", "flashlamp", { flashEnergy: 2500 });
+  assertClose(pumpNow(simAt(moved, 2.3e-3, flash), moved).x, atPeak.x, 1e-12, "the fired energy");
+  // A flash fired with twice the t_p peaks at twice the time, half as high.
+  const longer = { at: 2e-3, flashEnergy: 1000, flashTime: 0.6e-3 };
+  assertClose(pumpNow(simAt(c, 2.6e-3, longer), c).x, atPeak.x / 2, 1e-12, "the fired t_p");
+  // The output mirror changes the threshold, so x, but not w (the lamp).
+  const lossy = configFor("ruby", "flashlamp", { refl2: 0.3 });
+  const lossyNow = pumpNow(simAt(lossy, 2.3e-3, flash), lossy);
+  assert.ok(lossyNow.x < atPeak.x, "a lossier cavity is further from threshold");
+  assertClose(lossyNow.w, atPeak.w, 1e-12, "the same lamp, the same pump per ion");
+});
+
+test("pumpNow agrees with the pump advance runs: from y = 0 with no light, y rises at x per τ (§4.1)", () => {
+  // Four levels with no light: dy/dt′ = x − y. Just after the peak, over a
+  // step of τ/10⁴, y rises by about x·Δt′.
+  const c = configFor("nd-yag", "flashlamp", { flashEnergy: 0.5 });
+  const flash = { at: 0, flashEnergy: 0.5, flashTime: c.flashTime };
+  const sim = { t: c.flashTime, N: 0, lnPhi: 0, flash };
+  const d = B.derive(c);
+  const dt = d.tau * 1e-4;
+  const run = B.advance(deepFreeze({ sim, config: c, seconds: dt, maxSteps: 50 }));
+  assert.equal(run.reachedEnd, true);
+  assertClose(run.sim.N / d.N_c / 1e-4, pumpNow(simAt(c, c.flashTime, flash), c).x, 1e-4, "dy/dt′ = x at y = 0");
+});
+
+test("pumpNow checks its inputs and names itself", () => {
+  const yag = configFor("nd-yag", "diode");
+  const ruby = configFor("ruby", "flashlamp");
+  const flash = { at: 0, flashEnergy: 1, flashTime: 3e-4 };
+  const bad = [
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash }, config: yag }, /sim\.flash is a flash .* no flashlamp/],
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null }, config: Object.assign({}, yag, { pumpPower: -1 }) }, /pumpPower/],
+    [{ sim: { t: -1, N: 0, lnPhi: 0, flash: null }, config: yag }, /sim\.t/],
+    [{ sim: { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 2e-3, flashEnergy: 1, flashTime: 3e-4 } }, config: ruby }, /later than sim\.t/],
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null } }, /needs one object of named values, like \{ medium, pump/],
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null }, config: yag, seconds: 1 }, /seconds is not one of its inputs/]
+  ];
+  for (const [params, pattern] of bad) {
+    assert.throws(() => B.pumpNow(deepFreeze(params)), (error) =>
+      error.message.startsWith("LaserEngine.bench.pumpNow:") && pattern.test(error.message), JSON.stringify(params));
+  }
+  assert.throws(() => B.pumpNow(B.start(yag), yag), /^Error: LaserEngine\.bench\.pumpNow: /);
+  assert.throws(() => B.pumpNow(), /^Error: LaserEngine\.bench\.pumpNow: /);
+});
+
 /* ---------- inputs ---------- */
 
 test("every new input is checked, and every error names the function that was called", () => {
@@ -636,7 +781,7 @@ test("every new input is checked, and every error names the function that was ca
   const yagFlash = { at: 0, flashEnergy: 1, flashTime: 3e-4 };
   assert.throws(() => B.advance(deepFreeze({ sim: { t: 0, N: 0, lnPhi: 0, flash: yagFlash }, config: yag, seconds: 1e-6, maxSteps: 10 })),
     /^Error: LaserEngine\.bench\.advance: .*flashlamp/);
-  for (const name of ["pumpsFor", "configFor", "controls", "start", "fire", "flashThreshold"]) {
+  for (const name of ["pumpsFor", "configFor", "controls", "start", "fire", "pumpNow", "flashThreshold"]) {
     assert.throws(() => B[name](), new RegExp("^Error: LaserEngine\\.bench\\." + name + ": "), name);
   }
 });

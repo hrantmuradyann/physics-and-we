@@ -1,10 +1,9 @@
 /* ============================================================================
    history.js — what the plot remembers: the newest points of the
-   simulation, { t, P, y } (simulated seconds, output power in W, inversion
-   over threshold).
+   simulation, { t, P } (simulated seconds, output power in W).
 
      var h = LaserUI.history.create(4096);
-     h.push(t, P, y);        adds a point; a full history drops its oldest.
+     h.push(t, P);           adds a point; a full history drops its oldest.
                              Times must not go back (page.js clears the
                              history on Reset, the only time t does)
      h.points(fromTime)      copies of the points at or after fromTime, oldest first
@@ -30,7 +29,6 @@
     }
     var times = new Array(capacity);
     var powers = new Array(capacity);
-    var inversions = new Array(capacity);
     var next = 0;            // where the next point goes
     var count = 0;
 
@@ -41,14 +39,13 @@
 
     function pointAt(i) {
       var index = indexOf(i);
-      return { t: times[index], P: powers[index], y: inversions[index] };
+      return { t: times[index], P: powers[index] };
     }
 
     return Object.freeze({
-      push: function (t, P, y) {
+      push: function (t, P) {
         times[next] = t;
         powers[next] = P;
-        inversions[next] = y;
         next = (next + 1) % capacity;
         if (count < capacity) count += 1;
       },

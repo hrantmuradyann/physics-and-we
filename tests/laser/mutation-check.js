@@ -7,18 +7,24 @@
       nothing, and every mistake would look caught.
    2. Then, for each deliberate mistake in tests/laser/mutations.js: a fresh
       copy, the mistake made in the copy (the real files are never touched),
-      every laser test run against it. At least one test must FAIL.
+      and the laser test files run against it, one after another, until one
+      FAILS. One failing test is all a mistake needs to count as caught, so
+      the files after it are not run: the outcome is the same as running
+      them all, in a fraction of the time. The files named after the changed
+      file run first (bench.js: bench.test.js, bench-pumps.test.js), as they
+      catch most mistakes, then the others, quickest first (timed in step 1).
       Several mistakes are checked at the same time (PARALLEL_RUNS below),
       each in its own copy; the results are printed in the order of the list.
 
    Outcomes for each mistake:
      caught      a test failed — good
      MISSED      every test passed: the tests have a hole, add a test
-     TIMED OUT   the tests ran too long: a loop in a test (a solver run) has
-                   no small bound, so the mistake made it slow instead of
-                   failing. Bound the work (maxSteps near what the run needs);
-                   a { timeout } does not help, because node:test cannot stop
-                   a test that never gives up control
+     TIMED OUT   a test file ran too long before any file failed: a loop in
+                   a test (a solver run) has no small bound, so the mistake
+                   made it slow instead of failing. Bound the work (maxSteps
+                   near what the run needs); a { timeout } does not help,
+                   because node:test cannot stop a test that never gives up
+                   control
      ERROR       the entry itself is wrong (text not found, not valid
                    JavaScript after the change, path outside the copy, ...)
 
@@ -41,16 +47,19 @@ const TEST_DIR = __dirname;
 // not images (13 MB), and never local secrets such as .dev.vars.
 const COPY_ENTRIES = ["index.html", "js", "css", "data", "sections"];
 
-// How long one run of the tests may take before it counts as hung.
+// How long one test file may take before it counts as hung. (Until the
+// check stopped at the first failing file, the whole suite had this long,
+// its files running side by side: in effect, so did its slowest file.)
 const DEFAULT_TIMEOUT_MS = 60 * 1000;
 
 // The most output one test run may print (in characters). A mistake that
 // makes a test print in a loop is stopped here, not when memory runs out.
 const DEFAULT_MAX_OUTPUT = 64 * 1024 * 1024;
 
-// How many mistakes are checked at once. Each run of `node --test` already
-// runs its test files side by side, so half the processor cores is plenty.
-const PARALLEL_RUNS = Math.max(1, Math.floor(os.cpus().length / 2));
+// How many mistakes are checked at once. Each runs its test files one after
+// another, so one mistake per processor core, less one core for the rest of
+// the computer.
+const PARALLEL_RUNS = Math.max(1, os.cpus().length - 1);
 
 // This file's own test (mutation-check.test.js) runs this checker. If the
 // checker ran that test too, every run would start another run, forever.
@@ -129,10 +138,12 @@ function makeCopy() {
   return copyRoot;
 }
 
-// Runs the given test files against the project copy at copyRoot.
-// Resolves to { outcome: "passed" | "failed" | "timed out", output }; rejects
-// if the run cannot start or prints more than options.maxOutput characters.
-function runTests(copyRoot, options) {
+// Runs one test file against the project copy at copyRoot, with
+// `node --test`, as the whole suite runs it (each file in a process of its
+// own). Resolves to { outcome: "passed" | "failed" | "timed out", output,
+// ms }; rejects if the run cannot start or prints more than
+// options.maxOutput characters.
+function runFile(copyRoot, file, options) {
   const env = Object.assign({}, process.env, {
     LASER_TEST_ROOT: copyRoot,
     LASER_MUTATION_CHECK: "1"
@@ -143,8 +154,9 @@ function runTests(copyRoot, options) {
   // code. Start the inner run clean.
   delete env.NODE_TEST_CONTEXT;
 
+  const started = Date.now();
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ["--test"].concat(options.testFiles), { env: env });
+    const child = spawn(process.execPath, ["--test", file], { env: env });
     let output = "";
     let tooMuchOutput = false;
     function collect(text) {
@@ -172,44 +184,120 @@ function runTests(copyRoot, options) {
     });
     child.on("close", (code, signal) => {
       clearTimeout(timer);
+      const ms = Date.now() - started;
       if (timedOut) {
-        resolve({ outcome: "timed out", output: output });
+        resolve({ outcome: "timed out", output: output, ms: ms });
       } else if (tooMuchOutput) {
         reject(new Error("the tests printed more than " + options.maxOutput +
           " characters; a mistake probably makes a test print in a loop."));
       } else if (signal) {
         reject(new Error("the test run was killed by " + signal));
       } else {
-        resolve({ outcome: code === 0 ? "passed" : "failed", output: output });
+        resolve({ outcome: code === 0 ? "passed" : "failed", output: output, ms: ms });
       }
     });
   });
+}
+
+// Runs test files one after another and stops at the first that does not
+// pass: one failing test is all a mistake needs to be caught, and a file
+// that hangs leaves the outcome unknown. Resolves to { outcome, output,
+// files }: "passed", "failed" or "timed out", the output of the file that
+// decided it, and the files that ran, in order.
+async function runFiles(copyRoot, files, options) {
+  const ran = [];
+  for (const file of files) {
+    const run = await runFile(copyRoot, file, options);
+    ran.push(file);
+    if (run.outcome !== "passed") {
+      return { outcome: run.outcome, output: path.basename(file) + ":\n" + run.output, files: ran };
+    }
+  }
+  return { outcome: "passed", output: "", files: ran };
+}
+
+// The order to run the test files in for a mistake in `mutatedFile`: first
+// the files named after it (js/laser/engine/bench.js: bench.test.js and
+// bench-pumps.test.js), which catch most mistakes, then the others. Each
+// group runs quickest first, by `durations` (ms per file, from the
+// unchanged copy's run), so a mistake that a quick file catches costs
+// little. Without durations each group keeps the given order.
+function orderFor(mutatedFile, testFiles, durations) {
+  const stem = path.basename(mutatedFile).replace(/\.[^.]+$/, "");
+  function isNamedAfter(file) {
+    const name = path.basename(file);
+    return name.startsWith(stem + ".") || name.startsWith(stem + "-");
+  }
+  function quickestFirst(a, b) {
+    if (!durations) return 0;
+    return (durations[a] || 0) - (durations[b] || 0);
+  }
+  const named = testFiles.filter(isNamedAfter).sort(quickestFirst);
+  const others = testFiles.filter((file) => !isNamedAfter(file)).sort(quickestFirst);
+  return named.concat(others);
+}
+
+// Runs work(item) for every item, at most `limit` at a time. Resolves to the
+// answers in the order of the items, whatever order they finish in.
+async function inParallel(items, limit, work) {
+  const answers = new Array(items.length);
+  let next = 0;
+  // Each worker takes the next item until none is left.
+  async function worker() {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      answers[index] = await work(items[index]);
+    }
+  }
+  const workers = [];
+  for (let i = 0; i < Math.min(limit, items.length); i++) workers.push(worker());
+  await Promise.all(workers);
+  return answers;
 }
 
 function withDefaults(options) {
   return Object.assign({
     testFiles: allTestFiles(),
     timeoutMs: DEFAULT_TIMEOUT_MS,
-    maxOutput: DEFAULT_MAX_OUTPUT
+    maxOutput: DEFAULT_MAX_OUTPUT,
+    parallel: PARALLEL_RUNS,
+    durations: null
   }, options || {});
 }
 
 /* ---------- the public functions ---------- */
 
-// The tests against an unchanged copy. Resolves to { outcome, output }; the
-// outcome must be "passed" before any mistake can be judged.
+// The tests against an unchanged copy, every file, several at a time.
+// Resolves to { outcome, output, durations }: the outcome must be "passed"
+// before any mistake can be judged; output is that of the first file in
+// the list that did not pass; durations gives each file's time in ms, which
+// orders the files for the mistakes.
 async function runBaseline(options) {
   const opts = withDefaults(options);
   const copyRoot = makeCopy();
   try {
-    return await runTests(copyRoot, opts);
+    const runs = await inParallel(opts.testFiles, opts.parallel, (file) => runFile(copyRoot, file, opts));
+    const durations = {};
+    let outcome = "passed";
+    let output = "";
+    for (let i = 0; i < runs.length; i++) {
+      const file = opts.testFiles[i];
+      durations[file] = runs[i].ms;
+      if (outcome === "passed" && runs[i].outcome !== "passed") {
+        outcome = runs[i].outcome;
+        output = path.basename(file) + ":\n" + runs[i].output;
+      }
+    }
+    return { outcome: outcome, output: output, durations: durations };
   } finally {
     fs.rmSync(copyRoot, { recursive: true, force: true });
   }
 }
 
-// One mistake. Resolves to { outcome: "caught" | "missed" | "timed out", output };
-// rejects if the entry itself is wrong.
+// One mistake. Resolves to { outcome: "caught" | "missed" | "timed out",
+// output, files } (files: the test files that ran, in order); rejects if the
+// entry itself is wrong.
 async function runMutation(mutation, options) {
   const opts = withDefaults(options);
   checkEntry(mutation);
@@ -226,11 +314,12 @@ async function runMutation(mutation, options) {
     checkStillValid(changed, mutation);
     fs.writeFileSync(target, changed);
 
-    const run = await runTests(copyRoot, opts);
+    const order = orderFor(mutation.file, opts.testFiles, opts.durations);
+    const run = await runFiles(copyRoot, order, opts);
     const outcome = run.outcome === "failed" ? "caught"
       : run.outcome === "passed" ? "missed"
       : "timed out";
-    return { outcome: outcome, output: run.output };
+    return { outcome: outcome, output: run.output, files: run.files };
   } finally {
     fs.rmSync(copyRoot, { recursive: true, force: true });
   }
@@ -241,29 +330,15 @@ async function runMutation(mutation, options) {
 // { mutation, outcome, error } where outcome is "caught", "missed",
 // "timed out" or "error".
 async function checkMutations(list, options) {
-  const parallel = (options && options.parallel) || PARALLEL_RUNS;
-  const results = new Array(list.length);
-  let next = 0;
-
-  // Each worker takes the next unchecked entry until none is left.
-  async function worker() {
-    while (next < list.length) {
-      const index = next;
-      next += 1;
-      const mutation = list[index];
-      try {
-        const run = await runMutation(mutation, options);
-        results[index] = { mutation: mutation, outcome: run.outcome, error: null };
-      } catch (err) {
-        results[index] = { mutation: mutation, outcome: "error", error: err.message };
-      }
+  const opts = withDefaults(options);
+  return inParallel(list, opts.parallel, async (mutation) => {
+    try {
+      const run = await runMutation(mutation, opts);
+      return { mutation: mutation, outcome: run.outcome, error: null };
+    } catch (err) {
+      return { mutation: mutation, outcome: "error", error: err.message };
     }
-  }
-
-  const workers = [];
-  for (let i = 0; i < Math.min(parallel, list.length); i++) workers.push(worker());
-  await Promise.all(workers);
-  return results;
+  });
 }
 
 /* ---------- running it from the command line ---------- */
@@ -271,6 +346,7 @@ async function checkMutations(list, options) {
 const LABELS = { caught: "caught", missed: "MISSED", "timed out": "TIMED OUT", error: "ERROR" };
 
 async function main() {
+  const started = Date.now();
   const baseline = await runBaseline();
   if (baseline.outcome !== "passed") {
     console.log(baseline.output);
@@ -281,7 +357,7 @@ async function main() {
   }
 
   const { MUTATIONS } = require("./mutations.js");
-  const results = await checkMutations(MUTATIONS);
+  const results = await checkMutations(MUTATIONS, { durations: baseline.durations });
   let problems = 0;
 
   for (const result of results) {
@@ -295,7 +371,8 @@ async function main() {
   }
 
   console.log("");
-  console.log((results.length - problems) + " of " + results.length + " deliberate mistakes caught.");
+  console.log((results.length - problems) + " of " + results.length + " deliberate mistakes caught (" +
+    Math.round((Date.now() - started) / 1000) + " s).");
   if (problems > 0) {
     console.log("Add a test for each MISSED mistake, bound the work of the tests a TIMED OUT one " +
       "slowed down (maxSteps; a { timeout } cannot stop a synchronous test), " +
@@ -311,4 +388,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { applyMutation, runBaseline, runMutation, checkMutations, COPY_ENTRIES };
+module.exports = { applyMutation, orderFor, runBaseline, runMutation, checkMutations, COPY_ENTRIES };

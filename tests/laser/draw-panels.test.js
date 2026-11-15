@@ -51,7 +51,10 @@ const LEVEL_WORDS = {
 };
 
 function levelPicture(changes) {
-  return Object.assign({ x: 3.3, y: 1, stim: 2.3, words: LEVEL_WORDS }, changes || {});
+  const picture = Object.assign({ x: 3.3, y: 1, stim: 2.3, words: LEVEL_WORDS }, changes || {});
+  // Four levels hold y = x with no light: the small-signal gain is x.
+  if (picture.smallSignal === undefined) picture.smallSignal = picture.x;
+  return picture;
 }
 
 const LEVEL_CASES = [
@@ -149,9 +152,10 @@ for (const [name, drawing, cases] of [["levels", LEVELS, LEVEL_CASES]]) {
 /* ---------- the level diagram and the gauge ---------- */
 
 test("levels: the gauge's scale holds the gain, the loss and the small-signal gain, with room above", () => {
-  assert.equal(LEVELS.scaleMax({ x: 3, y: 1 }), 3 * 1.15);
-  assert.equal(LEVELS.scaleMax({ x: 0.5, y: 0.4 }), 1.15, "the loss line always fits");
-  assert.equal(LEVELS.scaleMax({ x: 0.5, y: 2 }), 2 * 1.15, "a high inversion left from a stronger pump");
+  assert.equal(LEVELS.scaleMax({ x: 3, smallSignal: 3, y: 1 }), 3 * 1.15);
+  assert.equal(LEVELS.scaleMax({ x: 0.5, smallSignal: 0.5, y: 0.4 }), 1.15, "the loss line always fits");
+  assert.equal(LEVELS.scaleMax({ x: 0.5, smallSignal: 0.5, y: 2 }), 2 * 1.15, "a high inversion left from a stronger pump");
+  assert.equal(LEVELS.scaleMax({ x: 5.72, smallSignal: 8.59, y: 1 }), 8.59 * 1.15, "ruby at its flash's peak: g₀/g_th > x");
 });
 
 test("levels: the gain bar is y on the gauge's scale, the loss line is 1 (gain = loss at threshold)", () => {
@@ -181,14 +185,22 @@ function lineAt(recorder, x0, y) {
     Math.abs(recorder.calls[i + 1].args[1] - y) < 1e-9);
 }
 
-test("levels: the dashed small-signal line is the gain with no light, x on the gauge's scale", () => {
+test("levels: the dashed small-signal line is the gain with no light, g₀/g_th on the gauge's scale", () => {
   const w = 800;
-  for (const picture of [levelPicture(), levelPicture({ x: 0.6, y: 0.5, stim: 0 }), levelPicture({ x: 2, y: 1.7, stim: 0.3 })]) {
+  // Ruby at its flash's peak: x = 5.72, but with no light it would hold
+  // y = n_t(w − 1)/(w + 1) = 8.59 (bench.pumpNow).
+  const ruby = levelPicture({ x: 5.72, smallSignal: 8.59, y: 1, stim: 4.7 });
+  for (const picture of [levelPicture(), levelPicture({ x: 0.6, y: 0.5, stim: 0 }),
+    levelPicture({ x: 2, y: 1.7, stim: 0.3 }), ruby]) {
     const { recorder, view } = drawWith(LEVELS, w, picture);
     const g = LEVELS.layout(w, view.h).gauge;
-    const smallY = g.bottom - (g.bottom - g.top) * picture.x / LEVELS.scaleMax(picture);
-    assert.ok(lineAt(recorder, g.gainX, smallY), "a line across the gain bar at x = " + picture.x);
+    const smallY = g.bottom - (g.bottom - g.top) * picture.smallSignal / LEVELS.scaleMax(picture);
+    assert.ok(lineAt(recorder, g.gainX, smallY), "a line across the gain bar at " + picture.smallSignal);
   }
+  const { recorder, view } = drawWith(LEVELS, w, ruby);
+  const g = LEVELS.layout(w, view.h).gauge;
+  const atX = g.bottom - (g.bottom - g.top) * ruby.x / LEVELS.scaleMax(ruby);
+  assert.equal(lineAt(recorder, g.gainX, atX), undefined, "not at the pump's x");
 });
 
 test("levels: the laser arrow only with stimulated emission, as wide as it", () => {

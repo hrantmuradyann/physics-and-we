@@ -1501,8 +1501,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "T_oc: Object.freeze({ min: 0.005, max: 0.3, log: true })",
-    replace: "T_oc: Object.freeze({ min: 0.005, max: 0.3, log: false })",
+    find: "var COUPLER_RANGE = { min: 0.005, max: 0.6, log: true };",
+    replace: "var COUPLER_RANGE = { min: 0.005, max: 0.6, log: false };",
     why: "the coupler slider made linear: the small couplers crowd into its first few pixels"
   },
 
@@ -1585,14 +1585,14 @@ const MUTATIONS = [
   /* ---------- stage 6: draw-levels.js ---------- */
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "return Math.max(picture.x, picture.y, 1) * HEADROOM;",
-    replace: "return Math.max(picture.x, picture.y) * HEADROOM;",
+    find: "return Math.max(picture.x, picture.smallSignal, picture.y, 1) * HEADROOM;",
+    replace: "return Math.max(picture.x, picture.smallSignal, picture.y) * HEADROOM;",
     why: "the scale forgets the loss: below threshold the loss line is off the gauge"
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "return Math.max(picture.x, picture.y, 1) * HEADROOM;",
-    replace: "return Math.max(picture.x, 1) * HEADROOM;",
+    find: "return Math.max(picture.x, picture.smallSignal, picture.y, 1) * HEADROOM;",
+    replace: "return Math.max(picture.x, picture.smallSignal, 1) * HEADROOM;",
     why: "the scale forgets the inversion: a spike runs off the bar"
   },
   {
@@ -1609,7 +1609,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var smallY = G.bottom - span * picture.x / top;",
+    find: "var smallY = G.bottom - span * picture.smallSignal / top;",
     replace: "var smallY = G.bottom - span * picture.y / top;",
     why: "the small-signal gain drawn at the gain"
   },
@@ -1650,12 +1650,6 @@ const MUTATIONS = [
     find: "if (point.t < from || point.t > chart.tNow) continue;",
     replace: "if (point.t > chart.tNow) continue;",
     why: "points older than the window drawn off the left edge"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "{ value: 1, word: inversionWords.threshold, tone: \"soft\" },",
-    replace: "{ value: derived.x, word: inversionWords.threshold, tone: \"soft\" },",
-    why: "the threshold line drawn at the pump level"
   },
   {
     file: "js/laser/ui/draw-plots.js",
@@ -1723,7 +1717,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "            showAll();                        // paused: show the exact moment\n",
+    find: "          showAll();                          // paused: show the exact moment\n",
     replace: "",
     why: "pausing leaves the readouts up to 0.1 s old"
   },
@@ -1753,8 +1747,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "else if (name === \"coupler\") state.config.refl2 = 1 - value;",
-    replace: "else if (name === \"coupler\") state.config.refl2 = value;",
+    find: "else config.refl2 = 1 - value;",
+    replace: "else config.refl2 = value;",
     why: "the coupler's transmission used as its reflectivity"
   },
   {
@@ -1771,26 +1765,26 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        beam: beamNow(),\n        pump: state.config.pumpPower",
-    replace: "        beam: 1,\n        pump: state.config.pumpPower",
+    find: "        beam: beamNow(),\n        pump: glowNow(),",
+    replace: "        beam: 1,\n        pump: glowNow(),",
     why: "the beam drawn whatever the output"
   },
   {
     file: "js/laser/page.js",
-    find: "stim: y * p, words: levelWords",
-    replace: "stim: y, words: levelWords",
+    find: "stim: Math.max(0, y * p),",
+    replace: "stim: Math.max(0, y),",
     why: "the laser arrow drawn from the inversion alone, before there is any light"
   },
   {
     file: "js/laser/page.js",
-    find: "        state.history.clear();\n",
+    find: "      state.history.clear();\n",
     replace: "",
     why: "Reset keeps the old run on the plot"
   },
   {
     file: "js/laser/page.js",
-    find: "          derived = bench.derive(state.config);\n          show();",
-    replace: "          show();",
+    find: "            take(config, numbers);\n            state.flashThreshold = threshold;",
+    replace: "            state.config = config;\n            state.flashThreshold = threshold;",
     why: "a slider changes the config but not the numbers derived from it"
   },
   {
@@ -1850,7 +1844,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "            setBehind(false);                 // paused: nothing is behind\n",
+    find: "          setBehind(false);                   // paused: nothing is behind\n",
     replace: "",
     why: "the note stays up while paused"
   },
@@ -2217,20 +2211,20 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "var rounded = round(typed, BOX_DIGITS) / shown.factor;",
+    find: "var rounded = round(typed, BOX_DIGITS) / shownOf(name).factor;",
     replace: "var rounded = round(typed, BOX_DIGITS);",
     why: "12.5 typed as per cent taken as 12.5 (1250 %)"
   },
   {
     file: "js/laser/page.js",
-    find: "var rounded = round(typed, BOX_DIGITS) / shown.factor;\n            use(clamp(rounded, range.min, range.max));",
-    replace: "var rounded = round(typed, BOX_DIGITS) / shown.factor;\n            use(rounded);",
+    find: "var rounded = round(typed, BOX_DIGITS) / shownOf(name).factor;\n            use(clamp(rounded, range.min, range.max), true);",
+    replace: "var rounded = round(typed, BOX_DIGITS) / shownOf(name).factor;\n            use(rounded, true);",
     why: "a typed 50 W accepted: beyond what the slider allows"
   },
   {
     file: "js/laser/page.js",
-    find: "var rounded = round(value, SLIDER_DIGITS);",
-    replace: "var rounded = value;",
+    find: "return clamp(round(value, SLIDER_DIGITS), range.min, range.max);",
+    replace: "return clamp(value, range.min, range.max);",
     why: "a slider giving 1.7078032… %, which the box cannot show exactly"
   },
   {
@@ -2241,21 +2235,15 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "cursor[name] = event.offsetX;",
-    replace: "cursor[name] = event.clientX;",
+    find: "cursor = event.offsetX;",
+    replace: "cursor = event.clientX;",
     why: "the pointer measured from the window, not from the chart"
   },
   {
     file: "js/laser/page.js",
-    find: "          cursor[name] = null;\n",
+    find: "        cursor = null;\n",
     replace: "",
     why: "the crosshair stays after the pointer left"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "cursor: cursor.inversion",
-    replace: "cursor: cursor.power",
-    why: "both charts following one pointer"
   },
   {
     file: "js/laser/page.js",
@@ -2265,8 +2253,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "excited: y / (1 + y),",
-    replace: "excited: y,",
+    find: "return y / (1 + y);",
+    replace: "return y;",
     why: "the cartoon's excited share is the raw inversion: every atom excited at threshold"
   },
   {
@@ -2283,9 +2271,9 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "pump: Math.min(1, derived.x / 4)\n",
-    replace: "pump: derived.x / 4\n",
-    why: "the cartoon's pump not held at its strongest"
+    find: "return Math.min(1, pumpLevel() / PUMP_FULL);",
+    replace: "return pumpLevel() / PUMP_FULL;",
+    why: "the pump's glow not held at its strongest"
   },
   {
     file: "js/laser/ui/draw-bench.js",
@@ -2295,9 +2283,9 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "pump: state.config.pumpPower / bench.RANGES.pumpPower.max,",
-    replace: "pump: state.config.pumpPower,",
-    why: "the pump light at full strength from 1 W up"
+    find: "return Math.min(1, pumpLevel() / PUMP_FULL);",
+    replace: "return Math.min(1, pumpLevel());",
+    why: "the pump's glow at full strength from threshold up"
   },
   {
     file: "js/laser/page.js",
@@ -2313,15 +2301,9 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "lines: [{ value: derived.P_out, word: powerWords.steady, tone: \"soft\" }],",
-    replace: "lines: [],",
+    find: "if (derived.P_out !== null && derived.P_out > 0) lines.push(",
+    replace: "if (false) lines.push(",
     why: "no steady-output line on the power chart"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "UI.plots.draw(view, chart(\"y\", {",
-    replace: "UI.plots.draw(view, chart(\"P\", {",
-    why: "the inversion chart plotting the power"
   },
   {
     file: "js/laser/page.js",
@@ -2386,9 +2368,9 @@ const MUTATIONS = [
   /* ---------- stage 6b: from the review ---------- */
   {
     file: "js/laser/page.js",
-    find: "          state.cartoon = newCartoon();       // no atoms or light left from the old run\n",
+    find: "      state.cartoon = newCartoon();       // no atoms or light left from the old run\n",
     replace: "",
-    why: "Reset keeping the old cartoon's atoms and photons"
+    why: "Reset or a new bench keeping the old cartoon's atoms and photons"
   },
   {
     file: "js/laser/page.js",
@@ -2410,13 +2392,13 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "var rounded = round(typed, BOX_DIGITS) / shown.factor;",
-    replace: "var rounded = typed / shown.factor;",
+    find: "var rounded = round(typed, BOX_DIGITS) / shownOf(name).factor;",
+    replace: "var rounded = typed / shownOf(name).factor;",
     why: "a typed value used with more digits than the box shows"
   },
   {
     file: "js/laser/page.js",
-    find: "        listen(canvas, \"pointerdown\", pointAt);\n",
+    find: "      listen(canvas, \"pointerdown\", pointAt);\n",
     replace: "",
     why: "a tap on a chart (no pointermove) shows no crosshair"
   },
@@ -2428,39 +2410,9 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "          cursor[name] = event.offsetX;\n          loop.redraw(canvas);",
-    replace: "          cursor[name] = event.offsetX;\n          loop.redraw();",
+    find: "        cursor = event.offsetX;\n        loop.redraw(canvas);",
+    replace: "        cursor = event.offsetX;\n        loop.redraw();",
     why: "the pointer redrawing every picture, not its chart"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "tone: \"faint\", stretch: false }",
-    replace: "tone: \"faint\" }",
-    why: "the pump level stretching the inversion axis"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "word: inversionWords.pump,",
-    replace: "word: \"\",",
-    why: "the pump level line without its word"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "if (!shownPoints || shownPoints.from !== from) {",
-    replace: "if (true) {",
-    why: "each chart taking its own copy of the points"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "if (!shownPoints || shownPoints.from !== from) {",
-    replace: "if (!shownPoints) {",
-    why: "the shared points kept after the window changed (slow motion)"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "      state.history.push(state.sim.t, powerNow(), inversionNow());\n      shownPoints = null;\n",
-    replace: "      state.history.push(state.sim.t, powerNow(), inversionNow());\n",
-    why: "the shared points never taken again after a new point"
   },
   {
     file: "js/laser/page.js",
@@ -2559,22 +2511,10 @@ const MUTATIONS = [
     why: "the pump's box a number input (loses a decimal comma)"
   },
   {
-    file: "sections/laser.html",
-    find: "class=\"laser-bench__canvas laser-bench__canvas--chart\" data-laser-canvas=\"inversion\"",
-    replace: "class=\"laser-bench__canvas\" data-laser-canvas=\"inversion\"",
-    why: "the inversion chart without the chart class"
-  },
-  {
     file: "css/laser.css",
     find: "  touch-action: pan-y;\n",
     replace: "",
     why: "a finger drag on a chart taken by the browser"
-  },
-  {
-    file: "data/laser.json",
-    find: "\"pump\": { \"hy\": \"մղում\", \"en\": \"pump\" }",
-    replace: "\"pump\": { \"hy\": \"\", \"en\": \"pump\" }",
-    why: "the pump level's word without its Armenian"
   },
   /* ---------- stage 7a: ode.rosenbrock, the seed floor, the bench ---------- */
   {
@@ -3168,6 +3108,430 @@ const MUTATIONS = [
     find: "var where = at(twoLevel ? \"twoLevel\" : \"threeLevel\", \"derivatives\");",
     replace: "var where = at(twoLevel ? \"threeLevel\" : \"twoLevel\", \"derivatives\");",
     why: "errors of three levels' f named for two levels"
+  },
+
+  /* ---------- stage 7c: choosing the laser on the page ---------- */
+  {
+    file: "js/laser/engine/bench.js",
+    find: "level = d.scheme === \"four-level\" ? d.x : d.w;",
+    replace: "level = d.x;",
+    why: "pumpNow giving the two-level atom's missing x as its pump"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level) };",
+    replace: "return { x: 0, w: level, smallSignal: -d.n_t / (1 + 2 * level) };",
+    why: "pumpNow giving the two-level atom x = 0, a threshold it does not have"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (flash === null) level = 0;",
+    replace: "if (flash === null) level = d.xPeak;",
+    why: "pumpNow pumping before the flash is fired"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "x: d.wThreshold === null ? null : level / d.wThreshold,",
+    replace: "x: level,",
+    why: "pumpNow giving three levels' w, not w over its threshold"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "else level = flashPump(d, config, flash.flashEnergy, flash.flashTime, sim.t - flash.at)(0);",
+    replace: "else level = flashPump(d, config, config.flashEnergy, flash.flashTime, sim.t - flash.at)(0);",
+    why: "pumpNow using the slider's energy, not the fired flash's"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "else level = flashPump(d, config, flash.flashEnergy, flash.flashTime, sim.t - flash.at)(0);",
+    replace: "else level = flashPump(d, config, flash.flashEnergy, config.flashTime, sim.t - flash.at)(0);",
+    why: "pumpNow with the config's t_p, not the fired flash's"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "else level = flashPump(d, config, flash.flashEnergy, flash.flashTime, sim.t - flash.at)(0);",
+    replace: "else level = flashPump(d, config, flash.flashEnergy, flash.flashTime, sim.t)(0);",
+    why: "pumpNow timing the flash from t = 0, not from when it was fired"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    refuseStrayFlash(where, sim, read);\n    var d = compute(where, config, read.medium, read.setup);\n    // The pump as advance runs it",
+    replace: "    var d = compute(where, config, read.medium, read.setup);\n    // The pump as advance runs it",
+    why: "pumpNow ignoring a flash on a bench without a lamp"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var where = at(\"pumpNow\");",
+    replace: "var where = at(\"advance\");",
+    why: "pumpNow's errors named for advance"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "\"he-ne discharge\": 1e6,",
+    replace: "\"he-ne discharge\": 1e4,",
+    why: "He-Ne starting at 1 s = 100 µs: its whole run in a few frames"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var start = START_SLOW_MOTION[config.medium + \" \" + config.pump];",
+    replace: "var start = START_SLOW_MOTION[config.medium];",
+    why: "the starting slow motion looked up by the medium alone"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var SLOW_MOTION = { min: 1e3, max: 1e9, log: true };",
+    replace: "var SLOW_MOTION = { min: 1e3, max: 1e6, log: true };",
+    why: "the slow motion stopping at 10⁶: the gas lasers too fast to watch"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "return { unit: \"mA\", factor: 1000 };",
+    replace: "return { unit: \"mA\", factor: 1 };",
+    why: "a current shown as mA but typed and read in A"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (pumpUnit() === \"A\" && controls.pump.max < 1)",
+    replace: "if (pumpUnit() === \"A\" && controls.pump.max < 0.01)",
+    why: "He-Ne's current shown in A: 0.005"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (field === \"flashEnergy\") return \"J\";",
+    replace: "if (field === \"flashEnergy\") return \"W\";",
+    why: "a flash's energy written in W"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var TWO_LEVEL_HIDES = [\"x\", \"T_best\", \"period\"];",
+    replace: "var TWO_LEVEL_HIDES = [];",
+    why: "the two-level atom showing a pump over a threshold it does not have"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "flashlamp: [\"flashThreshold\", \"x\", \"gth\", \"tau_c\", \"peak\", \"powerNow\", \"time\"]",
+    replace: "flashlamp: [\"flashThreshold\", \"x\", \"gth\", \"tau_c\", \"P_out\", \"powerNow\", \"time\"]",
+    why: "a flash showing a steady output it does not have"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "discharge: [\"currentThreshold\", \"x\",",
+    replace: "discharge: [\"pumpThreshold\", \"x\",",
+    why: "a discharge showing a threshold pump power instead of its current"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (name === \"currentThreshold\") return d.currentThreshold === null ? never :",
+    replace: "if (name === \"currentThreshold\") return d.currentThreshold === null ? \"—\" :",
+    why: "a threshold the tube never reaches written as a dash, not 'never reached'"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (name === \"coupler\" && settled) threshold = thresholdFlash(config);",
+    replace: "threshold = thresholdFlash(config);",
+    why: "the threshold flash searched again on every slider move"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            if (name === \"coupler\" && settled) threshold = thresholdFlash(config);\n",
+    replace: "",
+    why: "the threshold flash not found again for a new output mirror"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      nameThePump();\n      restart();",
+    replace: "      nameThePump();",
+    why: "a new bench keeping the old simulation, flash and all"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      state.slowMotion = startSlowMotion(config);\n",
+    replace: "",
+    why: "a new bench keeping the old slow motion"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var pump = pumps.indexOf(state.config.pump) === -1 ? pumps[0] : state.config.pump;",
+    replace: "var pump = pumps[0];",
+    why: "a new medium always taking its first pump"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          if (pumps.length === 0) {",
+    replace: "          if (false) {",
+    why: "a medium the bench cannot run accepted"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (bench.pumpsFor(state.config.medium).indexOf(pump) === -1) {",
+    replace: "if (false) {",
+    why: "a pump the medium does not have accepted"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      while (select.firstChild) select.removeChild(select.firstChild);\n",
+    replace: "",
+    why: "the options added to the old ones"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "option.disabled = item.disabled;",
+    replace: "option.disabled = false;",
+    why: "a medium not built yet offered like the others"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "text: notYet && later ? name + \" (\" + later + \")\" : name,",
+    replace: "text: name,",
+    why: "a medium not built yet not marked 'coming later'"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var name = word(data, \"media.\" + id) || id;",
+    replace: "var name = word(data, \"media.\" + id);",
+    why: "a medium with no name in the data left blank"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        selects.pump.value = state.config.pump;\n      }\n    }",
+    replace: "      }\n    }",
+    why: "the pump dropdown not showing the bench's pump"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (fire) fire.hidden = state.config.pump !== \"flashlamp\";",
+    replace: "if (fire) fire.hidden = false;",
+    why: "Fire shown on a bench without a flashlamp"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          if (!state.playing) play();\n",
+    replace: "",
+    why: "Fire on a paused page: the flash never runs"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          state.peak = powerNow();\n",
+    replace: "          state.peak = 0;\n",
+    why: "the highest output since Fire starting from nothing, not from the output at Fire"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        if (state.peak !== null) state.peak = Math.max(state.peak, powerNow());\n",
+    replace: "",
+    why: "the highest output since Fire never updated"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      state.peak = null;\n      remember();",
+    replace: "      remember();",
+    why: "Reset keeping the old flash's highest output"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "return (derived.N_t + state.sim.N) / (2 * derived.N_t);",
+    replace: "return (derived.N_t + state.sim.N) / derived.N_t;",
+    why: "the cartoon's excited share N₂/N_t written as 2N₂/N_t"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        y: Math.max(0, y),\n",
+    replace: "        y: y,\n",
+    why: "the level picture's bar below zero for three levels"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        x: pumpLevel(),\n",
+    replace: "        x: derived.x,\n",
+    why: "the level picture's pump from the steady numbers: none for a flash"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        pump: glowNow(),\n        transmission",
+    replace: "        pump: 1,\n        transmission",
+    why: "the pump on the bench always glowing fully"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (derived.P_out !== null && derived.P_out > 0) lines.push(",
+    replace: "if (true) lines.push(",
+    why: "a steady-output line on a flash's chart"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (name === \"pump\") setText('[data-laser-name=\"pump\"]', word(data, \"controls.pump.\" + state.config.pump));",
+    replace: "if (name === \"pump\") setText('[data-laser-name=\"pump\"]', word(data, \"controls.pump.diode\"));",
+    why: "the pump slider always named for diodes"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });\n",
+    replace: "",
+    why: "a new bench's sliders left at the old bench's values and ranges"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      showRows();\n      showFire();\n      setBehind(false);",
+    replace: "      showFire();\n      setBehind(false);",
+    why: "a new bench showing the old bench's readouts"
+  },
+  {
+    file: "sections/laser.html",
+    find: "data-laser-action=\"fire\" data-text=\"buttons.fire\" hidden>",
+    replace: "data-laser-action=\"fire\" data-text=\"buttons.fire\">",
+    why: "Fire shown before page.js has run"
+  },
+  {
+    file: "css/laser.css",
+    find: ".laser-stage [hidden] {\n  display: none;\n}",
+    replace: ".laser-stage [hidden] {\n  opacity: 0.5;\n}",
+    why: "hidden readouts and Fire shown by their own display rules"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"ruby\": { \"hy\": \"Ռուբին\", \"en\": \"Ruby\" },",
+    replace: "\"ruby\": { \"hy\": \"\", \"en\": \"Ruby\" },",
+    why: "ruby without its Armenian name"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"flashlamp\": { \"hy\": \"Բռնկման էներգիա (էլեկտրական)\", \"en\": \"Flash energy (electrical)\" },",
+    replace: "\"flashlamp\": { \"hy\": \"Բռնկման էներգիա (էլեկտրական)\", \"en\": \"\" },",
+    why: "the flash slider without its English name"
+  },
+
+  /* ---------- stage 7c: the review's fixes ---------- */
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "return Math.max(picture.x, picture.smallSignal, picture.y, 1) * HEADROOM;",
+    replace: "return Math.max(picture.x, picture.y, 1) * HEADROOM;",
+    why: "the scale forgets the small-signal gain: ruby's dashed line above the gauge"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "var smallY = G.bottom - span * picture.smallSignal / top;",
+    replace: "var smallY = G.bottom - span * picture.x / top;",
+    why: "the dashed small-signal line drawn at the pump x: wrong for three levels"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (d.scheme === \"four-level\") return { x: level, w: null, smallSignal: level };",
+    replace: "if (d.scheme === \"four-level\") return { x: level, w: level, smallSignal: level };",
+    why: "pumpNow giving four levels a w"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "smallSignal: d.n_t * (level - 1) / (level + 1)",
+    replace: "smallSignal: level / d.wThreshold",
+    why: "three levels' small-signal gain taken as w/w_th"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "smallSignal: d.n_t * (level - 1) / (level + 1)",
+    replace: "smallSignal: d.n_t * (level - 1) / (level + 2)",
+    why: "three levels' small-signal gain with the wrong denominator"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level) };",
+    replace: "return { x: null, w: level, smallSignal: -d.n_t / (1 + level) };",
+    why: "two levels' small-signal gain without the pump's own emission (2w)"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      else if (d.wThreshold !== null) d.xPeak = peak / d.wThreshold;\n      return d;",
+    replace: "      else if (d.wThreshold !== null) d.xPeak = peak / d.wThreshold;\n      else d.xPeak = 0;\n      return d;",
+    why: "the two-level flash given xPeak = 0, a threshold it does not have"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      d.w = pumpLevel(d, config, config.pumpPower);     // x stays null: no threshold",
+    replace: "      d.w = pumpLevel(d, config, config.pumpPower);\n      d.x = 0;",
+    why: "the two-level atom's derive giving x = 0, not null"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (name === \"coupler\" && settled) threshold = thresholdFlash(config);",
+    replace: "if (name === \"coupler\") threshold = thresholdFlash(config);",
+    why: "the threshold flash searched at every step of a drag"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            if (name === \"coupler\") state.flashThresholdOld = !settled;\n",
+    replace: "",
+    why: "a drag of the output mirror showing the old mirror's threshold flash"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          listen(slider, \"change\", function () { use(sliderValue(), true); });\n",
+    replace: "",
+    why: "a slider let go never settles: the threshold flash waits for ever"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var threshold = thresholdFlash(config);\n      take(config, numbers);",
+    replace: "      take(config, numbers);\n      var threshold = thresholdFlash(config);",
+    why: "a new bench taken before its threshold search: a failed search leaves it half-taken"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            var config = Object.assign({}, state.config);",
+    replace: "            var config = state.config;",
+    why: "a slider changing the config in place: a failed search leaves it changed"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        smallSignal: Math.max(0, pumpNow().smallSignal),",
+    replace: "        smallSignal: pumpLevel(),",
+    why: "the gauge's dashed line at the pump, not at g₀/g_th"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        smallSignal: Math.max(0, pumpNow().smallSignal),",
+    replace: "        smallSignal: pumpNow().smallSignal,",
+    why: "the two-level atom's small-signal gain drawn below the gauge"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (derived.P_out !== null && derived.P_out > 0) lines.push(",
+    replace: "if (derived.P_out !== null) lines.push(",
+    why: "a steady-output line at 0 W: below threshold, and for the two-level atom"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (pumpKept.sim !== state.sim || pumpKept.derived !== derived) {",
+    replace: "      if (true) {",
+    why: "the pump worked out again for every picture"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (pumpKept.sim !== state.sim || pumpKept.derived !== derived) {",
+    replace: "      if (pumpKept.sim !== state.sim) {",
+    why: "the pump kept after a slider move"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      return pump.x !== null ? pump.x : pump.w;",
+    replace: "      return pump.x;",
+    why: "the two-level atom's pump arrow and glow from the x it does not have"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      labels.pump = word(data, \"bench.pumps.\" + state.config.pump) || anyPump;",
+    replace: "      labels.pump = anyPump;",
+    why: "the drawing's pump not named for the chosen pump"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      nameThePump();\n      restart();",
+    replace: "      restart();",
+    why: "the drawing keeping the old bench's pump name"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"flashlamp\": { \"hy\": \"Բռնկման լամպ\", \"en\": \"Flashlamp\" },\n      \"discharge\": { \"hy\": \"Էլեկտրական պարպում\", \"en\": \"Electric discharge\" }\n    }\n  },",
+    replace: "\"flashlamp\": { \"hy\": \"\", \"en\": \"Flashlamp\" },\n      \"discharge\": { \"hy\": \"Էլեկտրական պարպում\", \"en\": \"Electric discharge\" }\n    }\n  },",
+    why: "the flashlamp's name on the drawing without its Armenian"
   }
 
 ];

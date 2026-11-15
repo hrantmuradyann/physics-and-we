@@ -9,44 +9,94 @@
       "en": "A laser is made of a few parts: a medium that amplifies light, a pump that gives it energy, and two mirrors that send the light back and forth. Here you will put a laser together from these parts and see when, and why, it starts to shine."
     },
     "status": {
-      "hy": "Լաբորատորիան դեռ կառուցվում է։ Առայժմ այստեղ մեկ լազեր է՝ Nd:YAG, որն անընդհատ մղվում է լազերային դիոդներով։ Մյուս մասերը կավելանան հաջորդ քայլերում։",
-      "en": "This lab is still being built. For now it has one laser, Nd:YAG, pumped continuously by laser diodes; more parts come next."
+      "hy": "Լաբորատորիան դեռ կառուցվում է։ Սահիչների վերևում ընտրեք ակտիվ միջավայրը և մղումը։ CaF₂:Dy-ն, կիսահաղորդչային լազերը և մյուս մասերը կավելանան հաջորդ քայլերում։",
+      "en": "This lab is still being built. Choose a gain medium and a pump above the sliders; CaF₂:Dy, the semiconductor laser and more parts come next."
     }
   },
 
   "bench": {
-    "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short. After 'transmission' the drawing writes the number, as in 'Transmission 5.00 %'.",
+    "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short. After 'transmission' the drawing writes the number, as in 'Transmission 5.00 %'. 'pumps' is the name written under the pump, one for each kind of pump ('parts.pump' is used for a pump that has none).",
     "alt": {
-      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, նրանց միջև՝ ակտիվ միջավայրի ձող, իսկ ձողի տակ՝ մղման դիոդներ։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։",
-      "en": "A drawing of a laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, between them a rod of gain medium, and under the rod the pump diodes. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror."
+      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, նրանց միջև՝ ակտիվ միջավայրի ձող, իսկ ձողի տակ՝ մղումը, որը նրան էներգիա է տալիս։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։",
+      "en": "A drawing of a laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, between them a rod of gain medium, and under the rod the pump that gives it energy. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror."
     },
     "parts": {
       "backMirror": { "hy": "Հետին հայելի", "en": "Back mirror" },
       "outputMirror": { "hy": "Ելքային հայելի", "en": "Output mirror" },
       "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
-      "pump": { "hy": "Մղման դիոդներ", "en": "Pump diodes" },
+      "pump": { "hy": "Մղում", "en": "Pump" },
       "transmission": { "hy": "Թափանցելիություն", "en": "Transmission" }
+    },
+    "pumps": {
+      "diode": { "hy": "Մղման դիոդներ", "en": "Pump diodes" },
+      "laser": { "hy": "Մղող լազեր", "en": "Pump laser" },
+      "flashlamp": { "hy": "Բռնկման լամպ", "en": "Flashlamp" },
+      "discharge": { "hy": "Էլեկտրական պարպում", "en": "Electric discharge" }
     }
   },
 
+  "choose": {
+    "_readme": "The two dropdowns above the sliders: the gain medium, and the pumps that medium can use. 'later' is added in brackets after a medium the lab cannot simulate yet.",
+    "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
+    "pump": { "hy": "Մղում", "en": "Pump" },
+    "later": { "hy": "հետագայում", "en": "coming later" }
+  },
+
+  "media": {
+    "_readme": "The names of the gain media in the dropdown, in the order the page lists them.",
+    "ruby": { "hy": "Ռուբին", "en": "Ruby" },
+    "nd-glass": { "hy": "Nd:ապակի", "en": "Nd:glass" },
+    "nd-yag": { "hy": "Nd:YAG", "en": "Nd:YAG" },
+    "caf2-dy": { "hy": "CaF₂:Dy", "en": "CaF₂:Dy" },
+    "he-ne": { "hy": "Հելիում-նեոն", "en": "Helium-neon" },
+    "ar-ion": { "hy": "Արգոնի իոն", "en": "Argon ion" },
+    "co2": { "hy": "Ածխաթթու գազ (CO₂)", "en": "Carbon dioxide (CO₂)" },
+    "diode": { "hy": "Կիսահաղորդչային դիոդ", "en": "Semiconductor diode" },
+    "dye-r6g": { "hy": "Ներկանյութ (ռոդամին 6G)", "en": "Dye (rhodamine 6G)" },
+    "ti-sapphire": { "hy": "Տիտան-շափյուղա", "en": "Titanium-sapphire" },
+    "two-level": { "hy": "Երկմակարդակ ատոմ", "en": "Two-level atom" }
+  },
+
+  "pumps": {
+    "_readme": "The names of the pumps in the second dropdown.",
+    "diode": { "hy": "Լազերային դիոդներ", "en": "Laser diodes" },
+    "laser": { "hy": "Մեկ այլ լազեր", "en": "Another laser" },
+    "flashlamp": { "hy": "Բռնկման լամպ", "en": "Flashlamp" },
+    "discharge": { "hy": "Էլեկտրական պարպում", "en": "Electric discharge" }
+  },
+
   "controls": {
-    "_readme": "The names of the sliders. Each slider also has a box to type a number in; the units (W, %, ×) are written by the page.",
-    "pump": { "hy": "Մղման հզորություն (կլանված)", "en": "Pump power (absorbed)" },
+    "_readme": "The names of the sliders. The pump slider's name depends on the pump chosen. Each slider also has a box to type a number in; the units (W, J, A, mA, %, ×) are written by the page.",
+    "pump": {
+      "diode": { "hy": "Մղման հզորություն (կլանված)", "en": "Pump power (absorbed)" },
+      "laser": { "hy": "Մղող լազերի հզորություն (կլանված)", "en": "Pump laser power (absorbed)" },
+      "flashlamp": { "hy": "Բռնկման էներգիա (էլեկտրական)", "en": "Flash energy (electrical)" },
+      "discharge": { "hy": "Պարպման հոսանք", "en": "Discharge current" }
+    },
     "coupler": { "hy": "Ելքային հայելու թափանցելիություն", "en": "Output mirror transmission" },
     "slowMotion": { "hy": "Դանդաղեցում", "en": "Slow motion" }
   },
 
+  "buttons": {
+    "_readme": "The button that fires the flashlamp; it is shown only when the pump is a flashlamp.",
+    "fire": { "hy": "Բռնկել լամպը", "en": "Fire the flash" }
+  },
+
   "readouts": {
-    "_readme": "The names of the numbers the page shows. 'Steady' means the value the laser settles to.",
+    "_readme": "The names of the numbers the page shows; each pump shows some of them. 'Steady' means the value the laser settles to. 'never' is written instead of a threshold the laser cannot reach.",
     "pumpThreshold": { "hy": "Շեմային մղման հզորություն", "en": "Threshold pump power" },
-    "x": { "hy": "Մղում ÷ շեմ", "en": "Pump ÷ threshold" },
+    "currentThreshold": { "hy": "Շեմային հոսանք", "en": "Threshold current" },
+    "flashThreshold": { "hy": "Բռնկման շեմային էներգիա", "en": "Threshold flash energy" },
+    "x": { "hy": "Մղումը հիմա ÷ շեմ", "en": "Pump now ÷ threshold" },
     "gth": { "hy": "Շեմային ուժեղացում", "en": "Threshold gain" },
     "tau_c": { "hy": "Ֆոտոնի կյանքը ռեզոնատորում", "en": "Photon lifetime in the cavity" },
     "P_out": { "hy": "Ելքային հզորություն (կայուն)", "en": "Output power (steady)" },
+    "peak": { "hy": "Ամենաբարձր ելքային հզորությունը բռնկումից ի վեր", "en": "Highest output since the flash" },
     "powerNow": { "hy": "Ելքային հզորություն հիմա", "en": "Output power now" },
     "T_best": { "hy": "Լավագույն ելքային հայելի", "en": "Best output mirror" },
     "period": { "hy": "Ռելաքսացիոն տատանումների պարբերություն", "en": "Relaxation oscillation period" },
-    "time": { "hy": "Մոդելավորված ժամանակ", "en": "Simulated time" }
+    "time": { "hy": "Մոդելավորված ժամանակ", "en": "Simulated time" },
+    "never": { "hy": "անհասանելի", "en": "never reached" }
   },
 
   "notes": {
@@ -59,8 +109,8 @@
   "power": {
     "_readme": "The big chart of the output power against time. 'title' is written above it; 'steady' beside the dashed line of the steady output: keep both short. The numbers and units on the axes are written by the page.",
     "alt": {
-      "hy": "Լազերի ելքային հզորության գրաֆիկն ըստ ժամանակի․ ուղղահայաց առանցքին՝ հզորությունը, հորիզոնականին՝ մոդելավորված ժամանակը։ Կետագիծը կայուն ելքային հզորությունն է։",
-      "en": "A chart of the laser's output power against time: the power on the vertical axis, the simulated time on the horizontal one. The dashed line is the steady output power."
+      "hy": "Լազերի ելքային հզորության գրաֆիկն ըստ ժամանակի․ ուղղահայաց առանցքին՝ հզորությունը, հորիզոնականին՝ մոդելավորված ժամանակը։ Անընդհատ մղման դեպքում կետագիծը ցույց է տալիս կայուն ելքային հզորությունը։",
+      "en": "A chart of the laser's output power against time: the power on the vertical axis, the simulated time on the horizontal one. With a steady pump, a dashed line marks the steady output power."
     },
     "words": {
       "title": { "hy": "Ելքային հզորություն", "en": "Output power" },
@@ -99,19 +149,6 @@
     }
   },
 
-  "inversion": {
-    "_readme": "The small chart of the inversion against time. 'title' is written above it, 'threshold' beside its dashed line, 'pump' beside the fainter dashed line of the pump level (shown when the curve comes near it).",
-    "alt": {
-      "hy": "Ինվերսիայի գրաֆիկն ըստ ժամանակի՝ համեմատած իր շեմային արժեքի հետ (կետագիծ)։ Ավելի թույլ կետագիծը ցույց է տալիս մղման մակարդակը՝ որտեղ ինվերսիան կկայունանար առանց լազերային լույսի։",
-      "en": "A chart of the inversion against time, compared with its threshold value (the dashed line). A fainter dashed line marks the pump level: where the inversion would settle without laser light."
-    },
-    "words": {
-      "title": { "hy": "Ինվերսիա ÷ շեմ", "en": "Inversion ÷ threshold" },
-      "threshold": { "hy": "շեմ", "en": "threshold" },
-      "pump": { "hy": "մղում", "en": "pump" }
-    }
-  },
-
   "learn": {
     "_readme": "The theory at the bottom of the page. 'button' is the button above the bench that leads to it. 'chapters' is a list: add, remove or reorder chapters freely. In a chapter's 'text', an empty line (\\n\\n) starts a new paragraph and **two stars** make words bold.",
     "button": { "hy": "Խորանալ լազերի ֆիզիկայի մեջ", "en": "Dig deeper into the physics of the laser" },
@@ -131,8 +168,8 @@
       {
         "title": { "hy": "Մղումը և հայելիները", "en": "The pump and the mirrors" },
         "text": {
-          "hy": "Ատոմները գրգռված չեն մնում, ուստի ինչ-որ բան պետք է անընդհատ նրանց նորից գրգռի․ դա **մղումն** է։ Այստեղ դա լազերային դիոդների լույսն է, որն ընկնում է ձողի վրա։\n\nՁողի միջով մեկ անցումը լույսը միայն մի փոքր է ուժեղացնում։ Երկու **հայելիները** լույսը նորից ու նորից վերադարձնում են ձողի մեջ, և ամեն անցման ժամանակ այն աճում է։ Հայելիներից մեկն անդրադարձնում է գրեթե ամբողջ լույսը։ Մյուսը՝ ելքային հայելին, մի փոքր մաս բաց է թողնում․ հենց այդ մասն է լազերի ճառագայթը։",
-          "en": "Atoms do not stay excited, so something must keep lifting them: the **pump**. Here it is the light of laser diodes shining into the rod.\n\nOne pass through the rod amplifies light only a little. Two **mirrors** send it back through the rod again and again, so it grows on every pass. One mirror reflects almost everything. The other, the output mirror, lets a small part through: that part is the laser beam."
+          "hy": "Ատոմները գրգռված չեն մնում, ուստի ինչ-որ բան պետք է անընդհատ նրանց նորից գրգռի․ դա **մղումն** է։ Նստարանին այն կարող եք ընտրել՝ լազերային դիոդների կամ մեկ այլ լազերի լույս, բռնկման լամպ կամ էլեկտրական հոսանք գազի միջով։\n\nՁողի միջով մեկ անցումը լույսը միայն մի փոքր է ուժեղացնում։ Երկու **հայելիները** լույսը նորից ու նորից վերադարձնում են ձողի մեջ, և ամեն անցման ժամանակ այն աճում է։ Հայելիներից մեկն անդրադարձնում է գրեթե ամբողջ լույսը։ Մյուսը՝ ելքային հայելին, մի փոքր մաս բաց է թողնում․ հենց այդ մասն է լազերի ճառագայթը։",
+          "en": "Atoms do not stay excited, so something must keep lifting them: the **pump**. On the bench you can choose it: the light of laser diodes or of another laser, a flashlamp, or an electric current through a gas.\n\nOne pass through the rod amplifies light only a little. Two **mirrors** send it back through the rod again and again, so it grows on every pass. One mirror reflects almost everything. The other, the output mirror, lets a small part through: that part is the laser beam."
         }
       },
       {
