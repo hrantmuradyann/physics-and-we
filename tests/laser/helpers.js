@@ -58,10 +58,12 @@ const ENGINE_FILES = [
 const UI_FILES = [
   "loop.js",
   "format.js",
+  "axis.js",
   "history.js",
   "draw-bench.js",
   "draw-levels.js",
-  "draw-plots.js"
+  "draw-plots.js",
+  "draw-photons.js"
 ];
 
 // Loads the engine into a fresh, empty sandbox and returns

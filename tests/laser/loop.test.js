@@ -367,6 +367,38 @@ test("two canvases share one frame loop", () => {
   loop.destroy();
 });
 
+test("redraw(canvas): a paused loop draws only that canvas; an unknown one draws nothing", () => {
+  const browser = createBrowser();
+  browser.load("js/laser/ui/loop.js");
+  const a = fakeCanvas(600);
+  const b = fakeCanvas(300);
+  const drawn = [];
+  function spec(parts, name) {
+    return {
+      canvas: parts.canvas, box: parts.box, aspect: 2, minHeight: 50, maxHeight: 500,
+      draw(view) { drawn.push([name, view.dt]); }
+    };
+  }
+  const loop = browser.window.LaserUI.loop.create({ canvases: [spec(a, "a"), spec(b, "b")], running: false });
+  browser.setOnScreen(a.canvas, true);
+  browser.setOnScreen(b.canvas, true);
+  drawn.length = 0;
+  loop.redraw(b.canvas);
+  assert.deepEqual(drawn, [["b", 0]]);
+  loop.redraw(fakeCanvas(100).canvas);
+  assert.deepEqual(drawn, [["b", 0]], "a canvas the loop does not have");
+  loop.redraw();
+  assert.deepEqual(drawn, [["b", 0], ["a", 0], ["b", 0]], "with no canvas, all of them");
+  // Running, the next frame draws it anyway.
+  loop.play();
+  drawn.length = 0;
+  loop.redraw(a.canvas);
+  assert.deepEqual(drawn, []);
+  loop.destroy();
+  loop.redraw(a.canvas);
+  assert.deepEqual(drawn, []);
+});
+
 test("create refuses what it cannot draw, naming itself", () => {
   const browser = createBrowser();
   browser.load("js/laser/ui/loop.js");

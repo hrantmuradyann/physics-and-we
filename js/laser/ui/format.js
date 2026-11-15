@@ -4,6 +4,8 @@
      LaserUI.format.si(3.19e-8, "s")       -> "31.9 ns"   (SI prefix)
      LaserUI.format.si(2.41e6, "Hz", 2)    -> "2.4 MHz"   (2 significant digits)
      LaserUI.format.number(0.71293)        -> "0.713"     (no prefix: m⁻¹, %, ×)
+     LaserUI.format.prefix(0.0074)         -> { power: -3, symbol: "m" }
+     LaserUI.format.plain(13.1826)         -> "13.2"      (for a number box)
      LaserUI.format.fromSlider(range, f)   slider position f (0 to 1) -> value
      LaserUI.format.toSlider(range, v)     value -> slider position
        range: { min, max, log }; a log range moves by the same factor for
@@ -61,6 +63,30 @@
     return rounded.toFixed(decimals);
   }
 
+  // The prefix for a value: the largest one not above it (femto for
+  // anything smaller, tera for anything larger, none for 0).
+  function prefixOf(size) {
+    var chosen = PREFIXES[0];
+    for (var i = 0; i < PREFIXES.length; i++) {
+      if (size >= Number("1e" + PREFIXES[i].power)) chosen = PREFIXES[i];
+    }
+    return chosen;
+  }
+
+  // prefix(value) -> { power, symbol }: 0.0074 -> { power: -3, symbol: "m" }.
+  function prefix(value) {
+    if (!isNumber(value) || value === 0) return { power: 0, symbol: "" };
+    var chosen = prefixOf(Math.abs(value));
+    return { power: chosen.power, symbol: chosen.symbol };
+  }
+
+  // plain(value, digits) -> the text a number box shows: `digits`
+  // significant digits (3), a plain point, no unit: "5", "13.2", "10000".
+  function plain(value, digits) {
+    if (!isNumber(value)) return "";
+    return String(Number(value.toPrecision(digits || 3)));
+  }
+
   function number(value, digits) {
     if (!isNumber(value)) return DASH;
     var places = digits || 3;
@@ -87,11 +113,8 @@
       var bound = value < 0 ? ">" + NO_BREAK + MINUS : "<" + NO_BREAK;
       return bound + "1" + NO_BREAK + PREFIXES[0].symbol + unit;
     }
-    var chosen = PREFIXES[0];
-    for (var i = 0; i < PREFIXES.length; i++) {
-      if (rounded >= Math.pow(10, PREFIXES[i].power)) chosen = PREFIXES[i];
-    }
-    var scaled = rounded / Math.pow(10, chosen.power);
+    var chosen = prefixOf(rounded);
+    var scaled = rounded / Number("1e" + chosen.power);
     return signOf(value) + significant(scaled, places) + NO_BREAK + chosen.symbol + unit;
   }
 
@@ -138,6 +161,8 @@
   UI.format = Object.freeze({
     si: si,
     number: number,
+    prefix: prefix,
+    plain: plain,
     fromSlider: fromSlider,
     toSlider: toSlider
   });

@@ -4,8 +4,11 @@
 
    It connects the parts and owns nothing else: the physics is in
    js/laser/engine/ (this file only calls LaserEngine.bench), the drawing in
-   js/laser/ui/. Build stage 6: one Nd:YAG laser, pumped continuously, with
-   sliders for the pump, the output coupler and the slow motion.
+   js/laser/ui/. One Nd:YAG laser, pumped continuously, with a slider and a
+   number box each for the pump, the output coupler and the slow motion,
+   and five pictures: the bench, the chart of the output power, the
+   cartoon of atoms and photons, the energy levels, and the chart of the
+   inversion (docs/laser-plan.md, stages 6 and 6b).
 
    WHY IT TAKES ITSELF DOWN FIRST
    The router (js/router.js) fires "section:ready" for this page more often
@@ -19,13 +22,13 @@
 
    WHAT SURVIVES A REBUILD
    The experiment itself (`state` below: the bench, the simulation, the
-   plot's history, Play/Pause) lives outside the build, so a language
-   switch changes the words, not the experiment.
+   charts' history, the cartoon, Play/Pause) lives outside the build, so a
+   language switch changes the words, not the experiment.
 
    TIME
    Each frame moves the simulation by (real seconds) / (slow motion), in
-   pieces (one plot point each) that share FRAME_STEPS solver steps: about
-   POINTS_PER_SECOND points a second of screen time, so the plot holds the
+   pieces (one chart point each) that share FRAME_STEPS solver steps: about
+   POINTS_PER_SECOND points a second of screen time, so the charts hold the
    same stretch of time on a 60 Hz and a 240 Hz screen. When the steps run
    out the simulation falls behind instead of freezing the page; if that
    happens in more than a quarter of the frames of a second, a note says
@@ -44,13 +47,15 @@
 
   var ROUTE = "laser";
   var SLIDER_STEPS = 1000;                            // a slider runs 0..1000
+  var SLIDER_DIGITS = 4;                              // a slider gives values of 4 digits: 13.46 W
+  var BOX_DIGITS = 6;                                 // a number box shows and gives 6 digits
   var SLOW_MOTION = { min: 1e3, max: 1e6, log: true };
   var START_SLOW_MOTION = 1e4;                        // 1 s on screen = 100 µs
-  var POINTS_PER_SECOND = 480;                        // plot points a second of screen time
+  var POINTS_PER_SECOND = 480;                        // chart points a second of screen time
   var MAX_PIECES = 8;                                 // at most 8 a frame (60 Hz and slower)
   var FRAME_STEPS = 1500;                             // solver steps per frame
-  var WINDOW = 5;                                     // s of screen time on the plot
-  // Points the plot keeps. 480 a second × WINDOW = 2400 up to 480 Hz; a
+  var WINDOW = 5;                                     // s of screen time on the charts
+  // Points the charts keep. 480 a second × WINDOW = 2400 up to 480 Hz; a
   // faster screen gets one a frame, so 16384 is enough up to 3000 Hz (the
   // first version kept 8 a frame in 4096 points, which cut the plot short
   // on a 120 Hz Mac).
@@ -58,14 +63,23 @@
   var READOUT_EVERY = 0.1;                            // s between live readouts
   var BEHIND_EVERY = 1;                               // s of frames judged for the note
   var BEHIND_SHARE = 0.25;                            // the note shows above this share
+  var CARTOON = { cols: 12, rows: 5 };                // the atoms of the photon picture
   var NO_BREAK = " ";
 
   var CONTROLS = ["pump", "coupler", "slowMotion"];
+  // What a number box shows: the value times `factor`, in `unit`.
+  var SHOWN = {
+    pump: { unit: "W", factor: 1 },
+    coupler: { unit: "%", factor: 100 },
+    slowMotion: { unit: "×", factor: 1 }
+  };
   var DERIVED_READOUTS = ["pumpThreshold", "x", "gth", "tau_c", "P_out", "T_best", "period"];
   var LIVE_READOUTS = ["powerNow", "time"];
-  var CANVASES = ["bench", "levels", "plots"];
+  var CANVASES = ["bench", "power", "photons", "levels", "inversion"];
+  var CHARTS = ["power", "inversion"];                // the canvases that follow the pointer
   var LEVEL_WORDS = ["pumpBand", "upper", "lower", "ground", "gain", "loss"];
-  var PLOT_WORDS = ["power", "inversion", "threshold", "time"];
+  var POWER_WORDS = ["title", "steady"];
+  var INVERSION_WORDS = ["title", "threshold", "pump"];
 
   var teardown = null;          // takes the current build down, or null
   var state = null;             // the experiment, kept across rebuilds
@@ -75,23 +89,55 @@
       root.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
+  // The cartoon of atoms and photons: an illustration with random events
+  // of its own (js/laser/ui/draw-photons.js), not the physics.
+  function newCartoon() {
+    return root.LaserUI.photons.create({ cols: CARTOON.cols, rows: CARTOON.rows, random: Math.random });
+  }
+
   function newState() {
     var bench = root.LaserEngine.bench;
-    var history = root.LaserUI.history.create(HISTORY_SIZE);
-    var experiment = {
+    return {
       config: bench.defaultConfig(),
       sim: bench.start(),
-      history: history,
+      history: root.LaserUI.history.create(HISTORY_SIZE),
+      cartoon: newCartoon(),
       slowMotion: START_SLOW_MOTION,
       playing: !prefersLessMotion(),
       behind: false
     };
-    return experiment;
   }
 
   // One word from data/laser.json in the visitor's language ("" if missing).
   function word(data, path) {
     return root.Content.inLang(root.Content.valueAt(data, path), root.Site.lang);
+  }
+
+  // The words `names` under `path`, as { name: word }.
+  function wordsAt(data, path, names) {
+    var words = {};
+    names.forEach(function (name) { words[name] = word(data, path + "." + name); });
+    return words;
+  }
+
+  function clamp(value, low, high) {
+    return Math.min(high, Math.max(low, value));
+  }
+
+  // A value rounded to `digits` significant digits: 13.4612 -> 13.46.
+  function round(value, digits) {
+    return Number(value.toPrecision(digits));
+  }
+
+  // The number typed into a box, or NaN. A decimal comma is read as a
+  // point (Armenian writes 13,5), and spaces between digits are dropped
+  // (10 000). The boxes are type="text" for this: a type="number" box
+  // hands the page "" for "13,5" in some browsers (iOS Safari), and the
+  // typed value was lost without a word (stage 6b review).
+  function readNumber(text) {
+    var cleaned = String(text).replace(/[\s\u00a0]/g, "").replace(",", ".");
+    if (cleaned === "") return NaN;
+    return Number(cleaned);
   }
 
   function siteWord(key) {
@@ -119,6 +165,8 @@
     else state.slowMotion = value;
   }
 
+  // A value as a sentence: for screen readers on the slider, and under
+  // the slow-motion slider.
   function valueText(name, value) {
     var F = root.LaserUI.format;
     if (name === "pump") return F.si(value, "W");
@@ -134,10 +182,12 @@
   // layout failed to load, so the router put an error message there).
   function build(container, data) {
     var found = {};
+    var any = false;
     CANVASES.forEach(function (name) {
       found[name] = container.querySelector('[data-laser-canvas="' + name + '"]');
+      if (found[name]) any = true;
     });
-    if (!found.bench && !found.levels && !found.plots) return null;
+    if (!any) return null;
     if (!state) state = newState();
 
     var bench = root.LaserEngine.bench;
@@ -145,6 +195,7 @@
     var F = UI.format;
     var derived = bench.derive(state.config);
     var sinceReadout = 0;
+    var cursor = { power: null, inversion: null };    // the pointer over a chart, CSS px
     var unhook = [];            // functions that remove this build's listeners
 
     function find(selector) {
@@ -158,14 +209,11 @@
     }
 
     /* the words */
-    var labels = {};
-    UI.bench.PARTS.forEach(function (part) {
-      labels[part] = word(data, "bench.parts." + part);
-    });
-    var levelWords = {};
-    LEVEL_WORDS.forEach(function (name) { levelWords[name] = word(data, "levels.words." + name); });
-    var plotWords = {};
-    PLOT_WORDS.forEach(function (name) { plotWords[name] = word(data, "plots.words." + name); });
+    var labels = wordsAt(data, "bench.parts", UI.bench.PARTS);
+    var levelWords = wordsAt(data, "levels.words", LEVEL_WORDS);
+    var powerWords = wordsAt(data, "power.words", POWER_WORDS);
+    var inversionWords = wordsAt(data, "inversion.words", INVERSION_WORDS);
+    var photonWords = wordsAt(data, "photons.words", UI.photons.WORDS);
 
     // Each picture's name for screen readers (role="img" is in the layout):
     // its description, or else the page title. With neither, an unnamed
@@ -191,8 +239,17 @@
     function inversionNow() {
       return state.sim.N / derived.N_c;
     }
+    // The light's strength for the pictures: the output over the output at
+    // twice threshold.
+    function beamNow() {
+      return powerNow() / derived.powerPerP;
+    }
+    // The chart points of this moment, taken once and shared by the two
+    // charts (stage 6b review: each took its own copy every frame).
+    var shownPoints = null;
     function remember() {
       state.history.push(state.sim.t, powerNow(), inversionNow());
+      shownPoints = null;
     }
     if (state.history.size() === 0) remember();
 
@@ -272,6 +329,16 @@
         }
       }
       judgeFrame(dt, behind);
+
+      // The cartoon acts the simulation out in screen time: half of its
+      // atoms excited at threshold (y = 1), its light as bright as the beam.
+      var y = inversionNow();
+      state.cartoon.step(dt, {
+        excited: y / (1 + y),
+        light: UI.bench.rayAlpha(beamNow()),
+        pump: Math.min(1, derived.x / 4)
+      });
+
       sinceReadout += dt;
       if (sinceReadout >= READOUT_EVERY) {
         sinceReadout = 0;
@@ -293,6 +360,7 @@
       };
     }
 
+    /* the pictures */
     var canvases = [];
     function addCanvas(name, size, draw) {
       var canvas = found[name];
@@ -306,8 +374,45 @@
         draw: pauseOnError(draw)
       });
     }
+    // The points of the last WINDOW seconds of screen time. Every change
+    // to the history goes through remember(), which forgets them.
+    function pointsFrom(from) {
+      if (!shownPoints || shownPoints.from !== from) {
+        shownPoints = { from: from, list: state.history.points(from) };
+      }
+      return shownPoints.list;
+    }
+    // One chart of the last WINDOW seconds of screen time.
+    function chart(key, more) {
+      var shownTime = WINDOW / state.slowMotion;          // simulated s on the chart
+      var settings = {
+        points: pointsFrom(state.sim.t - shownTime),
+        key: key,
+        tNow: state.sim.t,
+        shownTime: shownTime
+      };
+      Object.keys(more).forEach(function (name) { settings[name] = more[name]; });
+      return settings;
+    }
     addCanvas("bench", UI.bench.SIZE, function (view) {
-      UI.bench.draw(view, labels, { beam: powerNow() / derived.powerPerP });
+      UI.bench.draw(view, labels, {
+        beam: beamNow(),
+        pump: state.config.pumpPower / bench.RANGES.pumpPower.max,
+        transmission: 1 - state.config.refl2
+      });
+    });
+    addCanvas("power", UI.plots.SIZE, function (view) {
+      UI.plots.draw(view, chart("P", {
+        floor: derived.powerPerP,
+        unit: "W",
+        title: powerWords.title,
+        color: "accent",
+        lines: [{ value: derived.P_out, word: powerWords.steady, tone: "soft" }],
+        cursor: cursor.power
+      }));
+    });
+    addCanvas("photons", UI.photons.SIZE, function (view) {
+      UI.photons.draw(view, state.cartoon, photonWords);
     });
     addCanvas("levels", UI.levels.SIZE, function (view) {
       var y = inversionNow();
@@ -315,40 +420,78 @@
       var p = Math.exp(state.sim.lnPhi + derived.sOnePhoton);
       UI.levels.draw(view, { x: derived.x, y: y, stim: y * p, words: levelWords });
     });
-    addCanvas("plots", UI.plots.SIZE, function (view) {
-      var shownTime = WINDOW / state.slowMotion;          // simulated s on the plot
-      UI.plots.draw(view, {
-        points: state.history.points(state.sim.t - shownTime),
-        tNow: state.sim.t,
-        window: shownTime,
-        Pfloor: derived.powerPerP,
-        x: derived.x,
-        words: plotWords
-      });
+    addCanvas("inversion", UI.plots.SIZE_SMALL, function (view) {
+      UI.plots.draw(view, chart("y", {
+        floor: 1,
+        unit: "",
+        title: inversionWords.title,
+        color: "accent2",
+        // The threshold, and the pump level x: where the inversion would
+        // settle with no light. The pump level does not stretch the axis:
+        // at a strong pump (x = 38) the curve near 1 would lie flat on the
+        // bottom (stage 6b review); it shows when the curve goes near it.
+        lines: [
+          { value: 1, word: inversionWords.threshold, tone: "soft" },
+          { value: derived.x, word: inversionWords.pump, tone: "faint", stretch: false }
+        ],
+        cursor: cursor.inversion
+      }));
     });
 
-    /* the sliders */
-    function connectSliders() {
+    /* the sliders and their number boxes */
+    function connectControls() {
       CONTROLS.forEach(function (name) {
-        var input = find('[data-laser-control="' + name + '"]');
-        var output = find('[data-laser-value="' + name + '"]');
+        var slider = find('[data-laser-control="' + name + '"]');
+        var box = find('[data-laser-input="' + name + '"]');
+        var range = rangeOf(name);
+        var shown = SHOWN[name];
+        setText('[data-laser-unit="' + name + '"]', shown.unit);
+
+        // Writes the value everywhere it is shown.
         function show() {
-          var text = valueText(name, valueOf(name));
-          if (output) output.textContent = text;
-          if (input) input.setAttribute("aria-valuetext", text);
+          var value = valueOf(name);
+          var text = valueText(name, value);
+          if (slider) {
+            slider.value = String(Math.round(SLIDER_STEPS * F.toSlider(range, value)));
+            slider.setAttribute("aria-valuetext", text);
+          }
+          if (box) box.value = F.plain(shown.factor * value, BOX_DIGITS);
+          setText('[data-laser-value="' + name + '"]', text);
         }
-        if (input) {
-          input.min = "0";
-          input.max = String(SLIDER_STEPS);
-          input.step = "1";
-          input.value = String(Math.round(SLIDER_STEPS * F.toSlider(rangeOf(name), valueOf(name))));
-          listen(input, "input", function () {
-            setValue(name, F.fromSlider(rangeOf(name), Number(input.value) / SLIDER_STEPS));
-            derived = bench.derive(state.config);
-            show();
-            setBehind(false);                 // the new setting is judged afresh
-            showAll();                        // "now" depends on the bench too
-            loop.redraw();
+        // A new value from the slider or the box.
+        function use(value) {
+          setValue(name, value);
+          derived = bench.derive(state.config);
+          show();
+          setBehind(false);                   // the new setting is judged afresh
+          showAll();                          // "now" depends on the bench too
+          loop.redraw();
+        }
+
+        if (slider) {
+          slider.min = "0";
+          slider.max = String(SLIDER_STEPS);
+          slider.step = "1";
+          listen(slider, "input", function () {
+            var value = F.fromSlider(range, Number(slider.value) / SLIDER_STEPS);
+            // A round value, so the box shows exactly what is simulated.
+            var rounded = round(value, SLIDER_DIGITS);
+            use(clamp(rounded, range.min, range.max));
+          });
+        }
+        if (box) {
+          // "change": Enter, or leaving the box. A typed value is rounded
+          // to the digits the box shows (so it shows exactly what is
+          // simulated) and held inside the slider's range; text that is no
+          // number, or nothing, puts the old value back.
+          listen(box, "change", function () {
+            var typed = readNumber(box.value);
+            if (!isFinite(typed)) {
+              show();
+              return;
+            }
+            var rounded = round(typed, BOX_DIGITS) / shown.factor;
+            use(clamp(rounded, range.min, range.max));
           });
         }
         show();
@@ -379,12 +522,47 @@
         listen(resetButton, "click", function () {
           state.sim = bench.start();
           state.history.clear();
+          state.cartoon = newCartoon();       // no atoms or light left from the old run
           remember();
           setBehind(false);
           showAll();
           loop.redraw();
         });
       }
+      // "Dig deeper": down to the theory at the bottom of the page.
+      var learnButton = find('[data-laser-action="learn"]');
+      var theory = find("[data-laser-learn]");
+      if (learnButton && theory) {
+        listen(learnButton, "click", function () {
+          theory.scrollIntoView({ behavior: prefersLessMotion() ? "auto" : "smooth", block: "start" });
+        });
+      }
+    }
+
+    /* the pointer over a chart: its crosshair follows */
+    function connectPointer() {
+      CHARTS.forEach(function (name) {
+        var canvas = found[name];
+        if (!canvas) return;
+        // Only this chart is drawn again; a running loop draws it on its
+        // next frame anyway.
+        function pointAt(event) {
+          cursor[name] = event.offsetX;
+          loop.redraw(canvas);
+        }
+        // A tap on a touch screen sends no pointermove, so the crosshair
+        // also goes where the pointer comes down (with touch-action: pan-y
+        // in css/laser.css, a sideways drag moves it).
+        listen(canvas, "pointerdown", pointAt);
+        listen(canvas, "pointermove", pointAt);
+        // A finger leaves the screen after every tap: its crosshair stays
+        // until the next tap. A mouse or pen takes it away.
+        listen(canvas, "pointerleave", function (event) {
+          if (event.pointerType === "touch") return;
+          cursor[name] = null;
+          loop.redraw(canvas);
+        });
+      });
     }
 
     function takeDown() {
@@ -395,8 +573,9 @@
     // If a draw throws here, loop.js has registered nothing yet.
     var loop = UI.loop.create({ canvases: canvases, update: pauseOnError(update), running: state.playing });
     try {
-      connectSliders();
+      connectControls();
       connectButtons();
+      connectPointer();
       showPlay();
       showAll();
       showBehind();

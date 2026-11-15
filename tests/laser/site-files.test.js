@@ -244,12 +244,38 @@ test("sections/laser.html: no styles, scripts, <header> or <footer>; the silver 
   assert.match(html.trim(), /^<div class="line-art">[\s\S]*<\/div>$/, "wrapped in <div class=\"line-art\">");
 });
 
-test("sections/laser.html: the three canvases, each a picture for screen readers", () => {
+// The pictures js/laser/page.js draws, by their data-laser-canvas names
+// (tests/laser/page.test.js uses the same list).
+const PAGE_CANVASES = ["bench", "power", "photons", "levels", "inversion"];
+
+test("sections/laser.html: the five canvases, each a picture for screen readers, each described in the data", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
   const canvases = html.match(/<canvas\b[^>]*>/g) || [];
-  assert.deepEqual(canvases.map((tag) => (tag.match(/\sdata-laser-canvas="([^"]*)"/) || [])[1]),
-    ["bench", "levels", "plots"]);
+  assert.deepEqual(canvases.map((tag) => (tag.match(/\sdata-laser-canvas="([^"]*)"/) || [])[1]).sort(),
+    PAGE_CANVASES.slice().sort());
   for (const tag of canvases) assert.match(tag, /\srole="img"/);
+  const data = readJSON("data/laser.json");
+  const page = read("js/laser/page.js");
+  for (const name of PAGE_CANVASES) {
+    for (const lang of LANGS) assert.ok(String(data[name].alt[lang] || "").trim(), name + ".alt." + lang);
+    assert.ok(page.includes('"' + name + '"'), "page.js draws " + name);
+  }
+});
+
+test("the two chart canvases, and only they, carry the class that lets a finger move the crosshair", () => {
+  const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
+  for (const tag of html.match(/<canvas\b[^>]*>/g) || []) {
+    const name = (tag.match(/\sdata-laser-canvas="([^"]*)"/) || [])[1];
+    const chart = name === "power" || name === "inversion";
+    assert.equal(/\sclass="[^"]*\blaser-bench__canvas--chart\b/.test(tag), chart, name);
+  }
+  // A sideways drag goes to the page (the crosshair), an up-and-down drag
+  // still scrolls; the mouse pointer is a crosshair.
+  const css = read("css/laser.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const rule = css.match(/\.laser-bench__canvas--chart\s*\{([^}]*)\}/);
+  assert.ok(rule, "css/laser.css has a rule for .laser-bench__canvas--chart");
+  assert.match(rule[1], /touch-action:\s*pan-y\s*;/);
+  assert.match(rule[1], /cursor:\s*crosshair\s*;/);
 });
 
 // What js/laser/page.js looks for (tests/laser/page.test.js uses the same
@@ -258,13 +284,17 @@ test("sections/laser.html: the three canvases, each a picture for screen readers
 const PAGE_CONTROLS = ["pump", "coupler", "slowMotion"];
 const PAGE_READOUTS = ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"];
 
-test("sections/laser.html: every slider, value, readout and button page.js needs, once each", () => {
+test("sections/laser.html: every slider, number box, readout and button page.js needs, once each", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
   assert.deepEqual(attributeValues(html, "data-laser-control"), PAGE_CONTROLS);
-  assert.deepEqual(attributeValues(html, "data-laser-value"), PAGE_CONTROLS);
+  assert.deepEqual(attributeValues(html, "data-laser-input"), PAGE_CONTROLS);
+  assert.deepEqual(attributeValues(html, "data-laser-unit"), PAGE_CONTROLS);
+  assert.deepEqual(attributeValues(html, "data-laser-value"), ["slowMotion"]);
   assert.deepEqual(attributeValues(html, "data-laser-readout"), PAGE_READOUTS);
-  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["play", "reset"]);
+  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["learn", "play", "reset"]);
   assert.deepEqual(attributeValues(html, "data-laser-note"), ["behind"]);
+  // The theory the "learn" button scrolls to is on the page, once.
+  assert.equal((html.match(/\sdata-laser-learn[\s>]/g) || []).length, 1);
   const page = read("js/laser/page.js");
   for (const name of PAGE_CONTROLS.concat(PAGE_READOUTS)) {
     assert.ok(page.includes('"' + name + '"'), "page.js uses " + name);
@@ -277,6 +307,19 @@ test("sections/laser.html: every slider, value, readout and button page.js needs
     const id = (input[0].match(/\sid="([^"]+)"/) || [])[1];
     assert.ok(id, name + " has an id");
     assert.match(html, new RegExp('<label\\b[^>]*\\sfor="' + id + '"'), name + " has a label");
+  }
+  // Each number box is a text input with the decimal keypad, named by its
+  // slider's label (aria-labelledby the label's id). Not type="number":
+  // some browsers hand the page "" for a decimal comma ("13,5"), and
+  // page.js reads the number itself (stage 6b review).
+  for (const name of PAGE_CONTROLS) {
+    const box = html.match(new RegExp('<input\\b[^>]*\\sdata-laser-input="' + name + '"[^>]*>'));
+    assert.ok(box, name + " has a number box");
+    assert.match(box[0], /\stype="text"/);
+    assert.match(box[0], /\sinputmode="decimal"/, "the keypad with a decimal point");
+    const labelId = (box[0].match(/\saria-labelledby="([^"]+)"/) || [])[1];
+    assert.ok(labelId, name + "'s box is named");
+    assert.match(html, new RegExp('<label\\b[^>]*\\sid="' + labelId + '"'), name + "'s box is named by a label");
   }
   // Buttons are type="button"; the "behind" note starts hidden.
   for (const tag of html.match(/<button\b[^>]*>/g) || []) assert.match(tag, /\stype="button"/);

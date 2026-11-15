@@ -15,21 +15,22 @@
   },
 
   "bench": {
-    "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short.",
+    "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short. After 'transmission' the drawing writes the number, as in 'Transmission 5.00 %'.",
     "alt": {
-      "hy": "Լազերի նկար․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, նրանց միջև՝ ակտիվ միջավայրի ձող, իսկ ձողի տակ՝ մղման դիոդներ։ Երբ լազերն աշխատում է, ճառագայթը գնում է հայելիների միջև և դուրս է գալիս ելքային հայելու միջով։",
-      "en": "A drawing of a laser: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, between them a rod of gain medium, and under the rod the pump diodes. When the laser shines, a beam runs between the mirrors and out through the output mirror."
+      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, նրանց միջև՝ ակտիվ միջավայրի ձող, իսկ ձողի տակ՝ մղման դիոդներ։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։",
+      "en": "A drawing of a laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, between them a rod of gain medium, and under the rod the pump diodes. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror."
     },
     "parts": {
       "backMirror": { "hy": "Հետին հայելի", "en": "Back mirror" },
       "outputMirror": { "hy": "Ելքային հայելի", "en": "Output mirror" },
       "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
-      "pump": { "hy": "Մղման դիոդներ", "en": "Pump diodes" }
+      "pump": { "hy": "Մղման դիոդներ", "en": "Pump diodes" },
+      "transmission": { "hy": "Թափանցելիություն", "en": "Transmission" }
     }
   },
 
   "controls": {
-    "_readme": "The names of the sliders under the drawing. Their values (W, %, µs) are written by the page.",
+    "_readme": "The names of the sliders. Each slider also has a box to type a number in; the units (W, %, ×) are written by the page.",
     "pump": { "hy": "Մղման հզորություն (կլանված)", "en": "Pump power (absorbed)" },
     "coupler": { "hy": "Ելքային հայելու թափանցելիություն", "en": "Output mirror transmission" },
     "slowMotion": { "hy": "Դանդաղեցում", "en": "Slow motion" }
@@ -55,6 +56,33 @@
     }
   },
 
+  "power": {
+    "_readme": "The big chart of the output power against time. 'title' is written above it; 'steady' beside the dashed line of the steady output: keep both short. The numbers and units on the axes are written by the page.",
+    "alt": {
+      "hy": "Լազերի ելքային հզորության գրաֆիկն ըստ ժամանակի․ ուղղահայաց առանցքին՝ հզորությունը, հորիզոնականին՝ մոդելավորված ժամանակը։ Կետագիծը կայուն ելքային հզորությունն է։",
+      "en": "A chart of the laser's output power against time: the power on the vertical axis, the simulated time on the horizontal one. The dashed line is the steady output power."
+    },
+    "words": {
+      "title": { "hy": "Ելքային հզորություն", "en": "Output power" },
+      "steady": { "hy": "կայուն", "en": "steady" }
+    }
+  },
+
+  "photons": {
+    "_readme": "The cartoon of atoms and photons inside the gain medium. 'title' is written above it, the other words are its legend: keep them short.",
+    "alt": {
+      "hy": "Ակտիվ միջավայրի ներսի պարզեցված պատկեր․ ատոմներ, որոնց մի մասը գրգռված է, և նրանց միջով թռչող ֆոտոններ։ Գրգռված ատոմի կողքով անցնող ֆոտոնը ստիպում է նրան արձակել երկրորդ ֆոտոն, որը թռչում է առաջինի հետ միասին, իսկ մղումը ատոմները նորից գրգռում է։",
+      "en": "A cartoon of the inside of the gain medium: atoms, some of them excited, and photons flying through. A photon that passes an excited atom makes it emit a second photon that flies along with it; the pump lifts the atoms up again."
+    },
+    "words": {
+      "title": { "hy": "Ակտիվ միջավայրի ներսում (մասշտաբը պահպանված չէ)", "en": "Inside the gain medium (not to scale)" },
+      "excited": { "hy": "գրգռված ատոմ", "en": "excited atom" },
+      "ground": { "hy": "չգրգռված ատոմ", "en": "atom at rest" },
+      "photon": { "hy": "լազերային ֆոտոն", "en": "laser photon" },
+      "stray": { "hy": "պատահական ֆոտոն", "en": "stray photon" }
+    }
+  },
+
   "levels": {
     "_readme": "The picture of the energy levels and the gain gauge. 'words' are written on the picture: keep them short.",
     "alt": {
@@ -71,17 +99,63 @@
     }
   },
 
-  "plots": {
-    "_readme": "The two graphs against time. 'time' comes before the length of time the graphs show, as in 'Last 500 µs'.",
+  "inversion": {
+    "_readme": "The small chart of the inversion against time. 'title' is written above it, 'threshold' beside its dashed line, 'pump' beside the fainter dashed line of the pump level (shown when the curve comes near it).",
     "alt": {
-      "hy": "Երկու գրաֆիկ ըստ ժամանակի՝ լազերի ելքային հզորությունը և ինվերսիան՝ համեմատած իր շեմային արժեքի հետ (կետագիծ)։",
-      "en": "Two graphs against time: the output power of the laser, and the inversion compared with its threshold value (the dashed line)."
+      "hy": "Ինվերսիայի գրաֆիկն ըստ ժամանակի՝ համեմատած իր շեմային արժեքի հետ (կետագիծ)։ Ավելի թույլ կետագիծը ցույց է տալիս մղման մակարդակը՝ որտեղ ինվերսիան կկայունանար առանց լազերային լույսի։",
+      "en": "A chart of the inversion against time, compared with its threshold value (the dashed line). A fainter dashed line marks the pump level: where the inversion would settle without laser light."
     },
     "words": {
-      "power": { "hy": "Ելքային հզորություն", "en": "Output power" },
-      "inversion": { "hy": "Ինվերսիա ÷ շեմ", "en": "Inversion ÷ threshold" },
+      "title": { "hy": "Ինվերսիա ÷ շեմ", "en": "Inversion ÷ threshold" },
       "threshold": { "hy": "շեմ", "en": "threshold" },
-      "time": { "hy": "Վերջին", "en": "Last" }
+      "pump": { "hy": "մղում", "en": "pump" }
     }
+  },
+
+  "learn": {
+    "_readme": "The theory at the bottom of the page. 'button' is the button above the bench that leads to it. 'chapters' is a list: add, remove or reorder chapters freely. In a chapter's 'text', an empty line (\\n\\n) starts a new paragraph and **two stars** make words bold.",
+    "button": { "hy": "Խորանալ լազերի ֆիզիկայի մեջ", "en": "Dig deeper into the physics of the laser" },
+    "title": { "hy": "Ինչպես է աշխատում լազերը", "en": "How a laser works" },
+    "lead": {
+      "hy": "Կարճ ուղեցույց այն ամենի մասին, ինչ տեսնում եք վերևի նստարանին։ Լաբորատորիայի կառուցմանը զուգընթաց այն կդառնա լիարժեք գլուխների շարք։",
+      "en": "A short guide to what you see on the bench above. It will grow into full chapters as the lab is built."
+    },
+    "chapters": [
+      {
+        "title": { "hy": "Լույս, որը լույս է ծնում", "en": "Light that makes more light" },
+        "text": {
+          "hy": "Այն ատոմը, որն ավելորդ էներգիա ունի, կոչվում է **գրգռված**։ Եթե նրան ոչինչ չի խանգարում, որոշ ժամանակ անց այն այդ էներգիան արձակում է ֆոտոնի տեսքով, որը թռչում է պատահական ուղղությամբ․ սա ինքնաբուխ ճառագայթումն է՝ ցանկացած լամպի լույսը։\n\nԲայց եթե մինչ այդ գրգռված ատոմի կողքով ֆոտոն է անցնում, ատոմն իր ֆոտոնն արձակում է անմիջապես, և նոր ֆոտոնը առաջինի ճշգրիտ պատճենն է՝ նույն գույնի, նույն ուղղությամբ, նույն փուլով։ Սա **հարկադրական ճառագայթումն** է։ Մեկ ֆոտոնը դառնում է երկուսը, երկուսը՝ չորսը։ Այն նյութը, որտեղ դա ավելի հաճախ է տեղի ունենում, քան կլանումը, ուժեղացնում է լույսը և կոչվում է ակտիվ միջավայր։",
+          "en": "An atom that holds extra energy is called **excited**. Left alone, it gives that energy up after a while as a photon flying off in a random direction: this is spontaneous emission, the light of every lamp.\n\nBut if a photon passes the excited atom first, the atom emits its photon at once, and the new photon is a perfect copy: the same colour, the same direction, in step with the first. This is **stimulated emission**. One photon becomes two, two become four. A material in which this happens more often than absorption amplifies light, and is called a gain medium."
+        }
+      },
+      {
+        "title": { "hy": "Մղումը և հայելիները", "en": "The pump and the mirrors" },
+        "text": {
+          "hy": "Ատոմները գրգռված չեն մնում, ուստի ինչ-որ բան պետք է անընդհատ նրանց նորից գրգռի․ դա **մղումն** է։ Այստեղ դա լազերային դիոդների լույսն է, որն ընկնում է ձողի վրա։\n\nՁողի միջով մեկ անցումը լույսը միայն մի փոքր է ուժեղացնում։ Երկու **հայելիները** լույսը նորից ու նորից վերադարձնում են ձողի մեջ, և ամեն անցման ժամանակ այն աճում է։ Հայելիներից մեկն անդրադարձնում է գրեթե ամբողջ լույսը։ Մյուսը՝ ելքային հայելին, մի փոքր մաս բաց է թողնում․ հենց այդ մասն է լազերի ճառագայթը։",
+          "en": "Atoms do not stay excited, so something must keep lifting them: the **pump**. Here it is the light of laser diodes shining into the rod.\n\nOne pass through the rod amplifies light only a little. Two **mirrors** send it back through the rod again and again, so it grows on every pass. One mirror reflects almost everything. The other, the output mirror, lets a small part through: that part is the laser beam."
+        }
+      },
+      {
+        "title": { "hy": "Շեմը․ ուժեղացումն ընդդեմ կորստի", "en": "Threshold: gain against loss" },
+        "text": {
+          "hy": "Ամեն շրջանցման ժամանակ լույսը ձողում ուժեղանում է, իսկ հայելիների վրա և ձողի ներսում՝ կորուստ ունենում։ Թույլ մղման դեպքում կորուստը հաղթում է, և ճառագայթ չի առաջանում։ Լազերը սկսում է աշխատել մղման այն հզորության դեպքում, երբ ուժեղացումը հավասարվում է կորստին․ դա **շեմն** է։\n\nՇեմից վեր զարմանալի բան է տեղի ունենում․ ուժեղացումն այլևս չի աճում։ Այն մնում է ճիշտ հավասար կորստին, իսկ մղման ամբողջ հավելյալ հզորությունը վերածվում է լույսի։ Ահա թե ինչու ելքային հզորությունը մղման հետ աճում է ուղիղ գծով։",
+          "en": "On every round trip the light gains in the rod and loses at the mirrors and inside the rod. With a weak pump the loss wins and no beam appears. The laser starts at the pump power where gain equals loss: the **threshold**.\n\nAbove threshold something remarkable happens: the gain does not grow any further. It stays exactly equal to the loss, and all the extra pump power turns into light. That is why the output power rises in a straight line with the pump."
+        }
+      },
+      {
+        "title": { "hy": "Ինչու է այն սկզբում թարթում", "en": "Why it flickers when it starts" },
+        "text": {
+          "hy": "Սեղմեք «Սկզբից» և հետևեք գրաֆիկին։ Մինչև լույսի հայտնվելը մղումը հասցնում է գրգռել ավելի շատ ատոմ, քան պետք է շեմի համար։ Հետո լույսը շատ արագ աճում է, սպառում ավելորդ գրգռված ատոմները և նորից ընկնում, իսկ մղումը նորից սկսում է նրանց գրգռել։ Արդյունքում ստացվում է սուր պայթյունների շարք, որոնցից յուրաքանչյուրը նախորդից փոքր է, մինչև լազերը հասնի կայուն հզորության։ Սրանք **ռելաքսացիոն տատանումներն** են։",
+          "en": "Press Reset and watch the chart. Before any light appears, the pump has lifted more atoms than the threshold needs. Then the light grows very quickly, uses up the extra atoms and falls back, and the pump starts lifting them again. The result is a row of sharp spikes, each smaller than the last, until the laser settles at a steady power. These are **relaxation oscillations**."
+        }
+      },
+      {
+        "title": { "hy": "Լավագույն ելքային հայելին", "en": "The best output mirror" },
+        "text": {
+          "hy": "Դանդաղ տեղաշարժեք ելքային հայելու սահիչը և հետևեք կայուն ելքային հզորությանը։ Այն հայելին, որը գրեթե ոչինչ բաց չի թողնում, լույսը պահում է ներսում, որտեղ այն կորչում է։ Այն հայելին, որը չափազանց շատ է բաց թողնում, բարձրացնում է շեմը, և լազերը մարում է։ Դրանց միջև կա լավագույն հայելի, և էջը ցույց է տալիս, թե որն է այն։",
+          "en": "Move the output mirror slider slowly and watch the steady output power. A mirror that lets almost nothing through keeps the light inside, where it is lost. A mirror that lets too much through raises the threshold, and the laser goes out. In between there is a best mirror, and the page shows where it is."
+        }
+      }
+    ]
   }
 }

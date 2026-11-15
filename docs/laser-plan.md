@@ -95,6 +95,7 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 4: four-level rate equations (`rates.js`: scales, right-hand side, steady state, relaxation oscillations, the seed floor `liftToSeed`).
 - ✅ Stage 5: page skeleton (`?view=laser`, the Labs-page banner, `js/laser/ui/loop.js`, `draw-bench.js`, `page.js`; the engine is loaded by `index.html`).
 - ✅ Stage 6: first playable laser (`bench.js`; `format.js`, `history.js`, `draw-levels.js`, `draw-plots.js`; sliders for pump, coupler and slow motion, Play/Pause, Reset, readouts, the level diagram with its gain/loss gauge, plots of power and inversion).
+- ✅ Stage 6b: the page in the owner's design (`axis.js`, `draw-photons.js`; the bench with real-looking mirrors and separate rays, a scientific chart of the output power, number boxes beside the sliders, the photon cartoon, the "dig deeper" theory section).
 - Next: stage 7.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking.
@@ -631,6 +632,91 @@ The default bench (stage 4's small Nd:YAG laser plus a pump): rod l = 5 cm, A = 
 - Declined: after N is clamped to 0, `liftToSeed`'s floor lifts ln φ on every call, so the leftover photon number depends on how the run is cut into calls. The floor is stage 4's protection against a seed that overflows when the pump comes back, and the light it leaves is below 10⁻²⁰ W: "< 1 fW", an invisible beam, a line on the plot's axis.
 - Declined: `advance` checks and re-derives the config for every piece. Measured: 23 µs a piece in Node, 9 µs of it `derive`, so about 30 µs a frame in Chrome; the checks are the engine's rule that every error names the function called.
 - Declined: the three-line `clamp`/`word`/`text` helpers repeated in the drawing files, and `page.js`'s own reduced-motion check. Each UI file stands alone; sharing them would need one more shared file for very little.
+
+### Stage 6b — The page in the owner's design ✅
+
+The owner drew the page they want (14 Nov 2026) and asked for it together with stage 7. It is built first, as its own stage with its own commit, because stage 7's medium pickers go into the new layout. No new physics.
+
+**The design, in words** (the drawing itself is not in the repo):
+
+```
+              [ Dig deeper into the physics of the laser ]        [ dropdowns: gain medium, ... (stage 7) ]
+ ┌──────────────────────────────────────────────────────┐        ┌───────────────────────────────────────┐
+ │ THE BENCH: two mirrors that look like real mirrors,  │        │ OUTPUT POWER, big: a real scientific  │
+ │ the gain medium between them, many separate rays of  │        │ chart with precise time and power     │
+ │ light, a few of them leaving through the output      │        │ axes ("like a Bloomberg terminal")    │
+ │ mirror, the mirror's transmission written beside it  │        │                                       │
+ ├──────────────────────────┬───────────────────────────┤        ├───────────────────────────────────────┤
+ │ CONTROLS: pump, output   │ PHOTONS: how single       │        │ THE NUMBERS (threshold pump power,    │
+ │ mirror, slow motion,     │ photons make excited      │        │ pump ÷ threshold, ... simulated time) │
+ │ each a slider AND a      │ atoms emit more photons   │        │                                       │
+ │ box to type a number     │                           │        │                                       │
+ └──────────────────────────┴───────────────────────────┘        └───────────────────────────────────────┘
+ The colours of the drawing are only an example: use the site's.
+```
+
+**Scope card.**
+
+| Piece | What it is | Tests |
+|---|---|---|
+| `LaserUI.axis.ticks(min, max, count)` | `{ step, values }`: ticks at multiples of a 1-2-5 × 10ᵏ step inside [min, max], free of rounding noise (0.3, not 0.30000000000000004) | `axis.test.js` |
+| `LaserUI.axis.fromZero(max, count)` | `{ top, step, values }`: an axis from 0 to the first tick at or above max | `axis.test.js` |
+| `LaserUI.axis.labels(values, step, unit)` | `{ texts, unit, power, decimals }`: one SI prefix for the whole axis ("mW"), as many decimals as the step needs, the same for every tick; no prefix without a unit | `axis.test.js` |
+| `LaserUI.axis.valueText(value, labels, extra)` | a value written in the axis's own unit, with `extra` more decimals | `axis.test.js` |
+| `LaserUI.format.prefix(value)`, `plain(value, digits)` | the SI prefix `si()` uses; the text a number box shows ("5", "13.2", "10000") | `format.test.js` |
+| `LaserUI.plots.draw(view, chart)` | one chart, used twice (output power, big; inversion, small): frame, grid at the ticks, tick labels on the right and under the time axis, the unit once, an area under the curve, dashed reference lines with a word (steady output; threshold), a filled tag with the latest value on the axis, and under the pointer a crosshair with the time and value of the nearest point | `draw-plots.test.js` |
+| `LaserUI.bench.draw(view, labels, light)` | mirrors as glass with a curved coated face in a mount on a rail; the rod; the pump diodes with pump light going into the rod; an odd number of separate rays (3 to 21, as many as fit 5 px apart) from mirror face to mirror face, arrowheads showing both directions; round(rays × T), at least one, leave through the output mirror; the transmission written at the bottom right | `draw-bench.test.js` |
+| `LaserUI.photons.create({ cols, rows, random })`, `.step(dt, drive)`, `LaserUI.photons.draw(view, model, words)` | a cartoon of the medium: a grid of atoms (excited or not) and photons flying through. A photon passing an excited atom can make it emit a second photon beside it (same direction); the pump lifts atoms again; an excited atom now and then emits by itself in a random direction. `drive = { excited, light, pump }` (each 0–1) comes from the simulation; `random` is passed in, so the tests are repeatable | `draw-photons.test.js` |
+| `page.js` | five canvases (`bench`, `power`, `photons`, `levels`, `inversion`); each slider has a number box (`data-laser-input`) that follows it and sets it; the pointer over a chart; the "dig deeper" button scrolls to the theory | `page.test.js`, `site-files.test.js` |
+
+**Decisions:**
+- The level diagram with the gain/loss gauge and the inversion plot are not in the drawing. They are kept in a row under the designed blocks: stage 7's three-level lessons need the level diagram, and the inversion is the other half of every spike. The big chart shows the output power alone, as drawn.
+- The photon picture is a cartoon, and says so: 60 atoms stand for 10²² and the share of excited ones is y/(1 + y), so half are excited at threshold. Its rates follow the simulation (pump, light), its single events are random. It lives in `js/laser/ui/` because it is an illustration; no number on the page comes from it.
+- Rays: their number shows the mirror's transmission by counting (with 15 rays and T = 30 %, 5 leave; below 1 in 15 the one ray still leaves).
+- Number boxes: a typed value is used on Enter or when the box is left, held inside the slider's range; text that is not a number puts the old value back. The output mirror is typed in %, the slow motion as its factor (10 000 = 1 s shows 100 µs). They are text boxes with the decimal keypad (`type="text" inputmode="decimal"`), and the page reads a decimal comma as a point: Armenian writes 13,5, and a `type="number"` box hands the page "" for it in some browsers (review).
+- The chart's time axis is simulated time (ticks at round times that scroll left), not "seconds ago": that is what a recording instrument shows.
+- "Dig deeper" leads to a short theory section at the bottom of the same page (five short chapters); stage 12 turns it into the full learn section with presets.
+- The page's container is wider than the other labs' (1480 px): three columns do not fit in 960 px. From 760 to 1100 px there are two columns (controls beside the photons, the chart beside its numbers); under 760 px one column: button, bench, controls, chart, numbers, photons.
+- A slider gives values rounded to 4 significant digits, so its number box shows exactly the value that is simulated (13.46 W, not 13.4600000001). A typed value is rounded to the 6 digits the box shows, for the same reason (review).
+- The tag on a chart's axis shows the latest value with two more decimals than the ticks ("1.70" on an axis of 0, 5, 10). It is the page's background framed in the curve's colour, with the text in the heading colour (review: text on a tag filled with the curve's colour was 3.6:1 on the light theme).
+- The pump level x on the inversion chart does not stretch the axis (`stretch: false`); it is drawn when the curve comes near it, with the word "pump" (review: at x = 38 the curve near 1 lay flat on the bottom).
+- The transmission is written under the output mirror's name, right above the mirror, on a row of its own; the drawing writes its number from `light.transmission`, so `labels` holds words only (review).
+- On a touch screen a tap puts the chart's crosshair there and it stays when the finger leaves; a sideways drag moves it (`touch-action: pan-y`), an up-and-down drag scrolls the page (review).
+
+**Traps:**
+- the fake 2D context returns nothing from `measureText` and `createLinearGradient`: draw without them (text is squeezed with `fillText`'s `maxWidth`);
+- an object made inside the test sandbox (the options of `scrollIntoView`, the array of `setLineDash`) fails `deepEqual` against a Node literal: compare its fields or its JSON;
+- a mutation check that runs while the computer goes to sleep reports TIMED OUT for every break in flight (its 60 s limit is wall-clock time): run it under `caffeinate -i`;
+- `toFixed` and tick arithmetic: build powers of ten with `Number("1e" + k)`, not `Math.pow`, and clean products to 12 digits;
+- a chart with no points, one point, or a flat line at 0 must still have an axis;
+- the pointer position is in CSS pixels of the canvas (`offsetX`), the same units the drawing uses.
+- a `type="number"` box hands the page "" for a decimal comma in some browsers: read the number yourself from a text box;
+- a tap on a touch screen sends `pointerdown` and `pointerleave`, no `pointermove`, and a drag is taken for scrolling unless the element sets `touch-action`;
+- Python's `json.dumps` loses `data/*.json`'s hand-made layout (short `{ "hy", "en" }` pairs on one line, blank lines between blocks): change those files as text.
+
+**Found while building and testing:**
+- Three of the first breaks were missed: the tag at the oldest value (the test's curve started and ended at 1.7 W), the threshold word over the title (the test's line was never near the top), and photons entering a full picture (nothing filled it). Each has a test now.
+- Browser: the photons were too short to see as moving light, and the theory chapters' prose stopped at the site's reading width inside its panel; both tuned.
+
+**Breaks** (115 for this stage, 83 for the design and 32 from the review; 414 in all, all caught): axis.js steps, decimals, prefixes and rounding noise; the chart's tag, reference lines, crosshair, area and title; the bench's rays, arrowheads, mirrors, labels and transmission; the photon cartoon's rates, limits and drawing; the number boxes, the theory button, the pointer and the five canvases in page.js; the layout's controls, canvases and words. 23 earlier entries were brought up to date for the moved code; after the review 10 more were, and 4 went with the code they broke (the boxes' min and max, the old tag and transmission slots). The first run missed the 3 above; the run after the review missed 1, the shared chart points kept after a second Reset at t = 0, now tested.
+
+**Browser check** (Claude in Chrome, `http://127.0.0.1:5500`, after the review): the three-column layout at 1440 px; "13,5" typed into the pump box gives 13.5 W, the slider and the readouts follow; the crosshair reads 5.570 W at 2.056 ms over the spikes after the pump went up; at 20 W and a 0.5 % coupler (x = 37.7) the inversion axis ends at 1.5 with the curve on its threshold line; at 1 W (x = 0.661) the faint "pump" line shows with the curve rising to it; the bench 300 px wide in Armenian writes "Թափանցելիություն 5.00 %" unsqueezed; the outlined tag reads well on the light theme; the chart canvases have `touch-action: pan-y` and the crosshair cursor; one loop after a language switch, the canvases off screen not running; no console errors. Chrome would not make its window narrower than about 960 px, so the phone width was checked by narrowing the bench's box.
+
+**Review outcome** (`/code-review` on Opus 5.5, 14 findings, all fixed):
+- Reset left the photon cartoon as it was (atoms excited, light in flight) while the bench and charts started again: Reset makes a new one.
+- The number boxes were `type="number"`, which hands the page "" for "13,5" in some browsers (iOS Safari), so a decimal comma was silently thrown away: text boxes with the decimal keypad, and the page reads a comma as a point (and drops spaces between digits).
+- The crosshair did not work on a touch screen (a tap sends no `pointermove`, a drag scrolls): it also follows `pointerdown`, a finger leaving keeps it, and the chart canvases set `touch-action: pan-y`.
+- The pump level x stretched the inversion axis, so at x = 38 the curve near 1 lay on the bottom: `stretch: false`, drawn when the curve comes near it, with the word "pump"; the description for screen readers mentions it.
+- A pointer move over a paused chart drew all five pictures: `loop.redraw(canvas)` draws only that chart.
+- The two charts each took their own copy of the points every frame: they share one, taken again after every new point.
+- A typed value was simulated with all its digits, but the box showed 6: it is rounded to the 6 digits the box shows.
+- The tag's text (the background colour on the curve's colour) was 3.6:1 on the light theme and 4.3:1 on the dark inversion chart: the heading colour on the background, framed in the curve's colour (13.9:1 or more).
+- On a phone the transmission label was squeezed to 40 % beside the pump's name: it has a row of its own under the output mirror's name.
+- `page.js` wrote the transmission's number into the bench's words every frame: the drawing writes it from `light.transmission`, and `labels` holds words only.
+- The cartoon's light repeated the bench's ray strength: both use `LaserUI.bench.rayAlpha`.
+- `.laser-bench__canvas--chart` had no CSS rule: it now has the crosshair cursor and `touch-action: pan-y`, documented in `Instructions/HTML-CLASSES.md`, and a test checks both.
+- `CLAUDE.md`'s file map still described the stage-5 page: updated.
+- The nested clamp-and-round one-liners in `page.js`: a `clamp()` and a `round()` helper, one step per line.
 
 ### Stage 7 — Swapping media, three levels, flashlamp
 - **Prep:** D6 for the media becoming selectable. Web-verify §5.1 values against published sources and record them in the doc. Then D2, D3, D4.

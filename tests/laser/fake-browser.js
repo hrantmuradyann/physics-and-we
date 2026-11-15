@@ -16,7 +16,8 @@
      window events     addEventListener is counted, so a test can check that
                        a teardown removed everything it added
      elements          attributes, textContent, value, hidden, and their own
-                       listeners: fire("click") runs them, listenerCount counts
+                       listeners: fire("click") runs them, listenerCount counts;
+                       scrollIntoView() is recorded, not done
      colours           getComputedStyle reads the CSS variables of
                        css/style.css (dark theme unless the test sets others)
      2D context        records every method call and every property set
@@ -67,7 +68,10 @@ function themeVariables() {
 
 // An element: attributes, text, a value (for sliders), `hidden`, and its
 // own event listeners. fire("input") or fire("click") calls them as the
-// browser would; listenerCount(type) lets a test check a teardown.
+// browser would; fire("pointermove", { offsetX: 200 }) adds what the
+// browser would put on that event; listenerCount(type) lets a test check
+// a teardown. scrollIntoView() is only counted: `scrolledTo` holds the
+// options of every call.
 function fakeElement(tag) {
   const attributes = new Map();
   const listeners = new Map();          // event type -> [listener]
@@ -92,10 +96,12 @@ function fakeElement(tag) {
       const index = list.indexOf(listener);
       if (index !== -1) list.splice(index, 1);
     },
-    fire(type) {
-      const event = { type: type, target: element, preventDefault() {} };
+    fire(type, properties) {
+      const event = Object.assign({ type: type, target: element, preventDefault() {} }, properties || {});
       for (const listener of (listeners.get(type) || []).slice()) listener.call(element, event);
     },
+    scrolledTo: [],
+    scrollIntoView(options) { element.scrolledTo.push(options); },
     listenerCount(type) { return (listeners.get(type) || []).length; }
   };
   return element;

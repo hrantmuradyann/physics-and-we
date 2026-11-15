@@ -5,17 +5,27 @@
    here: the box around the canvas and a few blocks of text.
 
    THE BLOCKS
+     .container--laser  the page's own, wider container
      .laser-head      the title block of the laser page (also a .page-head)
      .laser-status    the small "still being built" note under the lead
      .band--laser     the stripe the bench sits in
-     .laser-bench     the box a canvas sits in (it sets the width): the
-                      bench, and the two pictures under the controls
-     .laser-dock      the sliders, buttons and numbers (also a .lab__panel;
-                      the sliders and numbers inside are the labs' own
-                      .lab-control and .lab-readout of css/labs.css)
+     .laser-stage     the grid of the page's main blocks:
+                        __more      the button that leads to the theory
+                        __bench     the drawing of the laser
+                        __controls  sliders, number boxes, buttons
+                        __photons   the cartoon of atoms and photons
+                        __side      the big chart with the numbers under it
+     .laser-bench     the box a canvas sits in (it sets the width)
+     .laser-field     a number box with its unit, beside a slider's name
+     .laser-hint      the line under the slow-motion slider
+     .laser-readouts  the numbers, in a panel of their own
      .laser-note      the note shown when the computer cannot keep up
-     .laser-panels    the two pictures under the controls, side by side
+     .laser-panels    the two pictures under the stage, side by side
+     .laser-learn     the theory at the bottom; .laser-chapter is one chapter
      .lab-feature     the big banner on the Labs page (sections/labs.html)
+
+   The sliders, numbers and buttons themselves are the labs' own
+   .lab__panel, .lab-control, .lab-readout and .lab__buttons (css/labs.css).
 
    Colours: only the theme variables of css/style.css, so everything follows
    the dark / light theme. tests/laser/site-files.test.js checks that no
@@ -72,25 +82,129 @@
   width: 100%;
 }
 
+/* The two charts: a crosshair follows the pointer (js/laser/page.js). On a
+   touch screen an up-and-down drag still scrolls the page, and a sideways
+   drag moves the crosshair instead of being taken by the browser. */
+.laser-bench__canvas--chart {
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+
 /* ============================================================================
-   THE CONTROLS AND THE TWO PICTURES UNDER THEM
+   THE STAGE — the page's main blocks (docs/laser-plan.md, stage 6b)
+
+   One column on a narrow screen, in the order of sections/laser.html.
+   From 760 px: the controls and the photons side by side.
+   From 1100 px: three columns; the bench over the first two, the chart
+   and the numbers down the third.
    ========================================================================== */
 
-/* Sliders and buttons on the left, the numbers on the right. */
-.laser-dock {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.3rem 2.2rem;
-  align-items: start;
-  margin-top: 1.3rem;
+/* Three columns do not fit in the other labs' 960 px. */
+.container--laser {
+  max-width: 1480px;
 }
 
-.laser-dock__left {
+.laser-stage {
   display: grid;
-  gap: 1.1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.3rem;
+  align-items: start;
 }
 
-/* Beside the sliders the numbers need no line above them. */
-.laser-dock__readouts {
+.laser-stage__more {
+  display: flex;
+  justify-content: center;
+}
+
+.laser-stage__side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.3rem;
+  align-content: start;
+}
+
+@media (min-width: 760px) {
+  .laser-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-areas:
+      "more     more"
+      "bench    bench"
+      "controls photons"
+      "side     side";
+  }
+
+  .laser-stage__more { grid-area: more; }
+  .laser-stage__bench { grid-area: bench; }
+  .laser-stage__controls { grid-area: controls; }
+  .laser-stage__photons { grid-area: photons; }
+  .laser-stage__side { grid-area: side; }
+
+  /* The chart beside its numbers. */
+  .laser-stage__side {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .laser-stage {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr) minmax(0, 1.2fr);
+    grid-template-areas:
+      "more     more    side"
+      "bench    bench   side"
+      "controls photons side";
+  }
+
+  /* The chart over its numbers. */
+  .laser-stage__side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- a slider's number box ---------- */
+
+.laser-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.laser-field__input {
+  width: 5.4rem;
+  padding: 0.28rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--faint-bg);
+  color: var(--heading);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.laser-field__input:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.laser-field__unit {
+  min-width: 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+
+/* What the slow motion means: "1 s = 100 µs". */
+.laser-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* In a panel of their own the numbers need no line above them. */
+.laser-readouts {
   padding-top: 0;
   border-top: 0;
 }
@@ -103,6 +217,8 @@
   color: var(--accent-soft);
 }
 
+/* ---------- under the stage ---------- */
+
 .laser-panels {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -111,16 +227,52 @@
 }
 
 @media (max-width: 860px) {
-  .laser-dock,
   .laser-panels {
     grid-template-columns: minmax(0, 1fr);
   }
+}
 
-  .laser-dock__readouts {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    padding-top: 1.1rem;
-    border-top: 1px solid var(--line);
-  }
+/* ============================================================================
+   THE THEORY
+   Each chapter is a panel with a solid colour under it, so the silver
+   lines of the page do not run through the words.
+   ========================================================================== */
+/* Room above the heading when the "dig deeper" button scrolls here: the
+   site's menu bar stays at the top of the window. */
+.laser-learn {
+  scroll-margin-top: 4.5rem;
+}
+
+.laser-learn .section-title {
+  margin-bottom: 1rem;
+}
+
+.laser-chapters {
+  display: grid;
+  gap: 1.3rem;
+  margin-top: 2.2rem;
+}
+
+.laser-chapter {
+  padding: clamp(1.3rem, 3vw, 1.9rem);
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background-color: var(--bg-3);
+  background-image: var(--card-bg);
+}
+
+/* The panel sets the width; the site's 62-character limit would leave
+   half of it empty. */
+.laser-chapter .prose {
+  max-width: none;
+}
+
+.laser-chapter__title {
+  margin: 0 0 0.7rem;
+  font-size: clamp(1.15rem, 2.2vw, 1.4rem);
+  font-weight: 800;
+  color: var(--heading);
+  line-height: 1.25;
 }
 
 /* ============================================================================

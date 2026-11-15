@@ -37,6 +37,7 @@
      });                                    visitor who asked for less motion
      loop.play()  loop.pause()  loop.isRunning()
      loop.redraw()     a paused loop draws every canvas once (a control moved)
+     loop.redraw(canvas)   ... or only that one (the pointer over a chart)
      loop.destroy()
      LaserUI.loop.liveCount()   loops created and not yet destroyed
 
@@ -66,7 +67,8 @@
     line: "--canvas-line",
     grid: "--canvas-grid",
     faint: "--canvas-faint",
-    glow: "--canvas-glow"
+    glow: "--canvas-glow",
+    bg: "--bg"                    // for text on a filled tag, and boxes over a plot
   });
   var FONT_VARIABLE = "--font-main";
 
@@ -315,8 +317,15 @@
       isRunning: function () {
         return frameId !== null;
       },
-      redraw: function () {
-        if (!destroyed && frameId === null) drawAll();
+      redraw: function (canvas) {
+        if (destroyed || frameId !== null) return;
+        if (canvas === undefined) {
+          drawAll();
+          return;
+        }
+        entries.forEach(function (entry) {
+          if (entry.canvas === canvas) drawOne(entry, 0);
+        });
       },
       destroy: function () {
         if (destroyed) return;

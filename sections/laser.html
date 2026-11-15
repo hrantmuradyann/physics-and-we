@@ -10,6 +10,14 @@
 
   This page is not in the menu. The banner on the Labs page leads here
   (sections/labs.html).
+
+  THE BLOCKS OF THE STAGE (css/laser.css places them; on a narrow screen
+  they stand one under another, in the order written here):
+    more      the button that leads to the theory at the bottom of the page
+    bench     the drawing of the laser
+    controls  the sliders, each with a box to type a number in, and the buttons
+    side      the chart of the output power, and the numbers under it
+    photons   the cartoon of atoms and photons inside the medium
   ══════════════════════════════════════════════════════════════════════════
 -->
 
@@ -20,7 +28,7 @@
      A <div>, not a <header>: a <header> would pick up the site's header
      bar from css/style.css. -->
 <div class="page-head laser-head">
-  <div class="container container--lab">
+  <div class="container container--laser">
     <a class="lab__back reveal" href="?view=labs" data-goto="labs" data-ui="backToLabs"></a>
     <p class="eyebrow reveal" data-text="page.eyebrow"></p>
     <h1 class="page-head__title reveal" data-text="page.title"></h1>
@@ -30,42 +38,60 @@
 </div>
 
 <!-- ░░ THE BENCH ░░
-     Every canvas here is drawn by js/laser/ui/ (draw-bench.js, draw-levels.js,
-     draw-plots.js). Their descriptions for screen readers (bench.alt,
-     levels.alt, plots.alt in data/laser.json) are put on the canvases by
-     js/laser/page.js, which also connects the sliders, buttons and numbers
-     below through their data-laser-* names: keep those names as they are. -->
+     Every canvas here is drawn by js/laser/ui/ (draw-bench.js, draw-plots.js,
+     draw-photons.js, draw-levels.js). Their descriptions for screen readers
+     (bench.alt, power.alt, ... in data/laser.json) are put on the canvases
+     by js/laser/page.js, which also connects the sliders, number boxes,
+     buttons and numbers below through their data-laser-* names: keep those
+     names as they are. -->
 <section class="band band--laser">
-  <div class="container container--lab">
-    <div class="laser-bench reveal">
-      <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
-    </div>
+  <div class="container container--laser">
+    <div class="laser-stage">
 
-    <!-- The controls. The slider values, the numbers and the Play/Pause
-         word are written by js/laser/page.js. -->
-    <div class="lab__panel laser-dock reveal">
-      <div class="laser-dock__left">
+      <!-- The way to the theory (the last section of this page). -->
+      <div class="laser-stage__more reveal">
+        <button class="btn btn--primary" type="button" data-laser-action="learn" data-text="learn.button"></button>
+      </div>
+
+      <div class="laser-stage__bench laser-bench reveal">
+        <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
+      </div>
+
+      <!-- The controls. A slider and its number box show the same value;
+           the units, the Play/Pause word and the line under the slow-motion
+           slider are written by js/laser/page.js. -->
+      <div class="laser-stage__controls lab__panel reveal">
         <div class="lab__controls">
           <div class="lab-control">
-            <label class="lab-control__label" for="laser-pump">
-              <span class="lab-control__name" data-text="controls.pump"></span>
-              <output class="lab-control__value" data-laser-value="pump"></output>
-            </label>
+            <div class="lab-control__label">
+              <label class="lab-control__name" for="laser-pump" id="laser-pump-name" data-text="controls.pump"></label>
+              <span class="laser-field">
+                <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-pump-name" data-laser-input="pump">
+                <span class="laser-field__unit" data-laser-unit="pump"></span>
+              </span>
+            </div>
             <input class="lab-control__input" id="laser-pump" type="range" min="0" max="1000" step="1" data-laser-control="pump">
           </div>
           <div class="lab-control">
-            <label class="lab-control__label" for="laser-coupler">
-              <span class="lab-control__name" data-text="controls.coupler"></span>
-              <output class="lab-control__value" data-laser-value="coupler"></output>
-            </label>
+            <div class="lab-control__label">
+              <label class="lab-control__name" for="laser-coupler" id="laser-coupler-name" data-text="controls.coupler"></label>
+              <span class="laser-field">
+                <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-coupler-name" data-laser-input="coupler">
+                <span class="laser-field__unit" data-laser-unit="coupler"></span>
+              </span>
+            </div>
             <input class="lab-control__input" id="laser-coupler" type="range" min="0" max="1000" step="1" data-laser-control="coupler">
           </div>
           <div class="lab-control">
-            <label class="lab-control__label" for="laser-slowMotion">
-              <span class="lab-control__name" data-text="controls.slowMotion"></span>
-              <output class="lab-control__value" data-laser-value="slowMotion"></output>
-            </label>
+            <div class="lab-control__label">
+              <label class="lab-control__name" for="laser-slowMotion" id="laser-slowMotion-name" data-text="controls.slowMotion"></label>
+              <span class="laser-field">
+                <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-slowMotion-name" data-laser-input="slowMotion">
+                <span class="laser-field__unit" data-laser-unit="slowMotion"></span>
+              </span>
+            </div>
             <input class="lab-control__input" id="laser-slowMotion" type="range" min="0" max="1000" step="1" data-laser-control="slowMotion">
+            <p class="laser-hint" data-laser-value="slowMotion"></p>
           </div>
         </div>
         <div class="lab__buttons">
@@ -74,54 +100,88 @@
         </div>
         <p class="laser-note" data-laser-note="behind" data-text="notes.behind" hidden></p>
       </div>
-      <div class="lab__readouts laser-dock__readouts">
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.pumpThreshold"></span>
-          <span class="lab-readout__value" data-laser-readout="pumpThreshold">—</span>
+
+      <!-- The big chart, and the numbers under it. -->
+      <div class="laser-stage__side">
+        <div class="laser-bench reveal">
+          <canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="power" role="img"></canvas>
         </div>
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.x"></span>
-          <span class="lab-readout__value" data-laser-readout="x">—</span>
-        </div>
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.gth"></span>
-          <span class="lab-readout__value" data-laser-readout="gth">—</span>
-        </div>
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.tau_c"></span>
-          <span class="lab-readout__value" data-laser-readout="tau_c">—</span>
-        </div>
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.P_out"></span>
-          <span class="lab-readout__value" data-laser-readout="P_out">—</span>
-        </div>
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.powerNow"></span>
-          <span class="lab-readout__value" data-laser-readout="powerNow">—</span>
-        </div>
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.T_best"></span>
-          <span class="lab-readout__value" data-laser-readout="T_best">—</span>
-        </div>
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.period"></span>
-          <span class="lab-readout__value" data-laser-readout="period">—</span>
-        </div>
-        <div class="lab-readout">
-          <span class="lab-readout__label" data-text="readouts.time"></span>
-          <span class="lab-readout__value" data-laser-readout="time">—</span>
+        <div class="lab__panel reveal">
+          <div class="lab__readouts laser-readouts">
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.pumpThreshold"></span>
+              <span class="lab-readout__value" data-laser-readout="pumpThreshold">—</span>
+            </div>
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.x"></span>
+              <span class="lab-readout__value" data-laser-readout="x">—</span>
+            </div>
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.gth"></span>
+              <span class="lab-readout__value" data-laser-readout="gth">—</span>
+            </div>
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.tau_c"></span>
+              <span class="lab-readout__value" data-laser-readout="tau_c">—</span>
+            </div>
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.P_out"></span>
+              <span class="lab-readout__value" data-laser-readout="P_out">—</span>
+            </div>
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.powerNow"></span>
+              <span class="lab-readout__value" data-laser-readout="powerNow">—</span>
+            </div>
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.T_best"></span>
+              <span class="lab-readout__value" data-laser-readout="T_best">—</span>
+            </div>
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.period"></span>
+              <span class="lab-readout__value" data-laser-readout="period">—</span>
+            </div>
+            <div class="lab-readout">
+              <span class="lab-readout__label" data-text="readouts.time"></span>
+              <span class="lab-readout__value" data-laser-readout="time">—</span>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div class="laser-stage__photons laser-bench reveal">
+        <canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas>
+      </div>
+
     </div>
 
-    <!-- The energy levels with the gain gauge, and the graphs against time. -->
+    <!-- Under the stage: the energy levels with the gain gauge, and the
+         inversion against time. -->
     <div class="laser-panels">
       <div class="laser-bench reveal">
         <canvas class="laser-bench__canvas" data-laser-canvas="levels" role="img"></canvas>
       </div>
       <div class="laser-bench reveal">
-        <canvas class="laser-bench__canvas" data-laser-canvas="plots" role="img"></canvas>
+        <canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="inversion" role="img"></canvas>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░ THE THEORY ░░
+     The "dig deeper" button above scrolls here (data-laser-learn). The
+     chapters are the list learn.chapters in data/laser.json: add, remove
+     or reorder them there. -->
+<section class="band laser-learn" data-laser-learn>
+  <div class="container container--narrow">
+    <h2 class="section-title reveal" data-text="learn.title"></h2>
+    <p class="lead reveal" data-text="learn.lead"></p>
+    <div class="laser-chapters" data-list="learn.chapters">
+      <template>
+        <article class="laser-chapter reveal">
+          <h3 class="laser-chapter__title" data-text="title"></h3>
+          <div class="prose" data-rich="text"></div>
+        </article>
+      </template>
     </div>
   </div>
 </section>

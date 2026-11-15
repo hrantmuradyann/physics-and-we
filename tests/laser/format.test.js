@@ -73,6 +73,33 @@ test("si and number never throw: every power of ten from 10⁻³²³ to 10³⁰�
   }
 });
 
+test("prefix: the SI prefix si() would use, as { power, symbol }", () => {
+  const cases = [
+    [1.72, 0, ""], [0.0074, -3, "m"], [3.19e-8, -9, "n"], [2.41e6, 6, "M"], [999, 0, ""], [1000, 3, "k"],
+    [1e-20, -15, "f"], [1e15, 12, "T"], [0, 0, ""], [-0.0074, -3, "m"]
+  ];
+  for (const [value, power, symbol] of cases) {
+    const prefix = F.prefix(value);
+    assert.equal(prefix.power, power, String(value));
+    assert.equal(prefix.symbol, symbol, String(value));
+  }
+  assert.equal(F.prefix(NaN).power, 0);
+});
+
+test("plain: the text a number box shows, with a plain point and no unit", () => {
+  const cases = [
+    [5, undefined, "5"], [7.25, undefined, "7.25"], [13.1826, undefined, "13.2"], [0.5, undefined, "0.5"],
+    [10000, undefined, "10000"], [1e6, undefined, "1000000"], [12345.6, undefined, "12300"], [0, undefined, "0"],
+    [4.75021, 4, "4.75"], [-2.5, undefined, "-2.5"]
+  ];
+  for (const [value, digits, expected] of cases) {
+    assert.equal(F.plain(value, digits), expected, String(value));
+    // A browser's number box takes it back as the same number.
+    assert.equal(Number(F.plain(value, digits)), Number(value.toPrecision(digits || 3)));
+  }
+  for (const value of [NaN, Infinity, null, undefined, "5"]) assert.equal(F.plain(value), "", String(value));
+});
+
 test("number: significant digits without a prefix (for m⁻¹, %, ×)", () => {
   const cases = [
     [0.71293, undefined, "0.713"],

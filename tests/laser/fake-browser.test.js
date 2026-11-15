@@ -190,3 +190,17 @@ test("an element keeps its own listeners: fire() runs them, removing one stops i
   element.fire("click");
   assert.equal(heard.length, 1);
 });
+
+test("fire() can carry what the browser puts on an event; scrollIntoView is recorded", () => {
+  const element = fakeElement("canvas");
+  const seen = [];
+  element.addEventListener("pointermove", (event) => seen.push([event.type, event.offsetX, event.target === element]));
+  element.fire("pointermove", { offsetX: 200 });
+  element.fire("pointermove");
+  assert.deepEqual(seen, [["pointermove", 200, true], ["pointermove", undefined, true]]);
+  assert.deepEqual(element.scrolledTo, []);
+  element.scrollIntoView({ behavior: "smooth", block: "start" });
+  assert.deepEqual(element.scrolledTo, [{ behavior: "smooth", block: "start" }]);
+  // Each element has its own record.
+  assert.deepEqual(fakeElement("div").scrolledTo, []);
+});

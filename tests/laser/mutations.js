@@ -1064,14 +1064,14 @@ const MUTATIONS = [
   /* ---------- stage 5: js/laser/ui/draw-bench.js ---------- */
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "g.fillStyle = colors.soft;",
-    replace: "g.fillStyle = \"#7ea8ff\";",
+    find: "    g.fillStyle = colors.muted;\n    g.font = \"600 \"",
+    replace: "    g.fillStyle = \"#7ea8ff\";\n    g.font = \"600 \"",
     why: "a colour written out: it stays blue on the light theme"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "backMirror: { x: pad, y: mirrorTop - 0.6 * fontSize, align: \"left\"",
-    replace: "backMirror: { x: pad, y: mirrorTop - 0.6 * fontSize, align: \"right\"",
+    find: "backMirror: { x: pad, y: nameRow, align: \"left\"",
+    replace: "backMirror: { x: pad, y: nameRow, align: \"right\"",
     why: "a label aligned the wrong way runs off the canvas"
   },
   {
@@ -1088,14 +1088,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var lampY = rodY + rodHeight + 0.09 * h;",
+    find: "var lampY = rodY + rodHeight + 0.075 * h;",
     replace: "var lampY = rodY + rodHeight;",
     why: "the lamp drawn touching the rod"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var innerRight = w - pad - mirrorThickness;",
-    replace: "var innerRight = w - pad;",
+    find: "var innerRight = w - side - mirrorThickness;",
+    replace: "var innerRight = w - side;",
     why: "the output mirror out of line with the back mirror: a lopsided picture"
   },
   {
@@ -1124,7 +1124,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var fontSize = Math.max(11, Math.min(15, Math.round(0.055 * h)));",
+    find: "var fontSize = clamp(Math.round(0.05 * h), 11, 15);",
     replace: "var fontSize = Math.round(0.04 * h);",
     why: "labels too small to read on a phone"
   },
@@ -1200,8 +1200,8 @@ const MUTATIONS = [
   },
   {
     file: "sections/laser.html",
-    find: "<div class=\"lab__panel laser-dock reveal\">",
-    replace: "<div class=\"lab__panel laser-dock reveal\" style=\"margin: 0\">",
+    find: "<div class=\"laser-stage__controls lab__panel reveal\">",
+    replace: "<div class=\"laser-stage__controls lab__panel reveal\" style=\"margin: 0\">",
     why: "a style written in the layout"
   },
   {
@@ -1236,8 +1236,8 @@ const MUTATIONS = [
   },
   {
     file: "index.html",
-    find: "<script src=\"js/laser/ui/draw-plots.js\"></script>\n  <script src=\"js/laser/page.js\"></script>",
-    replace: "<script src=\"js/laser/page.js\"></script>\n  <script src=\"js/laser/ui/draw-plots.js\"></script>",
+    find: "<script src=\"js/laser/ui/draw-photons.js\"></script>\n  <script src=\"js/laser/page.js\"></script>",
+    replace: "<script src=\"js/laser/page.js\"></script>\n  <script src=\"js/laser/ui/draw-photons.js\"></script>",
     why: "page.js loaded before a drawing file"
   },
   {
@@ -1314,8 +1314,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\"]);",
-    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\"]);",
+    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"transmission\"]);",
+    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\"]);",
     why: "a part left out of PARTS: its label never written"
   },
   {
@@ -1491,8 +1491,8 @@ const MUTATIONS = [
   /* ---------- stage 6: format.js ---------- */
   {
     file: "js/laser/ui/format.js",
-    find: "if (rounded >= Math.pow(10, PREFIXES[i].power)) chosen = PREFIXES[i];",
-    replace: "if (size >= Math.pow(10, PREFIXES[i].power)) chosen = PREFIXES[i];",
+    find: "var chosen = prefixOf(rounded);",
+    replace: "var chosen = prefixOf(size);",
     why: "the prefix chosen before rounding: 999.96 W written as 1000 W"
   },
   {
@@ -1617,51 +1617,51 @@ const MUTATIONS = [
   /* ---------- stage 6: draw-plots.js ---------- */
   {
     file: "js/laser/ui/draw-plots.js",
-    find: "var x = box.right - (tNow - shown[i].t) / shownTime * width;",
-    replace: "var x = box.left + (tNow - shown[i].t) / shownTime * width;",
+    find: "return P.right - (chart.tNow - t) / chart.shownTime * width;",
+    replace: "return P.left + (chart.tNow - t) / chart.shownTime * width;",
     why: "time running the wrong way: now on the left"
   },
   {
     file: "js/laser/ui/draw-plots.js",
-    find: "    var top = Pfloor;",
-    replace: "    var top = 0;",
+    find: "var largest = chart.floor > 0 ? chart.floor : 0;",
+    replace: "var largest = 0;",
     why: "the floor ignored: spontaneous emission blown up to fill the plot"
   },
   {
     file: "js/laser/ui/draw-plots.js",
-    find: "if (point.t >= tNow - shownTime && point.t <= tNow) shown.push(point);",
-    replace: "if (point.t <= tNow) shown.push(point);",
+    find: "if (point.t < from || point.t > chart.tNow) continue;",
+    replace: "if (point.t > chart.tNow) continue;",
     why: "points older than the window drawn off the left edge"
   },
   {
-    file: "js/laser/ui/draw-plots.js",
-    find: "var thresholdY = level(g, L.inversion, 1, ytop);",
-    replace: "var thresholdY = level(g, L.inversion, picture.x, ytop);",
+    file: "js/laser/page.js",
+    find: "{ value: 1, word: inversionWords.threshold, tone: \"soft\" },",
+    replace: "{ value: derived.x, word: inversionWords.threshold, tone: \"soft\" },",
     why: "the threshold line drawn at the pump level"
   },
   {
     file: "js/laser/ui/draw-plots.js",
-    find: "    var top = Math.max(1, x);",
-    replace: "    var top = x;",
-    why: "the inversion axis forgets the threshold: below threshold its line is off the plot"
+    find: "if (lines[j].value > largest) largest = lines[j].value;",
+    replace: "if (false) largest = lines[j].value;",
+    why: "the axis forgets the reference lines: the threshold or the steady output can be off the chart"
   },
   {
     file: "js/laser/ui/draw-plots.js",
-    find: "text(g, F.si(Ptop, \"W\", 2),",
-    replace: "text(g, F.si(picture.Pfloor, \"W\", 2),",
-    why: "the power axis labelled with the floor, not its real top"
+    find: "g.fillText(S.valueLabels.texts[i], L.labelX,",
+    replace: "g.fillText(S.valueLabels.texts[0], L.labelX,",
+    why: "every tick of the value axis labelled with the first tick's number"
   },
   {
     file: "js/laser/ui/draw-plots.js",
-    find: "var timeLabel = F.si(shownTime, \"s\", 2);",
-    replace: "var timeLabel = F.si(tNow, \"s\", 2);",
-    why: "the time label showing the time now, not the window's length"
+    find: "timeLabels: UI.axis.labels(time.values, time.step, \"s\")",
+    replace: "timeLabels: UI.axis.labels(value.values, value.step, \"s\")",
+    why: "the time axis labelled with the value axis's numbers"
   },
 
   /* ---------- stage 6: draw-bench.js ---------- */
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "g.globalAlpha = Math.min(1, Math.sqrt(beam));",
+    find: "g.globalAlpha = rayAlpha(beam);",
     replace: "g.globalAlpha = Math.min(1, beam);",
     why: "the beam's alpha linear in the power: a weak laser looks dark"
   },
@@ -1673,9 +1673,9 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "g.fillRect(outLeft, L.axis.y - 0.35 * inside, view.w - outLeft, 0.7 * inside);",
-    replace: "g.fillRect(outLeft, L.axis.y - 0.35 * inside, view.w - outLeft - 10, 0.7 * inside);",
-    why: "the output beam stopping short of the edge"
+    find: "line(g, outLeft, y, view.w, y);",
+    replace: "line(g, outLeft, y, view.w - 10, y);",
+    why: "the rays that leave stopping short of the edge"
   },
 
   /* ---------- stage 6: page.js ---------- */
@@ -1729,7 +1729,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "if (input) input.setAttribute(\"aria-valuetext\", text);",
+    find: "            slider.setAttribute(\"aria-valuetext\", text);\n",
     replace: "",
     why: "screen readers hear slider positions 0..1000 instead of watts"
   },
@@ -1747,14 +1747,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "var shownTime = WINDOW / state.slowMotion;",
-    replace: "var shownTime = WINDOW * state.slowMotion;",
+    find: "var shownTime = WINDOW / state.slowMotion;          // simulated s on the chart",
+    replace: "var shownTime = WINDOW * state.slowMotion;          // simulated s on the chart",
     why: "the plot's window multiplied by the slow motion"
   },
   {
     file: "js/laser/page.js",
-    find: "UI.bench.draw(view, labels, { beam: powerNow() / derived.powerPerP });",
-    replace: "UI.bench.draw(view, labels, { beam: 1 });",
+    find: "        beam: beamNow(),\n        pump: state.config.pumpPower",
+    replace: "        beam: 1,\n        pump: state.config.pumpPower",
     why: "the beam drawn whatever the output"
   },
   {
@@ -1771,8 +1771,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "            derived = bench.derive(state.config);\n            show();",
-    replace: "            show();",
+    find: "          derived = bench.derive(state.config);\n          show();",
+    replace: "          show();",
     why: "a slider changes the config but not the numbers derived from it"
   },
   {
@@ -1820,8 +1820,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "            showAll();                        // \"now\" depends on the bench too",
-    replace: "            showReadouts(DERIVED_READOUTS);",
+    find: "          showAll();                          // \"now\" depends on the bench too",
+    replace: "          showReadouts(DERIVED_READOUTS);",
     why: "a slider moved while paused leaves the output now at its old number"
   },
   {
@@ -1838,7 +1838,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "            setBehind(false);                 // the new setting is judged afresh\n",
+    find: "          setBehind(false);                   // the new setting is judged afresh\n",
     replace: "",
     why: "the note stays up after a slider moved to a cheaper setting"
   },
@@ -1862,9 +1862,701 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-plots.js",
-    find: "if (thresholdWordY - L.fontSize < L.inversion.top) thresholdWordY =",
-    replace: "if (false) thresholdWordY =",
+    find: "if (wordY - L.fontSize < P.top) wordY = y + L.fontSize + 2;",
+    replace: "if (false) wordY = y + L.fontSize + 2;",
     why: "the threshold word written over the box's title when the pump is off (found in the browser)"
+  },
+  /* ---------- stage 6b: the page in the owner's design ---------- */
+  {
+    file: "js/laser/ui/axis.js",
+    find: "else if (ratio <= 2 + 1e-9) round = 2;",
+    replace: "else if (ratio <= 2 + 1e-9) round = 2.5;",
+    why: "a step of 2.5: ticks at 2.5 and 7.5"
+  },
+  {
+    file: "js/laser/ui/axis.js",
+    find: "var first = Math.ceil(min / step - 1e-9);",
+    replace: "var first = Math.floor(min / step);",
+    why: "a tick before the start of the axis"
+  },
+  {
+    file: "js/laser/ui/axis.js",
+    find: "for (var i = first; i <= last; i++) values.push(clean(i * step));",
+    replace: "for (var i = first; i <= last; i++) values.push(i * step);",
+    why: "rounding noise in the ticks (0.30000000000000004)"
+  },
+  {
+    file: "js/laser/ui/axis.js",
+    find: "var top = clean(Math.ceil(max / step - 1e-9) * step);",
+    replace: "var top = clean(Math.floor(max / step) * step);",
+    why: "the axis ends below the largest value"
+  },
+  {
+    file: "js/laser/ui/axis.js",
+    find: "var step = stepFor(max - min, count);",
+    replace: "var step = stepFor(max, count);",
+    why: "the step taken from the end of the window, not its length: one tick late in a run"
+  },
+  {
+    file: "js/laser/ui/axis.js",
+    find: "var prefix = unit ? UI.format.prefix(largest) : { power: 0, symbol: \"\" };",
+    replace: "var prefix = UI.format.prefix(largest);",
+    why: "a plain number given an SI prefix (0.004 written as 4)"
+  },
+  {
+    file: "js/laser/ui/axis.js",
+    find: "while (decimals < MAX_DECIMALS && clean(step / scale * powerOfTen(decimals)) < 1) decimals += 1;",
+    replace: "while (false) decimals += 1;",
+    why: "no decimals: 0.5, 1.0, 1.5 written as 1, 1, 2"
+  },
+  {
+    file: "js/laser/ui/axis.js",
+    find: "return (value < 0 && Number(text) !== 0 ? MINUS : \"\") + text;",
+    replace: "return text;",
+    why: "negative ticks lose their sign"
+  },
+  {
+    file: "js/laser/ui/axis.js",
+    find: "var decimals = Math.min(MAX_DECIMALS + 1, axisLabels.decimals + (extra || 0));",
+    replace: "var decimals = axisLabels.decimals;",
+    why: "the value tag written no finer than the ticks"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "return String(Number(value.toPrecision(digits || 3)));",
+    replace: "return value.toPrecision(digits || 3);",
+    why: "a number box showing 5.00 or 1.00e+4"
+  },
+  {
+    file: "js/laser/ui/format.js",
+    find: "if (!isNumber(value) || value === 0) return { power: 0, symbol: \"\" };",
+    replace: "if (!isNumber(value)) return { power: 0, symbol: \"\" };",
+    why: "0 given the smallest prefix"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "return P.bottom - value / S.value.top * height;",
+    replace: "return P.top + value / S.value.top * height;",
+    why: "the value axis upside down"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "var value = UI.axis.fromZero(largest * HEADROOM, VALUE_TICKS);",
+    replace: "var value = UI.axis.fromZero(largest, VALUE_TICKS);",
+    why: "no room above the highest point: a point on a tick touches the top"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "if (t >= 0) upright(xOf(t));",
+    replace: "upright(xOf(t));",
+    why: "grid lines for times before the start"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "if (t < 0 || x < P.left + 1.6 * L.fontSize || x > P.right - 1.2 * L.fontSize) return;",
+    replace: "if (x < P.left + 1.6 * L.fontSize || x > P.right - 1.2 * L.fontSize) return;",
+    why: "a negative time written under the chart"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "if (t < 0 || x < P.left + 1.6 * L.fontSize || x > P.right - 1.2 * L.fontSize) return;",
+    replace: "if (t < 0) return;",
+    why: "a time label at the edge of the plot, cut off or run into the unit"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "var tagY = yOf(last[key]);",
+    replace: "var tagY = yOf(first[key]);",
+    why: "the tag at the oldest value, not the latest"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "return Math.abs(shown[low].t - t) <= Math.abs(shown[high].t - t) ? shown[low] : shown[high];",
+    replace: "return shown[low];",
+    why: "the crosshair on the point before the pointer, not the nearest"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "var boxX = cx < (P.left + P.right) / 2 ? P.right - boxWidth - 6 : P.left + 6;",
+    replace: "var boxX = P.left + 6;",
+    why: "the reading always on the left: it covers the point under the pointer"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "if (typeof chart.cursor === \"number\" && chart.cursor >= P.left && chart.cursor <= P.right) {",
+    replace: "if (typeof chart.cursor === \"number\") {",
+    why: "a crosshair for a pointer outside the plot"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "g.globalAlpha = 0.14;",
+    replace: "g.globalAlpha = 1;",
+    why: "the area under the curve solid: it hides the grid"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "var curveColor = c[chart.color] || c.accent;",
+    replace: "var curveColor = c.accent;",
+    why: "every chart in the same colour"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "if (!(line.value > 0) || line.value > S.value.top) return;",
+    replace: "if (line.value > S.value.top) return;",
+    why: "a reference line drawn at 0 (no steady output below threshold)"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "text(g, S.valueLabels.unit, L.labelX, L.titleY, L.labelWidth);",
+    replace: "text(g, chart.unit, L.labelX, L.titleY, L.labelWidth);",
+    why: "the unit written without its prefix: milliwatts under 'W'"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "g.fillText(UI.axis.valueText(last[key], S.valueLabels, 2), L.labelX,",
+    replace: "g.fillText(F.si(last[key], chart.unit, 3), L.labelX,",
+    why: "the tag written in its own unit, not the axis's (5.12 mW on an axis of W)"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var depth = 4 * L.sag * u * (1 - u);",
+    replace: "var depth = 0;",
+    why: "the rays end at the mirror's edge, not on its curved face"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "return clamp(Math.round(count * share), 1, count);",
+    replace: "return clamp(Math.round(count * share), 0, count);",
+    why: "no ray leaves through a weak output mirror"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "return clamp(Math.round(count * share), 1, count);",
+    replace: "return clamp(Math.floor(count * share), 1, count);",
+    why: "the rays that leave rounded down: 1 of 15 at 10 %"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var first = Math.floor((count - howMany) / 2);",
+    replace: "var first = 0;",
+    why: "the rays that leave are the top ones, not the ones on the axis"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "if (i % 2 === 0) arrowHead(g, rightGap + 4, y, 1, 0, 6);",
+    replace: "if (true) arrowHead(g, rightGap + 4, y, 1, 0, 6);",
+    why: "every ray pointing right: light going one way only"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var RAY_GAP = 5;",
+    replace: "var RAY_GAP = 2;",
+    why: "rays packed closer than 5 px: a blur, not separate rays"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (pump > 0) {",
+    replace: "    if (true) {",
+    why: "pump light drawn with the pump off"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.globalAlpha = 0.3 + 0.7 * pump;",
+    replace: "g.globalAlpha = 1;",
+    why: "pump light as strong at 1 W as at 20 W"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.lineWidth = strong ? 3.5 : 2;",
+    replace: "g.lineWidth = 2;",
+    why: "both mirrors drawn with the same coating"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var railY = 0.81 * h;",
+    replace: "var railY = 0.69 * h;",
+    why: "the bench drawn through the parts"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "line(g, faceX(L, \"back\", y), y, faceX(L, \"output\", y), y);",
+    replace: "line(g, L.rod.x, y, L.rod.x + L.rod.w, y);",
+    why: "rays only inside the rod: no light between the rod and the mirrors"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "if (atom.excited && photons.length < MOST && random() < CHANCE) emitWith(atom, photon);",
+    replace: "if (photons.length < MOST && random() < CHANCE) emitWith(atom, photon);",
+    why: "an atom at rest emitting: light from nothing"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "      atom.excited = false;\n      atom.flash = 1;\n      tally.stimulated += 1;\n      // Beside the first",
+    replace: "      atom.flash = 1;\n      tally.stimulated += 1;\n      // Beside the first",
+    why: "an atom keeps its energy after emitting: energy from nothing"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "laserPhoton(photon.x, y, photon.row, photon.dx);",
+    replace: "laserPhoton(photon.x, y, photon.row, -photon.dx);",
+    why: "the second photon flying the other way: not stimulated emission"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "if (Math.abs(Math.sin(angle)) < Math.sin(CONE)) {",
+    replace: "if (true) {",
+    why: "every photon an atom emits by itself joins the laser light"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "        if (photons.length >= MOST) continue;\n",
+    replace: "",
+    why: "photons entering without limit"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "liftCredit = Math.min(3, liftCredit + LIFT * (0.2 + 0.8 * drive.pump) * dt);",
+    replace: "liftCredit = Math.min(3, liftCredit + LIFT * dt);",
+    why: "a weak pump lifting atoms as fast as a strong one"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "if (drive.light > 0.02 && photons.length < MOST) {",
+    replace: "if (false) {",
+    why: "atoms falling in laser light shown as emitting by themselves"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "atom.flash = Math.max(0, atom.flash - dt / FLASH);",
+    replace: "atom.flash = Math.max(0, atom.flash - dt);",
+    why: "the flash fading at a speed of its own, not LIMITS.flash"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "if (p.x < -0.03 || p.x > 1.03 || p.y < -0.03 || p.y > 1.03) photons.splice(j, 1);",
+    replace: "if (false) photons.splice(j, 1);",
+    why: "photons that left the picture never forgotten"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "photon.x += photon.dx * SPEED * dt;",
+    replace: "photon.x += photon.dx * dt;",
+    why: "photons flying at a speed of their own, not LIMITS.speed"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "laserPhoton(direction === 1 ? 0 : 1, (row + 0.5) / rows, row, direction);",
+    replace: "laserPhoton(0, (row + 0.5) / rows, row, direction);",
+    why: "a photon going left entering at the left edge: it leaves at once"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "enterCredit = Math.min(3, enterCredit + ENTER * wanted.light * dt);",
+    replace: "enterCredit = Math.min(3, enterCredit + ENTER * dt);",
+    why: "laser photons entering with no laser light"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "dropCredit = Math.min(3, dropCredit + DROP * dt);",
+    replace: "dropCredit = 3;",
+    why: "the atoms falling all at once when the inversion falls"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "atomMark(g, c, x, y, radius, atom.excited);",
+    replace: "atomMark(g, c, x, y, radius, false);",
+    why: "excited atoms drawn like atoms at rest"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "var tone = photon.row < 0 ? c.muted : c.accent2;",
+    replace: "var tone = c.accent2;",
+    why: "stray photons drawn like laser photons"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "g.rotate(Math.atan2(dy, dx));",
+    replace: "g.rotate(0);",
+    why: "every photon drawn pointing right"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "    g.clip();\n",
+    replace: "",
+    why: "photons drawn outside the box"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "      if (!word(name)) return;\n",
+    replace: "",
+    why: "a legend mark drawn for a word that is missing"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (box) box.value = F.plain(shown.factor * value, BOX_DIGITS);",
+    replace: "if (box) box.value = F.plain(value, BOX_DIGITS);",
+    why: "the output mirror's box showing 0.05 beside a % sign"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var rounded = round(typed, BOX_DIGITS) / shown.factor;",
+    replace: "var rounded = round(typed, BOX_DIGITS);",
+    why: "12.5 typed as per cent taken as 12.5 (1250 %)"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var rounded = round(typed, BOX_DIGITS) / shown.factor;\n            use(clamp(rounded, range.min, range.max));",
+    replace: "var rounded = round(typed, BOX_DIGITS) / shown.factor;\n            use(rounded);",
+    why: "a typed 50 W accepted: beyond what the slider allows"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var rounded = round(value, SLIDER_DIGITS);",
+    replace: "var rounded = value;",
+    why: "a slider giving 1.7078032… %, which the box cannot show exactly"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        setText('[data-laser-unit=\"' + name + '\"]', shown.unit);\n",
+    replace: "",
+    why: "the number boxes without their units"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "cursor[name] = event.offsetX;",
+    replace: "cursor[name] = event.clientX;",
+    why: "the pointer measured from the window, not from the chart"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          cursor[name] = null;\n",
+    replace: "",
+    why: "the crosshair stays after the pointer left"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "cursor: cursor.inversion",
+    replace: "cursor: cursor.power",
+    why: "both charts following one pointer"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "theory.scrollIntoView({ behavior: prefersLessMotion() ? \"auto\" : \"smooth\", block: \"start\" });",
+    replace: "theory.scrollIntoView({ behavior: \"smooth\", block: \"start\" });",
+    why: "a smooth scroll for a visitor who asked for less motion"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "excited: y / (1 + y),",
+    replace: "excited: y,",
+    why: "the cartoon's excited share is the raw inversion: every atom excited at threshold"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "state.cartoon.step(dt, {",
+    replace: "state.cartoon.step(dt / state.slowMotion, {",
+    why: "the cartoon run in simulated time: it stands still"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "light: UI.bench.rayAlpha(beamNow()),",
+    replace: "light: 1,",
+    why: "the cartoon full of laser light before the laser starts"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "pump: Math.min(1, derived.x / 4)\n",
+    replace: "pump: derived.x / 4\n",
+    why: "the cartoon's pump not held at its strongest"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "return word ? word + \" \" + number : number;",
+    replace: "return word || number;",
+    why: "the output mirror's transmission written without its number"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "pump: state.config.pumpPower / bench.RANGES.pumpPower.max,",
+    replace: "pump: state.config.pumpPower,",
+    why: "the pump light at full strength from 1 W up"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        transmission: 1 - state.config.refl2\n",
+    replace: "        transmission: state.config.refl2\n",
+    why: "the rays that leave counted from the reflectivity"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "floor: derived.powerPerP,",
+    replace: "floor: 0,",
+    why: "no floor on the power axis: spontaneous emission blown up to fill the chart"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "lines: [{ value: derived.P_out, word: powerWords.steady, tone: \"soft\" }],",
+    replace: "lines: [],",
+    why: "no steady-output line on the power chart"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "UI.plots.draw(view, chart(\"y\", {",
+    replace: "UI.plots.draw(view, chart(\"P\", {",
+    why: "the inversion chart plotting the power"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (!any) return null;",
+    replace: "if (!found.bench) return null;",
+    why: "a page with only its charts builds nothing"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var shownTime = WINDOW / state.slowMotion;          // simulated s on the chart",
+    replace: "var shownTime = WINDOW;",
+    why: "the charts showing 5 simulated seconds, not 5 seconds of screen time"
+  },
+  {
+    file: "sections/laser.html",
+    find: "data-laser-input=\"coupler\"",
+    replace: "data-laser-input=\"mirror\"",
+    why: "a number box page.js cannot find"
+  },
+  {
+    file: "sections/laser.html",
+    find: " aria-labelledby=\"laser-pump-name\" data-laser-input=\"pump\"",
+    replace: " data-laser-input=\"pump\"",
+    why: "a number box with no name for screen readers"
+  },
+  {
+    file: "sections/laser.html",
+    find: "<section class=\"band laser-learn\" data-laser-learn>",
+    replace: "<section class=\"band laser-learn\">",
+    why: "the theory button with nowhere to scroll to"
+  },
+  {
+    file: "sections/laser.html",
+    find: "data-laser-canvas=\"photons\"",
+    replace: "data-laser-canvas=\"photon\"",
+    why: "a canvas page.js cannot find"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"button\": { \"hy\": \"Խորանալ լազերի ֆիզիկայի մեջ\",",
+    replace: "\"button\": { \"hy\": \"\",",
+    why: "the theory button without its Armenian words"
+  },
+  {
+    file: "data/laser.json",
+    find: "  \"photons\": {",
+    replace: "  \"photon\": {",
+    why: "the photon picture's words under another name"
+  },
+  {
+    file: "index.html",
+    find: "<script src=\"js/laser/ui/axis.js\"></script>\n  <script src=\"js/laser/ui/history.js\"></script>",
+    replace: "<script src=\"js/laser/ui/history.js\"></script>\n  <script src=\"js/laser/ui/axis.js\"></script>",
+    why: "the UI files loaded in another order than UI_FILES"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "    bg: \"--bg\"",
+    replace: "    bg: \"--bg-dark\"",
+    why: "a palette colour no theme sets"
+  },
+  /* ---------- stage 6b: from the review ---------- */
+  {
+    file: "js/laser/page.js",
+    find: "          state.cartoon = newCartoon();       // no atoms or light left from the old run\n",
+    replace: "",
+    why: "Reset keeping the old cartoon's atoms and photons"
+  },
+  {
+    file: "js/laser/page.js",
+    find: ".replace(/[\\s\\u00a0]/g, \"\").replace(\",\", \".\")",
+    replace: ".replace(/[\\s\\u00a0]/g, \"\")",
+    why: "a decimal comma not read as a point"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "String(text).replace(/[\\s\\u00a0]/g, \"\")",
+    replace: "String(text).trim()",
+    why: "spaces between digits not dropped"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "    if (cleaned === \"\") return NaN;\n",
+    replace: "",
+    why: "an empty box read as 0"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var rounded = round(typed, BOX_DIGITS) / shown.factor;",
+    replace: "var rounded = typed / shown.factor;",
+    why: "a typed value used with more digits than the box shows"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        listen(canvas, \"pointerdown\", pointAt);\n",
+    replace: "",
+    why: "a tap on a chart (no pointermove) shows no crosshair"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (event.pointerType === \"touch\") return;",
+    replace: "if (false) return;",
+    why: "a finger leaving after a tap takes the crosshair away"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          cursor[name] = event.offsetX;\n          loop.redraw(canvas);",
+    replace: "          cursor[name] = event.offsetX;\n          loop.redraw();",
+    why: "the pointer redrawing every picture, not its chart"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "tone: \"faint\", stretch: false }",
+    replace: "tone: \"faint\" }",
+    why: "the pump level stretching the inversion axis"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "word: inversionWords.pump,",
+    replace: "word: \"\",",
+    why: "the pump level line without its word"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (!shownPoints || shownPoints.from !== from) {",
+    replace: "if (true) {",
+    why: "each chart taking its own copy of the points"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (!shownPoints || shownPoints.from !== from) {",
+    replace: "if (!shownPoints) {",
+    why: "the shared points kept after the window changed (slow motion)"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      state.history.push(state.sim.t, powerNow(), inversionNow());\n      shownPoints = null;\n",
+    replace: "      state.history.push(state.sim.t, powerNow(), inversionNow());\n",
+    why: "the shared points never taken again after a new point"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "light: UI.bench.rayAlpha(beamNow()),",
+    replace: "light: Math.min(1, beamNow()),",
+    why: "the cartoon's light not the bench's ray strength"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      UI.bench.draw(view, labels, {",
+    replace: "      labels.transmission = \"\";\n      UI.bench.draw(view, labels, {",
+    why: "page.js changing the bench's words"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "        if (canvas === undefined) {",
+    replace: "        if (true) {",
+    why: "redraw(canvas) drawing every canvas"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "        if (destroyed || frameId !== null) return;\n        if (canvas === undefined) {",
+    replace: "        if (destroyed) return;\n        if (canvas === undefined) {",
+    why: "redraw(canvas) drawing outside a frame while running"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "      g.fillStyle = c.heading;\n      g.font = \"700 \"",
+    replace: "      g.fillStyle = c.bg;\n      g.font = \"700 \"",
+    why: "the tag's text in the background colour, on the background"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "      g.fillStyle = c.bg;\n      g.fillRect(P.right + 1",
+    replace: "      g.fillStyle = curveColor;\n      g.fillRect(P.right + 1",
+    why: "the tag filled with the curve's colour again (too little contrast)"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "      g.strokeRect(P.right + 1, tagY - tagHeight / 2, L.tagWidth, tagHeight);\n",
+    replace: "",
+    why: "the tag without its frame"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "      if (lines[j].stretch === false) continue;\n",
+    replace: "",
+    why: "a line with stretch: false stretching the axis"
+  },
+  {
+    file: "js/laser/ui/draw-plots.js",
+    find: "if (!(line.value > 0) || line.value > S.value.top) return;",
+    replace: "if (!(line.value > 0)) return;",
+    why: "a line above the axis drawn outside the plot"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "transmission: { x: w - pad, y: topRow, align: \"right\", maxWidth: w - 2 * pad }",
+    replace: "transmission: { x: w - pad, y: bottomRow, align: \"right\", maxWidth: (w - pad) - (w / 2 + lampLength / 2) - fontSize }",
+    why: "the transmission back under the bench, squeezed beside the pump's name"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "maxWidth: w - 2 * pad }",
+    replace: "maxWidth: w / 2 - pad - fontSize }",
+    why: "the transmission's row only half wide"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var nameRow = topRow - 1.35 * fontSize;",
+    replace: "var nameRow = topRow;",
+    why: "the mirror names on the transmission's row"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "return word ? word + \" \" + number : number;",
+    replace: "return word + \" \" + number;",
+    why: "the transmission's number after an empty word"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "if (typeof transmission !== \"number\" || !isFinite(transmission)) return \"\";",
+    replace: "if (transmission === undefined) return \"\";",
+    why: "a transmission that is no number written out"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "return beam > 0 ? Math.min(1, Math.sqrt(beam)) : 0;",
+    replace: "return beam > 0 ? Math.min(1, beam) : 0;",
+    why: "rayAlpha without the square root"
+  },
+  {
+    file: "sections/laser.html",
+    find: "type=\"text\" inputmode=\"decimal\" autocomplete=\"off\" spellcheck=\"false\" aria-labelledby=\"laser-pump-name\"",
+    replace: "type=\"number\" inputmode=\"decimal\" autocomplete=\"off\" spellcheck=\"false\" aria-labelledby=\"laser-pump-name\"",
+    why: "the pump's box a number input (loses a decimal comma)"
+  },
+  {
+    file: "sections/laser.html",
+    find: "class=\"laser-bench__canvas laser-bench__canvas--chart\" data-laser-canvas=\"inversion\"",
+    replace: "class=\"laser-bench__canvas\" data-laser-canvas=\"inversion\"",
+    why: "the inversion chart without the chart class"
+  },
+  {
+    file: "css/laser.css",
+    find: "  touch-action: pan-y;\n",
+    replace: "",
+    why: "a finger drag on a chart taken by the browser"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"pump\": { \"hy\": \"մղում\", \"en\": \"pump\" }",
+    replace: "\"pump\": { \"hy\": \"\", \"en\": \"pump\" }",
+    why: "the pump level's word without its Armenian"
   }
 ];
 
