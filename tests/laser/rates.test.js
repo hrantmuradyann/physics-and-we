@@ -110,22 +110,31 @@ test("derivatives: dy/dt′ = x − y − y·p and ds/dt′ = ((y − 1) + βy·
 });
 
 test("derivatives: the seed stays finite where e^(−s) alone overflows (β = 10⁻³¹⁰, s ≈ −714)", () => {
-  // s = ln(βy), so the seed βy·e^(−s) is exactly 1; e^(−s) on its own is Infinity.
+  // s = ln(βy), so the seed β(y + 10⁻¹²)·e^(−s) is 1 + 2×10⁻¹²; e^(−s) on
+  // its own is Infinity.
   const beta = 1e-310;
   const s = Math.log(beta) + Math.log(0.5);
   const [dy, ds] = call("derivatives", { x: 0.5, eps: 1e-3, beta })(0, [0.5, s]);
-  assertClose(ds, (0.5 - 1 + 1) / 1e-3, 1e-12, "ds/dt′");
+  assertClose(ds, (0.5 - 1 + (0.5 + 1e-12) / 0.5) / 1e-3, 1e-12, "ds/dt′");
   assertClose(dy, 0, 0, "dy/dt′ = x − y − y·p with p ≈ 0", 1e-300);
 });
 
-test("derivatives: no seed without excited atoms (y ≤ 0), and f stays finite there", () => {
-  // y = 0 is the pump off for long; y a hair below 0 a solver trial.
+test("derivatives: the seed counts max(y, 0) + 10⁻¹², as liftToSeed does, and f stays finite and smooth", () => {
+  // y = 0 is the pump off for long; y a hair below 0 a solver trial. The
+  // implicit solver differentiates f: with no seed at y ≤ 0 the slope
+  // across y = 0 grew past 10³³ with the pump off and stopped it.
   const f = call("derivatives", { x: 0, eps: 1e-3, beta: 1e-8 });
-  for (const y of [0, -1e-12]) {
+  const seedAt = (y) => 1e-8 * (Math.max(y, 0) + 1e-12) * Math.exp(50);
+  for (const y of [0, -1e-12, 1e-13, 1e-12, 1e-6]) {
     const [dy, ds] = f(0, [y, -50]);
-    assertClose(ds, (y - 1) / 1e-3, 1e-15, "ds/dt′ at y = " + y);
+    assertClose(ds, (y - 1 + seedAt(y)) / 1e-3, 1e-14, "ds/dt′ at y = " + y);
     assertClose(dy, -y * (1 + Math.exp(-50)), 1e-15, "dy/dt′ at y = " + y, 1e-300);
   }
+  // No corner above y = 0: the seed's slope in y is the same across
+  // 10⁻¹² as above it. With max(y, 10⁻¹²) it was 0 below 10⁻¹², and the
+  // solver's difference in y (4.7×10⁻¹¹) reached across that corner.
+  const slope = (a, b) => (f(0, [b, -50])[1] - f(0, [a, -50])[1]) / (b - a);
+  assertClose(slope(5e-13, 1.5e-12), slope(1e-11, 2e-11), 1e-3, "slope across 10⁻¹²");
 });
 
 test("with β = 0 the seed term is left out: f stays finite at s = −800, where e^(−s) overflows", () => {
@@ -153,7 +162,8 @@ test("steadyState without the seed is y = min(x, 1), p = max(x − 1, 0)", () =>
 
 test("steadyState with the seed makes f zero, on both sides of threshold and at it", () => {
   for (const beta of [1e-12, 1e-8, 1e-4]) {
-    for (const x of [0.1, 0.5, 0.99, 1, 1.01, 2, 10]) {
+    // x = 0 and 10⁻¹⁴: the pump off, where the seed floor sets p ≈ β·10⁻¹².
+    for (const x of [0, 1e-14, 0.1, 0.5, 0.99, 1, 1.01, 2, 10]) {
       const ss = call("steadyState", { x, beta });
       const [dy, ds] = R.derivatives({ x, eps: 1, beta })(0, [ss.y, Math.log(ss.p)]);
       const label = " at x = " + x + ", β = " + beta;
@@ -163,12 +173,14 @@ test("steadyState with the seed makes f zero, on both sides of threshold and at 
   }
   // exactly at threshold the photons sit at √β
   assertClose(call("steadyState", { x: 1, beta: 1e-8 }).p, 1e-4, 1e-12, "p(x = 1) = √β");
+  // with the pump off, at the floor's seed level
+  assertClose(call("steadyState", { x: 0, beta: 1e-8 }).p, 1e-20, 1e-12, "p(x = 0) = β·10⁻¹²");
 });
 
 test("steadyState below threshold keeps full precision for a tiny seed (no cancellation)", () => {
-  // p ≈ βx/(1 − x) = 10⁻¹⁵. The form ((x − 1) + √(…))/2 subtracts two
+  // p ≈ β(x + 10⁻¹²)/(1 − x) ≈ 10⁻¹⁵. The form (a + √(…))/2 subtracts two
   // numbers that agree in 15 digits and would be off by a few percent.
-  assertClose(call("steadyState", { x: 0.5, beta: 1e-15 }).p, 1e-15, 1e-12, "p");
+  assertClose(call("steadyState", { x: 0.5, beta: 1e-15 }).p, 1e-15 * (0.5 + 1e-12) / 0.5, 1e-12, "p");
 });
 
 /* ---------- dynamics on the solver ---------- */
@@ -226,10 +238,10 @@ test("liftToSeed leaves a laser that runs, the below-threshold level, the one-ph
   }
 });
 
-test("liftToSeed raises s to ln(β·y), or to ln(β·10⁻¹²) when y is smaller", () => {
+test("liftToSeed raises s to ln(β·(max(y, 0) + 10⁻¹²))", () => {
   const lifted = call("liftToSeed", { state: [0.8, -300], beta: 1e-8 });
   assert.equal(lifted[0], 0.8, "y is never changed");
-  assertClose(lifted[1], Math.log(1e-8 * 0.8), 1e-15, "s = ln(βy)");
+  assertClose(lifted[1], Math.log(1e-8 * (0.8 + 1e-12)), 1e-15, "s = ln(β(y + 10⁻¹²))");
   for (const y of [1e-300, 0, -1e-15]) {
     const low = call("liftToSeed", { state: [y, -1e6], beta: 1e-8 });
     assert.equal(low[0], y, "y is never changed");
@@ -249,18 +261,23 @@ test("β turned on after a run with β = 0: the solver gives up, unless the stat
   assertClose(Math.exp(run.state[1]), ss.p, 1e-6, "p");
 });
 
-test("pump off for 720τ: s follows ln(βy) past −709; back on, the laser starts again after liftToSeed", () => {
-  // ε = 0.1 keeps the run short; the seed works the same for any ε.
+test("pump off for 720τ: y falls past 10⁻³⁰⁰ while s stops at the seed of y = 10⁻¹²; back on, the laser starts again", () => {
+  // ε = 0.1 keeps the run short; the seed works the same for any ε. The
+  // seed counts y as y + 10⁻¹² (Y_FLOOR), so s settles at
+  // ln(β·(y + 10⁻¹²)/(1 − y)) instead of following ln(βy) down past −709,
+  // and the photons need not climb hundreds of e-folds when the pump comes
+  // back.
   const loose = { rtol: 1e-6, atol: 1e-9 };
-  const off = integrate({ x: 0, eps: 0.1, beta: 1e-8 }, [1, 0], 720, 9000, loose);      // needs about 5800
+  const off = integrate({ x: 0, eps: 0.1, beta: 1e-8 }, [1, 0], 720, 4000, loose);      // measured: 2629
   const [y, s] = off.state;
   assert.ok(y > 0 && y < 1e-300, "y = " + y);
-  // Below −709.78, e^(−s) alone is Infinity; s lags ln(βy) a little as y falls.
-  assert.ok(s < -720, "s = " + s);
-  assertClose(s, Math.log(1e-8) + Math.log(y), 0, "s ≈ ln(βy)", 0.2);
-  const on = { x: 2, eps: 0.1, beta: 1e-8 };
-  assert.throws(() => integrate(on, off.state, 20, 1500, loose), /step size fell below/);
-  const run = integrate(on, call("liftToSeed", { state: off.state, beta: 1e-8 }), 20, 1500, loose); // needs about 855
+  assertClose(s, Math.log(1e-8 * 1e-12), 1e-6, "s at the floor's seed level");
+  // At that level within the solver's tolerance (measured: 1.5×10⁻⁵ below
+  // it), so liftToSeed has nearly nothing to add.
+  const lifted = call("liftToSeed", { state: off.state, beta: 1e-8 });
+  assert.equal(lifted[0], y, "y is never changed");
+  assert.ok(Math.abs(lifted[1] - s) < 1e-4, "s lifted by " + (lifted[1] - s));
+  const run = integrate({ x: 2, eps: 0.1, beta: 1e-8 }, off.state, 20, 400, loose);     // measured: 251
   assertClose(run.state[0], 1, 1e-6, "y");
   assertClose(Math.exp(run.state[1]), 1, 1e-6, "p");
 });

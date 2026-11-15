@@ -107,8 +107,8 @@
     // The prefix is chosen after rounding, so 999.96 W becomes 1.00 kW.
     var rounded = Number(size.toPrecision(places));
     // Below the smallest prefix the number tells a visitor nothing more,
-    // and toFixed() could not write it (the page meets 10⁻¹⁷⁰ W with the
-    // pump off): "< 1 fW".
+    // and toFixed() could not write it past 10⁻¹⁰⁰ (before the seed floor
+    // of stage 7a the page met 10⁻¹⁷⁰ W with the pump off): "< 1 fW".
     if (rounded < 1e-15) {
       var bound = value < 0 ? ">" + NO_BREAK + MINUS : "<" + NO_BREAK;
       return bound + "1" + NO_BREAK + PREFIXES[0].symbol + unit;

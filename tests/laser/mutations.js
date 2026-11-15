@@ -508,21 +508,21 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "var hTry = lastStep ? t1 - t : h;",
+    find: "var hTry = lastStep ? t1 - point.t : h;",
     replace: "var hTry = h;",
     why: "the last step overshoots t1 instead of landing on it"
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "        rejected++;\n",
-    replace: "        rejected++;\n        k1 = step.kLast;\n",
+    find: "        rejected++;\n        justRejected = true;",
+    replace: "        rejected++;\n        point = { t: point.t, state: point.state, f: step.fNew };\n        justRejected = true;",
     why: "after a rejected step, the next try starts from the rejected step's last derivative"
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "k1 = step.kLast;             // first same as last",
-    replace: "k1 = derivatives(lastStep ? t1 : t + hTry, step.state);",
-    why: "first same as last not used: 7 calls of f per step instead of 6"
+    find: "point = { t: lastStep ? t1 : point.t + hTry, state: step.state, f: step.fNew };",
+    replace: "point = { t: lastStep ? t1 : point.t + hTry, state: step.state, f: derivatives(lastStep ? t1 : point.t + hTry, step.state) };",
+    why: "first same as last not used: one more call of f per step (7 instead of 6 for dopri5)"
   },
   {
     file: "js/laser/engine/ode.js",
@@ -532,31 +532,31 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "while (accepted + rejected < maxSteps) {",
-    replace: "while (accepted + rejected <= maxSteps) {",
+    find: "while (accepted + rejected < inputs.maxSteps) {",
+    replace: "while (accepted + rejected <= inputs.maxSteps) {",
     why: "the step budget off by one"
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "if (justRejected) factor = Math.min(factor, 1);",
-    replace: "",
+    find: "if (justRejected) factor = Math.min(factor, 1);\n        var hProposed = Math.min(hTry * factor, hMax);\n        // A last step cut short to land on t1 (a frame shorter than the\n",
+    replace: "\n        var hProposed = Math.min(hTry * factor, hMax);\n        // A last step cut short to land on t1 (a frame shorter than the\n",
     why: "the step grows right after a rejection"
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "        justRejected = false;\n",
-    replace: "",
+    find: "        justRejected = false;\n        // f at the new state",
+    replace: "        // f at the new state",
     why: "after one rejection the step never grows again"
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "    if (isNaN(err)) err = Infinity;\n",
-    replace: "",
+    find: "    if (isNaN(err)) err = Infinity;\n    return { state: newState, fNew: k[k.length - 1], err: err };",
+    replace: "    return { state: newState, fNew: k[k.length - 1], err: err };",
     why: "a NaN error makes the step NaN, and the solver spins until the budget runs out"
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "    check.finiteArray(WHERE, \"f(t0, state0)\", k1);\n",
+    find: "    check.finiteArray(where, \"f(t0, state0)\", point.f);\n",
     replace: "",
     why: "NaN at the start not reported"
   },
@@ -586,14 +586,20 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "var scale = atol + rtol * Math.max(Math.abs(state[m]), Math.abs(newState[m]));",
-    replace: "var scale = atol + rtol * Math.abs(state[m]);",
+    find: "var scale = atol + rtol * Math.max(Math.abs(state[m]), Math.abs(newState[m]));\n      sumOfSquares",
+    replace: "var scale = atol + rtol * Math.abs(state[m]);\n      sumOfSquares",
     why: "error scale from the old state only"
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "if (t1 <= t0) check.fail",
-    replace: "if (t1 < t0) check.fail",
+    find: "scale.push(atol + rtol * Math.max(Math.abs(state[m]), Math.abs(newState[m])));",
+    replace: "scale.push(atol + rtol * Math.abs(state[m]));",
+    why: "error scale from the old state only (rosenbrock): a state growing from 0 is measured against atol alone"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "if (inputs.t1 <= inputs.t0) {",
+    replace: "if (inputs.t1 < inputs.t0) {",
     why: "a zero-length interval accepted"
   },
   {
@@ -618,8 +624,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "      if (!isFinite(newState[m])) {",
-    replace: "      if (false) {",
+    find: "      if (!isFinite(newState[m])) {\n        return { state: newState, fNew: k[k.length - 1], err: Infinity };",
+    replace: "      if (false) {\n        return { state: newState, fNew: k[k.length - 1], err: Infinity };",
     why: "a step into Infinity accepted: its error scale is Infinity, so its error looks like 0"
   },
   {
@@ -630,8 +636,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "Math.pow(0.01 / fastest, ERROR_EXPONENT)",
-    replace: "Math.pow(0.1 / fastest, ERROR_EXPONENT)",
+    find: "Math.pow(0.01 / fastest, exponent)",
+    replace: "Math.pow(0.1 / fastest, exponent)",
     why: "first-step guess: wrong size from how fast f changes"
   },
   {
@@ -654,20 +660,20 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "    h = Math.min(h, hMax);           // a given h0 or the guess, never past hMax\n",
-    replace: "",
+    find: "    h = Math.min(h, hMax);           // a given h0 or the guess, never past hMax\n\n    var accepted = 0;",
+    replace: "\n    var accepted = 0;",
     why: "a given h0 longer than hMax used as it is"
   },
   {
     file: "js/laser/engine/ode.js",
-    find: "var hProposed = Math.min(hTry * factor, hMax);",
-    replace: "var hProposed = hTry * factor;",
+    find: "var hProposed = Math.min(hTry * factor, hMax);\n        // A last step cut short to land on t1 (a frame shorter than the\n",
+    replace: "var hProposed = hTry * factor;\n        // A last step cut short to land on t1 (a frame shorter than the\n",
     why: "hMax ignored after the first step"
   },
   {
     file: "js/laser/engine/ode.js",
     find: "h = hTry < h ? Math.max(h, hProposed) : hProposed;",
-    replace: "h = hTry < h ? Math.min(h, hTry * SAFETY * Math.pow(step.err, -ERROR_EXPONENT)) : hProposed;",
+    replace: "h = hTry < h ? Math.min(h, hTry * SAFETY * Math.pow(step.err, -exponent)) : hProposed;",
     why: "the step passed on taken from a cut-short step's error, which on a very short step is mostly rounding (declined review suggestion)"
   },
   {
@@ -704,33 +710,39 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "seed = Math.exp(logBeta + Math.log(y) - s);",
+    find: "seed = Math.exp(logBeta + Math.log(Math.max(y, 0) + Y_FLOOR) - s);",
     replace: "seed = Math.exp(logBeta - s);",
     why: "seed β·y written as β"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "seed = Math.exp(logBeta + Math.log(y) - s);",
-    replace: "seed = Math.exp(logBeta + Math.log(y) + s);",
+    find: "seed = Math.exp(logBeta + Math.log(Math.max(y, 0) + Y_FLOOR) - s);",
+    replace: "seed = Math.exp(logBeta + Math.log(Math.max(y, 0) + Y_FLOOR) + s);",
     why: "seed β·y/p written as β·y·p"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "seed = Math.exp(logBeta + Math.log(y) - s);",
-    replace: "seed = beta * y * Math.exp(-s);",
+    find: "seed = Math.exp(logBeta + Math.log(Math.max(y, 0) + Y_FLOOR) - s);",
+    replace: "seed = beta * (Math.max(y, 0) + Y_FLOOR) * Math.exp(-s);",
     why: "seed as β·y·e^(−s): e^(−s) overflows once s < −709 although the seed is about 1 (pump off)"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "if (beta > 0 && y > 0) {\n        seed = Math.exp(logBeta + Math.log(y) - s);",
-    replace: "if (y > 0) {\n        seed = beta * y * Math.exp(-s);",
+    find: "if (beta > 0) {\n        seed = Math.exp(logBeta + Math.log(Math.max(y, 0) + Y_FLOOR) - s);",
+    replace: "if (true) {\n        seed = beta * (Math.max(y, 0) + Y_FLOOR) * Math.exp(-s);",
     why: "β = 0 seed multiplied by 0: 0·Infinity = NaN once s < −709"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "if (beta > 0 && y > 0) {",
-    replace: "if (beta > 0) {",
-    why: "a seed from y < 0 (a solver trial): ln of a negative number is NaN"
+    find: "Math.log(Math.max(y, 0) + Y_FLOOR) - s",
+    replace: "Math.log(y) - s",
+    why: "the seed without its floor: ln of y ≤ 0 is NaN, and the implicit solver's Jacobian across y = 0 grows past 10³³ with the pump off"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "Math.log(Math.max(y, 0) + Y_FLOOR) - s",
+    replace: "Math.log(Math.max(y, Y_FLOOR)) - s",
+    why: "the seed floor as max(y, 10⁻¹²): a corner at y = 10⁻¹² that the solver's difference in y reaches across, so pump-off frames cost up to 580 steps (stage 7a review)"
   },
   {
     file: "js/laser/engine/rates.js",
@@ -812,9 +824,15 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "var p = x >= 1 ? ((x - 1) + squareRoot) / 2 : 2 * beta * x / (squareRoot - (x - 1));",
-    replace: "var p = ((x - 1) + squareRoot) / 2;",
+    find: "var p = a >= 0 ? (a + squareRoot) / 2 : 2 * c / (squareRoot - a);",
+    replace: "var p = (a + squareRoot) / 2;",
     why: "steady state below threshold computed with cancellation"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var a = x - 1 + beta * Y_FLOOR;\n    var c = beta * (x + Y_FLOOR);",
+    replace: "var a = x - 1;\n    var c = beta * x;",
+    why: "steadyState without the seed floor: p = 0 with the pump off, where f settles at β·10⁻¹²"
   },
   {
     file: "js/laser/engine/rates.js",
@@ -854,7 +872,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "var seedLevel = Math.log(beta) + Math.log(Math.max(y, Y_FLOOR));",
+    find: "var seedLevel = Math.log(beta) + Math.log(Math.max(y, 0) + Y_FLOOR);",
     replace: "var seedLevel = Math.log(beta) + Math.log(y);",
     why: "no floor for y: after a long time with the pump off there is nothing to lift to"
   },
@@ -2557,7 +2575,189 @@ const MUTATIONS = [
     find: "\"pump\": { \"hy\": \"մղում\", \"en\": \"pump\" }",
     replace: "\"pump\": { \"hy\": \"\", \"en\": \"pump\" }",
     why: "the pump level's word without its Armenian"
+  },
+  /* ---------- stage 7a: ode.rosenbrock, the seed floor, the bench ---------- */
+  {
+    file: "js/laser/engine/ode.js",
+    find: "d: 1 / (2 + Math.SQRT2),",
+    replace: "d: 1 / (2 - Math.SQRT2),",
+    why: "d from the other root of the method's equation"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "e32: 6 + Math.SQRT2",
+    replace: "e32: 6 - Math.SQRT2",
+    why: "e32 with the wrong sign of √2"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "rhs.push(f0[m] + hd * T[m]);",
+    replace: "rhs.push(f0[m]);",
+    why: "∂f/∂t left out of k₁: a stiff problem that changes with t lags behind"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "- 2 * (k1[m] - f0[m]) + hd * T[m]);",
+    replace: "- 2 * (k1[m] - f0[m]));",
+    why: "∂f/∂t left out of k₃ (the error estimate)"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var f1 = derivatives(Math.min(t + 0.5 * h, t1), midState);",
+    replace: "var f1 = derivatives(Math.min(t + h, t1), midState);",
+    why: "the middle stage evaluated at the end of the step"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "midState.push(state[m] + 0.5 * h * k1[m]);",
+    replace: "midState.push(state[m] + h * k1[m]);",
+    why: "the middle stage's state a whole step on"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "    for (m = 0; m < n; m++) k2[m] += k1[m];\n",
+    replace: "",
+    why: "k₂ without its + k₁"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "estimate.push(h / 6 * (k1[m] - 2 * k2[m] + k3[m]));",
+    replace: "estimate.push(h / 3 * (k1[m] - 2 * k2[m] + k3[m]));",
+    why: "the error estimate twice too big"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "estimate.push(h / 6 * (k1[m] - 2 * k2[m] + k3[m]));",
+    replace: "estimate.push(h / 6 * (k1[m] + 2 * k2[m] + k3[m]));",
+    why: "the error estimate with a wrong sign"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var ROSENBROCK_EXPONENT = 1 / 3;",
+    replace: "var ROSENBROCK_EXPONENT = 1 / 5;",
+    why: "the step control of dopri5 (order 5) for an order-3 error estimate"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "row.push((m === j ? 1 : 0) - hd * J[m][j]);",
+    replace: "row.push((m === j ? 1 : 0) + hd * J[m][j]);",
+    why: "W = I + h·d·J: the implicit part with the wrong sign"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "row.push((m === j ? 1 : 0) - hd * J[m][j]);",
+    replace: "row.push((m === j ? 1 : 0) - hd * J[j][m]);",
+    why: "the Jacobian transposed"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "        if (Math.abs(matrix[row][col]) > Math.abs(matrix[best][col])) best = row;\n",
+    replace: "",
+    why: "no pivoting: a 0 on the diagonal is divided by"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "        order[col] = order[best];\n        order[best] = swapIndex;\n",
+    replace: "",
+    why: "rows swapped without keeping track of their order"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "        matrix[row][col] = factor;\n",
+    replace: "",
+    why: "the elimination factors not kept for the solve"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "x[i] = sum / lu[i][i];",
+    replace: "x[i] = sum;",
+    why: "back substitution without dividing by the diagonal"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "sum = b[factors.order[i]];",
+    replace: "sum = b[i];",
+    why: "the right-hand side not put in the swapped row order"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "      if (state[j] + step === state[j]) step = Math.sqrt(Number.EPSILON) * Math.abs(state[j]);\n",
+    replace: "",
+    why: "a Jacobian step lost in rounding at large |state| (0/0)"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "for (i = 0; i < n; i++) J[i][j] = (fMoved[i] - f0[i]) / delta;",
+    replace: "for (i = 0; i < n; i++) J[j][i] = (fMoved[i] - f0[i]) / delta;",
+    why: "the Jacobian filled in by rows instead of columns"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "      if (point !== jacobianPoint) {",
+    replace: "      if (jacobianPoint === null) {",
+    why: "J and T never computed again after the first point"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "      if (point !== jacobianPoint) {",
+    replace: "      if (true) {",
+    why: "J and T computed again for every retry: n + 1 calls of f wasted"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var delta = Math.min(Math.sqrt(Number.EPSILON) * Math.max(Math.abs(t), Math.abs(t + h)), h);",
+    replace: "var delta = Math.sqrt(Number.EPSILON) * Math.max(Math.abs(t), Math.abs(t + h));",
+    why: "∂f/∂t over √ε·|t| even when that is longer than the step: on a short call f is called past t1"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "return (value - f0[i]) / dt;",
+    replace: "return (f0[i] - value) / dt;",
+    why: "∂f/∂t with the wrong sign"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "return (value - f0[i]) / dt;",
+    replace: "return 0;",
+    why: "∂f/∂t taken as 0"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "point = { t: lastStep ? t1 : point.t + hTry, state: step.state, f: step.fNew };",
+    replace: "point = { t: lastStep ? t1 : point.t + hTry, state: step.state, f: point.f };",
+    why: "f at the new point never taken over: every step starts from the first derivative"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "      if (!isFinite(newState[m])) {\n        return { state: newState, fNew: f2, err: Infinity };",
+    replace: "      if (false) {\n        return { state: newState, fNew: f2, err: Infinity };",
+    why: "a step into Infinity accepted (rosenbrock)"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "    if (isNaN(err)) err = Infinity;\n    return { state: newState, fNew: f2, err: err };",
+    replace: "    return { state: newState, fNew: f2, err: err };",
+    why: "a NaN error makes the step NaN (rosenbrock)"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var f2 = derivatives(Math.min(t + h, t1), newState);",
+    replace: "var f2 = derivatives(t + h, newState);",
+    why: "f called one rounding unit past t1 on the last step"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "firstStep(derivatives, t0, t1, point.state, point.f, inputs.rtol, inputs.atol, exponent)",
+    replace: "firstStep(derivatives, t0, t1, point.state, point.f, inputs.rtol, inputs.atol, ERROR_EXPONENT)",
+    why: "the first-step guess made for dopri5's order"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var run = E.ode.rosenbrock({",
+    replace: "var run = E.ode.dopri5({",
+    why: "the bench back on the explicit solver: below threshold its step stays below 3.3ε/(1 − y)"
   }
+
 ];
 
 module.exports = { MUTATIONS };

@@ -189,20 +189,22 @@ test("start(): the pump just switched on, no inversion, one photon", () => {
 test("from start to steady state: the output equals derive's P_out within 1 %", () => {
   const c = config();
   const d = B.derive(c);
-  // 30τ: about 50 damping times. Measured: 4565 steps.
-  const run = advance(B.start(), c, 30 * d.tau, 7000);
+  // 30τ: about 50 damping times. Measured: 12 390 steps (dopri5: 4565; the
+  // implicit solver is order 2, stage 7a).
+  const run = advance(B.start(), c, 30 * d.tau, 18600);
   assert.equal(run.reachedEnd, true);
   assertClose(run.sim.t, 30 * d.tau, 1e-12, "time");
   assertClose(powerOf(run.sim, d), d.P_out, 0.01, "P_out");
   assertClose(run.sim.N, d.N_c, 0.01, "the inversion clamped at threshold");
-  assert.ok(run.steps > 1000 && run.steps <= 7000, "steps " + run.steps);
+  assert.ok(run.steps > 1000 && run.steps <= 18600, "steps " + run.steps);
 });
 
 test("below threshold: the inversion settles at x·N_c and the output stays at the spontaneous level", () => {
   const c = config({ pumpPower: 0.75 });
   const d = B.derive(c);
-  // 10τ at x ≈ 0.5: measured 12 652 steps for this ε.
-  const run = advance(B.start(), c, 10 * d.tau, 19000);
+  // 10τ at x ≈ 0.5: measured 615 steps (dopri5 took 12 652 here, held to
+  // 3.3ε/(1 − y) by the photons' seed level, §11.3).
+  const run = advance(B.start(), c, 10 * d.tau, 1000);
   assert.equal(run.reachedEnd, true);
   assertClose(run.sim.N / d.N_c, d.x, 1e-3, "y → x");
   assert.ok(powerOf(run.sim, d) < 1e-6 * d.powerPerP, "no lasing: " + powerOf(run.sim, d) + " W");
@@ -210,8 +212,8 @@ test("below threshold: the inversion settles at x·N_c and the output stays at t
 
 test("advance is deterministic: the same input gives the same output, to the bit", () => {
   const c = config();
-  const first = advance(B.start(), c, 200e-6, 3000);
-  const second = advance(B.start(), c, 200e-6, 3000);
+  const first = advance(B.start(), c, 200e-6, 3200);           // measured: 2129
+  const second = advance(B.start(), c, 200e-6, 3200);
   assert.deepEqual(plain(first), plain(second));
 });
 
@@ -250,14 +252,15 @@ test("out of steps: partial progress, never a freeze; carrying on reaches the sa
 test("a solver answer a hair below N = 0 is passed on as 0, so the next call accepts it", () => {
   // With the pump off the inversion decays to below the solver's atol,
   // where its error control no longer watches it, and a step can end a
-  // hair below 0. Found while measuring: 30 % coupler, pump off, 0.5τ
-  // pieces, after 35τ, but that takes 450 000 steps, far too slow for a
-  // test. So this engine's solver is wrapped to give such an answer.
+  // hair below 0. Found in stage 6 while measuring (30 % coupler, pump
+  // off, 0.5τ pieces, after 35τ), but that run is slow and depends on the
+  // solver's rounding, so this engine's solver is wrapped to give such an
+  // answer.
   const loaded = loadEngine();
   const ode = loaded.ode;
   loaded.ode = {
-    dopri5: function (params) {
-      const run = ode.dopri5(params);
+    rosenbrock: function (params) {
+      const run = ode.rosenbrock(params);
       return Object.assign({}, run, { state: [-1e-12, run.state[1]] });
     }
   };
@@ -285,7 +288,7 @@ test("the 'almost no loss' check uses cavity.js's γ: accepted just above 10⁻�
 
 test("a slider moved mid-run: the atoms and photons carry over, only the scales change", () => {
   const c = config();
-  const before = advance(B.start(), c, 300e-6, 3000).sim;
+  const before = advance(B.start(), c, 300e-6, 5800).sim;      // measured: 3887
   const c2 = config({ refl2: 0.9 });                // x = 1.88: still lasing
   // 1 fs: far shorter than τ_c (6 ns here), so nothing has time to change.
   const after = advance(before, c2, 1e-15, 100).sim;
@@ -293,30 +296,68 @@ test("a slider moved mid-run: the atoms and photons carry over, only the scales 
   assertClose(after.lnPhi, before.lnPhi, 1e-6, "ln φ");
   // And the new cavity settles to its own output.
   const d2 = B.derive(c2);
-  const settled = advance(after, c2, 30 * d2.tau, 8500);        // measured: 5728 steps
+  const settled = advance(after, c2, 30 * d2.tau, 39000);       // measured: 25 904 steps
   assert.equal(settled.reachedEnd, true);
   assertClose(powerOf(settled.sim, d2), d2.P_out, 0.01, "new P_out");
 });
 
-test("pump off for 750τ, then on again: ln φ stays exact where φ would be a subnormal number, and lasing comes back", () => {
-  // A long, low-loss cavity, so ε ≈ 0.09 keeps this run short (§11.3:
-  // the cost per τ grows as 1/ε with the pump off).
+test("pump off for 750τ, then on again: the photons settle at the seed of y = 10⁻¹², and lasing comes back", () => {
+  // A long, low-loss cavity (ε ≈ 0.09). With the pump off the inversion
+  // falls past 10⁻³⁰⁰ of threshold; the seed counts it as y + 10⁻¹²
+  // (rates.js, Y_FLOOR), so ln φ settles near ln(β·10⁻¹²) − sOnePhoton
+  // instead of following the atoms down.
   const long = { L: 3, refl2: 0.999, alpha_i: 0, pumpPower: 4 };
   const on = config(long);
   const off = config(Object.assign({}, long, { pumpPower: 0 }));
   const d = B.derive(on);
   assert.ok(d.eps > 0.05 && d.x > 1.5, "the setting is what the comment says");
-  let run = advance(B.start(), on, 40 * d.tau, 4000);          // measured: 2533
+  let run = advance(B.start(), on, 40 * d.tau, 800);            // measured: 521
   assert.equal(run.reachedEnd, true);
-  run = advance(run.sim, off, 750 * d.tau, 11000);             // measured: about 7300
+  run = advance(run.sim, off, 750 * d.tau, 1000);               // measured: 671 (dopri5: about 7300)
   assert.equal(run.reachedEnd, true);
-  assert.ok(Number.isFinite(run.sim.lnPhi), "ln φ " + run.sim.lnPhi);
-  // Below ln(2.2×10⁻³⁰⁸) φ itself would be a subnormal number, with only
-  // a few correct digits (and 0 for a smaller β).
-  assert.ok(run.sim.lnPhi < Math.log(2.2250738585072014e-308), "far below one photon: " + run.sim.lnPhi);
-  run = advance(run.sim, on, 60 * d.tau, 6000);                 // measured: 3819
+  // What is left of y is below the solver's atol, where it no longer
+  // controls the error: a hair above 0 or below it (passed on as 0),
+  // depending on rounding. Either way it is below the seed floor's 10⁻¹².
+  assert.ok(run.sim.N >= 0 && run.sim.N < 1e-12 * d.N_c, "the inversion is gone: N = " + run.sim.N);
+  const floorLevel = Math.log(1e-8 * 1e-12) - d.sOnePhoton;     // ln φ at the floor's seed (1 − y ≈ 1)
+  assertClose(run.sim.lnPhi, floorLevel, 1e-6, "ln φ at the floor's seed level");
+  run = advance(run.sim, on, 60 * d.tau, 1000);                 // measured: 678
   assert.equal(run.reachedEnd, true);
   assertClose(powerOf(run.sim, d), d.P_out, 0.01, "lasing again");
+});
+
+// Runs `count` frames of 60 Hz as page.js does: each frame moves the
+// simulation (1/60 s) ÷ slowMotion on, in 8 pieces that share the frame's
+// steps. Here a frame may use only `bound` steps, so a solver that became
+// costlier fails at its first costly frame instead of running long.
+function pageFrames(sim, cfg, slowMotion, count, bound) {
+  const piece = (1 / 60) / slowMotion / 8;
+  let worst = 0;
+  for (let frame = 0; frame < count; frame++) {
+    let used = 0;
+    for (let i = 0; i < 8; i++) {
+      const run = B.advance(deepFreeze({ sim, config: cfg, seconds: piece, maxSteps: Math.max(1, bound - used) }));
+      used += run.steps;
+      assert.equal(run.reachedEnd, true, "frame " + frame + " needed more than " + bound + " steps");
+      sim = run.sim;
+    }
+    worst = Math.max(worst, used);
+  }
+  return { sim, worst };
+}
+
+test("the costliest Nd:YAG corner fits a 60 Hz frame's 1500 steps (20 W, 30 % coupler, slow motion 10³)", () => {
+  // Measured per frame: up to 698 steps while the spikes last (3 t_damp),
+  // 212 in the first τ with the pump off, 56 later on. The bounds are 1.5×
+  // that. The pump-off run goes on for 60τ, past y = 10⁻¹² (about 28τ),
+  // where the old seed floor max(y, 10⁻¹²) made frames cost up to 580.
+  const hot = config({ pumpPower: 20, refl2: 0.7 });
+  const d = B.derive(hot);
+  const frame = (1 / 60) / 1e3;
+  const on = pageFrames(B.start(), hot, 1e3, Math.ceil(3 * d.t_damp / frame), 1050);
+  assert.ok(on.worst > 400, "the spikes are the costly part: " + on.worst + " steps");
+  const off = pageFrames(on.sim, config({ pumpPower: 0, refl2: 0.7 }), 1e3, Math.ceil(60 * d.tau / frame), 320);
+  assert.ok(off.worst > 100, "the light dying away costs something: " + off.worst + " steps");
 });
 
 /* ---------- inputs ---------- */

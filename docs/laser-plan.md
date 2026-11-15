@@ -96,7 +96,8 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 5: page skeleton (`?view=laser`, the Labs-page banner, `js/laser/ui/loop.js`, `draw-bench.js`, `page.js`; the engine is loaded by `index.html`).
 - ✅ Stage 6: first playable laser (`bench.js`; `format.js`, `history.js`, `draw-levels.js`, `draw-plots.js`; sliders for pump, coupler and slow motion, Play/Pause, Reset, readouts, the level diagram with its gain/loss gauge, plots of power and inversion).
 - ✅ Stage 6b: the page in the owner's design (`axis.js`, `draw-photons.js`; the bench with real-looking mirrors and separate rays, a scientific chart of the output power, number boxes beside the sliders, the photon cartoon, the "dig deeper" theory section).
-- Next: stage 7.
+- ✅ Stage 7a: implicit solver for stiff runs (`ode.rosenbrock`, one step loop shared with `dopri5`; the bench switched to it; the seed floor inside the rate equations).
+- Next: stage 7b, the engine for the new media and pumps, then 7c, the page (see stage 7).
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking.
 
@@ -734,6 +735,82 @@ The owner drew the page they want (14 Nov 2026) and asked for it together with s
   - the flash integral equals E;
   - a full 1 ms ruby flash fits the step budget at the default slow motion. If it doesn't, add an implicit Rosenbrock solver as stage 7b, with its own tests.
 - **Breaks:** seed from ΔN instead of N₂; drop the factor 2 in the 3-level stimulated term; flash not normalised.
+
+**The owner's choices** (15 Nov 2026): a second dropdown for the **pump**, listing only the pumps the chosen medium can use; a **flashlamp** turns the pump slider into the flash energy (J) and adds a "Fire" button that fires one flash of about 1 ms; the **two-level atom** is the last entry of the medium list ("never lases"); the **gas lasers** get a discharge-current slider (mA) with §6.4's model, optimum current included.
+
+**Split into three stages, three commits** (measured at the start of the stage, below): **7a** an implicit solver, **7b** the engine for the new media and pumps, **7c** the page.
+
+**Why an implicit solver now.** The plan's test, "a full 1 ms ruby flash fits the step budget at the default slow motion", was measured with a prototype of the three-level equations (§3.1's ruby: l = 10 cm, R₂ = 0.5, L = 0.5 m, so ε = 1.85×10⁻⁶, n_t = N_t/N_c = 11.5; a 1 cm rod; a flash of t_p = 0.3 ms). With `ode.dopri5`, before the first spike each frame needs about 1400 of its 1500 steps at slow motion 10⁴ (3500 per 4.2 µs of simulated time): the photons sit at their seed level, where ∂ṡ/∂s = −(1 − y)/ε, and with y ≈ −n_t that is 7×10⁶ per τ (§11.3). A 2.5 ms run costs 3.1×10⁵ steps (1000 J) to 1.7×10⁶ (100 J, below threshold), several seconds in Node. A prototype of the Rosenbrock method below needs 1.6×10⁵ steps in all for the 1000 J run at the same tolerance, at most 670 a frame (in the spikes, not before them), and gives the same spikes (first light at 469.8 µs both ways, the same spacing, the same energy to 10⁻³). Stage 8's Q-switch is worse: the closed switch makes ε about 100 times smaller.
+
+### Stage 7a — Implicit solver for stiff runs (`ode.rosenbrock`)
+
+**Scope card.** Source: L. F. Shampine and M. W. Reichelt, "The MATLAB ODE Suite", *SIAM J. Sci. Comput.* 18 (1997) 1–22, §3: the modified Rosenbrock pair of order 2(3) behind MATLAB's `ode23s`. The numerical Jacobian follows Hairer and Wanner's codes (*Solving Ordinary Differential Equations II*, 2nd ed., §IV.7 and the RADAU5 code): δ_j = √(ε_machine·max(10⁻⁵, |y_j|)).
+
+| Function | Inputs | Output |
+|---|---|---|
+| `ode.rosenbrock({ f, t0, state0, t1, rtol, atol, h0, hMax, maxSteps })` | exactly as `ode.dopri5` | exactly as `ode.dopri5`: `{ t, state, reachedEnd, hNext, accepted, rejected, evaluations }` |
+| `ode.rosenbrockCoefficients` | — | `{ d: 1/(2 + √2), e32: 6 + √2 }`, frozen: the numbers the solver uses |
+
+One step from (t, y) with F₀ = f(t, y), J ≈ ∂f/∂y and T ≈ ∂f/∂t (both by forward differences, once per accepted point; T over √ε·max(|t|, |t + h|) but never longer than the step, as MATLAB's ode23s takes it), W = I − h·d·J:
+
+    k₁ = W⁻¹(F₀ + h·d·T)
+    F₁ = f(t + h/2, y + (h/2)·k₁)
+    k₂ = W⁻¹(F₁ − k₁) + k₁
+    y_new = y + h·k₂                         (order 2)
+    F₂ = f(t + h, y_new)
+    k₃ = W⁻¹(F₂ − e32·(k₂ − F₁) − 2·(k₁ − F₀) + h·d·T)
+    error ≈ (h/6)·(k₁ − 2k₂ + k₃)            (order 3)
+
+It is L-stable: a component that decays far faster than the step is damped to 0 in one step, so the step follows the accuracy of the slow parts, not the stiffness. F₂ is the next step's F₀ (first same as last). W is solved by Gaussian elimination with partial pivoting (n components; the laser uses 2 now, stage 8 adds a third, stage 9 up to 65).
+
+**Decisions:**
+- The same contract as `dopri5`, so the bench can use either and the same rules hold, from one step loop both solvers share (`adaptiveRun`; the review found two near copies): f gets copies and is never called outside [t0, t1] (the difference for T is never longer than the step); `maxSteps` counts every attempt; a step with a value that is not finite is retried 5× shorter; a step below 16·ε·max(|t|, |t1|) throws; `hNext` is not shrunk by a cut-short last step; no growth right after a rejection. The error norm and its scale are `dopri5`'s; the step factor is 0.9·err^(−1/3), between 0.2× and 5×.
+- J and T are computed again only at a new accepted point: a rejected step retries with the same ones (they belong to the point, not the step). Each accepted point costs n + 1 extra calls of f; each attempt 2.
+- `bench.advance` switches to `rosenbrock`, for every call (see the review below). Measured on the default Nd:YAG bench (rtol 10⁻⁶): lasing from the start for 30τ takes 12 390 steps instead of `dopri5`'s 4565 (order 2 against 5; at slow motion 10⁴ that is a few tens of steps a frame); 10τ below threshold 615 instead of 12 652. `dopri5` stays: it is the reference the new solver is tested against, and later stages may want it for non-stiff runs.
+- Not a higher-order Rosenbrock (RODAS, Kaps–Rentrop): their coefficients are long decimals that would have to be copied by hand; `ode23s`'s are two exact numbers, and its cost is within the budget.
+
+**Test values** (prototype; the real file is measured again in the tests):
+
+| Check | Expected | Bound |
+|---|---|---|
+| d and e32 | 1/(2 + √2), 6 + √2 | exact |
+| One step by hand on a linear problem (J and T exact there, but found by differences good to about 10⁻⁸) | y_new, the next h = h·0.9·err^(−1/3); also from y = 0, where the error scale must use the new state | 1e-9; hNext 1e-6 |
+| Fixed steps on a smooth nonlinear problem, h halved | error ÷ 4 (order 2); error estimate ÷ 8 (order 3) | [3.6, 4.4]; [7, 9] |
+| Stiff y′ = −λ(y − cos t), t ∈ [0, 1], λ = 10⁴ and 10⁸ | accurate, and about as many steps for 10⁸ as for 10⁴ (dopri5 needs λ/3.3) | measured 725 and 802 attempts: ≤ 1000 each, 10⁸ ≤ 1.5× 10⁴ |
+| The same with T left out | the steps or the error grow (a break must be caught) | — |
+| Four-level rate equations at the seed level (ε = 10⁻⁶, x = 0.5, 3τ) | finishes in about 10³ steps (dopri5: 6.9×10⁵, too many for a test reference), and y, s match the answer y = x(1 − e⁻³), s = ln(β(y + 10⁻¹²)/(1 − y)) | measured 1233 steps, errors 1.1×10⁻⁵ and 2.1×10⁻⁵: ≤ 2000 steps, 5×10⁻⁵ |
+| A coupled 3-component linear system with a known exact answer | matches | 1e-5 |
+| A step where W's first pivot is 0 | solved by pivoting, accepted | — |
+
+Also the contract tests of `dopri5`, for `rosenbrock`: the last step lands on t1; a partial result out of budget, continued to the same answer; f's copies; f never outside [t0, t1], also with T and J; not finite at the start throws; a blow-up and a NaN partway throw quickly; an overflow is never accepted; every input checked, errors naming `ode.rosenbrock`; 65 components; evaluations counted.
+
+**Traps:** the difference for T must not step past t1; a step δ so small that t + δ rounds to t gives T = 0/0; the Jacobian of a state where f is not finite nearby has NaN, which must make the step fail, not be accepted; the four-level f has a kink at y = 0 (no seed below), which a difference across it sees; pivoting.
+
+**Found while building and testing:**
+- **The solver stopped on the stage-6 bench with the pump off** (the long-cavity test: 750τ off). The bench passes on y = max(0, y), and with no seed at y ≤ 0 the four-level f has a kink there: just above 0 the seed's slope is β·e^(−s), which grows as the photons fall, past 10³³. The forward-difference Jacobian took that slope, the implicit step made y and s jump, and the steps shrank to nothing ("the step size fell below" after 1 000 000 tries). `dopri5` never looked at a slope, so it never saw this. Fix (a modelling decision, not settled by the doc, physically negligible): the seed adds 10⁻¹², the floor `liftToSeed` already used between calls, to the inversion: `β·(max(y, 0) + 10⁻¹²)·e^(−s)`. (First written as `max(y, 10⁻¹²)`; the review found its corner at 10⁻¹², below.) The photons with the pump off now settle at the seed of 10⁻¹² of threshold instead of following the atoms down to φ ≈ 10⁻³¹⁹; the stage-6 test that checked ln φ below the subnormal range checks the floor's level instead, and the stage-6 review's declined finding (the leftover light depended on how a run was cut into calls) is gone with it. Measured on three cavities (ε = 0.09, 1.4×10⁻⁴, 2.6×10⁻⁵): 750τ off costs 670 to 18 000 steps, and lasing comes back exactly.
+- **The Jacobian's difference step was lost in rounding past |y| ≈ 4.5×10¹⁵** (Hairer's √(ε·|y|) is below y's last digit there), giving 0/0: found by the overflow test, which climbs to 10³⁰⁸. There the step is √ε·|y|; tested at y = 10²⁰.
+- **Global accuracy is lower than `dopri5`'s at the same tolerance**: decay to t = 10 at rtol 10⁻⁶ ends 5×10⁻⁴ off (`dopri5`: 7×10⁻⁶), the oscillator's 10 periods at rtol 10⁻⁷ 6×10⁻⁴ off. That is what an order-2 method that advances with the less accurate of its pair does; the bench's dynamics are damped, so its steady states still match `derive()` to 10⁻⁸ (P_out after 30τ), and the ruby prototype's spikes matched `dopri5` at 10⁻⁸.
+- **Cost on the stage-6 bench** (rtol 10⁻⁶): 30τ from the start 12 390 steps (`dopri5` 4565); 10τ below threshold 615 (12 652); 200 µs 2129. The worst slider corner at slow motion 10³ needs about 700 steps in a 60 Hz frame (20 W, 30 % coupler, while the spikes last), so nothing falls behind on its own any more. The two page tests of the frame budget therefore use `dearer()` (`page.test.js`), a stand-in that charges a set number of steps per simulated second, as the old stiff corner did; stage 7c's ruby flash gives a real costly case.
+- A settled laser costs one to a few steps per call, because each call guesses its first step again and the guess falls back to 10⁻⁶ where f is nearly 0. Cheap enough (32 steps a frame); carrying the step between calls stays declined.
+- The first mutation check caught 449 of 451, with 2 timed out: with the middle stage or the error estimate broken, the 65-component test ran on to the default 100 000 steps (70 s; each step solves a 65 × 65 system). It now has `maxSteps: 270` (1.5× the 178 it needs) and checks `reachedEnd`.
+
+**Breaks** (33 for this stage: 30 in its own section of `tests/laser/mutations.js`, 3 beside the entries they belong with (the seed as max(y, 10⁻¹²), `steadyState` without the floor, the Rosenbrock error scale from the old state only); 447 in all): the two coefficients; ∂f/∂t left out of k₁ or k₃; the middle stage's time and state; k₂ without + k₁; the error estimate's size and sign; W's sign and a transposed Jacobian; pivoting, the row order, the kept factors and back substitution; the Jacobian's step lost in rounding, and filled in by rows; J and T never taken again, or taken for every retry; T past t1 on a short call, with the wrong sign, as 0; f at the new point not carried over; a step into Infinity and a NaN error; f one unit past t1; the step control's exponent and the first step's; the bench back on `dopri5`. The shared step loop's entries (the last step, the budget, hNext, growth after a rejection, NaN at the start, hMax) now cover both solvers at once, so the Rosenbrock copies of them were dropped.
+
+**Browser check** (Claude in Chrome, `http://127.0.0.1:5500/?view=laser`, after the review): the page loads the new engine (one step loop, the floor's p = 10⁻²⁰ with the pump off), no console errors. The costliest corner (20 W, 30 % coupler, slow motion 10³) from Reset and then with the pump off: on an idle machine (120 Hz, no frame over 25 ms) the "behind" note never shows, the power reads 7.77 W and falls to about 1 fW within 4 s. While the mutation check loaded the machine (one frame in ten 25–50 ms), the note showed for about a second during the spikes. Measured in Node at that corner: frames up to 33 ms fit the 1500 steps with either solver, 50 ms frames (the longest, dt is capped there) do not (Rosenbrock 7 of 12 behind, `dopri5` 1 of 12); from the seed level `dopri5` is no cheaper (870 steps against 691 in a 60 Hz frame), so this does not change the declined finding below.
+
+**Review outcome** (`/code-review` on Opus 5.5, 13 findings: 12 fixed, 1 declined):
+- The seed floor `max(y, 10⁻¹²)` only moved the corner from y = 0 to 10⁻¹², and the Jacobian's difference in y (4.7×10⁻¹¹) reached across it: frames with the pump off cost up to 580 steps (all 1500 at ε = 10⁻⁶, ruby's range). The floor is added instead, `max(y, 0) + 10⁻¹²` (in f, `liftToSeed` and `steadyState`); the worst pump-off frame is now 212. Tested by the seed's slope across 10⁻¹² (`rates.test.js`) and by a frame-by-frame run of the costliest corner (below).
+- Nothing drove the real solver through a costly slider setting since the page's budget tests moved to `dearer()`: `bench.test.js` runs 20 W, 30 % coupler, slow motion 10³ as the page does (8 pieces a frame), each frame allowed 1.5× its measured cost (698 while the spikes last, 212 after the pump goes off, over 60τ).
+- `steadyState` no longer matched f with the pump nearly off (p → 0 where f settles at β·10⁻¹²): it solves f's own equilibrium, floor included; the test that it makes f zero now includes x = 0 and 10⁻¹⁴.
+- The backward difference for T was never reached by any test, and is not needed: T is now taken as MATLAB's ode23s takes it, forward over at most the step, which never leaves [t0, t1] (the clamp to t1 was dropped too: when the difference is the whole last step, t1 − t is exact). The limit to the step is now what keeps f inside on a short call, and a break of it is caught. Its test checks a stiff step both ways, with the difference inside the step and as the whole step; the dead `dt === 0` branch is gone.
+- The Rosenbrock error scale's use of the new state was not tested: a step by hand from y = 0, where the old state alone would give the scale atol.
+- The test "agrees with dopri5" compared with the analytic answer: renamed, and its bound tightened to 5×10⁻⁵ (measured 1.1×10⁻⁵ and 2.1×10⁻⁵); `dopri5` would need 6.9×10⁵ steps there.
+- Two tests passed by rounding luck (`N = 0` after the pump-off run; `liftToSeed` leaving the end state exactly unchanged): they check that the inversion is below the floor, and that the lift is below 10⁻⁴ (measured 1.5×10⁻⁵).
+- The two solvers' step loops were near copies: one loop, `adaptiveRun`, that both use, and the error norm through `scaledSize`.
+- The page test of the pump off no longer reaches 10⁻¹⁷⁰ W (5×10⁻²⁰ W with the floor): its comment, `format.js` and `CLAUDE.md` now say so, and that `format.test.js`'s sweep of every power of ten is what guards the old crash.
+- `CLAUDE.md`, `bench.js`'s header and `rates.js`'s comments still said that φ falls to 10⁻³¹⁹ with the pump off and that `liftToSeed` is needed when the pump comes back: updated, and `ode.rosenbrockCoefficients` added to the frozen objects.
+- This section contradicted itself and the tests on step counts and bounds: corrected above.
+- Declined: using `rosenbrock` only when the run is stiff, or carrying the step between pieces (the reviewer measured 2–3× `dopri5`'s steps while lasing, 5× in the worst frame). The worst frame is 698 of 1500 steps; choosing a solver per call would add a rule about stiffness that the ruby and Q-switch stages (ε down to 10⁻⁸) would have to keep right, and those are the runs the implicit solver is for.
 
 ### Stage 8 — Q-switch parts
 - **Build:**

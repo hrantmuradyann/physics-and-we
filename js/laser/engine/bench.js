@@ -35,11 +35,12 @@
    lnPhi = ln φ (φ = photons in the mode). Every slider changes the scales
    that turn N and φ into y and s, but not the atoms and photons, so they
    are kept and converted again on each call. ln φ, not φ, because the
-   solver works with ln φ: after a long time with the pump off φ falls to
-   about 10⁻³¹⁹, a subnormal number with only a few correct digits (and to
-   0 with a smaller β), while ln φ ≈ −730 keeps all of them. Each call lets
-   the solver choose its first step again: carrying its last step size
-   from call to call saved only 2–8 % of the steps (measured in stage 6).
+   solver works with ln φ, and because φ has no lower limit of its own:
+   with β = 0 it falls without end (e^(−1600) before threshold), and with
+   the pump off it settles at the seed floor's level (rates.js), φ ≈ 10⁻⁹
+   for the default bench. Each call lets the solver choose its first step
+   again, which costs a settled laser a few steps a call (stage 7a; with
+   dopri5, carrying the step size saved only 2–8 %, stage 6).
 
    Tests: tests/laser/bench.test.js
    ========================================================================== */
@@ -235,7 +236,9 @@
       state: [sim.N / d.N_c, sim.lnPhi + d.sOnePhoton],
       beta: d.beta
     });
-    var run = E.ode.dopri5({
+    // The implicit solver: below threshold the photons sit at their seed
+    // level, where dopri5's step would stay below 3.3ε/(1 − y) (§11.3).
+    var run = E.ode.rosenbrock({
       f: fourLevel.derivatives({ x: d.x, eps: d.eps, beta: d.beta }),
       t0: 0,
       state0: state,

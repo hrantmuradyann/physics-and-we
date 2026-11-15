@@ -208,6 +208,43 @@ function last(list) {
   return list[list.length - 1];
 }
 
+// Makes the solver cost `price.perSecond` steps per second of simulated
+// time (0, the start, passes the real solver through): a call that would
+// cost more than its maxSteps runs only that share of its time and
+// reports reachedEnd false, as a solver out of steps does. price.charged
+// lists what page.js was charged, call by call. The tests of the frame
+// budget use it: since stage 7a's implicit solver no corner of the Nd:YAG
+// bench needs more than about 700 steps in a 60 Hz frame at the slowest
+// slow motion, and a settled laser costs one to a few steps per plot
+// point however long the frame is, so nothing falls behind on its own
+// (stage 7c's ruby flash will).
+function dearer(browser) {
+  const price = { perSecond: 0, charged: [] };
+  const engineNow = browser.window.LaserEngine;
+  const advance = engineNow.bench.advance;
+  browser.window.LaserEngine = Object.assign({}, engineNow, {
+    bench: Object.assign({}, engineNow.bench, {
+      advance: function (params) {
+        if (price.perSecond === 0) {
+          const real = advance(params);
+          price.charged.push(real.steps);
+          return real;
+        }
+        const cost = Math.ceil(params.seconds * price.perSecond);
+        if (cost <= params.maxSteps) {
+          const whole = advance(params);
+          price.charged.push(cost);
+          return Object.assign({}, whole, { steps: cost });
+        }
+        const part = advance(Object.assign({}, params, { seconds: params.seconds * params.maxSteps / cost }));
+        price.charged.push(params.maxSteps);
+        return Object.assign({}, part, { steps: params.maxSteps, reachedEnd: false });
+      }
+    })
+  });
+  return price;
+}
+
 function sum(numbers) {
   let total = 0;
   for (const n of numbers) total += n;
@@ -726,24 +763,24 @@ test("the cartoon's light is the bench's ray strength, from the same function", 
 });
 
 test("a frame never runs more than its step budget: the simulation falls behind and says so", () => {
-  const page = built("en", { watch: true, show: ["bench"] });
+  let price = null;
+  const page = built("en", { show: ["bench"], prepare: (browser) => { price = dearer(browser); } });
   const { browser, section } = page;
   slide(section, "slowMotion", 0);                    // 1 s = 1 ms
   page.clock = 1000;
   browser.runFrame(page.clock);
   runFrames(page, 20);                                // 333 µs: lasing
-  assert.equal(section.note.hidden, true, "it keeps up while lasing");
-  // The dearest corner (scope card): an inversion left over, pump off,
-  // 30 % coupler, the slowest slow motion. With no inversion at all there
-  // is no seed and nothing is stiff, so the run above comes first.
-  slide(section, "pump", 0);
-  slide(section, "coupler", 1000);
-  page.seen.steps.length = 0;
-  runFrames(page, 1, 50);                             // one long frame: dt 0.05 s = 50 µs
-  // Several pieces ran (each about 320 steps here), and together they kept
-  // to the frame's 1500 steps.
-  assert.ok(page.seen.steps.length > 2, "pieces run: " + page.seen.steps.length);
-  assert.ok(sum(page.seen.steps) <= 1500, "steps in the frame: " + sum(page.seen.steps));
+  // From now on a µs of simulated time costs 52 steps: a 60 Hz frame
+  // (16.7 µs at this slow motion) about 870 of its 1500, a 50 ms frame
+  // (50 µs) 2600.
+  price.perSecond = 52e6;
+  runFrames(page, 60);
+  assert.equal(section.note.hidden, true, "it keeps up at 60 Hz");
+  price.charged.length = 0;
+  runFrames(page, 1, 50);
+  // Several pieces ran, and together they kept to the frame's 1500 steps.
+  assert.ok(price.charged.length > 2, "pieces run: " + price.charged.length);
+  assert.ok(sum(price.charged) <= 1500, "steps in the frame: " + sum(price.charged));
   // The note is judged over a second of frames: not yet after one frame,
   // shown after a second of frames that all fell behind.
   assert.equal(section.note.hidden, true, "one frame is not enough for the note");
@@ -751,41 +788,45 @@ test("a frame never runs more than its step budget: the simulation falls behind 
   assert.equal(section.note.hidden, false, "the note is shown");
   section.play.fire("click");
   const F = browser.window.LaserUI.format;
-  const asked = 20 * FRAME / 1000 / 1e3 + 22 * 50e-6;
+  const asked = 80 * FRAME / 1000 / 1e3 + 22 * 50e-6;
   assert.notEqual(section.readouts.time.textContent, F.si(asked, "s"), "less than asked for");
   assert.equal(section.note.hidden, true, "paused, nothing is behind");
   // Again, and then a slider moved: the new setting is judged afresh.
   section.play.fire("click");
   runFrames(page, 22, 50);
   assert.equal(section.note.hidden, false, "shown again");
-  slide(section, "coupler", 999);
+  slide(section, "coupler", 400);
   assert.equal(section.note.hidden, true, "a slider moved");
   // And a typed number does the same.
   runFrames(page, 23, 50);
   assert.equal(section.note.hidden, false, "shown once more");
-  type(section, "coupler", "29");
+  type(section, "coupler", "5");
   assert.equal(section.note.hidden, true, "a number typed");
 });
 
 test("a dropped frame now and then does not make the note blink", () => {
-  const page = built("en", { show: ["bench"] });
+  let price = null;
+  const page = built("en", { show: ["bench"], prepare: (browser) => { price = dearer(browser); } });
   const { section } = page;
   slide(section, "slowMotion", 0);
   page.clock = 1000;
   page.browser.runFrame(page.clock);
   runFrames(page, 20);                                // lasing, as above
-  slide(section, "pump", 0);
-  slide(section, "coupler", 1000);
-  // At 60 Hz this corner needs about 860 of the 1500 steps a frame; one
-  // frame in 8 is dropped (dt 50 ms) and falls behind. 1.17 s of frames.
+  price.perSecond = 52e6;
+  // About 870 of the 1500 steps a 60 Hz frame; one frame in 8 is dropped
+  // (dt 50 ms, 2600) and falls behind. 1.17 s of frames.
+  let behindFrames = 0;
   for (let cycle = 0; cycle < 7; cycle++) {
+    const before = price.charged.length;
     runFrames(page, 1, 50);
+    if (sum(price.charged.slice(before)) === 1500) behindFrames += 1;
     assert.equal(section.note.hidden, true, "after a dropped frame, cycle " + cycle);
     for (let i = 0; i < 7; i++) {
       runFrames(page, 1);
       assert.equal(section.note.hidden, true, "cycle " + cycle + ", frame " + i);
     }
   }
+  assert.equal(behindFrames, 7, "every dropped frame used its whole budget");
 });
 
 test("the charts keep 5 s of screen time on 240 Hz and 1000 Hz screens (cut short on a 120 Hz Mac once)", () => {
@@ -811,8 +852,10 @@ test("the charts keep 5 s of screen time on 240 Hz and 1000 Hz screens (cut shor
 });
 
 test("pump off from the start at the strongest coupler: the output falls below 1 fW and the page keeps running", () => {
-  // About 10⁻¹⁷⁰ W here: formatting it once threw and stopped the page
-  // (stage-6 review).
+  // About 5×10⁻²⁰ W here, the seed floor's level (stage 7a). Before the
+  // floor it was 10⁻¹⁷⁰ W, and formatting that threw and stopped the page
+  // (stage-6 review); format.test.js tries every power of ten down to
+  // 10⁻³²³, which is what guards that.
   const page = built("en");
   const { browser, section } = page;
   slide(section, "pump", 0);
