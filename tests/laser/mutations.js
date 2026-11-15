@@ -115,9 +115,15 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/media.js",
-    find: "var perEmission = medium.scheme === \"three-level\" ? 2 : 1;",
-    replace: "var perEmission = 1;",
+    find: "if (medium.scheme === \"three-level\" || medium.scheme === \"two-level\") perEmission = 2;",
+    replace: "if (medium.scheme === \"two-level\") perEmission = 2;",
     why: "three-level I_sat without its factor 2 (doc §2.2)"
+  },
+  {
+    file: "js/laser/engine/media.js",
+    find: "if (medium.scheme === \"three-level\" || medium.scheme === \"two-level\") perEmission = 2;",
+    replace: "if (medium.scheme === \"three-level\") perEmission = 2;",
+    why: "the two-level atom's I_sat without the factor 2 that ruby has"
   },
   {
     file: "js/laser/engine/media.js",
@@ -184,8 +190,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/media.js",
-    find: "n: 1.76,\n      ng: null,\n      pumps: [\"laser\"],",
-    replace: "n: 1.67,\n      ng: null,\n      pumps: [\"laser\"],",
+    find: "n: 1.76,\n      ng: null,\n      N_t: null,\n      pumps: [\"laser\"],",
+    replace: "n: 1.67,\n      ng: null,\n      N_t: null,\n      pumps: [\"laser\"],",
     why: "Ti:sapphire refractive index mistyped"
   },
   {
@@ -692,20 +698,20 @@ const MUTATIONS = [
   /* ---------- stage 4: rates.js ---------- */
   {
     file: "js/laser/engine/rates.js",
-    find: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
-    replace: "return [x - y - y * Math.exp(s), ((1 - y) + seed) / eps];",
+    find: "return [pump - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [pump - y - y * Math.exp(s), ((1 - y) + seed) / eps];",
     why: "sign of (y − 1) flipped: gain becomes loss"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
-    replace: "return [x - y - y * Math.exp(s), ((y - 1) + seed)];",
+    find: "return [pump - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [pump - y - y * Math.exp(s), ((y - 1) + seed)];",
     why: "ε dropped: photons as slow as the inversion"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
-    replace: "return [x - y - Math.exp(s), ((y - 1) + seed) / eps];",
+    find: "return [pump - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [pump - y - Math.exp(s), ((y - 1) + seed) / eps];",
     why: "stimulated emission y·p written as p"
   },
   {
@@ -746,8 +752,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
-    replace: "return [x - y - y * Math.exp(s), ((y - 1) + seed) / (eps * (1 + eps))];",
+    find: "return [pump - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [pump - y - y * Math.exp(s), ((y - 1) + seed) / (eps * (1 + eps))];",
     why: "an error that grows with ε: the runs at ε ≤ 10⁻³ hardly see it, the He-Ne run (ε ≈ 0.66) does"
   },
   {
@@ -770,8 +776,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "var N_c = gamma / (sigma * l_g);",
-    replace: "var N_c = gamma / sigma;",
+    find: "N_c: gamma / (sigma * l_g),",
+    replace: "N_c: gamma / sigma,",
     why: "threshold inversion without the rod length"
   },
   {
@@ -782,14 +788,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "var pOnePhoton = B * tau;",
-    replace: "var pOnePhoton = B;",
+    find: "var result = scalesFor(numbers, numbers.B * numbers.tau);",
+    replace: "var result = scalesFor(numbers, numbers.B);",
     why: "one photon as p = B instead of Bτ"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "powerPerP: h * nu * outputRate / pOnePhoton",
-    replace: "powerPerP: h * outputRate / pOnePhoton",
+    find: "powerPerPhoton: h * nu * outputRate",
+    replace: "powerPerPhoton: h * outputRate",
     why: "output power without the photon energy hν"
   },
   {
@@ -824,14 +830,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "var p = a >= 0 ? (a + squareRoot) / 2 : 2 * c / (squareRoot - a);",
-    replace: "var p = (a + squareRoot) / 2;",
+    find: "return a >= 0 ? (a + squareRoot) / 2 : 2 * cTerm / (squareRoot - a);",
+    replace: "return (a + squareRoot) / 2;",
     why: "steady state below threshold computed with cancellation"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "var a = x - 1 + beta * Y_FLOOR;\n    var c = beta * (x + Y_FLOOR);",
-    replace: "var a = x - 1;\n    var c = beta * x;",
+    find: "var p = steadyPhotons(x - 1 + beta * Y_FLOOR, beta * (x + Y_FLOOR));",
+    replace: "var p = steadyPhotons(x - 1, beta * x);",
     why: "steadyState without the seed floor: p = 0 with the pump off, where f settles at β·10⁻¹²"
   },
   {
@@ -842,8 +848,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "var squared = omegaR * omegaR - dampingRate * dampingRate;",
-    replace: "var squared = omegaR * omegaR;",
+    find: "var squared = omegaSquared - dampingRate * dampingRate;",
+    replace: "var squared = omegaSquared;",
     why: "damped frequency without the (x/2τ)² correction"
   },
   {
@@ -860,14 +866,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "return [y, Math.max(s, seedLevel)];",
-    replace: "return [y, s];",
+    find: "var seedLevel = Math.log(beta) + Math.log(Math.max(y, 0) + Y_FLOOR);\n    return [y, Math.max(s, seedLevel)];",
+    replace: "var seedLevel = Math.log(beta) + Math.log(Math.max(y, 0) + Y_FLOOR);\n    return [y, s];",
     why: "liftToSeed does nothing: the solver gives up when β comes on or the pump comes back"
   },
   {
     file: "js/laser/engine/rates.js",
-    find: "return [y, Math.max(s, seedLevel)];",
-    replace: "return [y, Math.min(s, seedLevel)];",
+    find: "var seedLevel = Math.log(beta) + Math.log(Math.max(y, 0) + Y_FLOOR);\n    return [y, Math.max(s, seedLevel)];",
+    replace: "var seedLevel = Math.log(beta) + Math.log(Math.max(y, 0) + Y_FLOOR);\n    return [y, Math.min(s, seedLevel)];",
     why: "liftToSeed lowers the photons of a laser that runs"
   },
   {
@@ -1363,38 +1369,32 @@ const MUTATIONS = [
   /* ---------- stage 6: bench.js ---------- */
   {
     file: "js/laser/engine/bench.js",
-    find: "var R_p = config.eta * config.pumpPower / (pumpPhoton * V_a);",
-    replace: "var R_p = config.pumpPower / (pumpPhoton * V_a);",
-    why: "the pump rate without η: every absorbed photon counted as reaching the upper level"
-  },
-  {
-    file: "js/laser/engine/bench.js",
-    find: "var pumpPhoton = U.photonEnergy(config.pumpLam);",
-    replace: "var pumpPhoton = U.photonEnergy(medium.lam);",
+    find: "var perVolume = config.eta * power / (U.photonEnergy(config.pumpLam) * config.area * config.l_g);",
+    replace: "var perVolume = config.eta * power / (U.photonEnergy(d.lam) * config.area * config.l_g);",
     why: "the pump photon's energy taken at the laser wavelength"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var V_a = config.area * config.l_g;",
-    replace: "var V_a = config.area * L_e;",
+    find: "var perVolume = config.eta * power / (U.photonEnergy(config.pumpLam) * config.area * config.l_g);",
+    replace: "var perVolume = config.eta * power / (U.photonEnergy(config.pumpLam) * config.area * d.L_e);",
     why: "the pumped volume taken over the whole cavity instead of the rod"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var pumpThreshold = scales.R_c * pumpPhoton * V_a / config.eta;",
-    replace: "var pumpThreshold = scales.R_c * pumpPhoton * V_a;",
+    find: "d.pumpThreshold = d.R_c * U.photonEnergy(config.pumpLam) * config.area * config.l_g / config.eta;",
+    replace: "d.pumpThreshold = d.R_c * U.photonEnergy(config.pumpLam) * config.area * config.l_g;",
     why: "the threshold pump power without /η"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var P_out = x > 1 ? scales.powerPerP * (x - 1) : 0;",
-    replace: "var P_out = x > 1 ? scales.powerPerP * x : 0;",
+    find: "d.P_out = x > 1 ? d.powerPerP * (x - 1) : 0;",
+    replace: "d.P_out = x > 1 ? d.powerPerP * x : 0;",
     why: "the output as x instead of x − 1"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var P_out = x > 1 ? scales.powerPerP * (x - 1) : 0;",
-    replace: "var P_out = scales.powerPerP * (x - 1);",
+    find: "d.P_out = x > 1 ? d.powerPerP * (x - 1) : 0;",
+    replace: "d.P_out = d.powerPerP * (x - 1);",
     why: "a negative output below threshold"
   },
   {
@@ -1411,8 +1411,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var T_best = T_opt === null ? null : 1 - Math.exp(-T_opt);",
-    replace: "var T_best = T_opt;",
+    find: "d.T_best = T_opt === null ? null : 1 - Math.exp(-T_opt);",
+    replace: "d.T_best = T_opt;",
     why: "the best coupler shown as §3.6's T_opt, which is not where this model's output peaks"
   },
   {
@@ -1423,14 +1423,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var g0 = medium.sigma * R_p * medium.tau;",
-    replace: "var g0 = medium.sigma * R_p;",
+    find: "d.g0 = medium.sigma * d.R_p * medium.tau;",
+    replace: "d.g0 = medium.sigma * d.R_p;",
     why: "the small-signal gain without τ"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "slope: scales.powerPerP / pumpThreshold,",
-    replace: "slope: pumpThreshold / scales.powerPerP,",
+    find: "d.slope = d.powerPerP / d.pumpThreshold;",
+    replace: "d.slope = d.pumpThreshold / d.powerPerP;",
     why: "the slope efficiency upside down"
   },
   {
@@ -1441,8 +1441,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "state: [sim.N / d.N_c, sim.lnPhi + d.sOnePhoton],",
-    replace: "state: [sim.N / d.N_c, sim.lnPhi],",
+    find: "var state = [sim.N / d.N_c, sim.lnPhi + d.sOnePhoton];",
+    replace: "var state = [sim.N / d.N_c, sim.lnPhi];",
     why: "ln φ handed to the solver as s = ln p"
   },
   {
@@ -1459,7 +1459,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "N: Math.max(0, run.state[0]) * d.N_c,",
+    find: "N: Math.max(lowest, run.state[0] * d.N_c),",
     replace: "N: run.state[0] * d.N_c,",
     why: "a step's tiny negative inversion passed on, so the next call refuses it"
   },
@@ -1495,8 +1495,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "if (medium.scheme !== \"four-level\" || medium.sigma === null) {",
-    replace: "if (medium.sigma === null) {",
+    find: "if (d.scheme === \"four-level\") return E.rates.fourLevel.derivatives({ x: pump, eps: eps, beta: beta });",
+    replace: "if (d.scheme !== \"two-level\") return E.rates.fourLevel.derivatives({ x: pump, eps: eps, beta: beta });",
     why: "a three-level medium run with the four-level equations"
   },
   {
@@ -2307,7 +2307,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "floor: derived.powerPerP,",
+    find: "floor: derived.powerAtTwiceThreshold,",
     replace: "floor: 0,",
     why: "no floor on the power axis: spontaneous emission blown up to fill the chart"
   },
@@ -2756,6 +2756,418 @@ const MUTATIONS = [
     find: "var run = E.ode.rosenbrock({",
     replace: "var run = E.ode.dopri5({",
     why: "the bench back on the explicit solver: below threshold its step stays below 3.3ε/(1 − y)"
+  },
+
+  /* ---------- stage 7b: three and two levels, the pumps ---------- */
+  {
+    file: "js/laser/engine/rates.js",
+    find: "seed = Math.exp(logBeta + Math.log(Math.max(n_t + y, 0) + floor) - s);",
+    replace: "seed = Math.exp(logBeta + Math.log(Math.max(y, 0) + floor) - s);",
+    why: "three levels seeded from ΔN instead of N₂ (D2): no seed before half inversion"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var result = scalesFor(numbers, 2 * numbers.B * numbers.tau);",
+    replace: "var result = scalesFor(numbers, numbers.B * numbers.tau);",
+    why: "three levels without the factor 2 of an emission changing ΔN by 2"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var pumped = twoLevel ? -2 * pump * y : pump * (n_t - y);",
+    replace: "var pumped = twoLevel ? -pump * y : pump * (n_t - y);",
+    why: "two levels: the pump's stimulated emission −w·y instead of −2w·y"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var pumped = twoLevel ? -2 * pump * y : pump * (n_t - y);",
+    replace: "var pumped = pump * (n_t - y);",
+    why: "two levels pumped as three: the pump light does not drive the ions back down"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var pumped = twoLevel ? -2 * pump * y : pump * (n_t - y);",
+    replace: "var pumped = twoLevel ? -2 * pump * y : pump * n_t;",
+    why: "three levels: the pump does not empty the ground level"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return [pumped - (n_t + y) - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [pumped - y - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    why: "three levels: spontaneous decay of ΔN as for four levels, not of N₂"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return [pumped - (n_t + y) - y * Math.exp(s), ((y - 1) + seed) / eps];",
+    replace: "return [pumped - (n_t + y) - y * Math.exp(s), ((1 - y) + seed) / eps];",
+    why: "three levels: sign of (y − 1) flipped"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "+ ION_FLOOR * n_t) - Math.log(1 + n_t);",
+    replace: "+ ION_FLOOR * n_t);",
+    why: "three-level liftToSeed without /(1 + n_t): it raises ruby's all-down level"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var ION_FLOOR = 1e-7;",
+    replace: "var ION_FLOOR = 1e-12;",
+    why: "the ion floor at 10⁻¹²: rounding of n_t + y becomes noise and the solver crawls"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var floor = ION_FLOOR * n_t;\n    var seedShift",
+    replace: "var floor = ION_FLOOR;\n    var seedShift",
+    why: "the three-level steady state with a floor that is not f's"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "p = steadyPhotons((n_t - 1) * w - (n_t + 1) + seedShift,",
+    replace: "p = steadyPhotons((n_t - 1) * w - (n_t + 1),",
+    why: "the three-level steady state without the seed"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return { y: -n_t / (1 + 2 * w + p), p: p };",
+    replace: "return { y: -n_t / (1 + w + p), p: p };",
+    why: "the two-level steady state without the factor 2"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return { y: n_t * (w - 1) / (1 + w + p), p: p };",
+    replace: "return { y: n_t * (w - 1) / (1 + w), p: p };",
+    why: "the three-level steady y without the light's p"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "result.wThreshold = n_t > 1 ? (n_t + 1) / (n_t - 1) : null;",
+    replace: "result.wThreshold = n_t > 1 ? n_t / (n_t - 1) : null;",
+    why: "three-level threshold pump wrong"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var p0 = (n_t - 1) * w - (n_t + 1);",
+    replace: "var p0 = w - 1;",
+    why: "three-level relaxation: four-level p₀"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "return oscillation(p0 / (tau * tau_c), n_t * (w - 1) / (2 * tau));",
+    replace: "return oscillation(p0 / (tau * tau_c), w / (2 * tau));",
+    why: "three-level relaxation damped at four levels' rate"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var pump = pumpAt === null ? x : pumpAt(tPrime);",
+    replace: "var pump = pumpAt === null ? x : pumpAt(0);",
+    why: "four levels: a pump function read only at t′ = 0"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var pump = pumpAt === null ? w : pumpAt(tPrime);",
+    replace: "var pump = pumpAt === null ? w : pumpAt(0);",
+    why: "three levels: a pump function read only at t′ = 0"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "var scale = energy / flashTime;",
+    replace: "var scale = energy;",
+    why: "the flash not normalised: ∫P dt is E·t_p"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "return scale * u * Math.exp(-u);",
+    replace: "return scale * Math.exp(-u);",
+    why: "the flash as a jump and a decay, not t·e^(−t)"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "if (t <= 0) return 0;",
+    replace: "",
+    why: "the flash lights before it is fired"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "var GAIN_RATIO = 4;",
+    replace: "var GAIN_RATIO = 3;",
+    why: "§6.4's a/b changed"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "if (law === \"optimum\") return currentPeak * (ROOT_RATIO + 1);",
+    replace: "if (law === \"optimum\") return currentPeak * ROOT_RATIO;",
+    why: "the optimum law's highest current too low"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "return gainPeak * ratio * ratio;",
+    replace: "return gainPeak * ratio;",
+    why: "Ar⁺'s gain linear in the current, not square"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "if (law === \"square\") return currentPeak * Math.sqrt(k);",
+    replace: "if (law === \"square\") return currentPeak * k;",
+    why: "the square law's threshold without the root"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "var b = GAIN_RATIO - 1 - c;",
+    replace: "var b = GAIN_RATIO - 1 + c;",
+    why: "the optimum threshold's quadratic with a sign flipped"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "var u = 2 * c / (b + Math.sqrt(Math.max(0, b * b - 4 * c)));",
+    replace: "var u = (b + Math.sqrt(Math.max(0, b * b - 4 * c))) / 2;",
+    why: "the optimum threshold at the larger root, past the peak"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "if (k > 1) return null;",
+    replace: "",
+    why: "a tube that never reaches threshold given a current anyway"
+  },
+  {
+    file: "js/laser/engine/pumps.js",
+    find: "if (current > highest) {",
+    replace: "if (current > 10 * highest) {",
+    why: "a current past the law's end accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var lowest = read.medium.scheme === \"four-level\" ? 0 : -read.medium.N_t;",
+    replace: "var lowest = 0;",
+    why: "three levels clamped at ΔN = 0 instead of −N_t"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var N = read.medium.scheme === \"four-level\" ? 0 : -read.medium.N_t;",
+    replace: "var N = 0;",
+    why: "ruby starts half inverted, not with every ion down"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var perVolume = config.eta * power / (U.photonEnergy(config.pumpLam) * config.area * config.l_g);",
+    replace: "var perVolume = power / (U.photonEnergy(config.pumpLam) * config.area * config.l_g);",
+    why: "the pump rate without η, for every pump of light: every absorbed photon counted as reaching the upper level"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return perVolume * d.tau / d.N_t;",
+    replace: "return perVolume * d.tau / d.N_c;",
+    why: "w per ion of the threshold inversion, not per ion"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return perVolume * d.tau / d.N_t;",
+    replace: "return perVolume / d.N_t;",
+    why: "w without τ"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var perWatt = pumpLevel(d, config, config.flashShare);",
+    replace: "var perWatt = pumpLevel(d, config, 1);",
+    why: "the whole lamp's light absorbed by the rod"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var peak = pumpLevel(d, config, config.flashShare * d.flashPeak);",
+    replace: "var peak = pumpLevel(d, config, d.flashPeak);",
+    why: "xPeak counts the whole lamp's light"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "else if (d.wThreshold !== null) d.xPeak = peak / d.wThreshold;",
+    replace: "else if (d.wThreshold !== null) d.xPeak = peak;",
+    why: "three-level xPeak as w, not in units of threshold"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "d.flashPeak = config.flashEnergy / (Math.E * config.flashTime);",
+    replace: "d.flashPeak = config.flashEnergy / config.flashTime;",
+    why: "the lamp's peak without the 1/e"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (d.scheme === \"four-level\") {\n      return atPeak / photonFreePeak(d, config, atPeak);",
+    replace: "if (d.scheme !== \"two-level\") {\n      return atPeak / photonFreePeak(d, config, atPeak);",
+    why: "ruby's flash threshold by the four-level linear shortcut"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (photonFreePeak(d, config, middle) < 1) low = middle;\n      else high = middle;",
+    replace: "if (photonFreePeak(d, config, middle) < 1) high = middle;\n      else low = middle;",
+    why: "the bisection turned the wrong way"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return perWatt * lamp(since + tPrime * tau);",
+    replace: "return perWatt * lamp(tPrime * tau);",
+    why: "the flash restarts at every call"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "flashPump(d, config, flash.flashEnergy, flash.flashTime, sim.t - flash.at);",
+    replace: "flashPump(d, config, flash.flashEnergy, flash.flashTime, flash.at);",
+    why: "the flash's age taken as its firing time"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (Math.abs(pumpLam - medium.lam) > 1e-9 * medium.lam) {",
+    replace: "if (false) {",
+    why: "the two-level atom pumped at another wavelength"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (flash.at > sim.t) {",
+    replace: "if (false) {",
+    why: "a flash later than the simulation accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (sim.flash !== null && read.setup.pump !== \"flashlamp\") {",
+    replace: "if (false) {",
+    why: "a fired flash carried to a bench without a flashlamp"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "wThreshold: medium.scheme === \"three-level\" ? scales.wThreshold : null,",
+    replace: "wThreshold: fourLevel ? null : scales.wThreshold,",
+    why: "the two-level atom given a threshold"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "d.x = g0 * config.l_g / d.gamma;",
+    replace: "d.x = g0 / d.gamma;",
+    why: "the discharge's x without the tube length"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (config.current > highest) {",
+    replace: "if (false) {",
+    why: "the bench lets a discharge current past its law's end through"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var ions = d.scheme === \"three-level\" ? E.rates.threeLevel : E.rates.twoLevel;",
+    replace: "var ions = E.rates.threeLevel;",
+    why: "the two-level atom run with three levels' equations"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var FLASH_SHARE = 0.12;",
+    replace: "var FLASH_SHARE = 0.2;",
+    why: "the absorbed share of the flash changed"
+  },
+  {
+    file: "js/laser/engine/media.js",
+    find: "N_t: 1.6e19 / cm3,",
+    replace: "N_t: 1.6e18 / cm3,",
+    why: "ruby's Cr³⁺ density a decade low"
+  },
+
+  /* ---------- stage 7b review ---------- */
+  {
+    file: "js/laser/engine/bench.js",
+    find: "flashPump(d, config, flash.flashEnergy, flash.flashTime, sim.t - flash.at);",
+    replace: "flashPump(d, config, config.flashEnergy, config.flashTime, sim.t - flash.at);",
+    why: "the running flash read from the sliders: moving them after Fire changes it"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return { at: flash.at, flashEnergy: flash.flashEnergy, flashTime: flash.flashTime };",
+    replace: "return flash;",
+    why: "advance hands back the caller's flash object, not a copy"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "check.params(where, flash, FLASH_NAMES);\n",
+    replace: "",
+    why: "sim.flash with a name it does not use accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "check.atLeast(where, \"sim.flash.at\", flash.at, 0);\n",
+    replace: "",
+    why: "a flash before t = 0 accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "check.atLeast(where, \"sim.flash.flashEnergy\", flash.flashEnergy, 0);\n",
+    replace: "",
+    why: "a flash of negative energy accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "check.positive(where, \"sim.flash.flashTime\", flash.flashTime);\n",
+    replace: "",
+    why: "a flash of no duration accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var read = readConfig(where, config);\n    if (read.setup.pump !== \"flashlamp\") {\n      check.fail(where, \"needs a config with pump: \\\"flashlamp\\\", got \" + check.describe(config.pump) + \".\");\n    }\n    return {",
+    replace: "var read = readConfig(where, config);\n    return {",
+    why: "a flash fired on a bench without a flashlamp"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "top = E.pumps.dischargeMax({ law: setup.law, currentPeak: config.currentPeak });",
+    replace: "top = E.pumps.dischargeMax({ law: setup.law, currentPeak: setup.config.currentPeak });",
+    why: "the current slider's top from the default peak current, not the config's"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var COUPLER_RANGE = { min: 0.005, max: 0.6, log: true };",
+    replace: "var COUPLER_RANGE = { min: 0.005, max: 0.3, log: true };",
+    why: "the coupler slider ends below ruby's 50 %"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "powerAtTwiceThreshold: fourLevel ? scales.powerPerP : scales.powerPerP * (scales.n_t + 1),",
+    replace: "powerAtTwiceThreshold: scales.powerPerP,",
+    why: "three levels' light scaled as four levels': ruby's beam 12.5× too bright"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "high - low > 1e-6 * high",
+    replace: "high - low > 1e-3 * high",
+    why: "the flash threshold bisected only to 10⁻³"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (setup.pump === pump) found = setup;",
+    replace: "found = setup;",
+    why: "findSetup picks a medium's last setup whatever the pump"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "d.R_p = d.x * d.R_c;",
+    replace: "d.R_p = d.x;",
+    why: "R_p reported as x"
+  },
+  {
+    file: "js/laser/engine/constants.js",
+    find: "mA: 1e-3,",
+    replace: "mA: 1e-6,",
+    why: "the milliampere a thousand times too small"
+  },
+  {
+    file: "js/laser/engine/constants.js",
+    find: "mm: 1e-3,",
+    replace: "mm: 1e-2,",
+    why: "the millimetre written as a centimetre"
+  },
+  {
+    file: "js/laser/engine/constants.js",
+    find: "mm2: 1e-6,",
+    replace: "mm2: 1e-4,",
+    why: "the square millimetre written as a square centimetre"
+  },
+  {
+    file: "js/laser/engine/rates.js",
+    find: "var where = at(twoLevel ? \"twoLevel\" : \"threeLevel\", \"derivatives\");",
+    replace: "var where = at(twoLevel ? \"threeLevel\" : \"twoLevel\", \"derivatives\");",
+    why: "errors of three levels' f named for two levels"
   }
 
 ];

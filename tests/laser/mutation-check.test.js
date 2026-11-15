@@ -67,7 +67,7 @@ const BROKEN_ENTRIES = [
   { why: "not a copied folder", file: "images/logo.png", find: "x", replace: "y",
     message: /must start with one of/ },
   { why: "typo that breaks the syntax", file: "js/laser/engine/media.js",
-    find: "var perEmission = medium.scheme === \"three-level\" ? 2 : 1;",
+    find: "var perEmission = 1;",
     replace: "var perEmission = ;",
     message: /not valid JavaScript/ }
 ];

@@ -50,9 +50,12 @@
     THz: 1e12,                   // Hz
     nm: 1e-9,                    // m
     um: 1e-6,                    // m
+    mm: 1e-3,                    // m
     cm: 1e-2,                    // m
+    mm2: 1e-6,                   // m²
     cm2: 1e-4,                   // m²
     cm3: 1e-6,                   // m³
+    mA: 1e-3,                    // A
     erg: 1e-7,                   // J
     dynPerCm2: 0.1,              // Pa
     statvoltPerCm: c * 1e-4,     // V/m  (1 statvolt = 299.79 V, the book's "300 V/cm")

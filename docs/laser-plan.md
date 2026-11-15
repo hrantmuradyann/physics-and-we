@@ -97,9 +97,10 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 6: first playable laser (`bench.js`; `format.js`, `history.js`, `draw-levels.js`, `draw-plots.js`; sliders for pump, coupler and slow motion, Play/Pause, Reset, readouts, the level diagram with its gain/loss gauge, plots of power and inversion).
 - ✅ Stage 6b: the page in the owner's design (`axis.js`, `draw-photons.js`; the bench with real-looking mirrors and separate rays, a scientific chart of the output power, number boxes beside the sliders, the photon cartoon, the "dig deeper" theory section).
 - ✅ Stage 7a: implicit solver for stiff runs (`ode.rosenbrock`, one step loop shared with `dopri5`; the bench switched to it; the seed floor inside the rate equations).
-- Next: stage 7b, the engine for the new media and pumps, then 7c, the page (see stage 7).
+- ✅ Stage 7b: the engine for every medium and pump the bench runs (`pumps.js`: the flash and the gas discharge; `rates.threeLevel` and `rates.twoLevel`; ruby's N_t and the two-level atom in `media.js`; `bench.js`: the setups, `controls`, `fire`, `flashThreshold`); the page unchanged apart from `start(config)` and its light scale.
+- Next: stage 7c, the page for them (see stage 7).
 
-Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking.
+Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking. `docs/laser-progress.md` tells the same story in plain words for the owner; update it with each stage's commit.
 
 ## What went wrong in stage 1, and the rule that prevents it
 
@@ -811,6 +812,152 @@ Also the contract tests of `dopri5`, for `rosenbrock`: the last step lands on t1
 - `CLAUDE.md`, `bench.js`'s header and `rates.js`'s comments still said that φ falls to 10⁻³¹⁹ with the pump off and that `liftToSeed` is needed when the pump comes back: updated, and `ode.rosenbrockCoefficients` added to the frozen objects.
 - This section contradicted itself and the tests on step counts and bounds: corrected above.
 - Declined: using `rosenbrock` only when the run is stiff, or carrying the step between pieces (the reviewer measured 2–3× `dopri5`'s steps while lasing, 5× in the worst frame). The worst frame is 698 of 1500 steps; choosing a solver per call would add a rule about stiffness that the ruby and Q-switch stages (ε down to 10⁻⁸) would have to keep right, and those are the runs the implicit solver is for.
+
+### Stage 7b — The engine for the new media and pumps (`rates.js`, `pumps.js`, `media.js`, `bench.js`) ✅
+
+**Scope card.** No page work: the page (stage 7c) still shows the Nd:YAG diode bench, and only gains `pump: "diode"` in its config and `start(config)`.
+
+| Function | Inputs (SI) | Output |
+|---|---|---|
+| `rates.threeLevel.scales({ sigma, tau, nu, l_g, area, L_e, refl1, refl2, alpha_i, N_t })` | four-level's, plus N_t (m⁻³) | four-level's numbers with p = 2Bτφ (`pOnePhoton = 2Bτ`, so `powerPerP = (γ₂/2)·A·hν/(2στ)`), plus `n_t = N_t/N_c` and `wThreshold = (n_t + 1)/(n_t − 1)` (null for n_t ≤ 1: even all ions up stay below threshold) |
+| `rates.threeLevel.derivatives({ w, n_t, eps, beta })` | w = W_pτ, a number ≥ 0 or a function of t′ (a flash) | f(t′, [y, s]) with y = ΔN/N_c: dy/dt′ = w(n_t − y) − (n_t + y) − y·p, ε·ds/dt′ = (y − 1) + β·(max(n_t + y, 0) + 10⁻⁷·n_t)·e^(−s) (the ion floor, below) |
+| `rates.threeLevel.steadyState({ w, n_t, beta })` | w a number | { y, p }, f's own equilibrium, floor included |
+| `rates.threeLevel.relaxation({ w, n_t, tau, tau_c })` | w > wThreshold | ω_R = √(p₀/(ττ_c)), p₀ = (n_t − 1)w − (n_t + 1); damping rate n_t(w − 1)/(2τ); `omegaDamped`, `t_damp` as four-level |
+| `rates.threeLevel.liftToSeed({ state, n_t, beta })` | | s raised to ln(β·(max(n_t + y, 0) + 10⁻⁷·n_t)/(1 + n_t)): below the below-threshold level β(n_t + y)/(1 − y) for every y ≥ −n_t, so a steady state is never raised |
+| `rates.twoLevel.derivatives({ w, n_t, eps, beta })`, `.steadyState({ w, n_t, beta })` | | dy/dt′ = −2w·y − (n_t + y) − y·p and the same photon equation; `scales` and `liftToSeed` are the three-level ones |
+| `rates.fourLevel.derivatives({ x, eps, beta })` | x may now be a function of t′ | otherwise unchanged |
+| `pumps.flash({ energy, flashTime })` | J, s (t_p) | power(t), a function of the seconds since firing: (E/t_p)(t/t_p)e^(−t/t_p) for t > 0, 0 before (§6.1): ∫ = E, peak E/(e·t_p) at t = t_p. Checked once, like `derivatives`, because the solver calls it every step |
+| `pumps.dischargeGain({ law, current, currentPeak, gainPeak })` | law `"optimum"` or `"square"`; A, A, m⁻¹ | g₀ (m⁻¹): §6.4 with a/b = 4, normalised to gainPeak at currentPeak; or gainPeak·(I/I_peak)² |
+| `pumps.dischargeThreshold({ law, currentPeak, gainPeak, gth })` | | the lowest current with g₀ = g_th (closed form), null if gainPeak < g_th |
+| `pumps.dischargeMax({ law, currentPeak })` | | the highest current the law allows: 3·I_peak (gain 0 again) or I_peak (the rated current) |
+| `bench.pumpsFor(medium)` | id | the pumps the bench can run it with, in the dropdown's order; [] for CaF₂:Dy and the diode |
+| `bench.configFor({ medium, pump })` | | a new config for that pair |
+| `bench.controls(config)` | | `{ pump: { name, min, max, log }, coupler: { min, max, log } }`: the config field the pump slider sets and its range (a discharge's from the config's own currentPeak), and the coupler's T range, 0.5–60 % for every bench (first `pumpControl({ medium, pump })`, pump only; changed in the review) |
+| `bench.start(config)` | | `{ t: 0, N: 0 (four-level) or −N_t (all ions down), lnPhi: 0, flash: null }` |
+| `bench.fire({ sim, config })` | a flashlamp config | a copy with `flash: { at: t, flashEnergy, flashTime }` from the config, the flash's own energy and t_p from then on (a flash fired while one runs replaces it; first `fire(sim)` with only `flashAt`, changed in the review) |
+| `bench.flashThreshold(config)` | a flashlamp config | the smallest flash energy whose inversion reaches threshold (J), null if none can (two-level) |
+
+**Config:** `medium`, `pump`, `l_g`, `area`, `L`, `refl1`, `refl2`, `alpha_i`, `beta`, and by pump kind:
+- `diode`, `laser` (continuous light): `pumpPower` (W absorbed by the unpumped medium), `pumpLam`, `eta`.
+- `flashlamp`: `flashEnergy` (J into the lamp), `flashShare` (the share absorbed by the unpumped rod), `flashTime` (t_p), `pumpLam`, `eta`.
+- `discharge`: `current`, `currentPeak`, `gainPeak` (the law is the medium's: `"optimum"` for He-Ne and CO₂, `"square"` for Ar⁺).
+
+The pump rate per ion is set for the unpumped medium, as a lamp sets it whatever the populations are (W_p = σ_aΦ): four-level R_p = η·P/(hν_p·V_a) as before; three- and two-level W_p = η·P/(hν_p·N_t·V_a), with P the absorbed power (the flash: share·P_flash(t)). A discharge sets the small-signal gain: x = g₀(I)·l/γ.
+
+**Decisions** (numbers checked where a source was found; the rest marked):
+- Flash t_p = 0.3 ms for every flashlamp medium (FWHM 0.73 ms: the owner's "about 1 ms").
+- Ruby (§3.1's example): rod 10 cm, 1 cm across, L = 0.5 m, R₂ = 0.5, α_i = 0, N_t = 1.6×10¹⁹ cm⁻³; lamp light absorbed in the 550 nm band, share 0.12 (the book's 10–15 %), η = 0.7 (not verified: between about 0.7 and 1 in the literature). Then n_t = 11.54, ε = 1.85×10⁻⁶, τ_c = 5.54 ns, threshold about 640 J; the flash slider 0–3000 J, 1000 J at the start.
+- Nd:YAG with a flashlamp: rod 7.5 cm, 6 mm across, R₂ = 0.8 (threshold about 1.3 J; 0–50 J, 10 J). Nd:glass: rod 10 cm, 1 cm across, L = 0.5 m, R₂ = 0.8 (about 29 J; 0–300 J, 100 J). Both absorb in the 808 nm band, η = 0.9, share 0.12 (the book's ruby number; not verified for neodymium).
+- He-Ne: tube = cavity, 0.3 m; mode area 0.2 mm²; R₁ = 0.999, R₂ = 0.99; α_i = 0.01 m⁻¹ (so there is a best coupler); g_peak = 0.144 m⁻¹ (15.5 %/m, Stanford) at I_peak = 5 mA (datasheets: 3–8 mA, at most about 6.5 mA for a small tube; I_opt grows with the bore, so the book's 7–10 mm tubes ran at tens of mA). 0.43 mW at 5 mA. Slider 0–15 mA.
+- CO₂: tube = cavity, 0.8 m; 50 mm² (8 mm bore); R₂ = 0.8; α_i = 0.005 m⁻¹; g_peak = 1.1 m⁻¹ (1.1 %/cm, a DC longitudinal discharge) at I_peak = 20 mA (sealed tubes run at 14–29 mA). About 8 W (real 80 cm tubes give 40–60 W: this plane-wave model saturates the whole bore evenly). Slider 0–60 mA.
+- Ar⁺: tube = cavity, 1 m; 1.8 mm² (1.5 mm bore); R₂ = 0.95; α_i = 0.01 m⁻¹; g_peak = 2.3 m⁻¹ (about 10 dB/m) at its rated I_peak = 40 A. **Square law**, not §6.4's optimum: the upper level is reached in two electron collisions, so the gain grows as I² and keeps growing up to the rated current (not verified against a printed source). A departure from the owner's "optimum current included", for this one gas. About 0.45 W at 40 A; the slider (0–40 A) starts at 30 A (0.25 W), so it can still go up.
+- §6.4's a/b = 4 for He-Ne and CO₂: the gain is 0 again at 3·I_peak (a model choice; §6.4 leaves a, b free).
+- Dye (Rhodamine 6G): a 0.2 mm jet, a 15 µm spot (7×10⁻¹⁰ m²), L = 0.5 m, R₂ = 0.97, pumped at 532 nm with η = 1 (S₁ is reached directly; its own decay is in τ); triplet losses (§5.8) are left out, so the slope is high: threshold 42 mW, 1.6 W at 2 W. Ti:sapphire: crystal 5 mm, a 30 µm spot, L = 1.5 m, R₂ = 0.97, α_i = 0.5 m⁻¹, 532 nm, η = 1: threshold 0.15 W, 2.8 W at 5 W. Both 0–10 W.
+- The two-level atom: ruby's numbers (scheme `"two-level"`, I_sat with the factor 2 as for ruby), the last entry of the media list; a small sample (1 cm, 1 mm², L = 0.1 m, R₂ = 0.9) so that a pump of tens of watts reaches W_pτ ≈ 1; pumped by light at its own line (`pumpLam` = λ: there is no other level to absorb into), `"laser"` (0–1000 W) or `"flashlamp"`. It never runs, so `cw` and `pulsed` are both false.
+- `derive` for a flashlamp gives the flash's peak power and the pump at the peak in units of threshold (`xPeak`), and null for the steady numbers (P_out, threshold power, best coupler, relaxation); for a discharge `currentThreshold` instead of `pumpThreshold` and `slope`; for the two-level atom x = 0 and `ySteady` < 0.
+
+**Doc audit** (fixed in `docs/laser-physics.md` with this stage):
+- D2, §4.1: "N → ΔN in the second equation" makes the seed negative while ΔN < 0. The photon equation of a three-level medium has V_aBΔNφ for stimulated emission and βV_aN₂/τ for the seed, N₂ = (N_t + ΔN)/2; written out, with its dimensionless form in §11.2 (derived here: p = 2Bτφ, w = W_pτ, n_t = N_t/N_c).
+- §4.2: the ruby numbers (period 17 µs, damping 2 ms, "116 oscillations", "never die out") come from the four-level linearization. Linearizing the three-level equations: ω_R² = (n_t + 1)(x − 1)/(ττ_c), damping rate n_t(w − 1)/(2τ); for ruby at x = 3 a period of 5.1 µs and a damping time of 0.2 ms, shorter than the flash. So single-mode rate equations damp ruby's spikes far above threshold (at 2000–3000 J they smooth out within about 0.3 ms), but not near it (at 700–1000 J they last as long as the light, 0.3–0.8 ms; measured on the bench); real ruby keeps spiking irregularly even far above threshold, which needs several modes and heating (a known gap of the simple model).
+- §6.4: the He-Ne currents (above), and the square law for Ar⁺.
+- §5.1/§5.2: N_t as a column for ruby; the usual doping 0.05 wt % and τ = 3 ms at 300 K checked (Roditi's datasheet); the two-level atom added as a teaching entry.
+- D3 (He-Ne "no oscillations") was already reworded in stage 4; this stage tests it.
+
+**Test values** (prototypes in Node; the real files are measured again):
+
+| Check | Expected | Bound |
+|---|---|---|
+| Ruby scales (§3.1) | N_c = 1.39×10¹⁸ cm⁻³, n_t = 11.54, ε = 1.848×10⁻⁶, τ_c = 5.54 ns, w_th = 1.190 | 1e-3 |
+| Three-level gain from the pump alone (§2.2) | y < 0 for W_pτ < 1, y > 0 just above; steady y = n_t(w − 1)/(w + 1) without light | exact identity 1e-12 |
+| The seed comes from N₂ | at y = −n_t (all down) the seed is the floor's, not negative | — |
+| steadyState makes f zero, both schemes | | 1e-12 |
+| Relaxation (three-level) against a kicked run | period and damping time | 2 %, 10 % |
+| Two-level: y < 0 | every w from 0 to 10⁶, from y = −n_t and from y = 0.9·n_t (an inverted start relaxes) | always |
+| Ruby flash at 0.95 × and 1.05 × the threshold energy | no light above the seed level ×10; lasing | — |
+| Ruby at 1000 J | first light after a delay of 0.2–0.8 ms; spike spacing in [1, 50] µs (§12) | ranges |
+| He-Ne from the off state to I_peak | overdamped (no period), rises without overshoot, within 1 % of steady by 12τ (D3; the build-up from one photon takes about 6τ, so 10τ was too early) | 1 % |
+| Flash | ∫P dt = E, peak at t_p, 0 before | 1e-9 |
+| Discharge (optimum) | g₀(I_peak) = g_peak, the scan's maximum at I_peak, 0 at 0 and 3·I_peak, threshold = bisection | 1e-9 |
+| Every (medium, pump) of `configFor` | derives, runs 1 ms of its default within a step bound | — |
+| A ruby flash in page frames (slow motion 10⁴, 60 Hz) | fits 1500 steps a frame | measured, 1.5× |
+
+**Traps:** the seed from ΔN (negative before half the ions are up); dropping the factor 2 of the three-level stimulated term (p = 2Bτφ); a flash not normalised (∫ ≠ E); pumping with the populations instead of for the unpumped medium; the two-level pump at a shorter wavelength; `liftToSeed` raising a below-threshold three-level state (its level β(n_t + y)/(1 − y) is 12 times lower than β(n_t + y) at y = −n_t); the flash's corner at t = 0 (it starts at a call's start, where the forward difference only sees one side); clamping y at −n_t, not 0, for three levels.
+
+**Found while building and testing:**
+- **The three-level seed floor had to be bigger than four levels' 10⁻¹².** There the upper level is n_t + y, and as the ions all fall back down (y → −n_t) it is known only to the rounding of n_t, 2×10⁻¹⁶·n_t. Next to a floor of 10⁻¹² that rounding was noise of 10⁻³ in the seed, and the implicit solver, which differentiates f, took about 10⁵ steps per 10τ (ruby, 30τ after the pump stopped). The floor is 10⁻⁷·n_t (`ION_FLOOR`, in f, `steadyState` and `liftToSeed`): the rounding is then 2×10⁻⁹ of it, below the solver's tolerance whatever n_t is, and the same decay takes under 10 steps. With the pump off the photons settle at β·10⁻⁷·n_t/(1 + n_t), for ruby a hundredth of a photon. The four-level floor stays 10⁻¹² (its y = 0 is exact).
+- **He-Ne is not within 1 % after 10τ**: the build-up from one photon alone takes about 6τ. At 5 mA (x = 5.07) it is overdamped (x/2 > ω_Rτ, `derive` gives no period), so the test checks that it rises without overshoot and is within 1 % by 12τ.
+- **The two-level setups need their pump at the line itself**, which a fixed number in `SETUPS` would duplicate: their `pumpLam` is null there and `configFor` fills in the medium's λ; `derive` refuses any other wavelength for two levels.
+- **No clamp is needed at the discharge's highest current.** A first version clamped the optimum law's gain at 0 there for rounding; the mutation check showed the clamp never acts: the max-current check keeps u = I/I_peak within one rounding unit of 3, where the formula is exactly 0. The clamp is gone, and a test checks the gain at the top for 2000 peak currents.
+- **The flash threshold's peak search could run 55 000 pieces** when y never moved (a break that read the pump only at t′ = 0 timed the test run out): it now stops at the first piece that does not rise, not the first that falls. The parabola through the last three samples went with it: it moved the threshold energies by at most 6×10⁻⁷.
+- The step bounds in the tests were first guesses and too low: each is now 1.5× the measured cost.
+
+**Measured** (the real files, rtol 10⁻⁶):
+- The setups (5 digits, now the test values): He-Ne τ_c 117.38 ns, g_th 0.028418 m⁻¹, x 5.0672, 0.42773 mW, threshold 0.36139 mA; Ar⁺ at 30 A x 36.294, 0.25162 W (at 40 A 64.522, 0.45288 W), threshold 4.9797 A; CO₂ τ_c 23.090 ns, x 7.6143, 8.2319 W, threshold 0.93073 mA; dye threshold 42.420 mW, x 47.148, 1.6288 W, ε 20.556; Ti:sapphire threshold 0.14853 W, x 33.664, 2.7713 W; ruby n_t 11.5416, ε 1.84793×10⁻⁶, w_th 1.18973.
+- Flash thresholds: ruby 638.68 J (63 ms to compute after the review: bisection to 10⁻⁶ over runs of the photon-free equation), Nd:YAG 1.2932 J, Nd:glass 28.969 J. At the default energies the pump peaks at 5.72 (ruby, 1000 J), 9.69 (Nd:YAG, 10 J) and 4.69 (Nd:glass, 100 J) times threshold.
+- Ruby at 1000 J: first light at 0.47 ms, then 115 spikes 5–7 µs apart (§12's [1, 50] µs; the three-level relaxation period at x = 3 is 5.1 µs), peaks up to 0.32 MW. At 0.95 × the threshold energy the most light is 0.16 mW (spontaneous, amplified near threshold); at 1.05 × a 31 kW spike.
+- Cost: 1 ms of each setup's default (flash fired at the start) from 350 steps (He-Ne) to 15 000 (ruby); a ruby flash on the page (slow motion 10⁴, 60 Hz) at most 588 steps a frame, 33 on average, so the 1500 a frame are enough; the two-level flash at most 1284 steps per 50 µs piece.
+
+**Breaks** (70 for this stage: 51 in its own section of `tests/laser/mutations.js`, 2 beside the media entries (the factor 2 per emission for three and for two levels), 17 from the review in a section of their own; 515 in all): three levels seeded from ΔN, without the factor 2 of p = 2Bτφ, with four levels' decay, with the pump not emptying the ground level, with the sign of (y − 1) flipped; two levels with −w·y or pumped as three; `liftToSeed` without /(1 + n_t); the ion floor at 10⁻¹² or unscaled in the steady state; the steady states without the seed, the factor 2 or p; w_th, p₀ and the damping of the three-level relaxation; a pump function read only at t′ = 0 (four and three levels); the flash not normalised, as a jump, lit before firing; §6.4's a/b, the optimum law's top, the square law and its threshold, the optimum threshold's sign and root, a tube with no threshold, a current past the top; the clamp at 0 instead of −N_t, ruby starting half inverted, the pump without η or τ or per threshold ion, the whole lamp's light absorbed, xPeak, the lamp's peak without 1/e, ruby's threshold by the linear shortcut, the bisection turned round, the flash restarting each call or aged wrongly; the two-level pump wavelength, a flash later than t or on a bench without a lamp, the two-level atom given a threshold or three levels' equations; the discharge's x without l, ruby's N_t a decade low, the flash share; from the review: the running flash read from the sliders, the flash not copied, the flash checks, the slider tops, the coupler range, ruby's light scale, the bisection's tolerance, `findSetup`, R_p, the new units, a function's name in errors. 23 entries for `rates.js` and `bench.js` were brought up to date with the rewritten code first, and 9 more after the review; 2 went with the code they broke (the two-level `pumpLam` marker, R_p's own η). The first run missed 2 and timed out 1: the parabola in the flash threshold's peak search and the clamp of the discharge gain at 0 changed nothing that matters, so both were removed (see above); the timeout was the peak search running 55 000 pieces when y never rose, which now stops at once. After the review 2 more: a test of the flash copy compared copies its helper had made (it now calls `advance` directly), and a page test of 5000 frames that, with off-screen canvases drawn, drew 5000 long charts (27 s; it now checks after every 100 frames that none was drawn).
+
+**Browser check** (Claude in Chrome, `http://127.0.0.1:5500/?view=laser`, after the review; the page still shows only Nd:YAG): the page lases as in stage 7a, with the same readouts (threshold 1.51 W, x 3.31, g_th 0.713 m⁻¹, best output mirror 4.75 %) and the canvases off screen not running; no console errors. In Chrome the engine is about 8 times faster than in Node's vm: ruby's flash threshold takes 7.6 ms, and a 1.2 ms ruby flash run in 720 page frames 19 ms (18 240 steps). The first load mixed a cached `media.js` from before this stage with the new `bench.js` and threw ("there is no medium called two-level"): the local Python server sends no cache headers, so Chrome guessed; a hard reload fixed it. Cloudflare Pages tells browsers to check every file again, so the live site should not mix versions; worth checking once after the first deploy.
+
+**Review outcome** (`/code-review` on Opus 5.5, 14 findings, all fixed):
+- Ruby's default coupler (50 %) was outside `RANGES.T_oc` (0.5–30 %), so a slider would have shown 30 % while the bench ran at 50 %. `controls(config)` now gives the coupler's range with the pump's, 0.5–60 % (log) for every bench, and a test checks every default inside it and every corner of both sliders. `RANGES` stays the stage-6 page's until 7c.
+- A fired flash was rebuilt from the config on every call, so moving the energy slider after Fire changed the flash that was running. The sim keeps `flash: { at, flashEnergy, flashTime }`, set by `fire({ sim, config })`. Tested: ruby fired at 1000 J, then the energy set to 0 and t_p doubled, runs exactly as the untouched flash.
+- `powerPerP` is the output at p = 1, which is twice threshold only for four levels (for ruby p = n_t + 1 = 12.5 there, so its beam would have been 12.5× too bright). `derive` gives `powerAtTwiceThreshold`, and the page uses it for the beam and the power chart's floor. The page shows only Nd:YAG until 7c, where the two are equal, so a break of the page's use is caught from 7c on.
+- `flashThreshold` took 0.18–0.27 s for ruby under load: bisection to 10⁻⁶ instead of 10⁻⁹, now 63 ms. Stage 7c should still not call it on every slider move (keep the result until the config changes).
+- Its peak search grew with t_p/τ (Nd:YAG with t_p = 0.1 s: 0.75 s): pieces of t_p/100 instead of min(t_p, τ)/100. With t_p = 1 s, Nd:YAG now takes 31 ms and ruby 0.32 s; ruby with 1 µs 0.25 s.
+- Continuous light on a three-level medium fell into the four-level code (no setup has it): it is refused, naming `derive`.
+- A discharge's slider top came from the setup's default peak current, not the config's (He-Ne at 4 mA: 15 mA offered, 12 mA accepted): from the config's, tested.
+- The four-level light pump repeated `pumpLevel`'s formula: it uses `pumpLevel`.
+- `readConfig` looked the medium up twice and the setup in two scans, and `advance` derived before its 0-second return: one lookup, one scan, the derive after the return.
+- `ionDerivatives`/`ionSteadyState` took a scheme name and a flag that follows from it: the flag only.
+- The two-level setups had `pumpLam: null`, filled in by `configFor`: `SETUPS` reads the line from `media.js` (`TWO_LEVEL_LINE`).
+- Two tests ran the solver with an unmeasured `maxSteps` and no `reachedEnd` check: measured bounds (1.5×) and the check.
+- The setups wrote handbook values as bare SI numbers (`5e-3` for 5 mA): written with units; `mm`, `mm2` and `mA` added to `constants.js` and its test.
+- The docs said the model's ruby spikes die out within 0.2 ms, but the bench spikes for 0.8 ms at 1000 J. Measured at four energies (t_p = 0.3 ms, threshold 639 J): at 700 J and 1000 J the spikes last as long as the light (0.3 and 0.8 ms; the light still drops by more than half between spikes at the end), at 2000 J and 3000 J they smooth out within about 0.3 ms. §4.2, the doc audit above and `docs/laser-progress.md` now say so.
+
+### Stage 7c — Choosing the laser on the page
+
+**The owner's choices** (15 Nov 2026, besides stage 7's): the small chart of the inversion is not needed (the level picture shows the inversion as its bar), so it goes for every medium; each pump is drawn as itself on the bench. The page work is split in two commits: **7c** choosing the laser (the dropdowns, the controls, Fire, the slow motion, the readouts, the words), **7d** the drawings (each pump on the bench, the level picture and the cartoon for three and two levels). Until 7d, ruby is drawn with diodes and four levels: the commit is not deployed in between.
+
+**Scope card.**
+
+| Part | What it does |
+|---|---|
+| Medium dropdown (`data-laser-choose="medium"`, a `<select>`) | every medium of `media.list()`, in its order, named from `data/laser.json` (`media.<id>`); a medium without setups (CaF₂:Dy, the diode laser) is listed `disabled` with the words "coming later" |
+| Pump dropdown (`data-laser-choose="pump"`) | the medium's `bench.pumpsFor(medium)`, named from `pumps.<kind>` |
+| Choosing either | `config = bench.configFor(...)`, a new simulation (`start`), the charts' history and the cartoon cleared, the slow motion set to the setup's starting value, the sliders re-ranged from `bench.controls(config)`; Play/Pause kept. A language switch keeps the choice (it is in `state`) |
+| Pump slider | `controls(config).pump`: its field (`pumpPower`, `flashEnergy`, `current`), name (`controls.pump.<kind>`), range and unit: W, J, or A (mA when the top is under 1 A) |
+| Coupler slider | `controls(config).coupler`, 0.5–60 %, log. `bench.RANGES` goes (stage 7b kept it for the stage-6 page) |
+| Fire (`data-laser-action="fire"`) | shown only on a flashlamp bench: `sim = bench.fire({ sim, config })`; if the loop is paused it also presses Play, since the visitor asked to see a flash |
+| Slow motion | range 10³–10⁹ (log; the fastest lasers change within nanoseconds); each setup has a starting value (a table in `page.js`, below) |
+| Readouts | rows shown by pump kind (`hidden` on the others): continuous light as now; a discharge the threshold current instead of the threshold pump power; a flashlamp the threshold flash energy (`flashThreshold`, computed once per config change, not per frame), the pump now ÷ threshold, and the highest output since Fire; the two-level atom "never" for its threshold |
+| The pump now | `bench.pumpNow({ sim, config })` (engine, new) -> `{ x, power }`: the pump now in units of threshold (x for four levels, w/w_th for three; for two levels, which have none, w = W_pτ), and in its own terms (absorbed W, the lamp's W, or A). The level picture, the cartoon and the bench's pump glow use it, so a flash shows as it rises and falls |
+| The inversion chart | removed: its canvas, words, alt text and CSS; the level picture takes the row under the stage alone |
+| Words | `data/laser.json`: the medium and pump names, "coming later", the slider names by pump, Fire, the new readouts, a status line and theory that no longer say "one Nd:YAG laser"; both languages (the Armenian flagged for a fluent reader, as before) |
+
+**Starting slow motion** (from each setup's time scales, measured with `derive`; the frame cost of each is measured again in the tests):
+
+| Setup | Time scale | Start | 1 s on screen |
+|---|---|---|---|
+| Ruby, Nd:glass, Nd:YAG flash; Nd:YAG diodes; CO₂ | flash 1 ms; relaxation 6–11 µs | 10⁴ | 100 µs |
+| Two-level, laser | τ = 3 ms | 10³ | 1 ms |
+| Two-level, flash | the 1 ms flash | 10⁴ | 100 µs |
+| He-Ne, Ti:sapphire | build-up about 1 µs; Ti:sapphire's period 2.2 µs | 10⁶ | 1 µs |
+| Ar⁺, dye | build-up about 0.1 µs (τ 10 ns and 5 ns) | 10⁷ | 100 ns |
+
+**Tests first:**
+- `page.test.js`: the dropdowns list every medium in order, the two without setups disabled; the pump list follows the medium; a choice gives `configFor`'s config, a new simulation, cleared charts, the setup's slow motion and the new slider ranges and units; a language switch keeps it; Fire shows only for a flashlamp, fires (flash at the current t) and plays a paused loop; the readout rows by pump kind; `flashThreshold` is called once per config change; the pump now drives the levels, cartoon and bench; no inversion canvas any more.
+- `bench-pumps.test.js`: `pumpNow` for each kind (a flash at its peak gives `xPeak`; before Fire 0; a discharge its x; two levels w).
+- The frame budget, with the real engine, for every setup at its starting slow motion and at the slider's ends (60 Hz, 1.5× the measured worst frame, inside 1500), and a ruby flash fired on the page.
+- `site-files.test.js`: every `data-laser-*` name `page.js` needs, once; the words of every medium and pump in both languages.
+
+**Traps:** a choice must not keep the old bench's flash (a flash on a bench without a lamp is refused by `advance`); a slider range from the previous bench (the value must be read from the new config); `flashThreshold` per frame (60 ms in Node); a `<select>`'s `change` event, not `input`, in some browsers; option words set with `textContent`, never as markup; the number box's unit and factor change with the bench (mA against A); a disabled option the keyboard can still reach in some browsers (the page refuses a medium without setups anyway).
+
+### Stage 7d — Each pump drawn, and three and two levels
+
+To be written at its start: the flashlamp beside the rod, glowing with the flash; the gas tube with its electrodes and current; the pump laser's beam; the level picture for three levels (ground = lower laser level, the bar as the share of ions up, the gauge going below zero while the medium absorbs) and for two; the cartoon's excited share for three and two levels, N₂/N_t.
 
 ### Stage 8 — Q-switch parts
 - **Build:**

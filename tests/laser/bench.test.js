@@ -41,7 +41,7 @@ function powerOf(sim, derived) {
 test("the default bench: a small Nd:YAG laser pumped by 5 W of 808 nm diode light", () => {
   const c = B.defaultConfig();
   assert.deepEqual(plain(c), {
-    medium: "nd-yag", l_g: 0.05, area: 1e-6, L: 0.3, refl1: 1, refl2: 0.95,
+    medium: "nd-yag", pump: "diode", l_g: 0.05, area: 1e-6, L: 0.3, refl1: 1, refl2: 0.95,
     alpha_i: 0.2, pumpPower: 5, pumpLam: 808e-9, eta: 0.9, beta: 1e-8
   });
   c.pumpPower = 7;
@@ -182,8 +182,8 @@ test("every corner of the sliders gives finite numbers (or null), never an error
 
 /* ---------- advance: the simulation ---------- */
 
-test("start(): the pump just switched on, no inversion, one photon", () => {
-  assert.deepEqual(plain(B.start()), { t: 0, N: 0, lnPhi: 0 });
+test("start(config): the pump just switched on, no inversion, one photon, no flash", () => {
+  assert.deepEqual(plain(B.start(config())), { t: 0, N: 0, lnPhi: 0, flash: null });
 });
 
 test("from start to steady state: the output equals derive's P_out within 1 %", () => {
@@ -191,7 +191,7 @@ test("from start to steady state: the output equals derive's P_out within 1 %", 
   const d = B.derive(c);
   // 30τ: about 50 damping times. Measured: 12 390 steps (dopri5: 4565; the
   // implicit solver is order 2, stage 7a).
-  const run = advance(B.start(), c, 30 * d.tau, 18600);
+  const run = advance(B.start(config()), c, 30 * d.tau, 18600);
   assert.equal(run.reachedEnd, true);
   assertClose(run.sim.t, 30 * d.tau, 1e-12, "time");
   assertClose(powerOf(run.sim, d), d.P_out, 0.01, "P_out");
@@ -204,7 +204,7 @@ test("below threshold: the inversion settles at x·N_c and the output stays at t
   const d = B.derive(c);
   // 10τ at x ≈ 0.5: measured 615 steps (dopri5 took 12 652 here, held to
   // 3.3ε/(1 − y) by the photons' seed level, §11.3).
-  const run = advance(B.start(), c, 10 * d.tau, 1000);
+  const run = advance(B.start(config()), c, 10 * d.tau, 1000);
   assert.equal(run.reachedEnd, true);
   assertClose(run.sim.N / d.N_c, d.x, 1e-3, "y → x");
   assert.ok(powerOf(run.sim, d) < 1e-6 * d.powerPerP, "no lasing: " + powerOf(run.sim, d) + " W");
@@ -212,13 +212,13 @@ test("below threshold: the inversion settles at x·N_c and the output stays at t
 
 test("advance is deterministic: the same input gives the same output, to the bit", () => {
   const c = config();
-  const first = advance(B.start(), c, 200e-6, 3200);           // measured: 2129
-  const second = advance(B.start(), c, 200e-6, 3200);
+  const first = advance(B.start(config()), c, 200e-6, 3200);           // measured: 2129
+  const second = advance(B.start(config()), c, 200e-6, 3200);
   assert.deepEqual(plain(first), plain(second));
 });
 
 test("advance by 0 s changes nothing and takes no step (a frame that only draws)", () => {
-  const sim = { t: 1e-3, N: 2e22, lnPhi: 30 };
+  const sim = { t: 1e-3, N: 2e22, lnPhi: 30, flash: null };
   const run = advance(sim, config(), 0, 10);
   assert.deepEqual(plain(run), { sim: sim, reachedEnd: true, steps: 0 });
 });
@@ -226,7 +226,7 @@ test("advance by 0 s changes nothing and takes no step (a frame that only draws)
 test("out of steps: partial progress, never a freeze; carrying on reaches the same state as one call", () => {
   const c = config();
   const target = 120e-6;
-  const short = advance(B.start(), c, target, 5);
+  const short = advance(B.start(config()), c, target, 5);
   assert.equal(short.reachedEnd, false);
   assert.equal(short.steps, 5);
   assert.ok(short.sim.t > 0 && short.sim.t < target, "moved forward: " + short.sim.t);
@@ -238,7 +238,7 @@ test("out of steps: partial progress, never a freeze; carrying on reaches the sa
     sim = advance(sim, c, target - sim.t, 5).sim;
     calls += 1;
   }
-  const whole = advance(B.start(), c, target, 3000);
+  const whole = advance(B.start(config()), c, target, 3000);
   assert.equal(whole.reachedEnd, true);
   assertClose(sim.t, target, 1e-12, "time");
   // Each call picks its own first step, so the pieces take other steps
@@ -265,7 +265,7 @@ test("a solver answer a hair below N = 0 is passed on as 0, so the next call acc
     }
   };
   const c = config({ pumpPower: 0 });
-  const first = loaded.bench.advance({ sim: { t: 0, N: 1e10, lnPhi: 0 }, config: c, seconds: 1e-9, maxSteps: 100 });
+  const first = loaded.bench.advance({ sim: { t: 0, N: 1e10, lnPhi: 0, flash: null }, config: c, seconds: 1e-9, maxSteps: 100 });
   assert.equal(first.sim.N, 0);
   loaded.ode = ode;
   const next = loaded.bench.advance({ sim: first.sim, config: c, seconds: 1e-9, maxSteps: 100 });
@@ -288,7 +288,7 @@ test("the 'almost no loss' check uses cavity.js's γ: accepted just above 10⁻�
 
 test("a slider moved mid-run: the atoms and photons carry over, only the scales change", () => {
   const c = config();
-  const before = advance(B.start(), c, 300e-6, 5800).sim;      // measured: 3887
+  const before = advance(B.start(config()), c, 300e-6, 5800).sim;      // measured: 3887
   const c2 = config({ refl2: 0.9 });                // x = 1.88: still lasing
   // 1 fs: far shorter than τ_c (6 ns here), so nothing has time to change.
   const after = advance(before, c2, 1e-15, 100).sim;
@@ -311,7 +311,7 @@ test("pump off for 750τ, then on again: the photons settle at the seed of y = 1
   const off = config(Object.assign({}, long, { pumpPower: 0 }));
   const d = B.derive(on);
   assert.ok(d.eps > 0.05 && d.x > 1.5, "the setting is what the comment says");
-  let run = advance(B.start(), on, 40 * d.tau, 800);            // measured: 521
+  let run = advance(B.start(config()), on, 40 * d.tau, 800);            // measured: 521
   assert.equal(run.reachedEnd, true);
   run = advance(run.sim, off, 750 * d.tau, 1000);               // measured: 671 (dopri5: about 7300)
   assert.equal(run.reachedEnd, true);
@@ -354,7 +354,7 @@ test("the costliest Nd:YAG corner fits a 60 Hz frame's 1500 steps (20 W, 30 % co
   const hot = config({ pumpPower: 20, refl2: 0.7 });
   const d = B.derive(hot);
   const frame = (1 / 60) / 1e3;
-  const on = pageFrames(B.start(), hot, 1e3, Math.ceil(3 * d.t_damp / frame), 1050);
+  const on = pageFrames(B.start(config()), hot, 1e3, Math.ceil(3 * d.t_damp / frame), 1050);
   assert.ok(on.worst > 400, "the spikes are the costly part: " + on.worst + " steps");
   const off = pageFrames(on.sim, config({ pumpPower: 0, refl2: 0.7 }), 1e3, Math.ceil(60 * d.tau / frame), 320);
   assert.ok(off.worst > 100, "the light dying away costs something: " + off.worst + " steps");
@@ -366,7 +366,8 @@ test("every input is checked, and every error names the function that was called
   const bad = [
     [{ medium: "unobtainium" }, /medium/],
     [{ medium: 7 }, /medium/],
-    [{ medium: "ruby" }, /four-level/],
+    [{ medium: "ruby" }, /pump must be one of flashlamp/],
+    [{ pump: "laser" }, /pump must be one of diode, flashlamp/],
     [{ l_g: 0 }, /l_g/],
     [{ l_g: 0.5 }, /longer than the cavity|l_g/],
     [{ area: -1 }, /area/],
@@ -384,16 +385,16 @@ test("every input is checked, and every error names the function that was called
     assert.throws(() => B.derive(config(changes)), (error) =>
       error.message.startsWith("LaserEngine.bench.derive") && pattern.test(error.message),
       JSON.stringify(changes));
-    assert.throws(() => advance(B.start(), config(changes), 1e-6, 10), (error) =>
+    assert.throws(() => advance(B.start(config()), config(changes), 1e-6, 10), (error) =>
       error.message.startsWith("LaserEngine.bench.advance") && pattern.test(error.message),
       "advance " + JSON.stringify(changes));
   }
   const badRuns = [
-    [{ sim: { t: 0, N: -1, lnPhi: 0 } }, /N/],
-    [{ sim: { t: NaN, N: 0, lnPhi: 0 } }, /\bt\b/],
-    [{ sim: { t: 0, N: 0, lnPhi: Infinity } }, /lnPhi/],
-    [{ sim: { t: 0, N: 0 } }, /lnPhi/],
-    [{ sim: { t: 0, N: 0, lnPhi: 0, y: 1 } }, /y/],
+    [{ sim: { t: 0, N: -1, lnPhi: 0, flash: null } }, /N/],
+    [{ sim: { t: NaN, N: 0, lnPhi: 0, flash: null } }, /\bt\b/],
+    [{ sim: { t: 0, N: 0, lnPhi: Infinity, flash: null } }, /lnPhi/],
+    [{ sim: { t: 0, N: 0, flash: null } }, /lnPhi/],
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null, y: 1 } }, /y/],
     [{ sim: 5 }, /one object/],
     [{ seconds: -1 }, /seconds/],
     [{ seconds: Infinity }, /seconds/],
@@ -401,7 +402,7 @@ test("every input is checked, and every error names the function that was called
     [{ maxSteps: 2.5 }, /maxSteps/]
   ];
   for (const [changes, pattern] of badRuns) {
-    const params = Object.assign({ sim: B.start(), config: config(), seconds: 1e-6, maxSteps: 10 }, changes);
+    const params = Object.assign({ sim: B.start(config()), config: config(), seconds: 1e-6, maxSteps: 10 }, changes);
     assert.throws(() => B.advance(deepFreeze(params)), (error) =>
       error.message.startsWith("LaserEngine.bench.advance") && pattern.test(error.message),
       JSON.stringify(changes));
@@ -411,17 +412,17 @@ test("every input is checked, and every error names the function that was called
 test("a name the function does not use is refused (a typo would otherwise be ignored)", () => {
   assert.throws(() => B.derive(config({ pumpPowr: 5 })), /LaserEngine\.bench\.derive.*pumpPowr/);
   assert.throws(() => B.derive(config({ T_oc: 0.05 })), /LaserEngine\.bench\.derive.*T_oc/);
-  assert.throws(() => B.advance(deepFreeze({ sim: B.start(), config: config(), seconds: 1e-6, maxSteps: 10, budget: 3 })),
+  assert.throws(() => B.advance(deepFreeze({ sim: B.start(config()), config: config(), seconds: 1e-6, maxSteps: 10, budget: 3 })),
     /LaserEngine\.bench\.advance.*budget/);
 });
 
 test("advance refuses plain numbers instead of one object of named values", () => {
-  assert.throws(() => B.advance(B.start(), config(), 1e-6, 10), /LaserEngine\.bench\.advance/);
+  assert.throws(() => B.advance(B.start(config()), config(), 1e-6, 10), /LaserEngine\.bench\.advance/);
 });
 
 test("the engine's bench object is frozen; returned objects are new", () => {
   assert.ok(Object.isFrozen(B));
-  const a = B.start();
+  const a = B.start(config());
   a.t = 5;
-  assert.equal(B.start().t, 0);
+  assert.equal(B.start(config()).t, 0);
 });

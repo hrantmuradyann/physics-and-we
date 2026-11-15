@@ -81,7 +81,7 @@ test("every unit factor equals its definition", () => {
   const expected = {
     ms: 1e-3, us: 1e-6, ns: 1e-9,
     MHz: 1e6, GHz: 1e9, THz: 1e12,
-    nm: 1e-9, um: 1e-6, cm: 1e-2, cm2: 1e-4, cm3: 1e-6,
+    nm: 1e-9, um: 1e-6, mm: 1e-3, cm: 1e-2, mm2: 1e-6, cm2: 1e-4, cm3: 1e-6, mA: 1e-3,
     erg: 1e-7, dynPerCm2: 0.1, eV: 1.602176634e-19,
     mmHg: 133.322387415, atm: 101325
   };

@@ -837,7 +837,15 @@ test("the charts keep 5 s of screen time on 240 Hz and 1000 Hz screens (cut shor
     const { browser, section, seen } = page;
     page.clock = 1000;
     browser.runFrame(page.clock);
-    runFrames(page, Math.round(5.2 * rate), 1000 / rate);
+    // In chunks, checking that no chart is drawn while off screen: with
+    // that broken, this test drew 5000 long charts (27 s, which made the
+    // mutation check time out instead of fail).
+    const drawnBefore = seen.charts;
+    const frames = Math.round(5.2 * rate);
+    for (let done = 0; done < frames; done += 100) {
+      runFrames(page, Math.min(100, frames - done), 1000 / rate);
+      assert.equal(seen.charts, drawnBefore, rate + " Hz: a chart drawn while off screen");
+    }
     browser.setOnScreen(section.canvases.power, true);
     runFrames(page, 1, 1000 / rate);
     const chart = seen.chart.P;

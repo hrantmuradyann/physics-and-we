@@ -47,6 +47,7 @@ const ENGINE_FILES = [
   "cavity.js",
   "ode.js",
   "rates.js",
+  "pumps.js",
   "bench.js"
 ];
 

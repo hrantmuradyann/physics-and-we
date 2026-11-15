@@ -23,8 +23,9 @@
                          otherwise n
          I_sat         saturation intensity, W/m² (null if σ is not known):
                          hν/(στ)  for a four-level medium
-                         hν/(2στ) for a three-level one (ruby): there one
-                         emission changes ΔN by 2, not 1 (§2.2)
+                         hν/(2στ) for a three-level one (ruby) and the
+                         two-level atom: there one emission changes ΔN
+                         by 2, not 1 (§2.2)
 
    Tests: tests/laser/media.test.js
    ========================================================================== */
@@ -41,6 +42,7 @@
 
   // Short names for the units, so the table below reads like the doc's table.
   var nm = C.nm;
+  var cm3 = C.cm3;      // a density per cm³ is written  1.6e19 / cm3
   var um = C.um;        // micrometre (length)
   var cm2 = C.cm2;
   var ms = C.ms;
@@ -53,7 +55,8 @@
   /* What each field means (all SI):
 
        id          the name used in the code, the address and data/laser.json
-       scheme      "three-level", "four-level" or "semiconductor"
+       scheme      "three-level", "four-level", "semiconductor" or
+                     "two-level" (the teaching model that never lases)
        lam         main laser wavelength in vacuum, m
        lamMin,     the range of wavelengths the medium can give; both equal
        lamMax        lam for a medium with one fixed line
@@ -67,6 +70,9 @@
        n           refractive index
        ng          group index, where it differs noticeably from n: only
                      the diode (§3.3: n_g ≈ 4 against n = 3.6). null = use n
+       N_t         density of active ions, m⁻³: only where the rate
+                     equations need it, the three- and two-level ones
+                     (§4.1). null for every other medium
        pumps       how it can be pumped: "flashlamp", "diode", "lamp",
                      "discharge", "current", "laser"
        cw, pulsed  whether it runs continuously and/or in pulses
@@ -85,6 +91,8 @@
       broadening: "homogeneous",
       n: 1.76,
       ng: null,
+      // 0.05 % Cr₂O₃ by weight, the usual doping (§3.1, §5.1)
+      N_t: 1.6e19 / cm3,
       pumps: ["flashlamp"],
       cw: false, pulsed: true
     },
@@ -100,6 +108,7 @@
       broadening: "inhomogeneous",
       n: 1.5,
       ng: null,
+      N_t: null,
       pumps: ["flashlamp"],
       cw: false, pulsed: true
     },
@@ -115,6 +124,7 @@
       broadening: "homogeneous",
       n: 1.82,
       ng: null,
+      N_t: null,
       pumps: ["flashlamp", "diode"],
       cw: true, pulsed: true
     },
@@ -134,6 +144,7 @@
       broadening: null,
       n: 1.43,
       ng: null,
+      N_t: null,
       pumps: ["lamp"],
       cw: true, pulsed: true
     },
@@ -149,6 +160,7 @@
       broadening: "inhomogeneous",              // Doppler
       n: 1,
       ng: null,
+      N_t: null,
       pumps: ["discharge"],
       cw: true, pulsed: false
     },
@@ -164,6 +176,7 @@
       broadening: "inhomogeneous",              // Doppler
       n: 1,
       ng: null,
+      N_t: null,
       pumps: ["discharge"],
       cw: true, pulsed: false
     },
@@ -183,6 +196,7 @@
       broadening: "inhomogeneous",
       n: 1,
       ng: null,
+      N_t: null,
       pumps: ["discharge"],
       cw: true, pulsed: true
     },
@@ -200,6 +214,7 @@
       broadening: "homogeneous",                // §1 lists semiconductors as homogeneous
       n: 3.6,
       ng: 4,
+      N_t: null,
       pumps: ["current"],
       cw: true, pulsed: false
     },
@@ -217,6 +232,7 @@
       broadening: "homogeneous",
       n: 1.36,
       ng: null,
+      N_t: null,
       pumps: ["laser"],
       cw: true, pulsed: true
     },
@@ -234,10 +250,24 @@
       broadening: "homogeneous",
       n: 1.76,
       ng: null,
+      N_t: null,
       pumps: ["laser"],
       cw: true, pulsed: true
     }
   ];
+
+  // The two-level atom, last in the list. Not a real medium: ruby with its
+  // pump bands taken away, for §2.1's lesson that two levels never invert
+  // (§5.1). The same line, cross section, lifetime and ions; pumped by
+  // light at the line itself, since there is no other level to absorb
+  // into. It never lases, so it is neither cw nor pulsed.
+  var twoLevel = copyOf(find("ruby"));
+  twoLevel.id = "two-level";
+  twoLevel.scheme = "two-level";
+  twoLevel.pumps = ["laser", "flashlamp"];
+  twoLevel.cw = false;
+  twoLevel.pulsed = false;
+  MEDIA.push(twoLevel);
 
   /* ---------- reading the table ---------- */
 
@@ -265,8 +295,10 @@
   function saturationIntensity(medium, photonEnergy) {
     if (medium.sigma === null) return null;
     // In a three-level medium one emission empties the upper level AND fills
-    // the lower one, so it changes the inversion ΔN by 2.
-    var perEmission = medium.scheme === "three-level" ? 2 : 1;
+    // the lower one, so it changes the inversion ΔN by 2. So it does with
+    // two levels, whose lower level is the ground state too.
+    var perEmission = 1;
+    if (medium.scheme === "three-level" || medium.scheme === "two-level") perEmission = 2;
     return photonEnergy / (perEmission * medium.sigma * medium.tau);
   }
 

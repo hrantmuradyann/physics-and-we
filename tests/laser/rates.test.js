@@ -137,6 +137,14 @@ test("derivatives: the seed counts max(y, 0) + 10⁻¹², as liftToSeed does, an
   assertClose(slope(5e-13, 1.5e-12), slope(1e-11, 2e-11), 1e-3, "slope across 10⁻¹²");
 });
 
+test("the pump x may be a function of t′ (a flash): f uses its value at each time", () => {
+  const fn = call("derivatives", { x: (tPrime) => 2 * tPrime, eps: 1e-3, beta: 1e-6 });
+  for (const t of [0, 0.5, 3]) {
+    const fixed = call("derivatives", { x: 2 * t, eps: 1e-3, beta: 1e-6 });
+    assert.deepEqual(plain(fn(t, [0.8, -3])), plain(fixed(t, [0.8, -3])), "t′ = " + t);
+  }
+});
+
 test("with β = 0 the seed term is left out: f stays finite at s = −800, where e^(−s) overflows", () => {
   const f = call("derivatives", { x: 2, eps: 1e-3, beta: 0 });
   const [dy, ds] = f(0, [0.5, -800]);
@@ -319,7 +327,7 @@ function smallOscillation(x, eps, kick, cycles) {
   return { crossings, peaks };
 }
 
-test("§4.2: ruby's small oscillation has the period 2π/ω = 17.2 µs (doc: ≈ 17 µs)", () => {
+test("§4.2: a four-level small oscillation with ruby's τ and τ_c has the period 2π/ω = 17.2 µs (doc: ≈ 17 µs)", () => {
   // τ = 3 ms, τ_c = 5 ns, x = 3. Small means δy ≪ √(ε(x − 1)) ≈ 1.8×10⁻³;
   // a 1 % kick is full spiking, with a period twice as long.
   const tau = 3e-3;
@@ -383,7 +391,8 @@ test("§4.2, D3: He-Ne (ε ≈ 0.66, x = 2) follows the linear solution: one swi
 
 /* ---------- relaxation ---------- */
 
-test("relaxation: the doc's ruby numbers, 17.2 µs, 2 ms, and 116 oscillations while the amplitude falls by e", () => {
+test("relaxation: §4.2's four-level numbers for ruby's τ and τ_c, 17.2 µs, 2 ms, and 116 oscillations while the amplitude falls by e", () => {
+  // Ruby itself is three-level: 5.1 µs and 0.2 ms (three-level.test.js).
   const r = call("relaxation", { x: 3, tau: 3e-3, tau_c: 5e-9 });
   assertClose(2 * Math.PI / r.omegaR, 17.21e-6, 0.005 / 17.21, "period");     // 17.2072 µs
   assertClose(r.t_damp, 2e-3, 1e-12, "t_damp = 2τ/x");
@@ -431,11 +440,14 @@ test("every input is checked, and every error names the function that was called
   bad("scales", YAG_CAVITY, { refl1: 1, refl2: 1 }, /no loss at all/);
   bad("scales", YAG_CAVITY, { refl1: 1, refl2: 1, alpha_i: 1e-320 }, /no loss at all/);  // γ too small to divide by
   bad("scales", YAG_CAVITY, { gamma: 0.02 }, /gamma is not one of its inputs/);
-  bad("derivatives", { x: 2, eps: 1e-3, beta: 1e-8 }, { x: -1 }, /x must be a finite number of at least 0/);
+  bad("derivatives", { x: 2, eps: 1e-3, beta: 1e-8 }, { x: -1 }, /x must be a finite number of at least 0 or a function/);
+  bad("derivatives", { x: 2, eps: 1e-3, beta: 1e-8 }, { x: "2" }, /x must be a finite number of at least 0 or a function/);
+  bad("derivatives", { x: 2, eps: 1e-3, beta: 1e-8 }, { x: null }, /x must be a finite number of at least 0 or a function/);
   bad("derivatives", { x: 2, eps: 1e-3, beta: 1e-8 }, { eps: 0 }, /eps must be a positive/);
   bad("derivatives", { x: 2, eps: 1e-3, beta: 1e-8 }, { beta: 2 }, /beta must be a finite number from 0 to 1/);
   bad("derivatives", { x: 2, eps: 1e-3, beta: 1e-8 }, { beta: undefined }, /beta must be/);
   bad("steadyState", { x: 2, beta: 1e-8 }, { x: -0.5 }, /x must be a finite number of at least 0/);
+  bad("steadyState", { x: 2, beta: 1e-8 }, { x: () => 2 }, /x must be a finite number of at least 0/);
   bad("steadyState", { x: 2, beta: 1e-8 }, { beta: -1e-9 }, /beta must be a finite number from 0 to 1/);
   bad("relaxation", { x: 3, tau: 3e-3, tau_c: 5e-9 }, { tau_c: 0 }, /tau_c must be a positive/);
   bad("relaxation", { x: 3, tau: 3e-3, tau_c: 5e-9 }, { x: NaN }, /x must be a finite number/);

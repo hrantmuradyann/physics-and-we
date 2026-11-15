@@ -97,9 +97,10 @@
 
   function newState() {
     var bench = root.LaserEngine.bench;
+    var config = bench.defaultConfig();
     return {
-      config: bench.defaultConfig(),
-      sim: bench.start(),
+      config: config,
+      sim: bench.start(config),
       history: root.LaserUI.history.create(HISTORY_SIZE),
       cartoon: newCartoon(),
       slowMotion: START_SLOW_MOTION,
@@ -242,7 +243,7 @@
     // The light's strength for the pictures: the output over the output at
     // twice threshold.
     function beamNow() {
-      return powerNow() / derived.powerPerP;
+      return powerNow() / derived.powerAtTwiceThreshold;
     }
     // The chart points of this moment, taken once and shared by the two
     // charts (stage 6b review: each took its own copy every frame).
@@ -403,7 +404,7 @@
     });
     addCanvas("power", UI.plots.SIZE, function (view) {
       UI.plots.draw(view, chart("P", {
-        floor: derived.powerPerP,
+        floor: derived.powerAtTwiceThreshold,
         unit: "W",
         title: powerWords.title,
         color: "accent",
@@ -520,7 +521,7 @@
       var resetButton = find('[data-laser-action="reset"]');
       if (resetButton) {
         listen(resetButton, "click", function () {
-          state.sim = bench.start();
+          state.sim = bench.start(state.config);
           state.history.clear();
           state.cartoon = newCartoon();       // no atoms or light left from the old run
           remember();
