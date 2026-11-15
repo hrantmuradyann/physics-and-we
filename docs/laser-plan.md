@@ -99,7 +99,8 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 7a: implicit solver for stiff runs (`ode.rosenbrock`, one step loop shared with `dopri5`; the bench switched to it; the seed floor inside the rate equations).
 - ✅ Stage 7b: the engine for every medium and pump the bench runs (`pumps.js`: the flash and the gas discharge; `rates.threeLevel` and `rates.twoLevel`; ruby's N_t and the two-level atom in `media.js`; `bench.js`: the setups, `controls`, `fire`, `flashThreshold`); the page unchanged apart from `start(config)` and its light scale.
 - ✅ Stage 7c: choosing the laser on the page (two dropdowns over every bench of 7b; each bench's pump slider, units, starting slow motion and readout rows; Fire for a flashlamp; `bench.pumpNow`, whose `smallSignal` puts the gauge's dashed line at each medium's own gain; the inversion chart removed; the mutation check about 10× faster). Until 7d every bench is drawn with diodes and four levels.
-- Next: stage 7d, each pump drawn, and the pictures for three and two levels.
+- ✅ Stage 7d: each pump drawn as itself on the bench (diodes, flashlamp, gas tube with electrodes and supply, pump laser with its fold mirror) and the level picture for three and two levels (the ground as the lower level, the share bars with the threshold mark, the gauge below zero); `derive` gives `thresholdRate`.
+- Next: stage 8, Q-switching (8a the engine, 8b the page).
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking. `docs/laser-progress.md` tells the same story in plain words for the owner; update it with each stage's commit.
 
@@ -997,9 +998,65 @@ The pump rate per ion is set for the unpumped medium, as a lamp sets it whatever
 
 **Browser check after the review** (Claude in Chrome, the same address): the first load drew the gauge's line at w, from a `draw-levels.js` Chrome had cached (0 B transferred); a hard reload (Cmd+Shift+R) fixed it, as in stage 7b. Then: the engine gives `{ x, w, smallSignal }` (the two-level atom: x null, w 6.55, smallSignal −0.54) and `derive` the two-level x null; the two-level atom's dashed line sits at 0, and its drawing names the pump "Pump laser"; ruby, fired at 1000 J and paused at 225 µs (5.51 × threshold), has its dashed line at its own small-signal gain, not at the pump; the bench's alt text no longer speaks of diodes; dragging ruby's output mirror shows "…" under the chart and one search when it is let go (566 J at 6.6 %); at 320 px the two dropdowns stack inside the panel (x 41–279 px within 24–296); no console errors.
 
-### Stage 7d — Each pump drawn, and three and two levels
+### Stage 7d — Each pump drawn, and three and two levels ✅
 
-To be written at its start: the flashlamp beside the rod, glowing with the flash; the gas tube with its electrodes and current; the pump laser's beam; the level picture for three levels (ground = lower laser level, the bar as the share of ions up, the gauge going below zero while the medium absorbs) and for two; the cartoon's excited share for three and two levels, N₂/N_t.
+**The owner's choice** (15 Nov 2026, "Draw each pump"): diodes as now; a flashlamp, a tube beside the rod that glows as strongly as the flash; a gas discharge, where the tube is the medium, with electrodes at its ends and the current; a pump laser, a beam going into the medium. With this stage the level picture and its gauge also show three and two levels as they are (the stage-7c clamps at 0 go).
+
+**Scope card.** UI only; no engine change.
+
+| Part | What it does |
+|---|---|
+| `bench.draw(view, labels, light)` | `light.pumpKind`: `"diode"`, `"flashlamp"`, `"discharge"` or `"laser"` (`bench.KINDS`, the engine's pump kinds); missing or unknown draws the diodes. `light.pump` (0–1) is how strongly each pump glows, as before |
+| Diodes | as before: a strip under the rod and 7 arrows of light up into the rod |
+| Flashlamp | a tube under the rod, as long as the diodes' strip and a little thicker, with a metal cap at each end (its electrodes); its gas glows with `light.pump` (dark before Fire); 7 arrows of light up into the rod while it glows |
+| Discharge | no rod: the medium is a gas tube on the axis, 0.86 of the space between the mirrors, as tall as the rod, so the rays run inside it. Its bore glows with `light.pump`; two electrodes stick down from it near its ends, wired to a power supply that stands on the bench in the middle; an arrow on each wire shows the current (up into the left electrode, down out of the right) while it flows. The tube stands on two posts near its ends, outside the electrodes, so no wire crosses a post |
+| Pump laser | the rod as for diodes; the pump laser is a box on the bench under the rod's left half; its beam runs right to a small mirror at 45° under the rod's middle, which turns it up into the rod (an arrowhead at the rod). The beam shows only while the pump is on, with its alpha from `light.pump`; the small mirror stands on a post |
+| `bench.layout(w, h)` | gains `flashTube`, `tube` (with its `bore`), `electrodes` (two), `supply`, `wireY`, `posts` per kind, `pumpLaser`, `fold` and `beamY`, checked for every width from 280 to 1400 px like the rest |
+| `levels.draw(view, picture)` | `picture.scheme` (`"four-level"`, `"three-level"`, `"two-level"`; missing is four) and `picture.n_t` (N_t/N_c, for three and two). y and the small-signal gain may now be below zero |
+| Four levels | as before |
+| Three levels | three lines: the pump band, the upper level, and the ground, which is also the lower laser level (its word `groundLower`, else `ground`). The laser arrow runs from the upper level down to the ground. Two bars: the share of ions up, N₂/N_t = (n_t + y)/(2n_t), on the upper level, with a mark at threshold, (1 + 1/n_t)/2 (54 % for ruby), and the share down on the ground |
+| Two levels | two lines, the upper level and the ground; the pump drawn twice, up and down, equally wide: the pump light takes atoms down as fast as up (§2.1). The same two bars and mark: the upper bar never reaches the mark |
+| The gauge, three and two levels | from −n_t·1.15 (every ion down) up to max(small-signal gain, y, 1)·1.15, and at least a quarter of the depth below zero, so the loss line and its word fit. A zero line with the word `transparent`; a gain below zero (the medium absorbs) is drawn down from it, paler |
+| `levels.scaleMax`, `levels.scaleMin` | the top and bottom of the gauge. The top no longer takes x (it was there for the dashed line, which is now `smallSignal`; for four levels they are equal) |
+| `page.js` | passes `pumpKind = config.pump` to the bench; `scheme`, `n_t`, y and the small-signal gain unclamped to the levels; the laser arrow's rate y·p over the threshold pump rate, which is 1 for four levels and n_t + 1 for three and two (so a steady laser draws x − 1 for every scheme; for ruby y·p alone is 12.5 times that) |
+| Words | `levels.words.groundLower`, `levels.words.transparent`; the alt texts of the bench and of the level picture for every medium and pump; the theory and status unchanged |
+
+**Decisions:**
+- The pump laser's beam (532 nm, green, for the dye and Ti:sapphire) is drawn in the theme's pump colour, like every pump's light, as the laser's own rays are in the theme's colour (1064 nm is invisible). Colour from wavelength (§11.5) comes in stage 11, for both beams at once.
+- The medium stays schematic: a rod for every solid and for the dye (to scale, the dye's 0.2 mm jet in a 0.5 m cavity would be a line), a tube for the three gases.
+- The cartoon of atoms keeps its stage-7c share N₂/N_t for three and two levels; it does not show a ground atom absorbing the laser light (an illustration; noted as a limit).
+
+**Test values:** ruby before Fire, y = −n_t = −11.54: the upper bar empty, the ground bar full, the gain bar from zero down to the gauge's bottom less its 15 %; the two-level atom with its laser, steady y = smallSignal = −n_t/(1 + 2w) = −0.538 (w = 6.55, n_t = 7.59): its bar and dashed line just under zero; ruby's threshold mark at (1 + 1/11.54)/2 = 0.543.
+
+**Tests first:**
+- `draw-bench.test.js`: every new part inside the canvas at every width, in its place (the flashlamp under the rod with room for its light, the tube on the axis between the mirrors and around every ray, the electrodes under the tube's ends, the supply on the bench between them, posts outside the electrodes, the pump laser box under the rod clear of its posts, the fold under the rod's middle); for each kind the colour, clear/restore, inside and word checks; what each kind draws (the lamp's glow and light only with the pump; no rod for a discharge, the bore's glow and the current arrows with the pump; the pump beam's two legs and arrowhead with the pump, its alpha following it); an unknown kind is the diodes; `KINDS` is every pump kind of the engine.
+- `draw-panels.test.js`: three-level and two-level pictures in the shared checks; the lines drawn per scheme (no lower level for three, no pump band for two); the laser arrow from the upper level to the ground for three levels; the two bars as the shares, the threshold mark; the two-level pump arrows up and down, equally wide; `scaleMin`/`scaleMax`; the gauge's zero line and word only below zero; a negative gain drawn down from zero; the dashed line below zero.
+- `page-choose.test.js`: the bench gets the chosen pump's kind; the level picture gets the scheme, n_t, the unclamped y and small-signal gain, and the scaled laser rate (y·p/(n_t + 1) at every frame while ruby lases).
+- `site-files.test.js`: the new words in both languages (by the existing check of `data/laser.json`).
+
+**Found while building and testing:**
+- The scope card's "ruby lasing: about x − 1" for the laser arrow holds only for a steady laser. Ruby spikes: at 1000 J the arrow's rate y·p/(n_t + 1) reached 53 against x = 5.08 in a spike, about ten times the steady rate. The page test now checks the formula itself at every frame while ruby lases, not a range.
+- The mistakes check missed one entry on its first run: `groundLower` dropped from the words `page.js` reads, which left ruby's ground named "Ground" instead of "Ground (lower level)". A page test now checks that the level picture gets every word of `levels.words` in both languages.
+
+**Breaks** (83 for this stage: 61 new, 22 rewritten; 636 in all): the bench's pumps (each kind's parts, the flashlamp's glow and its light, dark before Fire, the gas tube in place of the rod, its bore and glow, the electrodes, wires, supply and current arrows, the posts outside the electrodes, the pump laser's box, beam, fold mirror and arrowhead, an unknown kind, `KINDS`), the level picture (each scheme's lines and words, the ground as the lower level, the two-level pump both ways, the laser arrow's end, the two share bars and the threshold mark, `scaleMin`, the top's floor for the loss word, the zero line and its word, a gain below zero drawn down and paler), the page (`pumpKind`, the scheme and n_t, the unclamped y and small-signal gain, the laser arrow's scale, the level words), the data (`groundLower`, `transparent` in each language); and from the review: the tube by its gain, its glow from amperes, `PUMP_OFF`, the box against the posts' feet, the arrowheads in the tube, the mark when n_t ≤ 1, the loss word above the gauge, the arrow not over `thresholdRate`. 15 entries were rewritten for the new drawings and 7 for the review's changes. The first run missed 1 (`groundLower` left out of the words `page.js` reads; see above). The last run: 636 of 636 caught, in 180 s.
+
+**Browser check** (Claude in Chrome, `http://127.0.0.1:5500/?view=laser`, after a hard reload):
+- Each pump as itself: Nd:YAG with its diode strip; ruby's flashlamp dark before Fire, then glowing and lighting the rod as the flash rises and falls; He-Ne, Ar⁺ and CO₂ as a gas tube with its electrodes, wires, supply and current arrows, the rays inside its bore; the dye and Ti:sapphire with the pump laser's box, its beam turned up into the rod by the small mirror.
+- The level picture: ruby before Fire with every ion down and its gain bar below zero, the "Transparent" line, then climbing past the threshold mark and lasing down to the ground; the two-level atom with its pump drawn up and down, its gain just under zero.
+- The light theme, Armenian, and a 360 px phone (the page in a 360 px iframe): everything fits, no console errors.
+- After the review: He-Ne at the top of its current (15 mA, no gain) glows and shows the current's arrows; at 360 px the pump laser's box stands clear of the posts' feet, and Ar⁺'s arrowheads sit in the gaps between the mirrors and the tube.
+
+**Review outcome** (`/code-review` on Opus 5.5, 10 findings: 9 fixed, 1 left with a reason):
+- A discharge's tube glow and current arrows followed its gain x, which the "optimum" law takes back to 0 at the slider's top: He-Ne and CO₂ were drawn dark and without current at their highest current. The bench now gets the current's share of the slider's top for a discharge (`benchPumpNow`); the cartoon keeps the gain. Tested at four slider positions for the three gases.
+- The flashlamp's glow (alpha from 0.2) and light (from 0.3) showed for any pump above 0, and a flash's tail only reaches 0 after hundreds of t_p: after one Fire the lamp looked lit for half an hour of screen time. A pump under 1 % of full (`PUMP_OFF`) is drawn off, for every kind.
+- At phone widths the rod's left post's foot (18 px) ran up to 4 px into the pump laser's box; the box now starts clear of it and ends clear of the small mirror's post (`POST_FOOT`; the test checks the feet, not only the posts).
+- The threshold mark (1 + 1/n_t)/2 was drawn above its bar when n_t < 1 (the two-level atom at couplers past about 55 %): no mark then, as even every ion up is short of threshold.
+- For n_t from about 2 to 7 the loss word rose above the gauge (5.8 px of room at 220 px): it now goes under its line when the line is too near the gauge's top; tested at every width for both schemes and n_t from 0.9 to 40. `ABOVE_ZERO`'s comment said "share of its depth below zero" while the code multiplies n_t: corrected.
+- The rays' arrowheads stood midway between each mirror and the rod, which a discharge does not draw, so they sat in the gas tube's glow: they now use the medium drawn, the rod or the tube.
+- The threshold pump rate (1 or n_t + 1) was physics in `page.js` and repeated in `bench.js`: `derive` now gives `thresholdRate`, and `powerAtTwiceThreshold` is `powerPerP·thresholdRate`. The scope card's "no engine change" has this one exception.
+- `KINDS` was said to be "in the dropdown's order", which has no single order: corrected.
+- `docs/laser-progress.md` was still at 7c: updated with this commit.
+- Not changed: the reviewer suggested the page pass the share of ions up to the level picture, which `page.js` also works out for the cartoon. The picture already gets y and n_t, which its gauge needs anyway, and draws its bars from them; a second copy of the same number could let the bars and the gauge disagree.
 
 ### Stage 8 — Q-switch parts
 - **Build:**

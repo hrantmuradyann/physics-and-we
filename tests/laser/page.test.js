@@ -44,7 +44,7 @@ test("the words page.js needs are in data/laser.json, in both languages", () => 
   for (const lang of ["hy", "en"]) {
     for (const name of CANVASES) assert.ok(WORDS[name].alt[lang].trim(), name + ".alt." + lang);
     for (const part of PARTS) assert.ok(WORDS.bench.parts[part][lang].trim(), part + "." + lang);
-    for (const name of ["pumpBand", "upper", "lower", "ground", "gain", "loss"]) {
+    for (const name of ["pumpBand", "upper", "lower", "ground", "groundLower", "gain", "loss", "transparent"]) {
       assert.ok(WORDS.levels.words[name][lang].trim(), "levels.words." + name + "." + lang);
     }
     for (const name of ["title", "steady"]) assert.ok(WORDS.power.words[name][lang].trim(), "power.words." + name + "." + lang);

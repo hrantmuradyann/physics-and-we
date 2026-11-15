@@ -17,8 +17,8 @@
   "bench": {
     "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short. After 'transmission' the drawing writes the number, as in 'Transmission 5.00 %'. 'pumps' is the name written under the pump, one for each kind of pump ('parts.pump' is used for a pump that has none).",
     "alt": {
-      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, նրանց միջև՝ ակտիվ միջավայրի ձող, իսկ ձողի տակ՝ մղումը, որը նրան էներգիա է տալիս։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։",
-      "en": "A drawing of a laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, between them a rod of gain medium, and under the rod the pump that gives it energy. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror."
+      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, իսկ նրանց միջև՝ ակտիվ միջավայրը և մղումը, որը նրան էներգիա է տալիս․ ձողի տակ՝ լազերային դիոդներ կամ բռնկման լամպ, կամ մեկ այլ լազեր, որի ճառագայթը փոքր հայելին ուղղում է դեպի ձողը, իսկ գազային լազերում՝ էլեկտրական հոսանք գազով լցված խողովակի միջով։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։",
+      "en": "A drawing of the laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, and between them the gain medium with the pump that gives it energy: laser diodes or a flashlamp under a rod, another laser whose beam a small mirror turns up into the rod, or, in a gas laser, an electric current through the tube of gas. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror."
     },
     "parts": {
       "backMirror": { "hy": "Հետին հայելի", "en": "Back mirror" },
@@ -134,18 +134,20 @@
   },
 
   "levels": {
-    "_readme": "The picture of the energy levels and the gain gauge. 'words' are written on the picture: keep them short.",
+    "_readme": "The picture of the energy levels and the gain gauge. 'words' are written on the picture: keep them short. 'groundLower' names the ground level of a three-level medium such as ruby, which is also its lower laser level; 'transparent' is written at the gauge's zero line (three and two levels), below which the medium absorbs.",
     "alt": {
-      "hy": "Ակտիվ միջավայրի էներգետիկ մակարդակները․ մղումը ատոմները հիմնական մակարդակից բարձրացնում է մղման գոտի, որտեղից նրանք արագ իջնում են վերին լազերային մակարդակ, իսկ լազերային լույսը նրանց իջեցնում է ստորին մակարդակ։ Աջում՝ միջավայրի ուժեղացումը ռեզոնատորի կորստի համեմատ․ լազերը լույս է արձակում, երբ ուժեղացումը հասնում է կորստին։",
-      "en": "The energy levels of the gain medium: the pump lifts atoms from the ground level to the pump band, they drop quickly to the upper laser level, and the laser light takes them down to the lower level. On the right, the gain of the medium against the loss of the cavity: the laser shines when the gain reaches the loss."
+      "hy": "Ակտիվ միջավայրի էներգետիկ մակարդակները․ մղումը ատոմները բարձրացնում է, նրանք արագ իջնում են վերին լազերային մակարդակ, իսկ լազերային լույսը նրանց իջեցնում է․ սյուները ցույց են տալիս, թե քանի ատոմ է վերևում։ Եռամակարդակ միջավայրում, օրինակ՝ ռուբինում, ստորին լազերային մակարդակը հիմնականն է, ուստի ատոմների կեսից ավելին պետք է վերևում լինի, որպեսզի միջավայրն ուժեղացնի լույսը, իսկ երկմակարդակ ատոմի դեպքում վերևում երբեք կեսից ավելին չի լինում։ Աջում՝ միջավայրի ուժեղացումը ռեզոնատորի կորստի համեմատ․ լազերը լույս է արձակում, երբ ուժեղացումը հասնում է կորստին, իսկ զրոյից ցածր միջավայրը կլանում է սեփական լույսը։",
+      "en": "The energy levels of the gain medium: the pump lifts atoms up, they drop quickly to the upper laser level, and the laser light takes them down; bars show how many atoms are up. In a three-level medium such as ruby the lower laser level is the ground level, so more than half of the atoms must be up before it amplifies light; a two-level atom never gets more than half up. On the right, the gain of the medium against the loss of the cavity: the laser shines when the gain reaches the loss, and below zero the medium absorbs its own light."
     },
     "words": {
       "pumpBand": { "hy": "Մղման գոտի", "en": "Pump band" },
       "upper": { "hy": "Վերին մակարդակ", "en": "Upper level" },
       "lower": { "hy": "Ստորին մակարդակ", "en": "Lower level" },
       "ground": { "hy": "Հիմնական", "en": "Ground" },
+      "groundLower": { "hy": "Հիմնական (ստորին)", "en": "Ground (lower level)" },
       "gain": { "hy": "Ուժեղացում", "en": "Gain" },
-      "loss": { "hy": "Կորուստ", "en": "Loss" }
+      "loss": { "hy": "Կորուստ", "en": "Loss" },
+      "transparent": { "hy": "Թափանցիկ", "en": "Transparent" }
     }
   },
 

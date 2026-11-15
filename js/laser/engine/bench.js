@@ -392,6 +392,7 @@
       inputs.N_t = medium.N_t;
       scales = E.rates.threeLevel.scales(inputs);
     }
+    var thresholdRate = fourLevel ? 1 : scales.n_t + 1;
     var gth = E.cavity.thresholdGain({
       refl1: config.refl1, refl2: config.refl2, alpha_i: config.alpha_i, l_g: config.l_g
     });
@@ -416,10 +417,15 @@
       eps: scales.eps,
       powerPerP: scales.powerPerP,                 // the output at p = 1
       powerPerPhoton: scales.powerPerP * scales.pOnePhoton,
+      // The pump rate at threshold in the units of the rate equations, N_c/τ
+      // (§11.2): 1 for four levels (x = 1), w_th(n_t − 1) = n_t + 1 for three
+      // (two levels, with no threshold, use the same). A steady laser's
+      // stimulated emission y·p is this times x − 1.
+      thresholdRate: thresholdRate,
       // The steady output at twice threshold, the page's unit of light (its
       // beam and its chart): p = x − 1 = 1 for four levels, p = (n_t + 1)(x − 1)
-      // = n_t + 1 for three (two levels, with no threshold, use the same).
-      powerAtTwiceThreshold: fourLevel ? scales.powerPerP : scales.powerPerP * (scales.n_t + 1),
+      // = n_t + 1 for three.
+      powerAtTwiceThreshold: scales.powerPerP * thresholdRate,
       sOnePhoton: scales.sOnePhoton,
       beta: config.beta,
       // Filled in below, by pump: a steady pump, a discharge or a flash.
@@ -489,7 +495,8 @@
   // derive(config) -> the still numbers of the bench, in SI:
   //   for every bench: medium, scheme, pump, lam, tau, I_sat, L_e, gamma
   //   (single pass), gth, N_c, tau_c, eps, powerPerP, powerPerPhoton,
-  //   sOnePhoton, beta; R_c for four levels; N_t, n_t for three and two,
+  //   thresholdRate, powerAtTwiceThreshold, sOnePhoton, beta; R_c for four
+  //   levels; N_t, n_t for three and two,
   //   and wThreshold for three (null if n_t ≤ 1).
   //   a steady pump (light, discharge): x, ySteady (the steady y), P_out
   //   (W); for four levels also g0, T_opt and T_best (null with no internal

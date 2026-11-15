@@ -4,15 +4,17 @@
    PART OF THE LASER PAGE'S DRAWING (js/laser/ui/): it draws, and never
    does physics. It shows the four parts every laser has
    (docs/laser-physics.md §11.1) the way they stand on an optical bench: a
-   mirror that reflects all the light, a rod of gain medium on the axis,
-   the pump under the rod, and an output mirror that lets part of the
-   light out. The light is drawn as separate rays (docs/laser-plan.md,
-   stage 6b).
+   mirror that reflects all the light, the gain medium on the axis, its
+   pump, and an output mirror that lets part of the light out. The light
+   is drawn as separate rays (docs/laser-plan.md, stage 6b).
 
      LaserUI.bench.SIZE              { aspect, minHeight, maxHeight }: the
                                      canvas proportions, for the loop
      LaserUI.bench.PARTS             the names of the labels, the keys of
                                      `labels` below
+     LaserUI.bench.KINDS             the pumps it can draw: "diode",
+                                     "laser", "flashlamp", "discharge" (the
+                                     engine's pump kinds)
      LaserUI.bench.layout(w, h)      where every part, ray and label goes,
                                      in CSS pixels (plain arithmetic,
                                      tested for every width the page has)
@@ -29,12 +31,29 @@
                  is left out. After `transmission` the drawing writes the
                  output mirror's transmission ("Transmission 5.00 %"), and
                  without a transmission in `light` it leaves that label out
-         light   optional { beam, pump, transmission }
+         light   optional { beam, pump, transmission, pumpKind }
                  beam          the output power over the output at twice
                                threshold; 0 or none draws no rays
                  pump          the pump over its strongest setting, 0–1;
                                0 or none draws no pump light
                  transmission  the output mirror's, 0–1
+                 pumpKind      one of KINDS; none, or one it does not
+                               know, draws the diodes
+
+   THE PUMPS (docs/laser-plan.md, stage 7d)
+     diode      a strip of diodes under the rod; its light goes up into
+                the rod
+     flashlamp  a tube under the rod with a metal cap (its electrode) at
+                each end; its gas glows as strongly as the flash, and
+                its light goes up into the rod
+     discharge  no rod: the medium is a gas tube that fills most of the
+                cavity. Its gas glows with the current; two electrodes
+                under it are wired to a power supply on the bench, and
+                an arrow on each wire shows the current
+     laser      a pump laser on the bench under the rod; its beam runs to
+                a small mirror at 45° under the rod's middle, which
+                turns it up into the rod
+   The pump light is the theme's colour, as the laser's own rays are.
 
    THE RAYS
    An odd number of rays (3 to 21, as many as fit 5 px apart) run from the
@@ -65,6 +84,18 @@
   // The labels, in the order they are written. page.js takes their words
   // from data/laser.json (bench.parts.<name>).
   var PARTS = Object.freeze(["backMirror", "outputMirror", "medium", "pump", "transmission"]);
+
+  // The pumps it draws: the engine's pump kinds.
+  var KINDS = Object.freeze(["diode", "laser", "flashlamp", "discharge"]);
+
+  // A pump under this share of full is drawn off: a flash's tail,
+  // (E/t_p)(t/t_p)e^(−t/t_p), reaches 0 only after hundreds of t_p, and a
+  // lamp drawn lit (its glow and arrows start from a floor) for all that
+  // time would look like it never went out.
+  var PUMP_OFF = 0.01;
+
+  // The width of a post's foot on the bench.
+  var POST_FOOT = 18;
 
   var MAX_RAYS = 21;
   var RAY_GAP = 5;              // px between two rays, at least
@@ -100,6 +131,38 @@
     var lampHeight = 0.045 * h;
     var lampX = innerLeft + (span - lampLength) / 2;
     var lampY = rodY + rodHeight + 0.075 * h;
+    var rodBottom = rodY + rodHeight;
+
+    // The gas tube of a discharge is the medium: it fills most of the
+    // cavity, and is as tall as the rod, so the rays run inside its bore.
+    var tubeLength = 0.86 * span;
+    var tubeX = innerLeft + (span - tubeLength) / 2;
+    var boreHeight = 0.8 * rodHeight;
+    var boreInset = 0.02 * tubeLength;
+    // Its electrodes stick down near its ends; the wires run from them to
+    // a power supply standing on the bench in the middle.
+    var electrodeWidth = 6;
+    var electrodeHeight = 0.06 * h;
+    var supplyWidth = 0.18 * tubeLength;
+    var supplyHeight = 0.1 * h;
+    var supplyY = railY - supplyHeight;
+    var wireY = supplyY + supplyHeight / 2;
+    var electrodes = [0.12, 0.88].map(function (share) {
+      return { x: tubeX + share * tubeLength - electrodeWidth / 2, y: rodBottom, w: electrodeWidth, h: electrodeHeight };
+    });
+    // The current goes up into the left electrode and down out of the right.
+    var arrowY = (rodBottom + electrodeHeight + wireY) / 2;
+
+    // The pump laser stands on the bench under the rod's left half, clear
+    // of the feet of the rod's left post and of the small mirror's post; the
+    // small mirror under the rod's middle turns its beam up into the rod.
+    var rodPosts = [rodX + 0.02 * rodLength, rodX + 0.98 * rodLength];
+    var foldX = w / 2;
+    var pumpLaserLeft = rodPosts[0] + POST_FOOT / 2 + 3;
+    var pumpLaserRight = foldX - POST_FOOT / 2 - Math.max(6, 0.12 * rodLength);
+    var pumpLaserHeight = 0.1 * h;
+    var pumpLaserY = railY - pumpLaserHeight;
+    var beamY = pumpLaserY + pumpLaserHeight / 2;
 
     // The rays: an odd number, the middle one on the axis.
     var beamHeight = 0.7 * rodHeight;
@@ -121,7 +184,23 @@
       outputMirror: { x: innerRight, y: mirrorTop, w: mirrorThickness, h: mirrorHeight },
       sag: 0.35 * mirrorThickness,                  // how deep the mirrors' faces curve
       rod: { x: rodX, y: rodY, w: rodLength, h: rodHeight },
+      rodPosts: rodPosts,
       lamp: { x: lampX, y: lampY, w: lampLength, h: lampHeight },
+      flashTube: { x: lampX, y: lampY, w: lampLength, h: 0.065 * h },
+      flashCap: Math.max(3, 0.04 * lampLength),
+      tube: { x: tubeX, y: rodY, w: tubeLength, h: rodHeight },
+      bore: { x: tubeX + boreInset, y: axisY - boreHeight / 2, w: tubeLength - 2 * boreInset, h: boreHeight },
+      tubePosts: [tubeX + 0.035 * tubeLength, tubeX + 0.965 * tubeLength],
+      electrodes: electrodes,
+      supply: { x: w / 2 - supplyWidth / 2, y: supplyY, w: supplyWidth, h: supplyHeight },
+      wireY: wireY,
+      currentArrows: [
+        { x: electrodes[0].x + electrodeWidth / 2, y: arrowY, dy: -1 },
+        { x: electrodes[1].x + electrodeWidth / 2, y: arrowY, dy: 1 }
+      ],
+      pumpLaser: { x: pumpLaserLeft, y: pumpLaserY, w: pumpLaserRight - pumpLaserLeft, h: pumpLaserHeight },
+      beamY: beamY,
+      fold: { x: foldX, y: beamY, size: Math.max(10, 0.06 * h) },
       rays: rays,
       labels: {
         backMirror: { x: pad, y: nameRow, align: "left", maxWidth: w / 2 - pad - fontSize },
@@ -187,7 +266,7 @@
   // A post from a part down to the bench, with a foot.
   function post(g, x, fromY, railY) {
     g.fillRect(x - 2, fromY, 4, railY - fromY);
-    g.fillRect(x - 9, railY - 4, 18, 4);
+    g.fillRect(x - POST_FOOT / 2, railY - 4, POST_FOOT, 4);
   }
 
   // A mirror: a piece of glass with a curved, coated face, held at the
@@ -241,47 +320,125 @@
     return word ? word + " " + number : number;
   }
 
-  function draw(view, labels, light) {
-    var g = view.g;
-    var colors = view.colors;
-    var L = layout(view.w, view.h);
-    var beam = light && light.beam > 0 ? light.beam : 0;
-    var pump = light && light.pump > 0 ? Math.min(1, light.pump) : 0;
+  // The pump to draw: the light's, if this file knows it, else the diodes.
+  function kindOf(light) {
+    if (light && KINDS.indexOf(light.pumpKind) !== -1) return light.pumpKind;
+    return "diode";
+  }
+
+  // The pump's light going up into the rod: PUMP_ARROWS upright lines with
+  // arrowheads, from just above `fromY` to the rod's bottom, spread over
+  // the part from x to x + width.
+  function lightUp(g, colors, L, x, width, fromY, pump) {
     var rodBottom = L.rod.y + L.rod.h;
-
-    g.clearRect(0, 0, view.w, view.h);
-    g.save();
-
-    // The bench, and what the parts stand on.
-    g.strokeStyle = colors.line;
+    g.globalAlpha = 0.3 + 0.7 * pump;
+    g.strokeStyle = colors.glow;
+    g.fillStyle = colors.glow;
     g.lineWidth = 2;
-    line(g, L.pad / 2, L.railY, view.w - L.pad / 2, L.railY);
-    g.fillStyle = colors.faint;
-    post(g, L.backMirror.x + L.backMirror.w / 2, L.backMirror.y + L.backMirror.h + 3, L.railY);
-    post(g, L.outputMirror.x + L.outputMirror.w / 2, L.outputMirror.y + L.outputMirror.h + 3, L.railY);
-    post(g, L.rod.x + 0.02 * L.rod.w, rodBottom, L.railY);
-    post(g, L.rod.x + 0.98 * L.rod.w, rodBottom, L.railY);
+    for (var k = 0; k < PUMP_ARROWS; k++) {
+      var px = x + (k + 0.5) / PUMP_ARROWS * width;
+      line(g, px, fromY - 2, px, rodBottom + 6);
+      arrowHead(g, px, rodBottom + 2, 0, -1, 5);
+    }
+    g.globalAlpha = 1;
+  }
 
-    // The pump, under the rod, and its light going up into the rod.
+  // Diodes: a strip under the rod.
+  function drawDiodes(g, colors, L, pump) {
     g.fillStyle = colors.glow;
     g.fillRect(L.lamp.x, L.lamp.y, L.lamp.w, L.lamp.h);
     g.strokeStyle = colors.faint;
     g.lineWidth = 1;
     g.strokeRect(L.lamp.x, L.lamp.y, L.lamp.w, L.lamp.h);
+    if (pump > 0) lightUp(g, colors, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);
+  }
+
+  // A flashlamp: a glass tube with a metal cap at each end, its gas
+  // glowing as strongly as the flash (dark before it is fired).
+  function drawFlashlamp(g, colors, L, pump) {
+    var F = L.flashTube;
+    var cap = L.flashCap;
+    if (pump > 0) {
+      g.globalAlpha = 0.2 + 0.8 * pump;
+      g.fillStyle = colors.glow;
+      g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);
+      g.globalAlpha = 1;
+    }
+    g.strokeStyle = colors.faint;
+    g.lineWidth = 1;
+    g.strokeRect(F.x, F.y, F.w, F.h);
+    g.fillStyle = colors.muted;
+    g.fillRect(F.x, F.y, cap, F.h);
+    g.fillRect(F.x + F.w - cap, F.y, cap, F.h);
+    if (pump > 0) lightUp(g, colors, L, F.x, F.w, F.y, pump);
+  }
+
+  // A discharge: the electrodes under the gas tube, wired to the supply on
+  // the bench, with an arrow on each wire while the current flows. (The
+  // tube itself is the medium: drawTube.)
+  function drawDischarge(g, colors, L, pump) {
+    var S = L.supply;
+    var sides = [S.x, S.x + S.w];
+    g.strokeStyle = colors.muted;
+    g.lineWidth = 1.5;
+    L.electrodes.forEach(function (e, i) {
+      var x = e.x + e.w / 2;
+      line(g, x, e.y + e.h, x, L.wireY);
+      line(g, x, L.wireY, sides[i], L.wireY);
+    });
+    g.globalAlpha = 0.4;
+    g.fillStyle = colors.faint;
+    g.fillRect(S.x, S.y, S.w, S.h);
+    g.globalAlpha = 1;
+    g.strokeRect(S.x, S.y, S.w, S.h);
+    g.fillStyle = colors.muted;
+    L.electrodes.forEach(function (e) {
+      g.fillRect(e.x, e.y, e.w, e.h);
+    });
+    if (pump > 0) {
+      g.globalAlpha = 0.3 + 0.7 * pump;
+      g.fillStyle = colors.glow;
+      L.currentArrows.forEach(function (arrow) {
+        arrowHead(g, arrow.x, arrow.y, 0, arrow.dy, 6);
+      });
+      g.globalAlpha = 1;
+    }
+  }
+
+  // A pump laser: a box on the bench; its beam runs to a small mirror at
+  // 45° under the rod's middle, which turns it up into the rod.
+  function drawPumpLaser(g, colors, L, pump) {
+    var P = L.pumpLaser;
+    var fold = L.fold;
+    var half = fold.size / 2;
+    var rodBottom = L.rod.y + L.rod.h;
+    g.globalAlpha = 0.4;
+    g.fillStyle = colors.faint;
+    g.fillRect(P.x, P.y, P.w, P.h);
+    g.globalAlpha = 1;
+    g.strokeStyle = colors.muted;
+    g.lineWidth = 1.5;
+    g.strokeRect(P.x, P.y, P.w, P.h);
     if (pump > 0) {
       g.globalAlpha = 0.3 + 0.7 * pump;
       g.strokeStyle = colors.glow;
       g.fillStyle = colors.glow;
-      g.lineWidth = 2;
-      for (var k = 0; k < PUMP_ARROWS; k++) {
-        var px = L.lamp.x + (k + 0.5) / PUMP_ARROWS * L.lamp.w;
-        line(g, px, L.lamp.y - 2, px, rodBottom + 6);
-        arrowHead(g, px, rodBottom + 2, 0, -1, 5);
-      }
+      g.lineWidth = 2.5;
+      line(g, P.x + P.w, L.beamY, fold.x, L.beamY);
+      line(g, fold.x, L.beamY, fold.x, rodBottom + 6);
+      arrowHead(g, fold.x, rodBottom + 2, 0, -1, 6);
       g.globalAlpha = 1;
     }
+    // The small mirror, "/": light coming from the left goes up.
+    g.fillStyle = colors.faint;
+    post(g, fold.x, fold.y + half, L.railY);
+    g.strokeStyle = colors.heading;
+    g.lineWidth = 2.5;
+    line(g, fold.x - half, fold.y + half, fold.x + half, fold.y - half);
+  }
 
-    // The rod of gain medium: a see-through fill with a solid edge.
+  // The rod of gain medium: a see-through fill with a solid edge.
+  function drawRod(g, colors, L) {
     g.globalAlpha = 0.28;
     g.fillStyle = colors.accent;
     g.fillRect(L.rod.x, L.rod.y, L.rod.w, L.rod.h);
@@ -289,14 +446,70 @@
     g.strokeStyle = colors.accent;
     g.lineWidth = 1.5;
     g.strokeRect(L.rod.x, L.rod.y, L.rod.w, L.rod.h);
+  }
+
+  // The gas tube of a discharge: lighter glass than a rod, and its gas
+  // glowing with the current (never so brightly that the rays vanish in it).
+  function drawTube(g, colors, L, pump) {
+    var T = L.tube;
+    var B = L.bore;
+    g.globalAlpha = 0.12;
+    g.fillStyle = colors.accent;
+    g.fillRect(T.x, T.y, T.w, T.h);
+    if (pump > 0) {
+      g.globalAlpha = 0.15 + 0.6 * pump;
+      g.fillStyle = colors.glow;
+      g.fillRect(B.x, B.y, B.w, B.h);
+    }
+    g.globalAlpha = 1;
+    g.strokeStyle = colors.accent;
+    g.lineWidth = 1.5;
+    g.strokeRect(T.x, T.y, T.w, T.h);
+  }
+
+  function draw(view, labels, light) {
+    var g = view.g;
+    var colors = view.colors;
+    var L = layout(view.w, view.h);
+    var beam = light && light.beam > 0 ? light.beam : 0;
+    var pump = light && light.pump >= PUMP_OFF ? Math.min(1, light.pump) : 0;
+    var kind = kindOf(light);
+    var rodBottom = L.rod.y + L.rod.h;
+
+    g.clearRect(0, 0, view.w, view.h);
+    g.save();
+
+    // The bench, and what the parts stand on: the mirrors, and the two ends
+    // of the medium (a gas tube's posts stand outside its electrodes).
+    g.strokeStyle = colors.line;
+    g.lineWidth = 2;
+    line(g, L.pad / 2, L.railY, view.w - L.pad / 2, L.railY);
+    g.fillStyle = colors.faint;
+    post(g, L.backMirror.x + L.backMirror.w / 2, L.backMirror.y + L.backMirror.h + 3, L.railY);
+    post(g, L.outputMirror.x + L.outputMirror.w / 2, L.outputMirror.y + L.outputMirror.h + 3, L.railY);
+    var mediumPosts = kind === "discharge" ? L.tubePosts : L.rodPosts;
+    mediumPosts.forEach(function (x) {
+      post(g, x, rodBottom, L.railY);
+    });
+
+    // The pump, then the medium over it.
+    if (kind === "flashlamp") drawFlashlamp(g, colors, L, pump);
+    else if (kind === "discharge") drawDischarge(g, colors, L, pump);
+    else if (kind === "laser") drawPumpLaser(g, colors, L, pump);
+    else drawDiodes(g, colors, L, pump);
+    if (kind === "discharge") drawTube(g, colors, L, pump);
+    else drawRod(g, colors, L);
 
     // The light: separate rays between the mirrors, some of them leaving.
     if (beam > 0) {
       var count = L.rays.length;
       var leaving = middleRays(count, raysOut(count, light.transmission));
       var outLeft = L.outputMirror.x + L.outputMirror.w;
-      var leftGap = (faceX(L, "back", L.axis.y) + L.rod.x) / 2;
-      var rightGap = (L.rod.x + L.rod.w + faceX(L, "output", L.axis.y)) / 2;
+      // The arrowheads go in the open gaps between the mirrors and the
+      // medium: the rod, or a discharge's gas tube.
+      var medium = kind === "discharge" ? L.tube : L.rod;
+      var leftGap = (faceX(L, "back", L.axis.y) + medium.x) / 2;
+      var rightGap = (medium.x + medium.w + faceX(L, "output", L.axis.y)) / 2;
       g.globalAlpha = rayAlpha(beam);
       g.strokeStyle = colors.accent2;
       g.fillStyle = colors.accent2;
@@ -339,6 +552,9 @@
   UI.bench = Object.freeze({
     SIZE: SIZE,
     PARTS: PARTS,
+    KINDS: KINDS,
+    PUMP_OFF: PUMP_OFF,
+    POST_FOOT: POST_FOOT,
     layout: layout,
     faceX: faceX,
     raysOut: raysOut,

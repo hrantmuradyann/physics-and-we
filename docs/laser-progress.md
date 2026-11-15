@@ -1,6 +1,6 @@
 # The laser simulator: what is done and what is left
 
-*Last updated: 15 November 2026, at the end of stage 7c.*
+*Last updated: 16 November 2026, at the end of stage 7d.*
 
 This page explains, in plain words, how far the laser simulator has got. The technical details are in `docs/laser-plan.md` (the build plan) and `docs/laser-physics.md` (the physics).
 
@@ -16,8 +16,8 @@ The page lives at the hidden address `?view=laser`. A banner on the Labs page li
 
 The work is split into numbered **stages**. Each stage adds one piece, and is not counted as finished until it passes four checks:
 
-1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 567 of them, and all of them pass.
-2. **Deliberate mistakes.** A tool makes 575 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes under 3 minutes (it took 25 before stage 7c made it faster; see below).
+1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 584 of them, and all of them pass.
+2. **Deliberate mistakes.** A tool makes 636 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes under 3 minutes (it took 25 before stage 7c made it faster; see below).
 3. **A code review.** A separate careful reading of the whole change, looking for bugs. What it finds is fixed before the stage is finished.
 4. **A check in the browser**, for stages that change the page: both themes, both languages, a phone-sized screen, no errors.
 
@@ -42,6 +42,7 @@ The simulator has two halves:
 | 7a | A sturdier time-stepper for "stiff" cases, where some things happen a million times faster than others (ruby is like this). The old one would have needed far too many steps per frame. |
 | 7b | **The engine for every other material and pump:** ruby, Nd:glass and Nd:YAG with a flashlamp; helium-neon, argon and CO₂ with an electric current; dye and titanium-sapphire with another laser; and the "two-level atom", which never lases. |
 | 7c | **Choosing the laser on the page** (see below). |
+| 7d | **Each laser drawn as it really is** (see below): its own pump on the bench, and the energy-level picture for ruby and the two-level atom. |
 
 ### What you can see on the page today
 
@@ -52,15 +53,35 @@ For each laser the page sets itself up to suit it:
 - **a "Fire" button** appears with a flashlamp: each press fires one flash, and the chart shows the light it makes, spikes and all;
 - **the slow motion** starts at a speed that suits the laser: one second on screen is 1 ms of the two-level atom, 100 µs of ruby, but only 100 ns of the argon and dye lasers, which change within nanoseconds;
 - **the numbers under the chart** are the ones that laser has: a flashlamp shows the smallest flash that makes it lase and the highest output since Fire; a gas laser shows its threshold current; the two-level atom says its threshold is "never reached";
-- **the energy-level picture** shows how strongly each material is pumped, and its gauge shows its own gain without light. For ruby it rises faster than the pump once the pump is past threshold (at the flash's peak, 8.6 times the loss for a pump 5.7 times its threshold); for the two-level atom it stays at zero.
+- **the energy-level picture** shows how strongly each material is pumped, and its gauge shows its own gain without light. For ruby it rises faster than the pump once the pump is past threshold (at the flash's peak, 8.6 times the loss for a pump 5.7 times its threshold); for the two-level atom it stays below zero: it never gains, it only absorbs less.
 
 The small chart of the excited atoms is gone (the owner's choice): the bar in the energy-level picture shows the same thing.
 
 Ruby fired with a 1000 J flash lights up after a fraction of a millisecond and fires spikes reaching about 460 kW, as in stage 7b. The light and dark themes and both languages work, and the dropdowns fit on a 320 px phone.
 
-**Not yet:** every laser is still drawn with laser diodes and four energy levels, though the drawing writes the right pump's name. Drawing each pump as itself is stage 7d.
+### Stage 7d, just finished
 
-### Stage 7c, just finished
+Each laser is now drawn with its own pump:
+- **laser diodes** (Nd:YAG): a strip under the rod, as before;
+- **a flashlamp** (ruby, Nd:glass, Nd:YAG): a glass tube under the rod with metal caps at its ends. It is dark until you press Fire, then glows and shines into the rod as strongly as the flash, and goes dark again as the flash fades;
+- **an electric discharge** (helium-neon, argon, CO₂): there is no rod, because the gas tube itself is the medium. It has electrodes near its ends, wires to a power supply on the bench, and little arrows showing the current. The gas glows brighter with more current;
+- **a pump laser** (dye, titanium-sapphire): a box on the bench whose beam hits a small mirror and is turned up into the medium.
+
+The energy-level picture now shows ruby (three levels) and the two-level atom as they are:
+- for ruby, the bottom level is also the lower laser level. Two bars show the share of atoms up and the share down, with a mark where the laser starts (54 % up for ruby). Before the flash every atom is down, and the gauge shows the gain below zero: the rod absorbs its own light. A line marks "Transparent", where the gain is zero;
+- the two-level atom has only two levels. The pump light is drawn both up and down, because it pushes atoms down as fast as up, so the upper bar never reaches the mark.
+
+The code review found 10 things. 9 were fixed; the ones you could see on the page:
+- the helium-neon and CO₂ tubes were drawn dark, with no current, at their highest current (their gain is zero there, and the drawing went by the gain);
+- the flashlamp kept looking slightly lit for half an hour after one flash;
+- on a phone the foot of a post poked into the pump laser's box;
+- one word of the energy-level picture ("Loss") could stick out of its frame.
+
+The tenth was a suggestion to pass one number twice to the drawing. It was left as it is, because the two copies could then disagree; the plan explains why.
+
+The pump laser's beam is drawn in the page's pump colour, not green: the colours of light from its wavelength come in stage 11, for every beam at once.
+
+### Stage 7c
 
 This stage put the choice of laser on the page (above). Two other things came with it:
 
@@ -75,8 +96,7 @@ This stage put the choice of laser on the page (above). Two other things came wi
 
 | Stage | What it will add |
 |---|---|
-| 7d | **The drawings for the new lasers** (next): each pump drawn as itself on the bench (diodes, a flashlamp beside the rod, a gas tube with electrodes, a pump laser's beam), and the energy-level picture and the atoms cartoon for three and two levels. Until then ruby is drawn with diodes and four levels. |
-| 8 | **Q-switching:** a shutter between the mirrors that stores energy and then releases it as one giant, very short pulse. Rotating prism, electro-optic shutter, and a dye that bleaches. |
+| 8 | **Q-switching** (next): a shutter between the mirrors that stores energy and then releases it as one giant, very short pulse. Rotating prism, electro-optic shutter, and a dye that bleaches. |
 | 9 | **Several laser frequencies at once,** with a spectrum panel showing which ones lase. |
 | 10 | **Mirror shapes:** curved mirrors, and which mirror pairs keep the light inside (stable) or lose it (unstable); the width of the beam. |
 | 11 | **Lenses outside the laser:** focusing the beam, tracing rays through glass, and the beam's colour from its wavelength. |

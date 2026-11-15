@@ -120,7 +120,7 @@
   // The readouts that change while the simulation runs ("x" for a flash).
   var LIVE_READOUTS = ["x", "peak", "powerNow", "time"];
   var CANVASES = ["bench", "power", "photons", "levels"];
-  var LEVEL_WORDS = ["pumpBand", "upper", "lower", "ground", "gain", "loss"];
+  var LEVEL_WORDS = ["pumpBand", "upper", "lower", "ground", "groundLower", "gain", "loss", "transparent"];
   var POWER_WORDS = ["title", "steady"];
 
   var teardown = null;          // takes the current build down, or null
@@ -260,8 +260,7 @@
     /* the words */
     var labels = wordsAt(data, "bench.parts", UI.bench.PARTS);
     // The name under the pump is the chosen pump's (bench.pumps.<kind>; the
-    // drawing's own word if it has none). Until stage 7d every pump is drawn
-    // as the diodes.
+    // drawing's own word if it has none).
     var anyPump = labels.pump;
     function nameThePump() {
       labels.pump = word(data, "bench.pumps." + state.config.pump) || anyPump;
@@ -328,6 +327,15 @@
     function glowNow() {
       return Math.min(1, pumpLevel() / PUMP_FULL);
     }
+    // How strongly the pump is drawn on the bench: as it glows, except a
+    // discharge, whose tube glows and whose wires carry their arrows by the
+    // current, its share of the slider's top. Its gain, and so its glow,
+    // falls back to 0 at the top of the "optimum" law (He-Ne, CO₂), where
+    // the most current flows.
+    function benchPumpNow() {
+      if (state.config.pump === "discharge") return state.config.current / controls.pump.max;
+      return glowNow();
+    }
     // The share of the cartoon's atoms that are excited: for four levels
     // y/(1 + y), half of them at threshold (y = 1); for three and two
     // levels the share of ions up, N₂/N_t = (N_t + ΔN)/(2N_t).
@@ -337,6 +345,14 @@
         return y / (1 + y);
       }
       return (derived.N_t + state.sim.N) / (2 * derived.N_t);
+    }
+    // Stimulated emission now, over the pump rate at threshold (the
+    // engine's thresholdRate), so that a steady laser gives x − 1 for every
+    // scheme. In the equations it is y·p (§11.2).
+    function stimulatedNow() {
+      var y = inversionNow();
+      var p = Math.exp(state.sim.lnPhi + derived.sOnePhoton);
+      return Math.max(0, y * p) / derived.thresholdRate;
     }
     function remember() {
       state.history.push(state.sim.t, powerNow());
@@ -499,8 +515,9 @@
     addCanvas("bench", UI.bench.SIZE, function (view) {
       UI.bench.draw(view, labels, {
         beam: beamNow(),
-        pump: glowNow(),
-        transmission: 1 - state.config.refl2
+        pump: benchPumpNow(),
+        transmission: 1 - state.config.refl2,
+        pumpKind: state.config.pump
       });
     });
     addCanvas("power", UI.plots.SIZE, function (view) {
@@ -526,17 +543,13 @@
       UI.photons.draw(view, state.cartoon, photonWords);
     });
     addCanvas("levels", UI.levels.SIZE, function (view) {
-      var y = inversionNow();
-      // Stimulated emission in units of the threshold rate: y·p (§11.2).
-      var p = Math.exp(state.sim.lnPhi + derived.sOnePhoton);
-      // The picture is the four-level one until stage 7d: it has no room
-      // below zero, where three and two levels start (every ion down) and
-      // where the two-level atom's small-signal gain always is.
       UI.levels.draw(view, {
+        scheme: derived.scheme,
         x: pumpLevel(),
-        smallSignal: Math.max(0, pumpNow().smallSignal),
-        y: Math.max(0, y),
-        stim: Math.max(0, y * p),
+        smallSignal: pumpNow().smallSignal,
+        y: inversionNow(),
+        stim: stimulatedNow(),
+        n_t: derived.n_t,
         words: levelWords
       });
     });

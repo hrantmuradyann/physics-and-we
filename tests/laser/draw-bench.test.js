@@ -57,6 +57,19 @@ const NB = "\u00a0";
 
 const LASING = deepFreeze({ beam: 1, pump: 0.25, transmission: 0.05 });
 
+// The engine's pump kinds, each drawn as itself (stage 7d).
+const KINDS = ["diode", "laser", "flashlamp", "discharge"];
+
+// The light of a lasing bench with this pump, at this strength.
+function lit(kind, pump) {
+  return { beam: 1, pump: pump === undefined ? 0.25 : pump, transmission: 0.05, pumpKind: kind };
+}
+
+// Every light the shared checks draw: none at all, and for each pump
+// off, lasing and at its strongest.
+const LIGHTS = [undefined, LASING];
+for (const kind of KINDS) LIGHTS.push(lit(kind, 0), lit(kind), { beam: 4, pump: 1, transmission: 0.3, pumpKind: kind });
+
 function drawAt(w, labels, theme, light) {
   const recorder = fakeContext();
   const view = {
@@ -119,6 +132,8 @@ test("loads as LaserUI.bench, frozen, with the canvas size the page uses", () =>
   assert.ok(Object.isFrozen(bench));
   assert.ok(Object.isFrozen(SIZE));
   assert.ok(Object.isFrozen(bench.PARTS));
+  assert.ok(Object.isFrozen(bench.KINDS));
+  assert.deepEqual(Array.from(bench.KINDS), KINDS, "every pump kind of the engine");
   // PARTS names exactly the labels draw() writes (page.js fills them in).
   assert.deepEqual(Array.from(bench.PARTS).sort(), Object.keys(LABELS).sort());
   assert.ok(SIZE.aspect > 1, "a bench is wider than it is high");
@@ -265,7 +280,7 @@ test("draw: every colour it uses is a theme colour, in both themes", () => {
   for (const theme of ["dark", "light"]) {
     const allowed = Object.values(palette(theme));
     for (const w of [327, 960]) {
-      for (const light of [undefined, LASING]) {
+      for (const light of LIGHTS) {
         const { recorder } = drawAt(w, LABELS, theme, light);
         const colours = recorder.sets.filter((s) => /Style$|Color$/.test(s.name));
         assert.ok(colours.length >= 4, "it sets some colours");
@@ -278,7 +293,7 @@ test("draw: every colour it uses is a theme colour, in both themes", () => {
 });
 
 test("draw: clears the canvas first and leaves the context as it found it", () => {
-  for (const light of [undefined, LASING]) {
+  for (const light of LIGHTS) {
     const { recorder, view } = drawAt(600, LABELS, "dark", light);
     assert.deepEqual(recorder.calls[0], { name: "clearRect", args: [0, 0, view.w, view.h] });
     const saves = recorder.calls.filter((c) => c.name === "save").length;
@@ -302,7 +317,7 @@ test("draw: clears the canvas first and leaves the context as it found it", () =
 
 test("draw: everything it draws is inside the canvas, at every width", () => {
   for (const w of WIDTHS) {
-    for (const light of [undefined, LASING, { beam: 4, pump: 1, transmission: 0.3 }]) {
+    for (const light of LIGHTS.concat([{ beam: 4, pump: 1, transmission: 0.3 }])) {
       const { recorder, view } = drawAt(w, LABELS, "dark", light);
       for (const call of recorder.calls) {
         if (!["moveTo", "lineTo", "fillRect", "strokeRect", "quadraticCurveTo", "fillText"].includes(call.name)) continue;
@@ -324,8 +339,8 @@ test("draw: everything it draws is inside the canvas, at every width", () => {
 
 test("draw: writes the five labels where the layout puts them, squeezed into their slots", () => {
   const written5 = Object.assign({}, LABELS, { transmission: "Transmission 5.00" + NB + "%" });
-  for (const w of [327, 600, 1100]) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", LASING);
+  for (const [w, light] of [[327, LASING], [600, LASING], [1100, LASING]].concat(KINDS.map((kind) => [600, lit(kind)]))) {
+    const { recorder, view } = drawAt(w, LABELS, "dark", light);
     const L = bench.layout(view.w, view.h);
     let align = null;
     let font = null;
@@ -549,4 +564,306 @@ test("draw: pump light goes up from the pump into the rod, stronger with more pu
   assert.ok(weak[0].alpha < strong[0].alpha, "more pump, stronger pump light");
   assert.ok(weak[0].alpha >= 0.3, "a weak pump still shows");
   assert.equal(pumpLines({ beam: 0, pump: 5, transmission: 0.05 })[0].alpha, 1, "alpha never above 1");
+});
+
+/* ---------- each pump drawn as itself (stage 7d) ---------- */
+
+// The filled and the outlined rectangles of a drawing, as "x,y,w,h".
+function rects(recorder, name) {
+  return recorder.calls.filter((c) => c.name === name).map((c) => c.args.join(","));
+}
+function rectKey(r) {
+  return [r.x, r.y, r.w, r.h].join(",");
+}
+
+// The rectangles filled, each with the alpha it was filled at.
+function filledWithAlpha(recorder) {
+  const list = [];
+  let alpha = 1;
+  for (const entry of recorder.log) {
+    if (entry.set === "globalAlpha") alpha = entry.value;
+    if (entry.call === "fillRect") list.push({ key: entry.args.join(","), alpha: alpha });
+  }
+  return list;
+}
+
+// The posts: 4 px wide, from a part down to the bench.
+function posts(recorder, L) {
+  return recorder.calls.filter((c) => c.name === "fillRect" && c.args[2] === 4 &&
+    Math.abs(c.args[1] + c.args[3] - L.railY) < 1e-9).map((c) => c.args[0] + 2);
+}
+
+// An arrowhead with its tip at (x, y): a moveTo there, then two lineTos
+// back from it, then fill. dy is −1 for one pointing up, 1 for down.
+function arrowheadAt(recorder, x, y, dy) {
+  const log = recorder.log;
+  for (let i = 0; i + 4 < log.length; i++) {
+    if (log[i].call !== "moveTo" || Math.abs(log[i].args[0] - x) > 1e-9 || Math.abs(log[i].args[1] - y) > 1e-9) continue;
+    const a = log[i + 1];
+    const b = log[i + 2];
+    if (a.call !== "lineTo" || b.call !== "lineTo") continue;
+    // The base is behind the tip.
+    if (Math.sign(y - a.args[1]) === dy && Math.sign(y - b.args[1]) === dy) return true;
+  }
+  return false;
+}
+
+test("layout: the flashlamp, the gas tube and the pump laser, inside the canvas and in their places, at every width", () => {
+  for (const w of WIDTHS) {
+    const h = heightFor(w);
+    const L = bench.layout(w, h);
+    const where = "w = " + w;
+    const tiny = 1e-9 * w;
+    const rodBottom = L.rod.y + L.rod.h;
+    for (const name of ["flashTube", "tube", "supply", "pumpLaser"]) {
+      assert.ok(inside(L[name], w, h), where + ": " + name + " " + JSON.stringify(L[name]));
+      assert.ok(L[name].w > 0 && L[name].h > 0, where + ": " + name + " has a size");
+    }
+    // The flashlamp: under the rod where the diodes are, a little thicker,
+    // with room for its light between it and the rod, and metal caps.
+    assert.equal(L.flashTube.x, L.lamp.x, where);
+    assert.equal(L.flashTube.w, L.lamp.w, where);
+    assert.ok(L.flashTube.h > L.lamp.h, where + ": a tube, thicker than the diodes' strip");
+    assert.ok(L.flashTube.y > rodBottom + 10, where + ": room for its light");
+    assert.ok(L.flashTube.y + L.flashTube.h < L.railY, where + ": above the bench");
+    assert.ok(L.flashCap > 0 && 2 * L.flashCap < 0.3 * L.flashTube.w, where + ": caps at the ends, the gas between");
+    // The gas tube: on the axis, as tall as the rod, longer, centred,
+    // between the mirrors' faces, every ray inside its bore.
+    const T = L.tube;
+    assertClose(T.y + T.h / 2, L.axis.y, 1e-12, where + ": the tube on the axis");
+    assert.equal(T.h, L.rod.h, where);
+    assert.ok(T.w > 1.5 * L.rod.w, where + ": the tube fills most of the cavity");
+    assert.ok(Math.abs(T.x + T.w / 2 - w / 2) < tiny, where + ": centred");
+    assert.ok(T.x > L.axis.x1 + 3 && T.x + T.w < L.axis.x2 - 3, where + ": clear of the mirrors");
+    const B = L.bore;
+    assert.ok(B.x > T.x && B.x + B.w < T.x + T.w && B.y > T.y && B.y + B.h < T.y + T.h, where + ": the bore inside the tube");
+    assert.ok(L.rays[0] > B.y + 1 && L.rays[L.rays.length - 1] < B.y + B.h - 1, where + ": every ray inside the bore");
+    // The electrodes stick down from the tube near its two ends, alike.
+    assert.equal(L.electrodes.length, 2, where);
+    const [left, right] = L.electrodes;
+    for (const e of L.electrodes) {
+      assert.ok(inside(e, w, h) && e.w > 0 && e.h > 0, where + ": electrode " + JSON.stringify(e));
+      assert.equal(e.y, T.y + T.h, where + ": from the tube's bottom");
+      assert.ok(e.y + e.h < L.wireY, where + ": above the wires' row");
+    }
+    assert.ok(left.x + left.w < T.x + 0.25 * T.w && right.x > T.x + 0.75 * T.w, where + ": near the ends");
+    assert.ok(Math.abs((left.x - T.x) - (T.x + T.w - (right.x + right.w))) < tiny, where + ": mirror images");
+    // The supply stands on the bench in the middle, between the electrodes;
+    // the wires run at its middle height.
+    const S = L.supply;
+    assert.ok(Math.abs(S.y + S.h - L.railY) < tiny, where + ": the supply on the bench");
+    assert.ok(Math.abs(S.x + S.w / 2 - w / 2) < tiny, where + ": in the middle");
+    assert.ok(S.x > left.x + left.w + 10 && S.x + S.w < right.x - 10, where + ": between the electrodes");
+    assert.ok(L.wireY > S.y && L.wireY < S.y + S.h, where + ": wires at the supply's height");
+    // The tube's posts stand outside the electrodes, so no wire crosses one.
+    assert.equal(L.tubePosts.length, 2, where);
+    assert.ok(L.tubePosts[0] - 2 > T.x && L.tubePosts[0] + 2 < left.x - 2, where + ": left post outside the left electrode");
+    assert.ok(L.tubePosts[1] + 2 < T.x + T.w && L.tubePosts[1] - 2 > right.x + right.w + 2, where + ": and right");
+    // The current's arrows: one on each wire, between the electrode and the wires' row.
+    assert.equal(L.currentArrows.length, 2, where);
+    L.currentArrows.forEach((arrow, i) => {
+      const e = L.electrodes[i];
+      assertClose(arrow.x, e.x + e.w / 2, 1e-12, where + ": on the electrode's wire");
+      assert.ok(arrow.y > e.y + e.h + 4 && arrow.y < L.wireY - 4, where + ": on its upright part");
+    });
+    assert.equal(L.currentArrows[0].dy, -1, where + ": up into the left electrode");
+    assert.equal(L.currentArrows[1].dy, 1, where + ": down out of the right one");
+    // The pump laser: a box standing on the bench under the rod's left half,
+    // clear of the rod's posts; its beam to the small mirror under the rod's
+    // middle, which turns it up into the rod.
+    const P = L.pumpLaser;
+    assert.ok(Math.abs(P.y + P.h - L.railY) < tiny, where + ": the pump laser on the bench");
+    assert.equal(L.rodPosts.length, 2, where);
+    // Clear of the feet too (18 px wide): at phone widths the left post's
+    // foot ran 4 px into the box (stage 7d review).
+    const foot = bench.POST_FOOT / 2;
+    assert.equal(bench.POST_FOOT, 18);
+    assert.ok(P.x >= L.rodPosts[0] + foot + 2, where + ": clear of the rod's left post and its foot");
+    assert.ok(P.x + P.w <= L.fold.x - foot - 6, where + ": before the small mirror's post, with room for the beam");
+    assert.ok(P.w >= 10, where + ": a box, not a line (" + P.w + " px)");
+    assertClose(L.beamY, P.y + P.h / 2, 1e-12, where + ": the beam from the box's middle");
+    assert.ok(Math.abs(L.fold.x - w / 2) < tiny, where + ": the small mirror under the rod's middle");
+    assert.equal(L.fold.y, L.beamY, where);
+    assert.ok(L.fold.y - L.fold.size / 2 > rodBottom + 10, where + ": room for the beam going up");
+    assert.ok(L.fold.y + L.fold.size / 2 < L.railY, where + ": above the bench");
+    assert.ok(P.y > rodBottom + 6, where + ": under the rod");
+  }
+});
+
+test("draw: each pump draws its own parts, and a missing or unknown kind is the diodes", () => {
+  const w = 900;
+  const draws = {};
+  for (const kind of KINDS) draws[kind] = drawAt(w, LABELS, "dark", lit(kind));
+  const L = bench.layout(w, heightFor(w));
+  const filled = (kind) => rects(draws[kind].recorder, "fillRect");
+  const outlined = (kind) => rects(draws[kind].recorder, "strokeRect");
+  // The rod, for every pump but the discharge, whose tube is the medium.
+  for (const kind of ["diode", "laser", "flashlamp"]) {
+    assert.ok(filled(kind).includes(rectKey(L.rod)), kind + ": the rod");
+    assert.ok(!outlined(kind).includes(rectKey(L.tube)), kind + ": no gas tube");
+  }
+  assert.ok(!filled("discharge").includes(rectKey(L.rod)) && !outlined("discharge").includes(rectKey(L.rod)), "discharge: no rod");
+  assert.ok(outlined("discharge").includes(rectKey(L.tube)), "discharge: the tube");
+  // The diodes' strip only for diodes.
+  assert.ok(filled("diode").includes(rectKey(L.lamp)), "diode: the strip");
+  for (const kind of ["laser", "flashlamp", "discharge"]) assert.ok(!filled(kind).includes(rectKey(L.lamp)), kind + ": no diodes");
+  // The flashlamp: its glass and its two caps.
+  const F = L.flashTube;
+  assert.ok(outlined("flashlamp").includes(rectKey(F)), "flashlamp: the glass");
+  assert.ok(filled("flashlamp").includes([F.x, F.y, L.flashCap, F.h].join(",")), "flashlamp: the left cap");
+  assert.ok(filled("flashlamp").includes([F.x + F.w - L.flashCap, F.y, L.flashCap, F.h].join(",")), "flashlamp: the right cap");
+  for (const kind of ["diode", "laser", "discharge"]) assert.ok(!outlined(kind).includes(rectKey(F)), kind + ": no flashlamp");
+  // The discharge: its electrodes and the supply.
+  for (const e of L.electrodes) assert.ok(filled("discharge").includes(rectKey(e)), "discharge: an electrode");
+  assert.ok(outlined("discharge").includes(rectKey(L.supply)), "discharge: the supply");
+  for (const kind of ["diode", "laser", "flashlamp"]) assert.ok(!outlined(kind).includes(rectKey(L.supply)), kind + ": no supply");
+  // The pump laser: its box and the small mirror.
+  assert.ok(outlined("laser").includes(rectKey(L.pumpLaser)), "laser: the pump laser");
+  const fold = strokedLines(draws.laser.recorder).find((line) =>
+    Math.abs(line.x1 - (L.fold.x - L.fold.size / 2)) < 1e-9 && Math.abs(line.y1 - (L.fold.y + L.fold.size / 2)) < 1e-9 &&
+    Math.abs(line.x2 - (L.fold.x + L.fold.size / 2)) < 1e-9 && Math.abs(line.y2 - (L.fold.y - L.fold.size / 2)) < 1e-9);
+  assert.ok(fold, "laser: the small mirror at 45°, turning the beam up");
+  for (const kind of ["diode", "flashlamp", "discharge"]) assert.ok(!outlined(kind).includes(rectKey(L.pumpLaser)), kind + ": no pump laser");
+  // What stands on the bench: two mirrors and two ends of the medium; the
+  // pump laser's small mirror on a fifth post.
+  const mirrorPosts = [L.backMirror.x + L.backMirror.w / 2, L.outputMirror.x + L.outputMirror.w / 2];
+  for (const kind of ["diode", "flashlamp"]) assert.deepEqual(posts(draws[kind].recorder, L), mirrorPosts.concat(Array.from(L.rodPosts)), kind);
+  assert.deepEqual(posts(draws.laser.recorder, L), mirrorPosts.concat(Array.from(L.rodPosts), [L.fold.x]), "laser");
+  assert.deepEqual(posts(draws.discharge.recorder, L), mirrorPosts.concat(Array.from(L.tubePosts)), "discharge");
+  // No kind, or one the drawing does not know: the diodes.
+  const diode = JSON.stringify(draws.diode.recorder.log);
+  assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", { beam: 1, pump: 0.25, transmission: 0.05 }).recorder.log), diode);
+  assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", lit("steam engine")).recorder.log), diode);
+});
+
+test("draw: a pump below PUMP_OFF is drawn off, for every kind (a flash's long tail goes dark)", () => {
+  const w = 900;
+  assert.equal(bench.PUMP_OFF, 0.01);
+  for (const kind of KINDS) {
+    const off = JSON.stringify(drawAt(w, LABELS, "dark", lit(kind, 0)).recorder.log);
+    // 30 s after ruby's flash peak (at 10⁴) its pump is 2×10⁻³ of full.
+    for (const pump of [1e-6, 2e-3, 0.0099]) {
+      assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", lit(kind, pump)).recorder.log), off, kind + " at " + pump);
+    }
+    assert.notEqual(JSON.stringify(drawAt(w, LABELS, "dark", lit(kind, bench.PUMP_OFF)).recorder.log), off, kind + " at PUMP_OFF");
+  }
+});
+
+// A horizontal arrowhead with its tip at (x, y), pointing dx (1 right, −1 left).
+function sideArrowheadAt(recorder, x, y, dx) {
+  const log = recorder.log;
+  for (let i = 0; i + 2 < log.length; i++) {
+    if (log[i].call !== "moveTo" || Math.abs(log[i].args[0] - x) > 1e-9 || Math.abs(log[i].args[1] - y) > 1e-9) continue;
+    const a = log[i + 1];
+    const b = log[i + 2];
+    if (a.call !== "lineTo" || b.call !== "lineTo") continue;
+    if (Math.sign(x - a.args[0]) === dx && Math.sign(x - b.args[0]) === dx) return { base: a.args[0] };
+  }
+  return null;
+}
+
+test("draw: the rays' arrowheads sit in the open gaps between the mirrors and the medium, rod or gas tube", () => {
+  for (const w of WIDTHS) {
+    const L = bench.layout(w, heightFor(w));
+    for (const kind of KINDS) {
+      const { recorder } = drawAt(w, LABELS, "dark", lit(kind, 0.5));
+      const M = kind === "discharge" ? L.tube : L.rod;
+      const leftGap = (bench.faceX(L, "back", L.axis.y) + M.x) / 2;
+      const rightGap = (M.x + M.w + bench.faceX(L, "output", L.axis.y)) / 2;
+      L.rays.forEach((y, i) => {
+        const where = "w = " + w + ", " + kind + ", ray " + i;
+        if (i % 2 === 0) {
+          const head = sideArrowheadAt(recorder, rightGap + 4, y, 1);
+          assert.ok(head, where + ": an arrowhead to the right");
+          assert.ok(head.base >= M.x + M.w + 1, where + ": clear of the medium");
+          assert.ok(rightGap + 4 <= bench.faceX(L, "output", y), where + ": inside the cavity");
+        } else {
+          const head = sideArrowheadAt(recorder, leftGap - 4, y, -1);
+          assert.ok(head, where + ": an arrowhead to the left");
+          assert.ok(head.base <= M.x - 1, where + ": clear of the medium");
+          assert.ok(leftGap - 4 >= bench.faceX(L, "back", y), where + ": inside the cavity");
+        }
+      });
+    }
+  }
+});
+
+test("draw: the flashlamp glows as strongly as the flash and lights the rod; dark before it is fired", () => {
+  const w = 900;
+  const L = bench.layout(w, heightFor(w));
+  const F = L.flashTube;
+  const gas = [F.x + L.flashCap, F.y, F.w - 2 * L.flashCap, F.h].join(",");
+  function glow(pump) {
+    const { recorder } = drawAt(w, LABELS, "dark", lit("flashlamp", pump));
+    const fill = filledWithAlpha(recorder).find((f) => f.key === gas);
+    return fill ? fill.alpha : 0;
+  }
+  // Its light: upright lines from the tube up to the rod, as the diodes'.
+  function light(pump) {
+    const { recorder } = drawAt(w, LABELS, "dark", lit("flashlamp", pump));
+    return strokedLines(recorder).filter((line) => line.x1 === line.x2 &&
+      line.y1 <= F.y && line.y1 > L.rod.y + L.rod.h && line.y2 >= L.rod.y + L.rod.h && line.y2 < F.y &&
+      line.x1 >= F.x && line.x1 <= F.x + F.w);
+  }
+  assert.equal(glow(0), 0, "not fired: the gas is dark");
+  assert.equal(light(0).length, 0, "and gives no light");
+  assert.ok(glow(0.1) >= 0.2, "a weak flash still shows");
+  assert.ok(glow(0.1) < glow(0.5) && glow(0.5) < glow(1), "brighter with a stronger flash");
+  assert.equal(glow(1), 1);
+  assert.equal(glow(3), 1, "never brighter than fully");
+  assert.equal(light(0.5).length, 7);
+  assert.ok(light(0.1)[0].alpha < light(1)[0].alpha, "more light with a stronger flash");
+});
+
+test("draw: the gas tube is the medium: the rays run inside it, its gas glows with the current, an arrow on each wire", () => {
+  const w = 900;
+  const L = bench.layout(w, heightFor(w));
+  const bore = rectKey(L.bore);
+  function drawn(pump) {
+    return drawAt(w, LABELS, "dark", lit("discharge", pump));
+  }
+  // The rays still run from mirror face to mirror face, through the tube.
+  assert.equal(raysInside(drawn(0.5).recorder, L).length, L.rays.length);
+  // The gas glows with the current, not at all without it.
+  function glow(pump) {
+    const fill = filledWithAlpha(drawn(pump).recorder).find((f) => f.key === bore);
+    return fill ? fill.alpha : 0;
+  }
+  assert.equal(glow(0), 0, "no current, no glow");
+  assert.ok(glow(0.1) >= 0.15, "a small current still shows");
+  assert.ok(glow(0.1) < glow(0.5) && glow(0.5) < glow(1), "brighter with more current");
+  assert.ok(glow(1) <= 0.75 && glow(4) === glow(1), "never so bright that the rays vanish in it");
+  // Each electrode is wired to the supply: down to the wires' row, then to the supply's side.
+  const lines = strokedLines(drawn(0.5).recorder);
+  const sides = [L.supply.x, L.supply.x + L.supply.w];
+  L.electrodes.forEach((e, i) => {
+    const x = e.x + e.w / 2;
+    assert.ok(lines.some((l) => l.x1 === x && l.x2 === x && l.y1 === e.y + e.h && l.y2 === L.wireY), "a wire down from electrode " + i);
+    assert.ok(lines.some((l) => l.y1 === L.wireY && l.y2 === L.wireY && l.x1 === x && l.x2 === sides[i]), "and on to the supply " + i);
+  });
+  // The current's arrows only while it flows.
+  for (const arrow of L.currentArrows) {
+    assert.ok(arrowheadAt(drawn(0.5).recorder, arrow.x, arrow.y, arrow.dy), "a current arrow at " + arrow.x);
+    assert.ok(!arrowheadAt(drawn(0).recorder, arrow.x, arrow.y, arrow.dy), "none without a current");
+  }
+});
+
+test("draw: the pump laser's beam runs to the small mirror and up into the rod, while the pump is on", () => {
+  const w = 900;
+  const L = bench.layout(w, heightFor(w));
+  const rodBottom = L.rod.y + L.rod.h;
+  function beam(pump) {
+    const lines = strokedLines(drawAt(w, LABELS, "dark", lit("laser", pump)).recorder);
+    const across = lines.find((l) => l.y1 === L.beamY && l.y2 === L.beamY && l.x1 === L.pumpLaser.x + L.pumpLaser.w && l.x2 === L.fold.x);
+    const up = lines.find((l) => l.x1 === L.fold.x && l.x2 === L.fold.x && l.y1 === L.beamY && l.y2 > rodBottom && l.y2 < rodBottom + 10);
+    return { across: across, up: up };
+  }
+  assert.deepEqual(beam(0), { across: undefined, up: undefined }, "pump off: no beam");
+  const weak = beam(0.1);
+  const strong = beam(1);
+  assert.ok(weak.across && weak.up && strong.across && strong.up, "the beam's two legs");
+  assert.equal(weak.across.alpha, weak.up.alpha, "one beam");
+  assert.ok(weak.across.alpha >= 0.3 && weak.across.alpha < strong.across.alpha, "stronger with more pump");
+  assert.equal(beam(5).across.alpha, 1, "alpha never above 1");
+  assert.ok(arrowheadAt(drawAt(w, LABELS, "dark", lit("laser", 0.5)).recorder, L.fold.x, rodBottom + 2, -1), "an arrowhead into the rod");
 });

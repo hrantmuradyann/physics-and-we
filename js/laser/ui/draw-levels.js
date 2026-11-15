@@ -1,32 +1,52 @@
 /* ============================================================================
-   draw-levels.js — the four levels of the gain medium and the gain/loss
-   gauge (docs/laser-physics.md §11.6, items 1 and 2).
+   draw-levels.js — the energy levels of the gain medium and the gain/loss
+   gauge (docs/laser-physics.md §2, §11.6 items 1 and 2).
 
      LaserUI.levels.draw(view, picture)
        view     what loop.js passes to a draw: { g, w, h, colors, font, … }
-       picture  { x, smallSignal, y, stim, words }
+       picture  { scheme, x, smallSignal, y, stim, n_t, words }
+                scheme  "four-level", "three-level" or "two-level"; none
+                      is four levels
                 x     pump rate / threshold rate (R_p/R_c): the pump
-                      arrow's width
+                      arrow's width (for the two-level atom, which has no
+                      threshold, its W_pτ)
                 smallSignal  the small-signal gain over the loss
                       (g₀/g_th), where the gain would be with no light:
                       the gauge's dashed line. For four levels it is x;
-                      for three it is not (bench.pumpNow gives both)
-                y     inversion / threshold inversion (N/N_c), now
-                stim  stimulated emission now, in the same units (y·p):
-                      x − 1 once the laser runs steadily
-                words { pumpBand, upper, lower, ground, gain, loss };
-                      a missing word is left out
+                      for three and two it is not (bench.pumpNow gives it)
+                y     inversion / threshold inversion (ΔN/N_c), now: from
+                      0 up for four levels, from −n_t (every ion down)
+                      for three and two
+                stim  stimulated emission now, over the threshold pump
+                      rate: x − 1 once the laser runs steadily
+                n_t   N_t/N_c, for three and two levels
+                words { pumpBand, upper, lower, ground, groundLower, gain,
+                      loss, transparent }; a missing word is left out
      LaserUI.levels.layout(w, h)     where everything goes (CSS pixels)
-     LaserUI.levels.scaleMax(picture)   the top of both scales, in units
-                                        of the threshold
+     LaserUI.levels.scaleMax(picture), scaleMin(picture)
+                the top and the bottom of the gauge, in units of the
+                threshold; four levels' bar uses the top too
 
-   Left: the levels, the pump arrow (ground → pump band) and the laser
-   arrow (upper → lower) as wide as their rates, and a bar on the upper
-   level filling up with the inversion, with a mark at threshold (no word:
-   at a strong pump the mark sits on the upper level's name). Right: the
-   gain bar against the loss line, which is the threshold. Above threshold the gain rises to
-   the loss and stops there, whatever the pump: gain clamping (§4.1).
-   Both use units of the threshold, so the loss is always 1.
+   Left: the levels, the pump arrow and the laser arrow as wide as their
+   rates.
+     four levels   pump band, upper, lower, ground; the pump from the
+                   ground to the band, the laser from upper to lower; a
+                   bar on the upper level filling up with the inversion,
+                   with a mark at threshold (no word: at a strong pump the
+                   mark sits on the upper level's name)
+     three levels  pump band, upper, ground: the ground is also the lower
+                   laser level, so the laser goes down to it, and more
+                   than half the ions must be up before the medium gains
+                   (§2.2). Two bars: the share of ions up, with a mark at
+                   threshold, (1 + 1/n_t)/2, and the share down
+     two levels    upper and ground; the pump drawn up and down, equally
+                   wide: its light takes atoms down as fast as up, so the
+                   upper bar never passes half (§2.1)
+   Right: the gain bar against the loss line, which is the threshold.
+   Above threshold the gain rises to the loss and stops there, whatever
+   the pump: gain clamping (§4.1). Units of the threshold, so the loss is
+   always 1. For three and two levels the gauge goes down to −n_t: below
+   its zero line the medium absorbs, and the bar is drawn down, paler.
 
    Tests: tests/laser/draw-panels.test.js
    ========================================================================== */
@@ -36,18 +56,36 @@
   var UI = root.LaserUI = root.LaserUI || {};
 
   var SIZE = Object.freeze({ aspect: 1.6, minHeight: 220, maxHeight: 320 });
-  var HEADROOM = 1.15;            // room above the highest value on a scale
+  var HEADROOM = 1.15;            // room around the highest and lowest values on a scale
   var ARROW_FULL = 4;             // a rate of 4× threshold draws the widest arrow
+  // For three and two levels the gauge reaches above zero at least this
+  // many times n_t, so with every ion down (the gauge's bottom at
+  // −1.15·n_t) the part above zero, with the loss line, is not a sliver.
+  var ABOVE_ZERO = 0.25;
 
   function clamp(value, low, high) {
     return Math.min(high, Math.max(low, value));
   }
 
-  // Holds x, the small-signal gain, y and the loss (1) with room above, so
-  // nothing drawn on the scale needs clamping (a clamp would only hide a
-  // wrong scale).
+  // Three and two levels have ions that can all be down; four levels
+  // start from an empty upper level. A picture with no scheme is four.
+  function hasIons(picture) {
+    return picture.scheme === "three-level" || picture.scheme === "two-level";
+  }
+
+  // The top of the gauge: it holds the small-signal gain, y and the loss
+  // (1) with room above, so nothing drawn on the scale needs clamping (a
+  // clamp would only hide a wrong scale).
   function scaleMax(picture) {
-    return Math.max(picture.x, picture.smallSignal, picture.y, 1) * HEADROOM;
+    var top = Math.max(picture.smallSignal, picture.y, 1) * HEADROOM;
+    if (hasIons(picture)) top = Math.max(top, ABOVE_ZERO * picture.n_t);
+    return top;
+  }
+
+  // The bottom of the gauge: 0 for four levels; for three and two, every
+  // ion down (y = −n_t), with room below.
+  function scaleMin(picture) {
+    return hasIons(picture) ? -picture.n_t * HEADROOM : 0;
   }
 
   function layout(w, h) {
@@ -80,6 +118,7 @@
       ground: bottom,
       arrows: {
         pump: lineLeft + 0.14 * lineWidth,
+        pumpDown: lineLeft + 0.26 * lineWidth,         // the two-level atom's pump, down
         relaxTop: lineLeft + 0.34 * lineWidth,
         laser: lineLeft + 0.52 * lineWidth,
         relaxBottom: lineLeft + 0.68 * lineWidth
@@ -90,6 +129,13 @@
         w: barWidth,
         top: upper - 0.26 * span,
         bottom: upper
+      },
+      // Three and two levels: the share of ions down, on the ground level.
+      groundBar: {
+        x: lineRight - barWidth - 2,
+        w: barWidth,
+        top: bottom - 0.26 * span,
+        bottom: bottom
       },
       gauge: {
         left: gaugeLeft,
@@ -129,117 +175,188 @@
     g.fill();
   }
 
+  // A horizontal line from x1 to x2 at height y.
+  function across(g, x1, x2, y) {
+    g.beginPath();
+    g.moveTo(x1, y);
+    g.lineTo(x2, y);
+    g.stroke();
+  }
+
+  // A bar filling `share` (0–1) of its slot from the bottom.
+  function shareBar(g, c, slot, share) {
+    var height = clamp(share, 0, 1) * (slot.bottom - slot.top);
+    g.strokeStyle = c.grid;
+    g.lineWidth = 1;
+    g.strokeRect(slot.x, slot.top, slot.w, slot.bottom - slot.top);
+    if (height > 0) {
+      g.fillStyle = c.accent;
+      g.globalAlpha = 0.75;
+      g.fillRect(slot.x, slot.bottom - height, slot.w, height);
+      g.globalAlpha = 1;
+    }
+  }
+
+  // The mark across a bar at `share` of its slot (the threshold).
+  function barMark(g, c, slot, share) {
+    var markY = slot.bottom - share * (slot.bottom - slot.top);
+    g.strokeStyle = c.soft;
+    g.lineWidth = 2;
+    across(g, slot.x - 3, slot.x + slot.w + 3, markY);
+  }
+
   function draw(view, picture) {
     var g = view.g;
     var c = view.colors;
     var L = layout(view.w, view.h);
     var words = picture.words || {};
+    var scheme = hasIons(picture) ? picture.scheme : "four-level";
     var top = scaleMax(picture);
+    var low = scaleMin(picture);
 
     g.clearRect(0, 0, view.w, view.h);
     g.save();
     g.font = L.fontSize + "px " + view.font;
     g.textBaseline = "alphabetic";
 
-    /* the four levels */
-    var levels = [
-      { y: L.pumpBand, name: "pumpBand" },
-      { y: L.upper, name: "upper" },
-      { y: L.lower, name: "lower" },
-      { y: L.ground, name: "ground" }
-    ];
+    /* the levels of this scheme */
+    var levels;
+    if (scheme === "three-level") {
+      levels = [
+        { y: L.pumpBand, word: word(words, "pumpBand") },
+        { y: L.upper, word: word(words, "upper") },
+        { y: L.ground, word: word(words, "groundLower") || word(words, "ground") }
+      ];
+    } else if (scheme === "two-level") {
+      levels = [
+        { y: L.upper, word: word(words, "upper") },
+        { y: L.ground, word: word(words, "ground") }
+      ];
+    } else {
+      levels = [
+        { y: L.pumpBand, word: word(words, "pumpBand") },
+        { y: L.upper, word: word(words, "upper") },
+        { y: L.lower, word: word(words, "lower") },
+        { y: L.ground, word: word(words, "ground") }
+      ];
+    }
     g.strokeStyle = c.line;
     g.lineWidth = 2;
     levels.forEach(function (level) {
-      g.beginPath();
-      g.moveTo(L.lineLeft, level.y);
-      g.lineTo(L.lineRight, level.y);
-      g.stroke();
+      across(g, L.lineLeft, L.lineRight, level.y);
     });
     g.fillStyle = c.muted;
     g.textAlign = "left";
     levels.forEach(function (level) {
-      text(g, word(words, level.name), L.labelLeft, level.y + 0.35 * L.fontSize, L.labelWidth);
+      text(g, level.word, L.labelLeft, level.y + 0.35 * L.fontSize, L.labelWidth);
     });
 
-    /* fast relaxations, thin and dashed */
-    g.strokeStyle = c.faint;
-    g.setLineDash([3, 3]);
-    g.lineWidth = 1.5;
-    g.beginPath();
-    g.moveTo(L.arrows.relaxTop, L.pumpBand);
-    g.lineTo(L.arrows.relaxTop, L.upper);
-    g.moveTo(L.arrows.relaxBottom, L.lower);
-    g.lineTo(L.arrows.relaxBottom, L.ground);
-    g.stroke();
-    g.setLineDash([]);
+    /* fast relaxations, thin and dashed: from the pump band down to the
+       upper level, and (four levels) from the lower level to the ground */
+    if (scheme !== "two-level") {
+      g.strokeStyle = c.faint;
+      g.setLineDash([3, 3]);
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(L.arrows.relaxTop, L.pumpBand);
+      g.lineTo(L.arrows.relaxTop, L.upper);
+      if (scheme === "four-level") {
+        g.moveTo(L.arrows.relaxBottom, L.lower);
+        g.lineTo(L.arrows.relaxBottom, L.ground);
+      }
+      g.stroke();
+      g.setLineDash([]);
+    }
 
     /* the pump and the laser transition, as wide as their rates */
     var pumpShare = clamp(picture.x / ARROW_FULL, 0, 1);
     if (pumpShare > 0) {
+      var pumpWidth = 1 + pumpShare * L.maxArrow;
       g.strokeStyle = c.glow;
       g.fillStyle = c.glow;
-      arrow(g, L.arrows.pump, L.ground, L.pumpBand, 1 + pumpShare * L.maxArrow);
+      if (scheme === "two-level") {
+        // Its light takes atoms down as fast as up (§2.1).
+        arrow(g, L.arrows.pump, L.ground, L.upper, pumpWidth);
+        arrow(g, L.arrows.pumpDown, L.upper, L.ground, pumpWidth);
+      } else {
+        arrow(g, L.arrows.pump, L.ground, L.pumpBand, pumpWidth);
+      }
     }
     var laserShare = clamp(picture.stim / ARROW_FULL, 0, 1);
     if (laserShare > 0.001) {
       g.strokeStyle = c.accent2;
       g.fillStyle = c.accent2;
-      arrow(g, L.arrows.laser, L.upper, L.lower, 1 + laserShare * L.maxArrow);
+      // Four levels lase down to the lower level, three and two to the ground.
+      var laserEnd = scheme === "four-level" ? L.lower : L.ground;
+      arrow(g, L.arrows.laser, L.upper, laserEnd, 1 + laserShare * L.maxArrow);
     }
 
-    /* the upper level's population: a bar with a mark at threshold */
-    var slot = L.bar.bottom - L.bar.top;
-    g.strokeStyle = c.grid;
-    g.lineWidth = 1;
-    g.strokeRect(L.bar.x, L.bar.top, L.bar.w, slot);
-    var filled = picture.y / top * slot;
-    if (filled > 0) {
-      g.fillStyle = c.accent;
-      g.globalAlpha = 0.75;
-      g.fillRect(L.bar.x, L.bar.bottom - filled, L.bar.w, filled);
-      g.globalAlpha = 1;
+    /* how many atoms are up */
+    if (scheme === "four-level") {
+      // The inversion on the gauge's scale, with a mark at threshold.
+      shareBar(g, c, L.bar, picture.y / top);
+      barMark(g, c, L.bar, 1 / top);
+    } else {
+      // The shares of ions up and down: N₂/N_t = (n_t + y)/(2n_t). At
+      // threshold y = 1, so the mark is at (1 + 1/n_t)/2.
+      // With n_t ≤ 1 even every ion up is short of threshold: no mark.
+      var up = (picture.n_t + picture.y) / (2 * picture.n_t);
+      shareBar(g, c, L.bar, up);
+      if (picture.n_t > 1) barMark(g, c, L.bar, (1 + 1 / picture.n_t) / 2);
+      shareBar(g, c, L.groundBar, 1 - up);
     }
-    var markY = L.bar.bottom - slot / top;
-    g.strokeStyle = c.soft;
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(L.bar.x - 3, markY);
-    g.lineTo(L.bar.x + L.bar.w + 3, markY);
-    g.stroke();
 
     /* the gauge: gain against loss (units of the threshold) */
     var G = L.gauge;
     var span = G.bottom - G.top;
+    function gaugeY(value) {
+      return G.bottom - span * (value - low) / (top - low);
+    }
+    var zeroY = gaugeY(0);
     g.strokeStyle = c.grid;
     g.lineWidth = 1;
     g.strokeRect(G.gainX, G.top, G.gainW, span);
-    var gainHeight = span * picture.y / top;
-    if (gainHeight > 0) {
+    // The gain from zero: up while the medium gains, down (paler) while it
+    // absorbs.
+    var gainY = gaugeY(picture.y);
+    if (gainY < zeroY) {
       g.fillStyle = c.accent;
-      g.fillRect(G.gainX, G.bottom - gainHeight, G.gainW, gainHeight);
+      g.fillRect(G.gainX, gainY, G.gainW, zeroY - gainY);
+    } else if (gainY > zeroY) {
+      g.fillStyle = c.accent;
+      g.globalAlpha = 0.4;
+      g.fillRect(G.gainX, zeroY, G.gainW, gainY - zeroY);
+      g.globalAlpha = 1;
     }
     // The small-signal gain: where the gain would be with no light at all.
-    var smallY = G.bottom - span * picture.smallSignal / top;
+    var smallY = gaugeY(picture.smallSignal);
     g.strokeStyle = c.muted;
     g.setLineDash([4, 3]);
-    g.beginPath();
-    g.moveTo(G.gainX, smallY);
-    g.lineTo(G.gainX + G.gainW, smallY);
-    g.stroke();
+    across(g, G.gainX, G.gainX + G.gainW, smallY);
     g.setLineDash([]);
+    var wordsLeft = G.gainX + G.gainW + 6;
+    var wordsWidth = Math.max(1, G.right - wordsLeft);
+    // Zero, for three and two levels: below it the medium absorbs.
+    if (low < 0) {
+      g.strokeStyle = c.faint;
+      g.lineWidth = 1;
+      across(g, G.left, G.right, zeroY);
+      g.fillStyle = c.muted;
+      g.textAlign = "left";
+      text(g, word(words, "transparent"), wordsLeft, zeroY + L.fontSize, wordsWidth);
+    }
     // The loss: gain must reach it to lase.
-    var lossY = G.bottom - span / top;
+    var lossY = gaugeY(1);
     g.strokeStyle = c.soft;
     g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(G.left, lossY);
-    g.lineTo(G.right, lossY);
-    g.stroke();
-    var wordsLeft = G.gainX + G.gainW + 6;
+    across(g, G.left, G.right, lossY);
     g.fillStyle = c.soft;
     g.textAlign = "left";
-    text(g, word(words, "loss"), wordsLeft, lossY - 4, Math.max(1, G.right - wordsLeft));
+    // Its word above the line, or under it when the line is too near the
+    // gauge's top for the word to fit there.
+    var lossWordY = lossY - 4;
+    if (lossWordY - L.fontSize < G.top) lossWordY = lossY + L.fontSize + 2;
+    text(g, word(words, "loss"), wordsLeft, lossWordY, wordsWidth);
     g.fillStyle = c.muted;
     g.textAlign = "center";
     // Centred under the bar, never wider than the gauge's left edge allows.
@@ -253,6 +370,7 @@
     SIZE: SIZE,
     layout: layout,
     scaleMax: scaleMax,
+    scaleMin: scaleMin,
     draw: draw
   });
 })(this);

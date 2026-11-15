@@ -313,6 +313,23 @@ test("powerAtTwiceThreshold is the steady output at twice threshold, for four an
   assertClose(two.powerAtTwiceThreshold, two.powerPerP * (two.n_t + 1), 1e-12, "two levels");
 });
 
+test("thresholdRate is the pump rate at threshold in units of N_c/τ: 1 for four levels, n_t + 1 for three and two", () => {
+  // Four levels: x = 1 is a pump rate of R_c = N_c/τ.
+  for (const [medium, pump] of [["nd-yag", "diode"], ["nd-yag", "flashlamp"], ["he-ne", "discharge"]]) {
+    assert.equal(B.derive(configFor(medium, pump)).thresholdRate, 1, medium + " with " + pump);
+  }
+  // Three levels: in steady light y = 1 and dy/dt′ = 0 give
+  // y·p = w(n_t − 1) − (n_t + 1) = (n_t + 1)(x − 1), with x = w/w_th.
+  const ruby = B.derive(configFor("ruby", "flashlamp"));
+  assertClose(ruby.thresholdRate, ruby.wThreshold * (ruby.n_t - 1), 1e-12, "w_th(n_t − 1)");
+  assertClose(ruby.thresholdRate, ruby.n_t + 1, 1e-12, "ruby: 12.5");
+  const w = 3 * ruby.wThreshold;                             // x = 3
+  const steady = E.rates.threeLevel.steadyState({ w, n_t: ruby.n_t, beta: 0 });
+  assertClose(steady.y * steady.p, ruby.thresholdRate * (3 - 1), 1e-12, "y·p = thresholdRate·(x − 1)");
+  const two = B.derive(configFor("two-level", "laser"));
+  assertClose(two.thresholdRate, two.n_t + 1, 1e-12, "two levels as three");
+});
+
 /* ---------- the simulation: start, fire, flash ---------- */
 
 test("start(config): no inversion for four levels, every ion down for three and two; one photon; no flash yet", () => {

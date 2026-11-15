@@ -1585,38 +1585,38 @@ const MUTATIONS = [
   /* ---------- stage 6: draw-levels.js ---------- */
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "return Math.max(picture.x, picture.smallSignal, picture.y, 1) * HEADROOM;",
-    replace: "return Math.max(picture.x, picture.smallSignal, picture.y) * HEADROOM;",
+    find: "var top = Math.max(picture.smallSignal, picture.y, 1) * HEADROOM;",
+    replace: "var top = Math.max(picture.smallSignal, picture.y) * HEADROOM;",
     why: "the scale forgets the loss: below threshold the loss line is off the gauge"
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "return Math.max(picture.x, picture.smallSignal, picture.y, 1) * HEADROOM;",
-    replace: "return Math.max(picture.x, picture.smallSignal, 1) * HEADROOM;",
+    find: "var top = Math.max(picture.smallSignal, picture.y, 1) * HEADROOM;",
+    replace: "var top = Math.max(picture.smallSignal, 1) * HEADROOM;",
     why: "the scale forgets the inversion: a spike runs off the bar"
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "g.fillRect(G.gainX, G.bottom - gainHeight, G.gainW, gainHeight);",
-    replace: "g.fillRect(G.gainX, G.top, G.gainW, gainHeight);",
+    find: "g.fillRect(G.gainX, gainY, G.gainW, zeroY - gainY);",
+    replace: "g.fillRect(G.gainX, G.top, G.gainW, zeroY - gainY);",
     why: "the gain bar hanging from the top"
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var lossY = G.bottom - span / top;",
-    replace: "var lossY = G.bottom - span * picture.x / top;",
+    find: "var lossY = gaugeY(1);",
+    replace: "var lossY = gaugeY(picture.smallSignal);",
     why: "the loss line drawn at the small-signal gain"
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var smallY = G.bottom - span * picture.smallSignal / top;",
-    replace: "var smallY = G.bottom - span * picture.y / top;",
+    find: "var smallY = gaugeY(picture.smallSignal);",
+    replace: "var smallY = gaugeY(picture.y);",
     why: "the small-signal gain drawn at the gain"
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var filled = picture.y / top * slot;",
-    replace: "var filled = picture.x / top * slot;",
+    find: "shareBar(g, c, L.bar, picture.y / top);",
+    replace: "shareBar(g, c, L.bar, picture.x / top);",
     why: "the upper-level bar showing the pump, not the inversion"
   },
   {
@@ -1765,14 +1765,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        beam: beamNow(),\n        pump: glowNow(),",
-    replace: "        beam: 1,\n        pump: glowNow(),",
+    find: "        beam: beamNow(),\n        pump: benchPumpNow(),",
+    replace: "        beam: 1,\n        pump: benchPumpNow(),",
     why: "the beam drawn whatever the output"
   },
   {
     file: "js/laser/page.js",
-    find: "stim: Math.max(0, y * p),",
-    replace: "stim: Math.max(0, y),",
+    find: "return Math.max(0, y * p) / derived.thresholdRate;",
+    replace: "return Math.max(0, y) / derived.thresholdRate;",
     why: "the laser arrow drawn from the inversion alone, before there is any light"
   },
   {
@@ -2067,14 +2067,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (pump > 0) {",
-    replace: "    if (true) {",
+    find: "    if (pump > 0) lightUp(g, colors, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);",
+    replace: "    lightUp(g, colors, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);",
     why: "pump light drawn with the pump off"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "g.globalAlpha = 0.3 + 0.7 * pump;",
-    replace: "g.globalAlpha = 1;",
+    find: "\n    g.globalAlpha = 0.3 + 0.7 * pump;\n    g.strokeStyle = colors.glow;",
+    replace: "\n    g.globalAlpha = 1;\n    g.strokeStyle = colors.glow;",
     why: "pump light as strong at 1 W as at 20 W"
   },
   {
@@ -2289,8 +2289,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        transmission: 1 - state.config.refl2\n",
-    replace: "        transmission: state.config.refl2\n",
+    find: "        transmission: 1 - state.config.refl2,\n",
+    replace: "        transmission: state.config.refl2,\n",
     why: "the rays that leave counted from the reflectivity"
   },
   {
@@ -3063,7 +3063,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "powerAtTwiceThreshold: fourLevel ? scales.powerPerP : scales.powerPerP * (scales.n_t + 1),",
+    find: "powerAtTwiceThreshold: scales.powerPerP * thresholdRate,",
     replace: "powerAtTwiceThreshold: scales.powerPerP,",
     why: "three levels' light scaled as four levels': ruby's beam 12.5× too bright"
   },
@@ -3335,9 +3335,9 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        y: Math.max(0, y),\n",
-    replace: "        y: y,\n",
-    why: "the level picture's bar below zero for three levels"
+    find: "        y: inversionNow(),\n",
+    replace: "        y: Math.max(0, inversionNow()),\n",
+    why: "three levels' inversion clamped at 0 again: ruby before Fire shows no ion down"
   },
   {
     file: "js/laser/page.js",
@@ -3347,7 +3347,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        pump: glowNow(),\n        transmission",
+    find: "        pump: benchPumpNow(),\n        transmission",
     replace: "        pump: 1,\n        transmission",
     why: "the pump on the bench always glowing fully"
   },
@@ -3403,14 +3403,14 @@ const MUTATIONS = [
   /* ---------- stage 7c: the review's fixes ---------- */
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "return Math.max(picture.x, picture.smallSignal, picture.y, 1) * HEADROOM;",
-    replace: "return Math.max(picture.x, picture.y, 1) * HEADROOM;",
+    find: "var top = Math.max(picture.smallSignal, picture.y, 1) * HEADROOM;",
+    replace: "var top = Math.max(picture.y, 1) * HEADROOM;",
     why: "the scale forgets the small-signal gain: ruby's dashed line above the gauge"
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var smallY = G.bottom - span * picture.smallSignal / top;",
-    replace: "var smallY = G.bottom - span * picture.x / top;",
+    find: "var smallY = gaugeY(picture.smallSignal);",
+    replace: "var smallY = gaugeY(picture.x);",
     why: "the dashed small-signal line drawn at the pump x: wrong for three levels"
   },
   {
@@ -3481,15 +3481,15 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        smallSignal: Math.max(0, pumpNow().smallSignal),",
-    replace: "        smallSignal: pumpLevel(),",
+    find: "        smallSignal: pumpNow().smallSignal,\n",
+    replace: "        smallSignal: pumpLevel(),\n",
     why: "the gauge's dashed line at the pump, not at g₀/g_th"
   },
   {
     file: "js/laser/page.js",
-    find: "        smallSignal: Math.max(0, pumpNow().smallSignal),",
-    replace: "        smallSignal: pumpNow().smallSignal,",
-    why: "the two-level atom's small-signal gain drawn below the gauge"
+    find: "        smallSignal: pumpNow().smallSignal,\n",
+    replace: "        smallSignal: Math.max(0, pumpNow().smallSignal),\n",
+    why: "the small-signal gain clamped at 0: the two-level atom seems on the edge of gaining"
   },
   {
     file: "js/laser/page.js",
@@ -3532,8 +3532,379 @@ const MUTATIONS = [
     find: "\"flashlamp\": { \"hy\": \"Բռնկման լամպ\", \"en\": \"Flashlamp\" },\n      \"discharge\": { \"hy\": \"Էլեկտրական պարպում\", \"en\": \"Electric discharge\" }\n    }\n  },",
     replace: "\"flashlamp\": { \"hy\": \"\", \"en\": \"Flashlamp\" },\n      \"discharge\": { \"hy\": \"Էլեկտրական պարպում\", \"en\": \"Electric discharge\" }\n    }\n  },",
     why: "the flashlamp's name on the drawing without its Armenian"
-  }
+  },
 
+  /* ---------- stage 7d: each pump drawn, three and two levels ---------- */
+
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var KINDS = Object.freeze([\"diode\", \"laser\", \"flashlamp\", \"discharge\"]);",
+    replace: "var KINDS = Object.freeze([\"diode\", \"laser\", \"flashlamp\"]);",
+    why: "the discharge missing from the pumps the drawing knows: a gas laser drawn as diodes"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "if (light && KINDS.indexOf(light.pumpKind) !== -1) return light.pumpKind;",
+    replace: "if (false) return light.pumpKind;",
+    why: "every pump drawn as diodes"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    else if (kind === \"laser\") drawPumpLaser(g, colors, L, pump);\n",
+    replace: "",
+    why: "the pump laser drawn as diodes"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (kind === \"discharge\") drawTube(g, colors, L, pump);\n    else drawRod(g, colors, L);",
+    replace: "    drawRod(g, colors, L);",
+    why: "a gas laser drawn with a rod, no tube"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var mediumPosts = kind === \"discharge\" ? L.tubePosts : L.rodPosts;",
+    replace: "var mediumPosts = L.rodPosts;",
+    why: "the gas tube standing on the rod's posts, across its wires"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (pump > 0) {\n      g.globalAlpha = 0.2 + 0.8 * pump;",
+    replace: "    if (true) {\n      g.globalAlpha = 0.2 + 0.8 * pump;",
+    why: "the flashlamp glowing before it is fired"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.globalAlpha = 0.2 + 0.8 * pump;",
+    replace: "g.globalAlpha = 1;",
+    why: "the flashlamp as bright for a weak flash as for a strong one"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);",
+    replace: "g.fillRect(F.x, F.y, F.w, F.h);",
+    why: "the flashlamp's glow over its electrodes"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (pump > 0) lightUp(g, colors, L, F.x, F.w, F.y, pump);\n",
+    replace: "",
+    why: "the flashlamp's light not reaching the rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.fillRect(F.x + F.w - cap, F.y, cap, F.h);\n",
+    replace: "",
+    why: "the flashlamp without its right electrode"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (pump > 0) {\n      g.globalAlpha = 0.15 + 0.6 * pump;",
+    replace: "    if (true) {\n      g.globalAlpha = 0.15 + 0.6 * pump;",
+    why: "the gas glowing with no current"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.globalAlpha = 0.15 + 0.6 * pump;",
+    replace: "g.globalAlpha = 0.15 + 0.85 * pump;",
+    why: "the gas glowing so brightly that the rays vanish in it"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (pump > 0) {\n      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.fillStyle = colors.glow;\n      L.currentArrows",
+    replace: "    if (true) {\n      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.fillStyle = colors.glow;\n      L.currentArrows",
+    why: "current arrows with no current"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "{ x: electrodes[0].x + electrodeWidth / 2, y: arrowY, dy: -1 },",
+    replace: "{ x: electrodes[0].x + electrodeWidth / 2, y: arrowY, dy: 1 },",
+    why: "the current going down both wires"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      line(g, x, L.wireY, sides[i], L.wireY);",
+    replace: "      line(g, x, L.wireY, sides[1 - i], L.wireY);",
+    why: "the wires crossing to the supply's far sides"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var electrodes = [0.12, 0.88].map(",
+    replace: "var electrodes = [0.3, 0.7].map(",
+    why: "the electrodes away from the tube's ends"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var tubeLength = 0.86 * span;",
+    replace: "var tubeLength = 0.5 * span;",
+    why: "the gas tube no longer than a rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var boreHeight = 0.8 * rodHeight;",
+    replace: "var boreHeight = 0.6 * rodHeight;",
+    why: "rays outside the gas tube's bore"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var supplyY = railY - supplyHeight;",
+    replace: "var supplyY = railY - 1.2 * supplyHeight;",
+    why: "the supply floating above the bench"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (pump > 0) {\n      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = colors.glow;\n      g.fillStyle = colors.glow;\n      g.lineWidth = 2.5;",
+    replace: "    if (true) {\n      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = colors.glow;\n      g.fillStyle = colors.glow;\n      g.lineWidth = 2.5;",
+    why: "the pump laser's beam with the pump off"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = colors.glow;\n      g.fillStyle = colors.glow;\n      g.lineWidth = 2.5;",
+    replace: "      g.globalAlpha = 1;\n      g.strokeStyle = colors.glow;\n      g.fillStyle = colors.glow;\n      g.lineWidth = 2.5;",
+    why: "the pump laser's beam as strong at any pump"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      line(g, fold.x, L.beamY, fold.x, rodBottom + 6);\n",
+    replace: "",
+    why: "the pump beam stopping at the small mirror"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    line(g, fold.x - half, fold.y + half, fold.x + half, fold.y - half);",
+    replace: "    line(g, fold.x - half, fold.y - half, fold.x + half, fold.y + half);",
+    why: "the small mirror turned to send the beam down"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    post(g, fold.x, fold.y + half, L.railY);\n",
+    replace: "",
+    why: "the small mirror floating over the bench"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var pumpLaserLeft = rodPosts[0] + POST_FOOT / 2 + 3;",
+    replace: "var pumpLaserLeft = rodX;",
+    why: "the pump laser standing on the rod's post"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var beamY = pumpLaserY + pumpLaserHeight / 2;",
+    replace: "var beamY = pumpLaserY + pumpLaserHeight;",
+    why: "the pump beam leaving from the box's bottom edge"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "return picture.scheme === \"three-level\" || picture.scheme === \"two-level\";",
+    replace: "return picture.scheme === \"three-level\";",
+    why: "the two-level atom drawn as four levels"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "return hasIons(picture) ? -picture.n_t * HEADROOM : 0;",
+    replace: "return hasIons(picture) ? -picture.n_t : 0;",
+    why: "no room below every ion down"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "    if (hasIons(picture)) top = Math.max(top, ABOVE_ZERO * picture.n_t);\n",
+    replace: "",
+    why: "no room above zero: ruby's loss word off the canvas before Fire"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "        { y: L.pumpBand, word: word(words, \"pumpBand\") },\n        { y: L.upper, word: word(words, \"upper\") },\n        { y: L.ground, word: word(words, \"groundLower\") || word(words, \"ground\") }",
+    replace: "        { y: L.pumpBand, word: word(words, \"pumpBand\") },\n        { y: L.upper, word: word(words, \"upper\") },\n        { y: L.lower, word: word(words, \"lower\") },\n        { y: L.ground, word: word(words, \"groundLower\") || word(words, \"ground\") }",
+    why: "ruby drawn with a lower laser level it does not have"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "word(words, \"groundLower\") || word(words, \"ground\")",
+    replace: "word(words, \"ground\")",
+    why: "ruby's ground not named as its lower laser level"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "var laserEnd = scheme === \"four-level\" ? L.lower : L.ground;",
+    replace: "var laserEnd = L.lower;",
+    why: "ruby lasing down to a lower level it does not have"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "        arrow(g, L.arrows.pumpDown, L.upper, L.ground, pumpWidth);\n",
+    replace: "",
+    why: "the two-level atom's pump only lifting atoms"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "        arrow(g, L.arrows.pump, L.ground, L.upper, pumpWidth);",
+    replace: "        arrow(g, L.arrows.pump, L.ground, L.pumpBand, pumpWidth);",
+    why: "the two-level atom pumped to a band it does not have"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "      if (scheme === \"four-level\") {\n        g.moveTo(L.arrows.relaxBottom",
+    replace: "      if (true) {\n        g.moveTo(L.arrows.relaxBottom",
+    why: "ruby drawn with a relaxation from a lower level it does not have"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "    if (scheme !== \"two-level\") {\n      g.strokeStyle = c.faint;",
+    replace: "    if (true) {\n      g.strokeStyle = c.faint;",
+    why: "the two-level atom drawn with a pump band's relaxation"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "var up = (picture.n_t + picture.y) / (2 * picture.n_t);",
+    replace: "var up = (picture.n_t + picture.y) / picture.n_t;",
+    why: "the share of ions up written as 2N₂/N_t"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "barMark(g, c, L.bar, (1 + 1 / picture.n_t) / 2);",
+    replace: "barMark(g, c, L.bar, 0.5);",
+    why: "the threshold mark at half the ions up: ruby's 54 % lost"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "shareBar(g, c, L.groundBar, 1 - up);",
+    replace: "shareBar(g, c, L.groundBar, up);",
+    why: "the ground bar showing the ions up"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "      g.globalAlpha = 0.4;\n      g.fillRect(G.gainX, zeroY, G.gainW, gainY - zeroY);",
+    replace: "      g.globalAlpha = 1;\n      g.fillRect(G.gainX, zeroY, G.gainW, gainY - zeroY);",
+    why: "absorption drawn as solid as gain"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "    } else if (gainY > zeroY) {",
+    replace: "    } else if (false) {",
+    why: "a medium that absorbs drawn with no bar"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "    if (low < 0) {",
+    replace: "    if (false) {",
+    why: "no zero line: where absorption ends is not shown"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "text(g, word(words, \"transparent\"), wordsLeft, zeroY + L.fontSize, wordsWidth);",
+    replace: "text(g, word(words, \"transparent\"), wordsLeft, zeroY - 4, wordsWidth);",
+    why: "the zero line's word above it, on the loss line's side"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "return G.bottom - span * (value - low) / (top - low);",
+    replace: "return G.bottom - span * value / top;",
+    why: "the gauge without its part below zero"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        transmission: 1 - state.config.refl2,\n        pumpKind: state.config.pump\n",
+    replace: "        transmission: 1 - state.config.refl2\n",
+    why: "every pump drawn as diodes on the page"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        scheme: derived.scheme,\n",
+    replace: "",
+    why: "the level picture always four levels"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        n_t: derived.n_t,\n",
+    replace: "",
+    why: "the level picture without n_t"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var thresholdRate = fourLevel ? 1 : scales.n_t + 1;",
+    replace: "var thresholdRate = 1;",
+    why: "ruby's laser arrow 12.5 times too wide"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var thresholdRate = fourLevel ? 1 : scales.n_t + 1;",
+    replace: "var thresholdRate = fourLevel ? 1 : scales.n_t;",
+    why: "the threshold pump rate taken as n_t, not n_t + 1"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var LEVEL_WORDS = [\"pumpBand\", \"upper\", \"lower\", \"ground\", \"groundLower\", \"gain\", \"loss\", \"transparent\"];",
+    replace: "var LEVEL_WORDS = [\"pumpBand\", \"upper\", \"lower\", \"ground\", \"gain\", \"loss\", \"transparent\"];",
+    why: "ruby's ground not named on the page"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"transparent\": { \"hy\": \"Թափանցիկ\", \"en\": \"Transparent\" }",
+    replace: "\"transparent\": { \"hy\": \"\", \"en\": \"Transparent\" }",
+    why: "the gauge's zero line without its Armenian word"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"groundLower\": { \"hy\": \"Հիմնական (ստորին)\", \"en\": \"Ground (lower level)\" }",
+    replace: "\"groundLower\": { \"hy\": \"Հիմնական (ստորին)\", \"en\": \"\" }",
+    why: "ruby's ground without its English name"
+  }
+,
+
+  // ---------- stage 7d review ----------
+  {
+    file: "js/laser/page.js",
+    find: "if (state.config.pump === \"discharge\") return state.config.current / controls.pump.max;",
+    replace: "if (state.config.pump === \"discharge\") return glowNow();",
+    why: "the gas tube drawn by its gain: dark at the top of the current"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "if (state.config.pump === \"discharge\") return state.config.current / controls.pump.max;",
+    replace: "if (state.config.pump === \"discharge\") return state.config.current;",
+    why: "the gas tube's glow from the current in amperes, not its share of the slider"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var pump = light && light.pump >= PUMP_OFF ? Math.min(1, light.pump) : 0;",
+    replace: "var pump = light && light.pump > 0 ? Math.min(1, light.pump) : 0;",
+    why: "the flashlamp lit for half an hour after its flash"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var pumpLaserLeft = rodPosts[0] + POST_FOOT / 2 + 3;",
+    replace: "var pumpLaserLeft = rodX + 0.07 * rodLength;",
+    why: "the rod post's foot poking into the pump laser's box on a phone"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var pumpLaserRight = foldX - POST_FOOT / 2 - Math.max(6, 0.12 * rodLength);",
+    replace: "var pumpLaserRight = foldX;",
+    why: "the pump laser's box running into the small mirror's post"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var medium = kind === \"discharge\" ? L.tube : L.rod;",
+    replace: "var medium = L.rod;",
+    why: "the rays' arrowheads inside the gas tube's glow"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "if (picture.n_t > 1) barMark(g, c, L.bar, (1 + 1 / picture.n_t) / 2);",
+    replace: "barMark(g, c, L.bar, (1 + 1 / picture.n_t) / 2);",
+    why: "the threshold mark above its bar when n_t ≤ 1"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "    if (lossWordY - L.fontSize < G.top) lossWordY = lossY + L.fontSize + 2;\n",
+    replace: "",
+    why: "the loss word above the gauge's top"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "return Math.max(0, y * p) / derived.thresholdRate;",
+    replace: "return Math.max(0, y * p);",
+    why: "the laser arrow not over the threshold pump rate"
+  }
 ];
 
 module.exports = { MUTATIONS };
