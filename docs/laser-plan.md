@@ -103,7 +103,31 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 8a: Q-switching in the engine (`qswitch.js`: η_E and §4.3's giant pulse, the Pockels cell's and the rotating prism's loss, the bleachable filter as one more rate equation; `bench.js`: `qSwitchesFor`, `withQSwitch`, the shutter's opening time and the filter's state in the simulation, `lossNow`, `giantPulse`, advance's `peak` and its pieces at the shutter's moments; `ode.js`: `peakOf`); the page unchanged.
 - ✅ Stage 8b: Q-switching on the page (the owner's design: one Q-switch, the bleachable filter, as an On/Off switch right under the laser beside Fire; turning it on or off keeps the run and the chart (`bench.carryOver`); its slider, the loss now and §4.3's prediction, the highest output from the runs' peaks, the pulses' tops on the chart, the filter on the drawing; `derive` and `pumpNow` give the closed filter's threshold on a steady pump).
 - ✖ Stage 9 (several longitudinal modes and a spectrum panel): **dropped by the owner** on 2026-11-16, as it would make everything too complex. The simulator stays one-mode (`docs/laser-physics.md` §11.3). The number is not reused, so later stages keep theirs.
-- Next: stage 10, mirror geometry.
+- Next: stage 10a, mirror optics in the engine (stage 10 was rewritten on 2026-11-16 from the owner's requests: see "Where we stopped" just below).
+
+### Where we stopped (2026-11-16), for the next session
+
+- **Last commit:** `92f8a18` "Laser simulator stage 8b: Q-switching on the page", on `feature/laser`. **Nothing is pushed**; push only when the owner says so. The working tree was clean after it, except this plan's own commit.
+- **Stage 8b is finished:** 672 tests pass, 807 of 807 deliberate mistakes are caught, and three `/code-review` runs (13, 12, 11 findings) are fixed except two small parts declined with reasons (see stage 8b). One thing was not seen in a browser: the third review's phone-layout fix. On a 390 px screen, the Nd:YAG diode bench (switch, no Fire) should show no empty line above the switch. Check it first.
+- **Next is stage 10a** (above). Start with:
+  1. the doc audit and research for D11, D12, D13 and D15 (web search; write the theory with sources into `docs/laser-physics.md`; ask the owner only if the sources disagree or a physics choice is open);
+  2. then 10a's scope card, then the recipe.
+- **The owner, at the start of 10b and 10c:**
+  - 10b: one mirror choice per mirror, or one for both (recommended: per mirror);
+  - 10b: a stability diagram, yes or no;
+  - 10c: end- or side-pumped diodes (recommended: end, which matches §6.3 and the engine's numbers). Show pictures.
+- **Questions still open with the owner** (asked, no answer yet):
+  - a short "check the numbers" stage before 10 (CO₂'s I_sat/gain against sources, the §5.1 media numbers, ruby's flash share);
+  - the Armenian terms «Բարորակության մոդուլյատոր» (Q-switch) and «Հագեցող ֆիլտր» (bleachable filter), and a fluent reader for all the Armenian;
+  - ruby's ~13 J against the book's 1–2 J (partly fixable in 10a, if the mode fills only part of the rod);
+  - pushing `feature/laser`.
+- **What the owner values** (from their requests): a page that is simple and inviting for someone who knows nothing about lasers, and now also realistic to look at. Small asks get small changes (e.g. "only change the color").
+- **Practical:**
+  - serve the site with `python3 -m http.server 5500 --bind 127.0.0.1` and open `http://127.0.0.1:5500/?view=laser`. The server caches: fetch changed files with `cache: "reload"` before reloading;
+  - `node --test` takes about 30 s; `node tests/laser/mutation-check.js` about 5.5 min;
+  - edit nothing under `js/`, `css/`, `data/`, `sections/`, `index.html` or `tests/` while the mutation check runs (docs are safe);
+  - use the Edit tool, not shell scripts, for Armenian text;
+  - the review runs as `/code-review xhigh`.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking. `docs/laser-progress.md` tells the same story in plain words for the owner; update it with each stage's commit.
 
@@ -213,6 +237,11 @@ Problems to handle in the named stage:
 | D7 | The §12 ruby "1–2 J, 10⁻⁸ s" depends on parameters the doc doesn't state | Write the assumptions into the preset; test order of magnitude only; **never tune parameters just to pass** — report if it can't be reached | 8 |
 | D8 | Several formulas silently need the three-level factor 2 (Rigrod, E_out, F_sat) | Always take `I_sat` from `media.get()`; the factor 2 appears in a test for every such formula | 2, 8 |
 | D9 | Sign conventions: mirror radius positive = concave (§7.1), lens surface radius positive = centre to the right (§8.1), mirror as a lens f = R/2 | Write one convention in the `optics.js` header; test a plane mirror (R = ∞), a concave mirror and a convex mirror | 10–11 |
+| D11 | **Loss near and on the stability edges is not in the doc.** §7.2 gives w → ∞ at g₁g₂ = 0 or 1 (flat-flat, hemispherical, concentric), and §7.6 has only the numerical Fox–Li. A rod's flat-flat cavity really lases with a small diffraction loss (N_F ~ 100) | Research (Siegman, *Lasers*, ch. 19–22; Li 1965 and Vainshtein for the plane-parallel loss against N_F) and write a closed form, or a fast 1D Fox–Li run when a mirror slider is let go, into a new §7.7. Test: the loss is continuous across each edge, and a flat-flat rod lases | 10a |
+| D12 | **Unstable mirrors' loss is not in the doc** (§7.1 only says "rays walk off") | The geometric magnification M = \|m\| + √(m² − 1) and the round-trip loss 1 − 1/M² for round mirrors (Siegman, Proc. IEEE 53, 277 (1965); *Lasers* ch. 22): research, check and write into §7.7 | 10a |
+| D13 | **Each laser's real mirrors are not in the doc** (He-Ne §5.5: only "spherical multilayer mirrors") | Research the usual radii and which mirror is flat for each bench, and record them with sources in §5 | 10a |
+| D14 | **What each medium and pump looks like is not in the doc** (colours, rods, tubes, cells, diode modules) | Research with sources into a new §5.9 | 10c |
+| D15 | The engine's gain is plane-wave over `area`: the mode's size does not change the gain | Decide in 10a's scope card: mirrors change only the losses (simple, the default), or also the gain (Fan–Byer's mode size for the diode bench, §6.3). Write the choice down either way | 10a |
 | D10 | A Gaussian beam in a medium: §7.3 replaces a slab by l/n, while §8.4 puts n into z_R. Mixing the two is off by a factor of n | Use the reduced (l/n) convention everywhere; test slab ≡ free space l/n | 10 |
 
 **Site trap found while reading `js/router.js`.** After the first page loads, the router renders **every** page in the background, which fires `section:ready` for `laser` while it's hidden. (A second trap was found in stage 5's browser check: the router could fire the first `section:ready` before the scripts after it had run. It now waits for `DOMContentLoaded`.) It also re-renders every loaded page on each language switch. So `page.js` must:
@@ -1253,21 +1282,93 @@ The pump rate per ion is set for the unpumped medium, as a lamp sets it whatever
 - `switchNow()` called twice for the level picture; a `slider()` helper used once: tidied.
 - Stale references: the plan's "§11.6 items 1, 2, 5" (now 4), the physics doc's §11.6 numbered 7 after 5, `sections/laser.html`'s header comment.
 
-### Stage 10 — Mirror geometry (`optics.js`, part 1)
+### Stage 10 — Mirrors, the light's path, and a bench that looks real
+
+Rewritten on 2026-11-16 from the owner's requests (in their words, shortened):
+1. "Will I see the direction of light, curved a bit, not a straight line?"
+2. A choice of mirror: **flat, concave or convex**, and **a slider for the radius** of the concave and convex ones.
+3. "I want to see how light will move after touching them."
+4. The mirrors' **focal points drawn and labelled F**.
+5. "The light has to go through the ruby to make a laser; if the mirrors focus it wrong, nothing will happen."
+6. **Every gain medium as it really is**: ruby in its natural red, gases in cylindrical tubes with the gas visible, and so on. "Make everything look real."
+7. **Diodes that look more real**, and the way they pump the medium made visible, with an accent on it.
+
+**The physics that shapes the design** (to keep in mind in every sub-stage):
+- Light goes in straight lines between surfaces. It changes direction only at a mirror or a surface (and bends gently inside a heated rod: stage 13c). What looks "curved" is the bundle: the beam narrows to a waist and widens again, an hourglass (§7.2's w(z)). So the bench draws the beam's outline (the Gaussian envelope) and a few rays traced round trip after round trip (§7.3's ABCD matrices), each a straight piece between two reflections.
+- A stable pair of mirrors (0 ≤ g₁g₂ ≤ 1, §7.1) keeps a ray near the axis for ever; in an unstable pair it walks out over a few round trips and leaves past a mirror's edge. The owner's item 5 is true for most lasers here, not all: a low-gain laser (He-Ne) stops at once, while a high-gain one (ruby, Nd, CO₂ with a strong pump) can still lase, and real high-power lasers use unstable mirrors on purpose (§7.1's table). The page must show which, not "nothing ever happens".
+- Two flat mirrors sit on the stability edge, and real lasers work that way (the first ruby laser had flat ends). Their loss comes from diffraction at the rod's edge, small for a rod (Fresnel number N_F = a²/(λL) ~ 100). §7.2's formulas give w → ∞ there, so flat-flat must not be drawn or simulated as "never lases" (D11).
+- "Through the ruby": a beam wider than the rod is clipped, a loss of exp(−2a²/w²) per pass for the lowest mode (§7.4), with a the rod's radius.
+- **The picture is stretched across the axis.** The beam is about 1 mm wide in a 10–100 cm cavity, so the drawing magnifies widths k times and says so ("widths × k"). Paraxial optics is linear: stretched across, rays stay straight and F stays where it is along the axis, while angles look k times steeper. A mirror's drawn bend is a symbol (more bend for a smaller radius), not to scale.
+
+Three sub-stages, one commit each, each through the whole recipe (§3):
+
+#### Stage 10a — Mirror optics in the engine (`js/laser/engine/optics.js`, `bench.js`)
+- **Doc audit first, with research** (D11, D12, D13, D15): write the missing theory into `docs/laser-physics.md` (a new §7.7 "Loss near and beyond the stability edges"; the mirror set-ups in §5) with sources, before the scope card.
 - **Build:**
-  - ABCD matrices (free space, thin lens, mirror, slab l/n), round trip, stability m, g-parameters, mode from the round trip;
-  - §7.2 closed forms;
-  - transverse-mode frequencies, aperture loss, Fresnel number, tilt displacement;
-  - in the bench, an unstable cavity gets a large diffraction loss and stops lasing;
-  - a stability-diagram panel.
+  - `optics.js` (new engine file: `ENGINE_FILES`, `index.html`, the engine rules):
+    - ABCD matrices (free space, mirror, slab l/n), the round trip, m = (A + D)/2, g₁, g₂, stability;
+    - the Gaussian mode (w₀, its place, w on each mirror, w(z)) with D1's form, regular at g = 0;
+    - each mirror's focal point, f = R/2: real, in front, for a concave mirror; virtual, behind it, for a convex one (D9); none for a flat one;
+    - the paraxial ray trace the drawing needs: a ray (y, θ) through n round trips, its hit points, and where it leaves (past a mirror's edge or the rod's);
+    - the losses: clipping by the rod (§7.4), walk-off of an unstable pair (D12), the edges (D11).
+  - The config gets each mirror's shape and radius (code names `Rc1`, `Rc2` from §0; a flat mirror cannot be `Infinity`, which `check.js` refuses: decide in the scope card, e.g. a shape word plus a radius). Each `SETUPS` bench gets its real mirrors (D13). The mirrors' loss joins the cavity's γ (single pass) and every threshold; `derive` gives the stability, the mode, F, the loss.
+  - Decide in the scope card (D15): mirrors change only the losses (simple, the default), or also the gain through the mode's size (Fan–Byer for the diode bench, §6.3).
 - **Tests:**
-  - §12 (A + D)/2 = 2g₁g₂ − 1 for several random g₁, g₂;
+  - (A + D)/2 = 2g₁g₂ − 1 for random g₁, g₂;
   - every row of the §7.1 table, boundaries included;
-  - **D1**: confocal w₀ = 0.317 mm and θ = 2.18′, plus continuity near g = 0;
-  - w(z) from q propagation = the closed-form w(z);
-  - tilt displacement grows without limit near plane-parallel;
-  - D9, D10.
-- **Breaks:** f = R instead of R/2; slab l instead of l/n; drop the √ in w².
+  - D1: confocal w₀ = 0.317 mm and θ = 2.18′, continuous near g = 0;
+  - w(z) from q = the closed form;
+  - F = R/2 with its signs (D9);
+  - a slab = free space l/n (D10);
+  - a ray stays inside for 1000 round trips when stable and leaves when unstable;
+  - the loss is continuous across each edge (D11, D12); a flat-flat ruby rod lases;
+  - a slightly unstable He-Ne stops, while ruby with a strong flash still pulses.
+- **Breaks:** f = R instead of R/2; slab l instead of l/n; drop the √ in w²; 1/M instead of 1/M²; a convex mirror's sign flipped.
+
+#### Stage 10b — The mirrors on the page
+- **Build:**
+  - For each mirror, a choice of flat, concave or convex (three buttons with a little picture of each), and a radius slider (log) shown only for a curved mirror. Its range comes from the scope card, and it must reach confocal (R = L) and concentric (R = L/2).
+  - The drawing:
+    - the mirrors bent by their shape;
+    - the beam's outline, the hourglass, shaded;
+    - 3–5 rays traced bounce by bounce (straight pieces), fading with each round trip; a ray that misses the rod or walks past a mirror's edge goes on out and fades, which is the loss made visible;
+    - F for each curved mirror: a dot on the axis labelled "F", solid for a real focus (concave) and hollow and dashed for a virtual one (convex, behind the mirror);
+    - an F off the canvas becomes an arrow at the edge with its distance ("F 2.5 m →");
+    - the "widths × k" note.
+  - Readouts: stable or unstable (in words), the waist, the mirrors' loss. An unstable or clipped laser visibly dims or stops.
+  - Words in both languages.
+- **Ask the owner at the start:**
+  - one choice per mirror (recommended, because the most common real laser has one flat and one concave mirror), or one choice for both;
+  - whether to add a small stability diagram, (g₁, g₂) with a moving dot (§7.1). It is visual, but it adds to the page.
+- **Tests:**
+  - page and draw tests: the controls, every width, rays straight between reflections, F at R/2 along the drawing's axis scale, the off-canvas arrow, an unstable ray leaving;
+  - the browser check of the look with the owner.
+
+#### Stage 10c — A bench that looks real
+- **Research first (D14),** written into `docs/laser-physics.md` as a new §5.9 "What each medium looks like", with sources:
+  - ruby: a pink-red rod; Cr³⁺ absorbs the green and violet of §5.2's pump bands and passes red;
+  - Nd:YAG: pale lilac; Nd:glass: pale purple; Ti:sapphire: pink;
+  - dye (rhodamine 6G): a red-orange liquid in a glass cell or a jet;
+  - He-Ne: a glass tube with a thin bore, glowing orange-red, with Brewster windows;
+  - Ar⁺: a blue-white plasma in a ceramic bore with water cooling;
+  - CO₂: a long glass tube with a faint violet-pink glow and a water jacket;
+  - the two-level atom stays symbolic.
+- **Build:**
+  - Rods drawn as cylinders with highlights and polished ends, each in its medium's colour.
+  - Gases in glass cylinders, glowing in their own colour, with atoms drifting (an illustration in screen time, still for `view.still`). Dye in a glass cell.
+  - **The diodes** (ask the owner at the start, with pictures):
+    - **end pumping (recommended):** a diode module with a fibre and a focusing lens behind the back mirror, which passes 808 nm (a dichroic mirror, labelled). The pump cone narrows into the rod and fades as it is absorbed, P(z) = P₀e^(−αz) (§6.3). This is what the doc and the engine's numbers already describe (Fan–Byer, matched spot), and it makes the pumping very easy to see;
+    - **side pumping (the alternative):** diode bars on heat sinks under the rod, each with a fan of light.
+    - Either way, 808 nm is infrared, drawn in a false colour labelled "808 nm, infrared (invisible)".
+  - **The accent on pumping** (every pump): pump photons travelling into the medium and vanishing where they are absorbed, each lighting an atom; the medium's glow growing with the inversion (the flash already lights the rod: `lightRod`).
+  - The pump laser of dye and Ti:sapphire as a real 532 nm green beam (end-pumped as in real ones: decide in the scope card).
+  - **Beam colours from the wavelength** (§11.5; moved here from stage 11, because the colour is part of the look):
+    - visible: ruby 694 nm deep red, He-Ne 633 nm red, Ar⁺ 488/514 nm blue-green, dye ~590 nm yellow-orange;
+    - near the edge of sight: Ti:sapphire ~800 nm;
+    - invisible: Nd 1064 nm and CO₂ 10.6 µm, drawn in a false colour labelled "infrared, invisible".
+  - Physical colours (materials, wavelengths) live in one file, `js/laser/ui/materials.js`. It is the only file the colour-literal test (`site-files.test.js`) exempts, and each of its colours is tested for contrast against both themes' bench background. CLAUDE.md's colour rule gets this exception written in.
+  - The fake 2D context gets `createLinearGradient`/`createRadialGradient` that record their stops (with tests in `fake-browser.test.js`), so the shading can be tested.
+- **Tests:** every medium and pump drawn inside the canvas at every width, from its own colours; the gradients' stops; the beam colour for every medium (in range, no NaN, the invisible label); the contrast.
 
 ### Stage 11 — Lenses outside the cavity, ray tracing, colour
 - **Prep:** D6 for the Sellmeier coefficients (N-BK7, fused silica).
@@ -1276,16 +1377,13 @@ The pump rate per ion is set for the unpumped medium, as a lamp sets it whatever
   - exact ray tracing: ray–sphere intersection, vector Snell's law, total-internal-reflection flag;
   - Sellmeier glass indices (λ in **µm**);
   - field and pressure at a target (§8.8); T_eff (§8.3);
-  - `ui/color.js`: wavelength → RGB, plus the "invisible" label for IR/UV;
-  - lens picker, ray drawing, beam envelope.
+  - lens picker, ray drawing through the lenses (the colour from the wavelength is done in stage 10c).
 - **Tests:**
   - n_BK7(587.6 nm) = 1.5168 and n_silica = 1.4585 (known reference values);
   - blue focuses before red;
   - exact ray trace = paraxial result for small angles;
   - §12 field and pressure rows (1.94×10⁵ V/cm, 0.033 atm; 2.92×10⁸ V/cm, 7.4×10⁴ atm);
-  - Self's formula: s = f → output waist at the back focal plane;
-  - colour function: endpoint fade, no NaN.
-- **Browser:** every beam colour is visible in both themes (yellow and green on cream).
+  - Self's formula: s = f → output waist at the back focal plane.
 - **Breaks:** λ in nm passed to Sellmeier; flipped normal; wrong sign in Self's formula.
 
 ### Stage 12 — Learn section

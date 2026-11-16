@@ -155,10 +155,16 @@ This stage put the choice of laser on the page (above). Two other things came wi
 
 Stage 9 (several laser frequencies at once, with a spectrum panel) was dropped at your request: it would have made everything too complex. The laser stays one frequency.
 
+Stage 10 was rewritten on 16 November from your requests (the mirrors, the focal points, the light's path, real-looking materials and diodes) and split into three parts, each finished, checked and saved on its own. Three things I will ask you when we get there: one mirror choice per mirror or one for both; whether to add a small "stability diagram"; and whether the diodes pump the crystal from its end (my recommendation: it matches the physics already in the simulator, and the pump light is easy to see) or from its side.
+
+**A note on "curved light":** light goes in straight lines between the mirrors, and it only turns at a mirror. What looks curved is the whole beam narrowing and widening. Inside a crystal heated by the pump it does bend a little; that is stage 13 (heat in the rod).
+
 | Stage | What it will add |
 |---|---|
-| 10 | **Mirror shapes** (next): curved mirrors, and which mirror pairs keep the light inside (stable) or lose it (unstable); the width of the beam. |
-| 11 | **Lenses outside the laser:** focusing the beam, tracing rays through glass, and the beam's colour from its wavelength. |
+| 10a | **Mirror physics** (next), in the simulator's engine: flat, concave and convex mirrors; which pairs keep the light inside (stable) and which lose it; the beam's width; the focal points; the light lost when the beam is wider than the rod. Some of this theory is missing from the physics notes, so it starts with research (I do it, from textbooks and papers, and write the sources down). |
+| 10b | **Mirrors on the page:** for each mirror, flat, concave or convex, and a slider for the radius of a curved one. The light's path drawn bounce by bounce: straight between the mirrors, changing direction at each one, so the beam narrows to a "waist" and widens again like an hourglass. The focal points marked **F**. With mirrors that do not keep the light, you see the rays walk out and the laser dim or stop (a weak laser like He-Ne stops; a very strong one like ruby can still flash, as real high-power lasers do). |
+| 10c | **A bench that looks real:** ruby as a red rod, Nd:YAG pale lilac, Ti:sapphire pink, dye as a coloured liquid in a glass cell, the gases in glass tubes glowing in their real colours with atoms moving inside; more realistic diodes, with the pump light visibly going into the crystal and being absorbed; the laser beam in its real colour (and the invisible infrared ones in a marked false colour). |
+| 11 | **Lenses outside the laser:** focusing the beam and tracing rays through glass. |
 | 12 | **The "learn" section:** chapters in both languages, each with a "try it on the bench" button that sets up the right example. |
 | 13 | **Extras,** one at a time: polarisation and Brewster windows; doubling the frequency (green light from infrared); heat in the rod acting as a lens; mode-locking (very short pulses); self-focusing; the semiconductor diode laser; and the pump in more detail (lamp reflectors, discharge). |
 | 14 | A final pass over all the documentation. |

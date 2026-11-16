@@ -54,7 +54,7 @@ data/news.json           only the news PAGE heading text — hand-edit this one
 
 Instructions/            human docs (see "Pointers" below)
 docs/laser-physics.md    physics reference (Sivukhin, Optics §§119–126) for the laser simulator
-docs/laser-plan.md       laser simulator architecture, the per-stage recipe, known doc problems, all build stages and which are done
+docs/laser-plan.md       laser simulator architecture, the per-stage recipe, known doc problems, all build stages and which are done; its Status section ends with "Where we stopped": read it first in a new session
 docs/laser-progress.md   the same progress in plain words for the owner (what is done, what is left, what to check); update it when a stage is finished
 sections/*.html          one layout fragment per page (no text, no <script> effect)
 data/*.json              one text file per page (bilingual, no markup); data/site.json = nav/footer/shared UI strings
