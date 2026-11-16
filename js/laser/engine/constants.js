@@ -45,6 +45,7 @@
     ms: 1e-3,                    // s
     us: 1e-6,                    // s  (µs)
     ns: 1e-9,                    // s
+    ps: 1e-12,                   // s
     MHz: 1e6,                    // Hz
     GHz: 1e9,                    // Hz
     THz: 1e12,                   // Hz

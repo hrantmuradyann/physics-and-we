@@ -42,7 +42,7 @@ test("the default bench: a small Nd:YAG laser pumped by 5 W of 808 nm diode ligh
   const c = B.defaultConfig();
   assert.deepEqual(plain(c), {
     medium: "nd-yag", pump: "diode", l_g: 0.05, area: 1e-6, L: 0.3, refl1: 1, refl2: 0.95,
-    alpha_i: 0.2, pumpPower: 5, pumpLam: 808e-9, eta: 0.9, beta: 1e-8
+    alpha_i: 0.2, pumpPower: 5, pumpLam: 808e-9, eta: 0.9, beta: 1e-8, qSwitch: "none"
   });
   c.pumpPower = 7;
   assert.equal(B.defaultConfig().pumpPower, 5, "each call gives a new object");
@@ -182,7 +182,7 @@ test("every corner of the sliders gives finite numbers (or null), never an error
 /* ---------- advance: the simulation ---------- */
 
 test("start(config): the pump just switched on, no inversion, one photon, no flash", () => {
-  assert.deepEqual(plain(B.start(config())), { t: 0, N: 0, lnPhi: 0, flash: null });
+  assert.deepEqual(plain(B.start(config())), { t: 0, N: 0, lnPhi: 0, flash: null, opensAt: null, absorber: null });
 });
 
 test("from start to steady state: the output equals derive's P_out within 1 %", () => {
@@ -217,9 +217,11 @@ test("advance is deterministic: the same input gives the same output, to the bit
 });
 
 test("advance by 0 s changes nothing and takes no step (a frame that only draws)", () => {
-  const sim = { t: 1e-3, N: 2e22, lnPhi: 30, flash: null };
+  const sim = { t: 1e-3, N: 2e22, lnPhi: 30, flash: null, opensAt: null, absorber: null };
   const run = advance(sim, config(), 0, 10);
-  assert.deepEqual(plain(run), { sim: sim, reachedEnd: true, steps: 0 });
+  // Its peak is the output at that moment: φ·(power per photon).
+  const power = B.derive(config()).powerPerPhoton * Math.exp(30);
+  assert.deepEqual(plain(run), { sim: sim, reachedEnd: true, steps: 0, peak: { t: 1e-3, power: power } });
 });
 
 test("out of steps: partial progress, never a freeze; carrying on reaches the same state as one call", () => {
@@ -264,7 +266,7 @@ test("a solver answer a hair below N = 0 is passed on as 0, so the next call acc
     }
   };
   const c = config({ pumpPower: 0 });
-  const first = loaded.bench.advance({ sim: { t: 0, N: 1e10, lnPhi: 0, flash: null }, config: c, seconds: 1e-9, maxSteps: 100 });
+  const first = loaded.bench.advance({ sim: { t: 0, N: 1e10, lnPhi: 0, flash: null, opensAt: null, absorber: null }, config: c, seconds: 1e-9, maxSteps: 100 });
   assert.equal(first.sim.N, 0);
   loaded.ode = ode;
   const next = loaded.bench.advance({ sim: first.sim, config: c, seconds: 1e-9, maxSteps: 100 });
@@ -389,11 +391,11 @@ test("every input is checked, and every error names the function that was called
       "advance " + JSON.stringify(changes));
   }
   const badRuns = [
-    [{ sim: { t: 0, N: -1, lnPhi: 0, flash: null } }, /N/],
-    [{ sim: { t: NaN, N: 0, lnPhi: 0, flash: null } }, /\bt\b/],
-    [{ sim: { t: 0, N: 0, lnPhi: Infinity, flash: null } }, /lnPhi/],
-    [{ sim: { t: 0, N: 0, flash: null } }, /lnPhi/],
-    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null, y: 1 } }, /y/],
+    [{ sim: { t: 0, N: -1, lnPhi: 0, flash: null, opensAt: null, absorber: null } }, /N/],
+    [{ sim: { t: NaN, N: 0, lnPhi: 0, flash: null, opensAt: null, absorber: null } }, /\bt\b/],
+    [{ sim: { t: 0, N: 0, lnPhi: Infinity, flash: null, opensAt: null, absorber: null } }, /lnPhi/],
+    [{ sim: { t: 0, N: 0, flash: null, opensAt: null, absorber: null } }, /lnPhi/],
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null, opensAt: null, absorber: null, y: 1 } }, /y/],
     [{ sim: 5 }, /one object/],
     [{ seconds: -1 }, /seconds/],
     [{ seconds: Infinity }, /seconds/],

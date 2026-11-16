@@ -10,7 +10,13 @@
      LaserEngine.bench.pumpsFor(medium)   the pumps the bench runs a medium
                                           with, in the dropdown's order
                                           ([] for one it cannot run yet)
-     LaserEngine.bench.configFor({ medium, pump })   a new config: that setup
+     LaserEngine.bench.configFor({ medium, pump })   a new config: that setup,
+                                          with no Q-switch
+     LaserEngine.bench.qSwitchesFor({ medium, pump })   the Q-switches that
+                                          setup can have: "none" first
+     LaserEngine.bench.withQSwitch({ config, qSwitch })   a new config: the
+                                          same bench with that Q-switch and
+                                          its starting values
      LaserEngine.bench.controls(config)   the sliders of that bench:
                                           { pump: { name, min, max, log },
                                             coupler: { min, max, log } }
@@ -20,15 +26,23 @@
                                           coupler, … (SI units)
      LaserEngine.bench.start(config)      the simulation at the moment the
                                           bench is switched on:
-                                          { t, N, lnPhi, flash }
+                                          { t, N, lnPhi, flash, opensAt, absorber }
      LaserEngine.bench.fire({ sim, config })   a copy with a flash of the
                                           config's energy fired now
      LaserEngine.bench.advance({ sim, config, seconds, maxSteps })
-                                          -> { sim, reachedEnd, steps }
+                                          -> { sim, reachedEnd, steps, peak }
      LaserEngine.bench.pumpNow({ sim, config })   the pump at the moment
                                           of sim: { x, w, smallSignal }
      LaserEngine.bench.flashThreshold(config)   the smallest flash energy
-                                          that reaches threshold (J), or null
+                                          that reaches threshold (J), or null;
+                                          behind a filter, its closed loss
+     LaserEngine.bench.lossNow({ sim, config })   the cavity's loss at the
+                                          moment of sim, in units of the open
+                                          cavity's: 1 + the Q-switch's
+     LaserEngine.bench.giantPulse({ sim, config })   §4.3's giant pulse for
+                                          the inversion of sim, if the shutter
+                                          opened now: { eta_E, energy,
+                                          peakPower, width }, or null
 
    THE CONFIG (all SI)
      medium     an id from media.js       pump   "diode", "laser" (both
@@ -52,6 +66,23 @@
                                  CO₂) or the rated current (Ar⁺), A
                     gainPeak     the small-signal gain there, m⁻¹
    The discharge's law is the medium's ("optimum" or "square", pumps.js).
+   and the Q-switch (qswitch.js, docs/laser-physics.md §4.3, §9):
+     qSwitch    "none"; or, for the setups that list them (qSwitchesFor),
+                "cell" (a Pockels cell and polarizer), "prism" (a rotating
+                prism as the back mirror) or "absorber" (a bleachable filter)
+     cell       qDelay      from the flash to the voltage starting to fall, s
+                leak        the share of the light a closed shutter keeps
+                            per round trip
+                switchTime  how long the voltage takes to fall, s
+     prism      qDelay      from the flash to the prism lining up, s; it
+                            keeps turning, so it also lines up every
+                            1/rotation before and after that
+                leak        as the cell's, for the prism turned away
+                rotation    rev/s, at most 10⁵
+                angleTolerance  θ_tol, rad
+     absorber   absorber    the filter's id (qswitch.ABSORBERS)
+                absorberT0  its transmission per pass when unbleached
+   The filter's beam is as wide as the mode in the medium (A_a = A).
 
    THE MODEL (docs/laser-physics.md §4.1, §6)
    The pump is spread evenly over the active volume V_a = A·l (the
@@ -64,23 +95,41 @@
    matched to the mode, which is how it is tested. A discharge sets the
    small-signal gain itself: x = g₀(I)·l/γ.
 
-   THE SIMULATION STATE  { t, N, lnPhi, flash }
+   THE SIMULATION STATE  { t, N, lnPhi, flash, opensAt, absorber }
    Physical, not the solver's y and s: t in s, the inversion N in m⁻³ (for
    three and two levels ΔN = N₂ − N₁, from −N_t with every ion down),
    lnPhi = ln φ (φ = photons in the mode), and flash, the last flash fired:
    null (none yet) or { at, flashEnergy, flashTime }, its time and the
    energy and t_p it was fired with, so a slider moved after Fire changes
-   the next flash, not the one that is running. Every slider changes the
-   scales that turn N and φ into y and s, but not the atoms and photons,
-   so they are kept and converted again on each call. ln φ, not φ, because the solver works
-   with ln φ, and because φ has no lower limit of its own: with β = 0 it
-   falls without end (e^(−1600) before threshold), and with the pump off
-   it settles at the seed floor's level (rates.js), φ ≈ 10⁻⁹ for the
-   default bench. Each call lets the solver choose its first step again,
-   which costs a settled laser a few steps a call (stage 7a; with dopri5,
-   carrying the step size saved only 2–8 %, stage 6).
+   the next flash, not the one that is running. opensAt, set by Fire as
+   its time + qDelay, is when the cell starts to open, or a moment the
+   prism lines up (it lines up again every turn, before it too: a fast
+   prism lets out pulses during the flash). null before Fire (the
+   shutter stays closed, the prism counts as turned away) and on a bench
+   without a shutter. absorber is the share of the filter's molecules in their ground
+   state, 1 when it has recovered (start), null without a filter. Every
+   slider changes the scales that turn N and φ into y and s, but not the
+   atoms and photons, so they are kept and converted again on each call.
+   ln φ, not φ, because the solver works with ln φ, and because φ has no
+   lower limit of its own: with β = 0 it falls without end (e^(−1600)
+   before threshold), and with the pump off it settles at the seed
+   floor's level (rates.js), φ ≈ 10⁻⁹ for the default bench. Each call
+   lets the solver choose its first step again, which costs a settled
+   laser a few steps a call (stage 7a; with dopri5, carrying the step
+   size saved only 2–8 %, stage 6).
 
-   Tests: tests/laser/bench.test.js, tests/laser/bench-pumps.test.js
+   THE Q-SWITCH IN THE RUN. The switch adds its loss to the photons'
+   equation (qswitch.withLoss); the filter is one more entry of the
+   solver's state (qswitch.withAbsorber). The prism lines up for about
+   0.3 µs a turn, with the leak's loss on both sides, so a long solver
+   call could step right over it: advance starts a new call where each
+   of its windows opens (cutsOf). advance's peak is the highest output
+   at the solver's points within the call: a giant pulse lasts ~10 ns,
+   far less than the time between the page's chart points, and the
+   solver's steps are short there.
+
+   Tests: tests/laser/bench.test.js, tests/laser/bench-pumps.test.js,
+   tests/laser/bench-qswitch.test.js
    ========================================================================== */
 (function (root) {
   "use strict";
@@ -94,9 +143,12 @@
   var cm = E.constants.cm;
   var mm2 = E.constants.mm2;
   var ms = E.constants.ms;
+  var us = E.constants.us;
+  var ns = E.constants.ns;
   var mA = E.constants.mA;
+  var c = E.constants.c;
 
-  var COMMON_NAMES = ["medium", "pump", "l_g", "area", "L", "refl1", "refl2", "alpha_i", "beta"];
+  var COMMON_NAMES = ["medium", "pump", "l_g", "area", "L", "refl1", "refl2", "alpha_i", "beta", "qSwitch"];
   var PUMP_NAMES = {
     diode: ["pumpPower", "pumpLam", "eta"],
     laser: ["pumpPower", "pumpLam", "eta"],
@@ -105,7 +157,14 @@
   };
   // The config field each pump's slider sets.
   var CONTROL_NAMES = { diode: "pumpPower", laser: "pumpPower", flashlamp: "flashEnergy", discharge: "current" };
-  var SIM_NAMES = ["t", "N", "lnPhi", "flash"];
+  var SIM_NAMES = ["t", "N", "lnPhi", "flash", "opensAt", "absorber"];
+  // The config fields of each Q-switch.
+  var Q_SWITCH_NAMES = {
+    none: [],
+    cell: ["qDelay", "leak", "switchTime"],
+    prism: ["qDelay", "leak", "rotation", "angleTolerance"],
+    absorber: ["absorber", "absorberT0"]
+  };
   var FLASH_NAMES = ["at", "flashEnergy", "flashTime"];
 
   // A cavity losing less than this per pass keeps its photons for seconds
@@ -119,6 +178,24 @@
   var FLASH_SHARE = 0.12;    // the book's 10–15 % of the lamp's light (§6.1)
   var BETA = 1e-8;           // §4.1's range, 10⁻⁸–10⁻⁴
 
+  // The shutters (docs/laser-plan.md, stage 8a; not verified against
+  // printed sources). A closed shutter keeps 10⁻⁴ of the light per round
+  // trip: a loss of 4.6 per pass, so that ruby (n_t = 11.5, γ = 0.35)
+  // cannot lase through it. The cell's voltage falls in 5 ns (§9.3:
+  // "~nanoseconds"); the prism turns 500 times a second and the cavity
+  // takes it within 1 mrad (§9.5).
+  var LEAK = 1e-4;
+  var SWITCH_TIME = 5 * ns;
+  var ROTATION = 500;
+  var ANGLE_TOLERANCE = 1e-3;
+  // The prism's loss is the leak's to rounding past 6 θ_tol from lining
+  // up (e^(−36) = 2×10⁻¹⁶): its window opens there.
+  var PRISM_WINDOW = 6;
+  // The fastest prism a config may have: §9.5's turns 500 times a second.
+  // A much faster one would only make the windows (and so the cuts below)
+  // too many and too short to mean anything.
+  var MAX_ROTATION = 1e5;
+
   // The output coupler's slider, T = 1 − R₂, for every setup: up to
   // ruby's 50 % (§3.1) and a little more.
   var COUPLER_RANGE = { min: 0.005, max: 0.6, log: true };
@@ -129,24 +206,35 @@
   // Every medium and pump the bench runs, in the order of the dropdowns
   // (docs/laser-plan.md, stage 7b, where each number is explained). max is
   // the pump slider's top; a discharge's comes from its law (pumps.js).
+  // qSwitches lists the Q-switches a setup can take besides "none"
+  // (stage 8a). qDelay is when the inversion behind a closed shutter is
+  // highest after the flash, at the default flash energy (measured: ruby
+  // 1.00 ms, Nd:glass 0.60 ms, Nd:YAG 0.55 ms). absorberT0 is the filter's
+  // transmission: low enough to hold the light back for a while, high
+  // enough that the inversion can overcome it (Nd:glass with 0.5 never
+  // lased: its threshold behind the filter, 6.3, is above its peak, 3.45).
   var SETUPS = [
     // §3.1's ruby: rod 10 cm, 1 cm across. Lamp light absorbed in the green
     // band, η = 0.7 (not verified). Threshold about 640 J.
     { medium: "ruby", pump: "flashlamp", max: 3000,
+      qSwitches: ["cell", "prism", "absorber"], qDelay: 1 * ms, absorber: "cryptocyanine", absorberT0: 0.5,
       config: { l_g: 10 * cm, area: Math.PI * (5 * mm) * (5 * mm), L: 50 * cm, refl1: 1, refl2: 0.5, alpha_i: 0,
         flashEnergy: 1000, flashShare: FLASH_SHARE, flashTime: FLASH_TIME, pumpLam: 550 * nm, eta: 0.7 } },
     // Threshold about 29 J.
     { medium: "nd-glass", pump: "flashlamp", max: 300,
+      qSwitches: ["cell", "prism", "absorber"], qDelay: 0.6 * ms, absorber: "cr-yag", absorberT0: 0.8,
       config: { l_g: 10 * cm, area: Math.PI * (5 * mm) * (5 * mm), L: 50 * cm, refl1: 1, refl2: 0.8, alpha_i: 0.2,
         flashEnergy: 100, flashShare: FLASH_SHARE, flashTime: FLASH_TIME, pumpLam: 808 * nm, eta: 0.9 } },
     // Stage 4's small Nd:YAG laser (stage 6): rod 5 cm, mode area 1 mm²,
     // a 5 % output coupler, scattering 0.2 m⁻¹ (L_i = 2 %: with none there
     // is no best coupler, §3.6), 808 nm diodes with η = 0.9 (§6.3).
     { medium: "nd-yag", pump: "diode", max: 20,
+      qSwitches: ["absorber"], absorber: "cr-yag", absorberT0: 0.95,
       config: { l_g: 5 * cm, area: 1 * mm2, L: 30 * cm, refl1: 1, refl2: 0.95, alpha_i: 0.2,
         pumpPower: 5, pumpLam: 808 * nm, eta: 0.9 } },
     // Rod 7.5 cm, 6 mm across. Threshold about 1.3 J.
     { medium: "nd-yag", pump: "flashlamp", max: 50,
+      qSwitches: ["cell", "prism", "absorber"], qDelay: 0.55 * ms, absorber: "cr-yag", absorberT0: 0.5,
       config: { l_g: 7.5 * cm, area: Math.PI * (3 * mm) * (3 * mm), L: 30 * cm, refl1: 1, refl2: 0.8, alpha_i: 0.2,
         flashEnergy: 10, flashShare: FLASH_SHARE, flashTime: FLASH_TIME, pumpLam: 808 * nm, eta: 0.9 } },
     // The tube fills the cavity. 15.5 %/m (0.144 m⁻¹) at 5 mA; 0.43 mW there.
@@ -241,7 +329,55 @@
       config[name] = setup.config[name];
     });
     config.beta = BETA;
+    config.qSwitch = "none";
     return config;
+  }
+
+  // The Q-switches of a setup: "none", then the ones it lists.
+  // A cell or a prism: a shutter that Fire times (a filter opens by itself).
+  function hasShutter(config) {
+    return config.qSwitch === "cell" || config.qSwitch === "prism";
+  }
+
+  function qSwitchesOf(setup) {
+    return ["none"].concat(setup.qSwitches || []);
+  }
+
+  // qSwitchesFor({ medium, pump }) -> ["none", "cell", ...], a new array
+  function qSwitchesFor(params) {
+    var where = at("qSwitchesFor");
+    check.params(where, params, ["medium", "pump"]);
+    return qSwitchesOf(findSetup(where, params.medium, params.pump).setup);
+  }
+
+  // withQSwitch({ config, qSwitch }) -> a new config: the same bench with
+  // that Q-switch, its fields at their starting values (another
+  // Q-switch's fields are dropped).
+  function withQSwitch(params) {
+    var where = at("withQSwitch");
+    check.params(where, params, ["config", "qSwitch"]);
+    var config = params.config;
+    var setup = readConfig(where, config).setup;
+    var qSwitch = readQSwitch(where, setup, params.qSwitch);
+    var copy = {};
+    COMMON_NAMES.concat(PUMP_NAMES[setup.pump]).forEach(function (name) {
+      copy[name] = config[name];
+    });
+    copy.qSwitch = qSwitch;
+    if (hasShutter(copy)) {
+      copy.qDelay = setup.qDelay;
+      copy.leak = LEAK;
+    }
+    if (qSwitch === "cell") copy.switchTime = SWITCH_TIME;
+    if (qSwitch === "prism") {
+      copy.rotation = ROTATION;
+      copy.angleTolerance = ANGLE_TOLERANCE;
+    }
+    if (qSwitch === "absorber") {
+      copy.absorber = setup.absorber;
+      copy.absorberT0 = setup.absorberT0;
+    }
+    return copy;
   }
 
   // controls(config) -> { pump: { name, min, max, log }, coupler: { min, max, log } }
@@ -276,7 +412,9 @@
     var found = findSetup(where, config.medium, config.pump);
     var setup = found.setup;
     var medium = found.medium;
-    check.params(where, config, COMMON_NAMES.concat(PUMP_NAMES[setup.pump]));
+    var qSwitch = readQSwitch(where, setup, config.qSwitch);
+    check.params(where, config, COMMON_NAMES.concat(PUMP_NAMES[setup.pump], Q_SWITCH_NAMES[qSwitch]));
+    readQSwitchFields(where, config, qSwitch);
 
     var l_g = check.positive(where, "l_g", config.l_g);
     check.positive(where, "area", config.area);
@@ -331,6 +469,44 @@
     return { medium: medium, setup: setup };
   }
 
+  // Checks a Q-switch's name against the ones its setup can have.
+  function readQSwitch(where, setup, qSwitch) {
+    var allowed = qSwitchesOf(setup);
+    if (allowed.indexOf(qSwitch) === -1) {
+      check.fail(where, "qSwitch must be one of " + allowed.join(", ") + " for " + setup.medium + " with " +
+        setup.pump + ", got " + check.describe(qSwitch) + ".");
+    }
+    return qSwitch;
+  }
+
+  // Checks the fields of a config's Q-switch.
+  // (The leak is checked here as qswitch.js checks it, so that the error
+  // names the function the page called.)
+  function readQSwitchFields(where, config, qSwitch) {
+    if (hasShutter(config)) {
+      check.atLeast(where, "qDelay", config.qDelay, 0);
+      var leak = check.between(where, "leak", config.leak, 0, 1);
+      if (leak === 0) check.fail(where, "leak must be above 0: a shutter that holds back every photon gives an infinite loss.");
+    }
+    if (qSwitch === "cell") check.positive(where, "switchTime", config.switchTime);
+    if (qSwitch === "prism") {
+      var rotation = check.positive(where, "rotation", config.rotation);
+      if (rotation > MAX_ROTATION) {
+        check.fail(where, "rotation must be at most " + MAX_ROTATION + " rev/s (§9.5's prism turns 500 times a " +
+          "second), got " + rotation + ".");
+      }
+      check.positive(where, "angleTolerance", config.angleTolerance);
+    }
+    if (qSwitch === "absorber") {
+      var ids = Object.keys(E.qswitch.ABSORBERS);
+      if (ids.indexOf(config.absorber) === -1) {
+        check.fail(where, "absorber must be one of " + ids.join(", ") + ", got " + check.describe(config.absorber) + ".");
+      }
+      var T0 = check.between(where, "absorberT0", config.absorberT0, 0, 1);
+      if (T0 === 0) check.fail(where, "absorberT0 must be above 0: a filter that lets no light through can never bleach.");
+    }
+  }
+
   /* ---------- the still numbers ---------- */
 
   // The pump in the solver's units for `power` W absorbed (§4.1): x for
@@ -375,6 +551,19 @@
       if (relaxation.omegaDamped > 0) d.period = 2 * Math.PI / relaxation.omegaDamped;
       d.t_damp = relaxation.t_damp;
     }
+  }
+
+  // The extra single-pass loss of the closed Q-switch, over γ: a shutter's
+  // leak, or the unbleached filter's −ln T₀.
+  function closedExtra(config, gamma) {
+    if (hasShutter(config)) return E.qswitch.closedLoss(config.leak) / gamma;
+    if (config.qSwitch === "absorber") return -Math.log(config.absorberT0) / gamma;
+    return 0;
+  }
+
+  // 1 + closedExtra, or null without a Q-switch.
+  function closedLoss(config, gamma) {
+    return config.qSwitch === "none" ? null : 1 + closedExtra(config, gamma);
   }
 
   // The still numbers of a checked config (see derive below).
@@ -428,6 +617,10 @@
       powerAtTwiceThreshold: scales.powerPerP * thresholdRate,
       sOnePhoton: scales.sOnePhoton,
       beta: config.beta,
+      qSwitch: config.qSwitch,
+      // The loss with the Q-switch closed (the filter unbleached), in units
+      // of the open cavity's: the inversion y it holds back without lasing.
+      lossClosed: closedLoss(config, scales.gamma),
       // Filled in below, by pump: a steady pump, a discharge or a flash.
       R_p: null,
       x: null,
@@ -507,6 +700,10 @@
   //   a flashlamp: flashPeak (the lamp's peak, W) and xPeak (the pump then
   //   in units of threshold; null for two levels). Its steady numbers are
   //   null.
+  //   with a Q-switch: qSwitch, and lossClosed, the loss with it closed
+  //   (the filter unbleached) over the open cavity's, so the inversion it
+  //   holds back; null without one. The other numbers are the open
+  //   cavity's.
   //   Every number a bench does not have is null.
   function derive(config) {
     var where = at("derive");
@@ -516,13 +713,22 @@
 
   /* ---------- the simulation ---------- */
 
-  // start(config) -> { t, N, lnPhi, flash }: no inversion for four
-  // levels, every ion down (ΔN = −N_t) for three and two, one photon
-  // (ln 1 = 0), no flash yet.
+  // start(config) -> { t, N, lnPhi, flash, opensAt, absorber }: no
+  // inversion for four levels, every ion down (ΔN = −N_t) for three and
+  // two, one photon (ln 1 = 0), no flash yet, a shutter that has not
+  // opened, a filter that has recovered (absorber 1) if there is one.
   function start(config) {
     var read = readConfig(at("start"), config);
     var N = read.medium.scheme === "four-level" ? 0 : -read.medium.N_t;
-    return { t: 0, N: N, lnPhi: 0, flash: null };
+    var absorber = config.qSwitch === "absorber" ? 1 : null;
+    return { t: 0, N: N, lnPhi: 0, flash: null, opensAt: null, absorber: absorber };
+  }
+
+  function copySim(sim) {
+    return {
+      t: sim.t, N: sim.N, lnPhi: sim.lnPhi, flash: copyFlash(sim.flash),
+      opensAt: sim.opensAt, absorber: sim.absorber
+    };
   }
 
   function copyFlash(flash) {
@@ -535,6 +741,8 @@
     check.atLeast(where, "sim.t", sim.t, 0);
     check.finite(where, "sim.N", sim.N);
     check.finite(where, "sim.lnPhi", sim.lnPhi);
+    if (sim.opensAt !== null) check.atLeast(where, "sim.opensAt", sim.opensAt, 0);
+    if (sim.absorber !== null) check.between(where, "sim.absorber", sim.absorber, 0, 1);
     var flash = sim.flash;
     if (flash === null) return sim;
     if (typeof flash !== "object" || Array.isArray(flash)) {
@@ -551,18 +759,34 @@
     return sim;
   }
 
-  // A flash in a simulation of a bench without a lamp (a page that kept
-  // the simulation of its last bench) is refused, not ignored.
-  function refuseStrayFlash(where, sim, read) {
+  // A simulation that does not fit the bench (a page that kept the
+  // simulation of its last bench) is refused, not quietly misread: a
+  // flash on a bench without a lamp, a shutter's opening on a bench
+  // without a shutter, a filter's state that the bench has not, or none
+  // when it has one.
+  function refuseStrangeSim(where, sim, read, config) {
+    var again = " Start the simulation again for a new bench.";
     if (sim.flash !== null && read.setup.pump !== "flashlamp") {
       check.fail(where, "sim.flash is a flash fired at " + sim.flash.at + " s, but this bench has no " +
-        "flashlamp (its pump is " + read.setup.pump + "). Start the simulation again for a new bench.");
+        "flashlamp (its pump is " + read.setup.pump + ")." + again);
+    }
+    if (sim.opensAt !== null && !hasShutter(config)) {
+      check.fail(where, "sim.opensAt is " + sim.opensAt + " s, but this bench has no shutter (its qSwitch is " +
+        config.qSwitch + ")." + again);
+    }
+    var filterWord = ": a filter's state is a number exactly when there is a filter.";
+    if (config.qSwitch === "absorber" && sim.absorber === null) {
+      check.fail(where, "sim.absorber is null, but this bench's qSwitch is absorber" + filterWord + again);
+    }
+    if (config.qSwitch !== "absorber" && sim.absorber !== null) {
+      check.fail(where, "sim.absorber is " + sim.absorber + ", but this bench's qSwitch is " + config.qSwitch +
+        filterWord + again);
     }
   }
 
   // fire({ sim, config }) -> a copy of sim with a flash fired now, of the
-  // config's flashEnergy and flashTime. A flash fired while one runs
-  // replaces it.
+  // config's flashEnergy and flashTime, and a shutter (cell or prism) set
+  // to open qDelay later. A flash fired while one runs replaces it.
   function fire(params) {
     var where = at("fire");
     check.params(where, params, ["sim", "config"]);
@@ -572,12 +796,12 @@
     if (read.setup.pump !== "flashlamp") {
       check.fail(where, "needs a config with pump: \"flashlamp\", got " + check.describe(config.pump) + ".");
     }
-    return {
-      t: sim.t,
-      N: sim.N,
-      lnPhi: sim.lnPhi,
-      flash: { at: sim.t, flashEnergy: config.flashEnergy, flashTime: config.flashTime }
-    };
+    refuseStrangeSim(where, sim, read, config);
+    var fired = copySim(sim);
+    fired.flash = { at: sim.t, flashEnergy: config.flashEnergy, flashTime: config.flashTime };
+    // A shutter is closed again, to open qDelay after this flash.
+    fired.opensAt = hasShutter(config) ? sim.t + config.qDelay : null;
+    return fired;
   }
 
   // The flash's pump as a function of t′, the solver's time in a call that
@@ -600,10 +824,56 @@
     return ions.derivatives({ w: pump, n_t: d.n_t, eps: eps, beta: beta });
   }
 
-  // advance({ sim, config, seconds, maxSteps }) -> { sim, reachedEnd, steps }
+  // The shutter's extra single-pass loss (a cell or a prism) as a function
+  // of the time t (s), checked once here (the solver calls it several
+  // times a step): closed until the simulation has an opening time.
+  function shutterLossFunction(config, opensAt) {
+    if (opensAt === null) {
+      var closed = E.qswitch.closedLoss(config.leak);
+      return function () { return closed; };
+    }
+    var loss;
+    if (config.qSwitch === "cell") {
+      loss = E.qswitch.cellLossFunction({ leak: config.leak, switchTime: config.switchTime });
+    } else {
+      loss = E.qswitch.prismLossFunction({
+        leak: config.leak, rotation: config.rotation, angleTolerance: config.angleTolerance
+      });
+    }
+    return function (t) { return loss(t - opensAt); };
+  }
+
+  // The times after t and before t + seconds (s, in order) where advance
+  // starts a new solver call: where each of the prism's windows opens,
+  // PRISM_WINDOW θ_tol before it lines up. On both sides of a window the
+  // loss is the leak's, so a call that began before it could step right
+  // over it (measured: a 200 µs call over ruby's lined-up prism, 12 steps
+  // and no pulse); a new call starts with a short step and finds it. The
+  // cell needs no cut: once open it stays open, and the solver's error
+  // control finds the corners of its switching (measured in stage 8a: the
+  // same pulse, 7 % more steps, than with cuts there).
+  // A run needs at least one step from each cut, so at most maxSteps of
+  // them are made: the work here stays bounded however fast the prism.
+  function cutsOf(config, opensAt, t, seconds, maxSteps) {
+    var cuts = [];
+    if (opensAt === null || config.qSwitch !== "prism") return cuts;
+    var turn = 1 / config.rotation;
+    var half = PRISM_WINDOW * config.angleTolerance / (2 * Math.PI * config.rotation);
+    // The first window that opens after t (opensAt + k·turn − half > t),
+    // then one each turn until the run's end.
+    var k = Math.floor((t - opensAt + half) / turn) + 1;
+    for (var opens = opensAt + k * turn - half; opens < t + seconds && cuts.length < maxSteps; opens += turn) {
+      cuts.push(opens);
+    }
+    return cuts;
+  }
+
+  // advance({ sim, config, seconds, maxSteps }) -> { sim, reachedEnd, steps, peak }
   // Moves the simulation `seconds` of simulated time on, with at most
   // maxSteps solver steps (accepted or rejected). Out of steps, it stops
   // where it got to: reachedEnd is false, and the next call carries on.
+  // peak = { t, power }: the highest output (W) at the solver's points
+  // in the call, the start included.
   function advance(params) {
     var where = at("advance");
     check.params(where, params, ["sim", "config", "seconds", "maxSteps"]);
@@ -613,17 +883,19 @@
     // The lowest inversion there is: none, or every ion down.
     var lowest = read.medium.scheme === "four-level" ? 0 : -read.medium.N_t;
     check.atLeast(where, "sim.N", sim.N, lowest);
-    refuseStrayFlash(where, sim, read);
+    refuseStrangeSim(where, sim, read, config);
     var seconds = check.atLeast(where, "seconds", params.seconds, 0);
     var maxSteps = check.integerAtLeast(where, "maxSteps", params.maxSteps, 1);
+    var d = compute(where, config, read.medium, read.setup);
     if (seconds === 0) {
       return {
-        sim: { t: sim.t, N: sim.N, lnPhi: sim.lnPhi, flash: copyFlash(sim.flash) },
+        sim: copySim(sim),
         reachedEnd: true,
-        steps: 0
+        steps: 0,
+        peak: { t: sim.t, power: d.powerPerPhoton * Math.exp(sim.lnPhi) }
       };
     }
-    var d = compute(where, config, read.medium, read.setup);
+    var tau = d.tau;
 
     // The pump: steady, or the flash fired last (none before it is fired),
     // with the energy and t_p it was fired with. A flash fired now starts
@@ -638,35 +910,87 @@
     }
 
     // Into the solver's variables (§11.2): y = N/N_c, s = ln p = ln φ + ln(p of one photon).
+    // liftToSeed raises the photons to what the seed keeps in an open
+    // cavity; a closed Q-switch, losing 1 + q times as much, keeps
+    // 1/(1 + q) of that. Lifted to the open cavity's level, they fell back
+    // in every call: 64 steps a call behind Nd:YAG's closed cell, 4 with
+    // this (stage 8a). β/(1 + q) is still never above the steady level.
     var state = [sim.N / d.N_c, sim.lnPhi + d.sOnePhoton];
+    var liftBeta = d.beta / (1 + extraLossNow(config, sim, d.gamma));
     if (d.scheme === "four-level") {
-      state = E.rates.fourLevel.liftToSeed({ state: state, beta: d.beta });
+      state = E.rates.fourLevel.liftToSeed({ state: state, beta: liftBeta });
     } else {
-      state = E.rates.threeLevel.liftToSeed({ state: state, n_t: d.n_t, beta: d.beta });
+      state = E.rates.threeLevel.liftToSeed({ state: state, n_t: d.n_t, beta: liftBeta });
     }
+    // t′ counts from this call's start: the flash's pump is a function of it.
+    var f = derivativesFor(d, pump, d.beta, d.eps);
+    if (hasShutter(config)) {
+      var shutter = shutterLossFunction(config, sim.opensAt);
+      f = E.qswitch.withLoss({
+        f: f, eps: d.eps,
+        loss: function (tPrime) { return shutter(sim.t + tPrime * tau) / d.gamma; }
+      });
+    } else if (config.qSwitch === "absorber") {
+      var filter = E.qswitch.ABSORBERS[config.absorber];
+      // The filter's beam is the mode's (A_a = A): σ_a·c·τ/(A·L_e·p₁) (§9.4).
+      f = E.qswitch.withAbsorber({
+        f: f, eps: d.eps,
+        depth: closedExtra(config, d.gamma),
+        recovery: tau / filter.tau,
+        bleach: filter.sigma * c * tau / (config.area * d.L_e * Math.exp(d.sOnePhoton))
+      });
+      state.push(sim.absorber);
+    }
+
     // The implicit solver: below threshold the photons sit at their seed
     // level, where dopri5's step would stay below 3.3ε/(1 − y) (§11.3).
-    var run = E.ode.rosenbrock({
-      f: derivativesFor(d, pump, d.beta, d.eps),
-      t0: 0,
-      state0: state,
-      t1: seconds / d.tau,                              // t′ = t/τ
-      maxSteps: maxSteps
-    });
+    // One solver call from each cut to the next (t′ from this call's start).
+    var cuts = cutsOf(config, sim.opensAt, sim.t, seconds, maxSteps);
+    var steps = 0;
+    var reachedEnd = true;
+    var tNow = sim.t;
+    var peak = { t: sim.t, s: state[1] };
+    var from = 0;
+    for (var i = 0; i <= cuts.length; i++) {
+      var last = i === cuts.length;
+      var to = last ? seconds / tau : (cuts[i] - sim.t) / tau;
+      // A cut that rounds onto the last one (or onto the end) leaves
+      // nothing to run, and the solver refuses an empty interval.
+      if (to <= from) continue;
+      var run = E.ode.rosenbrock({
+        f: f, t0: from, state0: state, t1: to, maxSteps: maxSteps - steps, peakOf: 1
+      });
+      steps += run.accepted + run.rejected;
+      state = run.state;
+      if (run.peak.value > peak.s) peak = { t: sim.t + run.peak.t * tau, s: run.peak.value };
+      if (!run.reachedEnd) {
+        reachedEnd = false;
+        tNow = sim.t + run.t * tau;
+        break;
+      }
+      if (steps >= maxSteps && !last) {
+        reachedEnd = false;
+        tNow = cuts[i];
+        break;
+      }
+      from = to;
+    }
 
+    var next = copySim(sim);
+    next.t = reachedEnd ? sim.t + seconds : tNow;
+    // With the pump off y decays below the solver's atol, where its error
+    // control stops watching it, and a step can end a hair below its
+    // lowest value (measured, four levels: 30 % coupler, after 35τ). The
+    // next call would refuse it. The filter's share is kept in [0, 1] for
+    // the same reason.
+    next.N = Math.max(lowest, state[0] * d.N_c);
+    next.lnPhi = state[1] - d.sOnePhoton;
+    if (config.qSwitch === "absorber") next.absorber = Math.min(1, Math.max(0, state[2]));
     return {
-      sim: {
-        t: run.reachedEnd ? sim.t + seconds : sim.t + run.t * d.tau,
-        // With the pump off y decays below the solver's atol, where its
-        // error control stops watching it, and a step can end a hair below
-        // its lowest value (measured, four levels: 30 % coupler, after
-        // 35τ). The next call would refuse it.
-        N: Math.max(lowest, run.state[0] * d.N_c),
-        lnPhi: run.state[1] - d.sOnePhoton,
-        flash: copyFlash(flash)
-      },
-      reachedEnd: run.reachedEnd,
-      steps: run.accepted + run.rejected
+      sim: next,
+      reachedEnd: reachedEnd,
+      steps: steps,
+      peak: { t: peak.t, power: d.powerPerP * Math.exp(peak.s) }
     };
   }
 
@@ -687,7 +1011,7 @@
     var sim = readSim(where, params.sim);
     var config = params.config;
     var read = readConfig(where, config);
-    refuseStrayFlash(where, sim, read);
+    refuseStrangeSim(where, sim, read, config);
     var d = compute(where, config, read.medium, read.setup);
     // The pump as advance runs it: x for four levels, w for three and two.
     var level;
@@ -707,6 +1031,53 @@
       };
     }
     return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level) };
+  }
+
+  // The Q-switch's extra single-pass loss at the moment of sim, over γ.
+  function extraLossNow(config, sim, gamma) {
+    if (hasShutter(config)) return shutterLossFunction(config, sim.opensAt)(sim.t) / gamma;
+    if (config.qSwitch === "absorber") return sim.absorber * closedExtra(config, gamma);
+    return 0;
+  }
+
+  // lossNow({ sim, config }) -> the cavity's loss at the moment of sim, in
+  // units of the open cavity's: 1 + the shutter's extra loss over γ, or
+  // 1 + the filter's (its share still unbleached times its depth); 1
+  // without a Q-switch.
+  function lossNow(params) {
+    var where = at("lossNow");
+    check.params(where, params, ["sim", "config"]);
+    var sim = readSim(where, params.sim);
+    var config = params.config;
+    var read = readConfig(where, config);
+    refuseStrangeSim(where, sim, read, config);
+    return 1 + extraLossNow(config, sim, compute(where, config, read.medium, read.setup).gamma);
+  }
+
+  // giantPulse({ sim, config }) -> { eta_E, energy, peakPower, width }, or
+  // null: §4.3's giant pulse if the cavity opened fully now, with the
+  // inversion of sim (x = N/N_c over the open cavity's threshold). null
+  // at or below threshold and for the two-level atom, which never lases.
+  function giantPulse(params) {
+    var where = at("giantPulse");
+    check.params(where, params, ["sim", "config"]);
+    var sim = readSim(where, params.sim);
+    var config = params.config;
+    var read = readConfig(where, config);
+    refuseStrangeSim(where, sim, read, config);
+    var d = compute(where, config, read.medium, read.setup);
+    var x = sim.N / d.N_c;
+    if (d.scheme === "two-level" || !(x > 1)) return null;
+    return E.qswitch.giantPulse({
+      x: x,
+      N_p: d.N_c,
+      V_a: config.area * config.l_g,
+      nu: read.medium.nu,
+      tau_c: d.tau_c,
+      gamma: d.gamma,
+      gammaOut: Math.abs(Math.log(config.refl2)),
+      scheme: d.scheme
+    });
   }
 
   /* ---------- the flash threshold ---------- */
@@ -752,10 +1123,14 @@
 
   // flashThreshold(config) -> J, or null
   // The smallest flash energy whose inversion, without light, reaches
-  // threshold (y = 1). For four levels y is proportional to the energy
-  // (its equation is linear and starts at 0), so one run gives it; for
-  // three levels the pump multiplies y, and it is found by bisection. Two
-  // levels never reach it, nor three with n_t ≤ 1.
+  // threshold: y = 1, the open cavity's loss, with no Q-switch and with
+  // a cell or a prism (opened at the inversion's peak, it gives a pulse
+  // only if y > 1 there); behind a filter, which must be overcome before
+  // any light builds up, y = lossClosed. For four levels y is
+  // proportional to the energy (its equation is linear and starts at 0),
+  // so one run gives it; for three levels the pump multiplies y, and it
+  // is found by bisection. Two levels never reach it, nor three whose
+  // target is at or above n_t (every ion up).
   function flashThreshold(config) {
     var where = at("flashThreshold");
     var read = readConfig(where, config);
@@ -763,18 +1138,20 @@
       check.fail(where, "needs a config with pump: \"flashlamp\", got " + check.describe(config.pump) + ".");
     }
     var d = compute(where, config, read.medium, read.setup);
-    if (d.scheme === "two-level" || (d.scheme === "three-level" && d.wThreshold === null)) return null;
+    var target = config.qSwitch === "absorber" ? closedLoss(config, d.gamma) : 1;
+    if (d.scheme === "two-level") return null;
+    if (d.scheme === "three-level" && target >= d.n_t) return null;
     // The energy whose peak pump is the threshold pump: the peak of y lags
     // behind the pump's, so the threshold energy is above it.
     var atPeak = Math.E * config.flashTime / pumpLevel(d, config, config.flashShare);
     if (d.scheme === "four-level") {
-      return atPeak / photonFreePeak(d, config, atPeak);
+      return target * atPeak / photonFreePeak(d, config, atPeak);
     }
     atPeak *= d.wThreshold;
     var low = 0;
     var high = atPeak;
     var doublings = 0;
-    while (photonFreePeak(d, config, high) < 1) {
+    while (photonFreePeak(d, config, high) < target) {
       low = high;
       high *= 2;
       doublings += 1;
@@ -783,7 +1160,7 @@
     // To 10⁻⁶ of the energy: the page shows 3 or 4 digits.
     for (var i = 0; i < 60 && high - low > 1e-6 * high; i++) {
       var middle = (low + high) / 2;
-      if (photonFreePeak(d, config, middle) < 1) low = middle;
+      if (photonFreePeak(d, config, middle) < target) low = middle;
       else high = middle;
     }
     return (low + high) / 2;
@@ -799,6 +1176,10 @@
     fire: fire,
     advance: advance,
     pumpNow: pumpNow,
-    flashThreshold: flashThreshold
+    flashThreshold: flashThreshold,
+    qSwitchesFor: qSwitchesFor,
+    withQSwitch: withQSwitch,
+    lossNow: lossNow,
+    giantPulse: giantPulse
   });
 })(this);

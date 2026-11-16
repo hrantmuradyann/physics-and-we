@@ -72,7 +72,7 @@ const PAIRS = [
   ["two-level", "flashlamp"]
 ];
 
-const COMMON = ["medium", "pump", "l_g", "area", "L", "refl1", "refl2", "alpha_i", "beta"];
+const COMMON = ["medium", "pump", "l_g", "area", "L", "refl1", "refl2", "alpha_i", "beta", "qSwitch"];
 const BY_KIND = {
   diode: ["pumpPower", "pumpLam", "eta"],
   laser: ["pumpPower", "pumpLam", "eta"],
@@ -338,20 +338,20 @@ test("start(config): no inversion for four levels, every ion down for three and 
     const d = B.derive(c);
     const sim = B.start(c);
     const N = d.scheme === "four-level" ? 0 : -d.N_t;
-    assert.deepEqual(plain(sim), { t: 0, N, lnPhi: 0, flash: null }, medium + " + " + pump);
+    assert.deepEqual(plain(sim), { t: 0, N, lnPhi: 0, flash: null, opensAt: null, absorber: null }, medium + " + " + pump);
   }
   assert.throws(() => B.start(configFor("ruby", "flashlamp", { flashTime: 0 })), /^Error: LaserEngine\.bench\.start: flashTime/);
 });
 
 test("fire({ sim, config }): a copy that remembers when the flash went off and what it was; a second flash replaces the first", () => {
   const c = configFor("ruby", "flashlamp");
-  const sim = deepFreeze({ t: 2e-3, N: -1e25, lnPhi: 3, flash: null });
+  const sim = deepFreeze({ t: 2e-3, N: -1e25, lnPhi: 3, flash: null, opensAt: null, absorber: null });
   const fired = B.fire(deepFreeze({ sim, config: c }));
-  assert.deepEqual(plain(fired), { t: 2e-3, N: -1e25, lnPhi: 3, flash: { at: 2e-3, flashEnergy: 1000, flashTime: 0.3e-3 } });
+  assert.deepEqual(plain(fired), { t: 2e-3, N: -1e25, lnPhi: 3, flash: { at: 2e-3, flashEnergy: 1000, flashTime: 0.3e-3 }, opensAt: null, absorber: null });
   const stronger = configFor("ruby", "flashlamp", { flashEnergy: 2000 });
   const again = B.fire(deepFreeze({ sim: Object.assign({}, fired, { t: 3e-3 }), config: stronger }));
   assert.deepEqual(plain(again.flash), { at: 3e-3, flashEnergy: 2000, flashTime: 0.3e-3 });
-  assert.throws(() => B.fire({ sim: { t: -1, N: 0, lnPhi: 0, flash: null }, config: c }), /^Error: LaserEngine\.bench\.fire: sim\.t/);
+  assert.throws(() => B.fire({ sim: { t: -1, N: 0, lnPhi: 0, flash: null, opensAt: null, absorber: null }, config: c }), /^Error: LaserEngine\.bench\.fire: sim\.t/);
   assert.throws(() => B.fire({ sim, config: configFor("nd-yag", "diode") }), /^Error: LaserEngine\.bench\.fire: needs a config with pump: "flashlamp"/);
   assert.throws(() => B.fire(sim), /^Error: LaserEngine\.bench\.fire: t is not one of its inputs/);
   // advance carries the flash on, a copy of it. Called directly: the
@@ -603,7 +603,7 @@ test("a ruby flash on the page (slow motion 10⁴, 60 Hz) fits a frame's 1500 st
 // A simulation state written out, flash and all (pumpNow reads only t and
 // the flash; N and lnPhi are any allowed values).
 function simAt(cfg, t, flash) {
-  return deepFreeze({ t, N: B.start(cfg).N, lnPhi: 0, flash: flash || null });
+  return deepFreeze({ t, N: B.start(cfg).N, lnPhi: 0, flash: flash || null, opensAt: null, absorber: null });
 }
 
 function pumpNow(sim, cfg) {
@@ -711,7 +711,7 @@ test("pumpNow agrees with the pump advance runs: from y = 0 with no light, y ris
   // step of τ/10⁴, y rises by about x·Δt′.
   const c = configFor("nd-yag", "flashlamp", { flashEnergy: 0.5 });
   const flash = { at: 0, flashEnergy: 0.5, flashTime: c.flashTime };
-  const sim = { t: c.flashTime, N: 0, lnPhi: 0, flash };
+  const sim = { t: c.flashTime, N: 0, lnPhi: 0, flash, opensAt: null, absorber: null };
   const d = B.derive(c);
   const dt = d.tau * 1e-4;
   const run = B.advance(deepFreeze({ sim, config: c, seconds: dt, maxSteps: 50 }));
@@ -724,12 +724,12 @@ test("pumpNow checks its inputs and names itself", () => {
   const ruby = configFor("ruby", "flashlamp");
   const flash = { at: 0, flashEnergy: 1, flashTime: 3e-4 };
   const bad = [
-    [{ sim: { t: 0, N: 0, lnPhi: 0, flash }, config: yag }, /sim\.flash is a flash .* no flashlamp/],
-    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null }, config: Object.assign({}, yag, { pumpPower: -1 }) }, /pumpPower/],
-    [{ sim: { t: -1, N: 0, lnPhi: 0, flash: null }, config: yag }, /sim\.t/],
-    [{ sim: { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 2e-3, flashEnergy: 1, flashTime: 3e-4 } }, config: ruby }, /later than sim\.t/],
-    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null } }, /needs one object of named values, like \{ medium, pump/],
-    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null }, config: yag, seconds: 1 }, /seconds is not one of its inputs/]
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash, opensAt: null, absorber: null }, config: yag }, /sim\.flash is a flash .* no flashlamp/],
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null, opensAt: null, absorber: null }, config: Object.assign({}, yag, { pumpPower: -1 }) }, /pumpPower/],
+    [{ sim: { t: -1, N: 0, lnPhi: 0, flash: null, opensAt: null, absorber: null }, config: yag }, /sim\.t/],
+    [{ sim: { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 2e-3, flashEnergy: 1, flashTime: 3e-4 }, opensAt: null, absorber: null }, config: ruby }, /later than sim\.t/],
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null, opensAt: null, absorber: null } }, /needs one object of named values, like \{ medium, pump/],
+    [{ sim: { t: 0, N: 0, lnPhi: 0, flash: null, opensAt: null, absorber: null }, config: yag, seconds: 1 }, /seconds is not one of its inputs/]
   ];
   for (const [params, pattern] of bad) {
     assert.throws(() => B.pumpNow(deepFreeze(params)), (error) =>
@@ -778,17 +778,17 @@ test("every new input is checked, and every error names the function that was ca
   const ruby = configFor("ruby", "flashlamp");
   const yag = configFor("nd-yag", "diode");
   const badRuns = [
-    [ruby, { t: 0, N: -1.7e25, lnPhi: 0, flash: null }, /sim\.N/],
-    [yag, { t: 0, N: -1, lnPhi: 0, flash: null }, /sim\.N/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 2e-3, flashEnergy: 1000, flashTime: 3e-4 } }, /sim\.flash\.at .* later than sim\.t/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: -1, flashEnergy: 1000, flashTime: 3e-4 } }, /sim\.flash\.at/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 0, flashEnergy: -1, flashTime: 3e-4 } }, /sim\.flash\.flashEnergy/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 0, flashEnergy: 1000, flashTime: 0 } }, /sim\.flash\.flashTime/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 0, flashEnergy: 1000 } }, /sim\.flash\.flashTime/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 0, flashEnergy: 1000, flashTime: 3e-4, when: 0 } }, /when is not one of its inputs/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: 0 }, /sim\.flash must be null .* got 0/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: [0, 1000, 3e-4] }, /sim\.flash must be null/],
-    [ruby, { t: 1e-3, N: 0, lnPhi: 0 }, /sim\.flash must be null/]
+    [ruby, { t: 0, N: -1.7e25, lnPhi: 0, flash: null, opensAt: null, absorber: null }, /sim\.N/],
+    [yag, { t: 0, N: -1, lnPhi: 0, flash: null, opensAt: null, absorber: null }, /sim\.N/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 2e-3, flashEnergy: 1000, flashTime: 3e-4 }, opensAt: null, absorber: null }, /sim\.flash\.at .* later than sim\.t/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: -1, flashEnergy: 1000, flashTime: 3e-4 }, opensAt: null, absorber: null }, /sim\.flash\.at/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 0, flashEnergy: -1, flashTime: 3e-4 }, opensAt: null, absorber: null }, /sim\.flash\.flashEnergy/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 0, flashEnergy: 1000, flashTime: 0 }, opensAt: null, absorber: null }, /sim\.flash\.flashTime/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 0, flashEnergy: 1000 }, opensAt: null, absorber: null }, /sim\.flash\.flashTime/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: { at: 0, flashEnergy: 1000, flashTime: 3e-4, when: 0 }, opensAt: null, absorber: null }, /when is not one of its inputs/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: 0, opensAt: null, absorber: null }, /sim\.flash must be null .* got 0/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, flash: [0, 1000, 3e-4], opensAt: null, absorber: null }, /sim\.flash must be null/],
+    [ruby, { t: 1e-3, N: 0, lnPhi: 0, opensAt: null, absorber: null }, /sim\.flash must be null/]
   ];
   for (const [cfg, sim, pattern] of badRuns) {
     assert.throws(() => B.advance(deepFreeze({ sim, config: cfg, seconds: 1e-6, maxSteps: 10 })), (error) =>
@@ -796,7 +796,7 @@ test("every new input is checked, and every error names the function that was ca
   }
   // A flash fired on a bench without a lamp is refused, not ignored.
   const yagFlash = { at: 0, flashEnergy: 1, flashTime: 3e-4 };
-  assert.throws(() => B.advance(deepFreeze({ sim: { t: 0, N: 0, lnPhi: 0, flash: yagFlash }, config: yag, seconds: 1e-6, maxSteps: 10 })),
+  assert.throws(() => B.advance(deepFreeze({ sim: { t: 0, N: 0, lnPhi: 0, flash: yagFlash, opensAt: null, absorber: null }, config: yag, seconds: 1e-6, maxSteps: 10 })),
     /^Error: LaserEngine\.bench\.advance: .*flashlamp/);
   for (const name of ["pumpsFor", "configFor", "controls", "start", "fire", "pumpNow", "flashThreshold"]) {
     assert.throws(() => B[name](), new RegExp("^Error: LaserEngine\\.bench\\." + name + ": "), name);

@@ -387,7 +387,7 @@ For a four-level medium with τ = 3 ms, τ_c ≈ 5 ns and x = 3 these give a per
 
 The idea from §121, items 5–6: while pumping, feedback is switched off and inversion builds up far above threshold. Then the shutter opens and all the stored energy comes out in ~10⁻⁸ s. In code this is simply τ_c(t): small before opening, normal after.
 
-**Pumping phase** (shutter closed, φ ≈ 0): N(t) = R_pτ·(1 − e^{−t/τ}). It makes sense to open the shutter after ~τ (for ruby ~2 ms, as in the book): beyond that the inversion stops growing and is lost to spontaneous decay.
+**Pumping phase** (shutter closed, φ ≈ 0): N(t) = R_pτ·(1 − e^{−t/τ}). It makes sense to open the shutter after ~τ (for ruby ~2 ms, as in the book): beyond that the inversion stops growing and is lost to spontaneous decay. With a flash the inversion rises and falls again, so the shutter opens at its peak; for the simulator's flash (t_p = 0.3 ms, §6.1) that is 1.00 ms after it for ruby, 0.60 ms for Nd:glass and 0.55 ms for Nd:YAG (measured in stage 8a).
 
 **Pulse phase** (shutter open; pumping and spontaneous decay are negligible over 10⁻⁸ s). Let N_i be the initial inversion, N_p the threshold with the shutter open, x = N_i/N_p, γ the single-pass loss. The energy-utilization factor η_E is found from a transcendental equation (solve numerically):
 
@@ -399,17 +399,19 @@ x\,\eta_E = -\ln(1-\eta_E)
 E_{\text{out}} = \frac{\gamma_2}{2\gamma}\,\eta_E\,N_i V_a\,h\nu, \qquad P_{\text{peak}} = \frac{\gamma_2}{2\gamma}\,\frac{h\nu\,V_a N_p}{\tau_c}\,(x - 1 - \ln x), \qquad \Delta\tau_p \approx \tau_c\,\frac{x\,\eta_E}{x-1-\ln x}
 ```
 
-For a three-level medium (ruby) the energy is half as large: each photon reduces ΔN by 2. Pulse build-up time from noise: t_d ≈ τ_c·ln(φ_peak/φ_noise)/(x − 1), where the logarithm is typically 30–40. Check: τ_c = 5 ns and x = 3 give η_E ≈ 0.94 and Δτ_p ≈ 16 ns — the book's ~10⁻⁸ s. With 1–2 J of energy that is 10–200 MW (§121, item 9).
+For a three-level medium (ruby) the energy and the peak power are half as large, and the width is the same: each photon reduces ΔN by 2. (The peak power follows from the same equations as the energy: with the pump and the decay left out, dp/dy = −(y − 1)/(εy), so the photons are highest at y = 1, where p = (x − 1 − ln x)/ε; for three levels the same p is half the photons.) Pulse build-up time from noise: t_d ≈ τ_c·ln(φ_peak/φ_noise)/(x − 1), where the logarithm is typically 30–40. Check: τ_c = 5 ns and x = 3 give η_E ≈ 0.94 and Δτ_p ≈ 16 ns — the book's ~10⁻⁸ s. With 1–2 J of energy that is 10–200 MW (§121, item 9).
 
 How feedback is switched on and off — three options from the book; their models are in Section 9:
 
 | Q-switch | How it works | Switching time | Loss in the code |
 | --- | --- | --- | --- |
-| Rotating total-internal-reflection prism, ~500 rev/s | The cavity is aligned only at one angular position | fractions of a microsecond | R_eff(θ) = R·exp(−(θ/θ_tol)²), θ = Ωt |
-| Kerr or Pockels cell + polarizer | Rotates the polarization by 90° in a double pass; the polarizer blocks it | ~nanoseconds | round-trip transmission cos²(πV/(2V_λ/4)) |
-| Bleachable filter (saturable absorber) | Becomes transparent by itself at high intensity | automatic | its own population equation for the absorber |
+| Rotating total-internal-reflection prism, ~500 rev/s | The cavity is aligned only at one angular position | fractions of a microsecond | R_eff(θ) = R·(ℓ + (1 − ℓ)·exp(−(θ/θ_tol)²)), θ = Ωt (§9.5) |
+| Kerr or Pockels cell + polarizer | Rotates the polarization by 90° in a double pass; the polarizer blocks it | ~nanoseconds | round-trip transmission ℓ + (1 − ℓ)·cos²Γ, Γ = πV/(2V_λ/4) (§9.3) |
+| Bleachable filter (saturable absorber) | Becomes transparent by itself at high intensity | automatic | its own population equation for the absorber (§9.4) |
 
-The prism has a subtlety described in the book: the rod end faces themselves reflect (n − 1)²/(n + 1)² ≈ 7.6% and can give parasitic feedback. That is why the faces are cut at Brewster's angle (Section 9). In the simulator, unangled faces should add a second, weak cavity with R ≈ 0.076.
+ℓ is the leak: the share of the light a closed shutter still lets through per round trip. Without it a closed cell (cos²Γ = 0) or a prism turned away (e^(−10⁷)) is an infinite loss, which the rate equations cannot hold; a real polarizer and a real prism leak too. The simulator takes ℓ = 10⁻⁴: 4.6 per pass, so ruby (n_t = 11.5) cannot lase through it.
+
+The prism has a subtlety described in the book: the rod end faces themselves reflect (n − 1)²/(n + 1)² ≈ 7.6% and can give parasitic feedback. That is why the faces are cut at Brewster's angle (Section 9). In the simulator, unangled faces should add a second, weak cavity with R ≈ 0.076. This needs a second photon variable, so it is built with the Brewster windows (stage 13a), not with the Q-switches (stage 8a).
 
 ### 4.4 Amplifiers: a cascade of rods
 
@@ -853,7 +855,7 @@ Layout of Fig. 349: the polarizer passes the rod's polarization, the cell is rot
 \text{Pockels: } \Gamma = \pi\,\frac{V}{V_\pi},\ \ V_\pi = \frac{\lambda}{2n_o^3 r_{63}}; \qquad \text{Kerr: } \Gamma = 2\pi K\,l\,\frac{V^2}{d^2}; \qquad T_{\text{round trip}} = \cos^2\Gamma
 ```
 
-The Pockels cell is linear in voltage (§91), the Kerr cell quadratic (§90; K is the Kerr constant). The shutter is closed at Γ = π/2, i.e. at the quarter-wave voltage V_λ/4 = V_π/2; for a KD*P crystal at 1064 nm that is a few kV. It is opened by removing the voltage within nanoseconds. In the rate equations this is an additional round-trip loss −ln T_round trip(t).
+The Pockels cell is linear in voltage (§91), the Kerr cell quadratic (§90; K is the Kerr constant). The shutter is closed at Γ = π/2, i.e. at the quarter-wave voltage V_λ/4 = V_π/2; for a KD*P crystal at 1064 nm that is a few kV. It is opened by removing the voltage within nanoseconds. In the rate equations this is an additional round-trip loss −ln T_round trip(t). Closed, cos²Γ = 0 is an infinite loss; a real polarizer leaks, so the simulator uses T_round trip = ℓ + (1 − ℓ)cos²Γ with ℓ = 10⁻⁴ (§4.3), and lets Γ fall from π/2 to 0 evenly over the switching time t_s = 5 ns: Γ = (π/2)(1 − t/t_s).
 
 ### 9.4 Bleachable filter (saturable absorber)
 
@@ -863,11 +865,19 @@ This is the very two-level system of Section 2.1: at high intensity the populati
 \frac{dN_g}{dt} = \frac{N_a - N_g}{\tau_a} - \frac{c}{n}\,\sigma_a N_g\,S, \qquad \gamma_a(t) = \sigma_a N_g(t)\,l_a, \qquad \alpha(I) = \frac{\alpha_0}{1 + I/I_{\text{sat},a}},\ \ I_{\text{sat},a} = \frac{h\nu}{\sigma_a\tau_a}
 ```
 
-Condition for it to work as a Q-switch: the absorber must saturate more easily than the gain medium, i.e. σ_a/A_a ≫ σ/A (A is the beam area in each element). Under a continuous flash the model by itself produces a train of pulses, as in the book: after each pulse the filter darkens again within τ_a, the inversion builds up, and everything repeats.
+Here S is the photon density φ/V of Section 0, not the photon count φ: mixing them is off by the mode volume. In the rate equations' units (§11.2) the simulator uses the share a = N_g/N_a. The φ photons of the mode pass the filter at c·φ/(A_a·L_e) per unit area and time (they are spread along the optical length L_e, which already holds every element's n, so it is c, not c/n), and p = φ·p₁, p₁ the p of one photon (Bτ for four levels, 2Bτ for three). So
+
+```latex
+\frac{da}{dt'} = \frac{\tau}{\tau_a}\,(1 - a) - b\,a\,p, \qquad b = \frac{\sigma_a c\,\tau}{A_a L_e\,p_1}, \qquad \frac{ds}{dt'} \mathrel{+}= -\frac{a\,(-\ln T_0)}{\gamma\,\varepsilon}
+```
+
+with T₀ = e^{−σ_a N_a l_a} the filter's single-pass transmission when unbleached. Each photon absorbed bleaches one molecule, so the loss and the bleaching are one process (both are σ_a·c·φ·N_g·l_a/L_e photons per second). The simulator takes the filter's beam as wide as the mode in the medium, A_a = A.
+
+Condition for it to work as a Q-switch: the absorber must saturate more easily than the gain medium, i.e. σ_a/A_a ≫ σ/A (A is the beam area in each element). Under continuous pumping the model by itself produces a train of pulses, as in the book: after each pulse the filter darkens again within τ_a, the inversion builds up, and everything repeats (the diode-pumped Nd:YAG of the simulator: a pulse every 300 µs).
 
 ### 9.5 Rotating prism
 
-A total-internal-reflection prism replaces a mirror (Fig. 348); rotation angle θ(t) = Ωt, Ω = 2π·500 s⁻¹. The cavity is "aligned" only while θ is smaller than a tolerance θ_tol ~ the beam divergence (~1 mrad). The effective reflectivity can be modelled phenomenologically: R_eff(t) = R·exp(−(Ωt/θ_tol)²). The opening window is ~θ_tol/Ω ≈ 0.3 µs, while the pulse builds up in ~10⁻⁸ s. So the prism, as the book says, "has no time to move". If the simulator slows the rotation down by a factor of hundreds, several weak pulses appear instead of one giant pulse.
+A total-internal-reflection prism replaces a mirror (Fig. 348); rotation angle θ(t) = Ωt, Ω = 2π·500 s⁻¹. The cavity is "aligned" only while θ is smaller than a tolerance θ_tol ~ the beam divergence (~1 mrad). The effective reflectivity can be modelled phenomenologically: R_eff(t) = R·exp(−(Ωt/θ_tol)²). Turned away it falls to e^(−10⁷), an infinite loss for the rate equations, so the simulator adds the leak ℓ of §4.3: R_eff = R·(ℓ + (1 − ℓ)·exp(−(θ/θ_tol)²)), with θ wrapped to one turn, so the prism lines up again every 1/500 s. The opening window is ~θ_tol/Ω ≈ 0.3 µs, while the pulse builds up in ~10⁻⁸ s. So the prism, as the book says, "has no time to move". If the simulator slows the rotation down by a factor of hundreds, several weak pulses appear instead of one giant pulse. In the model the pulse also comes a little before the prism is fully lined up: the loss falls below what the stored inversion can overcome first, so the pulse starts in a cavity that still loses more than the open one and takes less of the inversion (ruby at 500 rev/s: 120 MW, against 522 MW with the cell).
 
 ## 10. Nonlinear optics: frequency doubling, self-focusing, parametric oscillator (§§123–126)
 
@@ -1041,7 +1051,7 @@ Each row is a ready-made test: feed in the inputs and compare with the expected 
 | Flashlamp capacitors | 200 J at 2 kV | C ≥ 100 µF | §121, item 3 |
 | Reflection from a ruby end face | n = 1.76, normal incidence | 7.6%; internal Brewster angle ≈ 30° | §121, item 6 |
 | Free-running ruby | rod 20–30 cm × 1.5 cm, 1 ms flash | spikes ~10⁻⁶ s separated by microseconds, tens of kW | §121, item 5 |
-| Q-switching | rod 20 × 1.5 cm | 10⁻⁸ s pulse, 1–2 J, 10–200 MW | §121, item 9 |
+| Q-switching | rod 20 × 1.5 cm | 10⁻⁸ s pulse, 1–2 J, 10–200 MW (the simulator, with the assumptions of stage 8a's D7 test: 18.6 ns, but 12.7 J and 685 MW) | §121, item 9 |
 | Giant-pulse formulas | τ_c = 5 ns, x = 3 | η_E ≈ 0.94, Δτ_p ≈ 16 ns | Section 4.3 |
 | Amplifier cascade | oscillator + amplifiers | 2×10⁻⁹ s, ~20 J, ~10⁴ MW | §121, item 9 |
 | Field and pressure in the beam | 100 MW on 1 cm², λ = 694.3 nm | E_rms = 1.94×10⁵ V/cm, 0.033 atm | Problem 1 to §121 |

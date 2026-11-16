@@ -1,6 +1,6 @@
 # The laser simulator: what is done and what is left
 
-*Last updated: 16 November 2026, at the end of stage 7d.*
+*Last updated: 16 November 2026, at the end of stage 8a.*
 
 This page explains, in plain words, how far the laser simulator has got. The technical details are in `docs/laser-plan.md` (the build plan) and `docs/laser-physics.md` (the physics).
 
@@ -16,8 +16,8 @@ The page lives at the hidden address `?view=laser`. A banner on the Labs page li
 
 The work is split into numbered **stages**. Each stage adds one piece, and is not counted as finished until it passes four checks:
 
-1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 584 of them, and all of them pass.
-2. **Deliberate mistakes.** A tool makes 636 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes under 3 minutes (it took 25 before stage 7c made it faster; see below).
+1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 629 of them, and all of them pass.
+2. **Deliberate mistakes.** A tool makes 713 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes under 4 minutes (it took 25 before stage 7c made it faster; see below).
 3. **A code review.** A separate careful reading of the whole change, looking for bugs. What it finds is fixed before the stage is finished.
 4. **A check in the browser**, for stages that change the page: both themes, both languages, a phone-sized screen, no errors.
 
@@ -43,6 +43,7 @@ The simulator has two halves:
 | 7b | **The engine for every other material and pump:** ruby, Nd:glass and Nd:YAG with a flashlamp; helium-neon, argon and CO₂ with an electric current; dye and titanium-sapphire with another laser; and the "two-level atom", which never lases. |
 | 7c | **Choosing the laser on the page** (see below). |
 | 7d | **Each laser drawn as it really is** (see below): its own pump on the bench, and the energy-level picture for ruby and the two-level atom. |
+| 8a | **Q-switching in the engine** (see below): the giant pulse. Not on the page yet; that is stage 8b. |
 
 ### What you can see on the page today
 
@@ -59,7 +60,33 @@ The small chart of the excited atoms is gone (the owner's choice): the bar in th
 
 Ruby fired with a 1000 J flash lights up after a fraction of a millisecond and fires spikes reaching about 460 kW, as in stage 7b. The light and dark themes and both languages work, and the dropdowns fit on a 320 px phone.
 
-### Stage 7d, just finished
+### Stage 8a, just finished: the giant pulse, in the engine
+
+A **Q-switch** is a shutter between the two mirrors. While it is closed the light cannot bounce back and forth, so the laser cannot start, and the flash stores far more energy in the rod than a laser could ever hold on its own. When the shutter opens, all that energy comes out at once as one **giant pulse**, about 10 billionths of a second long. Ruby's normal spikes reach about 460 kW; its giant pulse reaches about 520 MW, over a thousand times more.
+
+The engine now has the three Q-switches from the book:
+- **an electro-optic shutter** (a Pockels cell with a polarizer): electricity turns it from closed to open in 5 billionths of a second;
+- **a rotating prism** that is the back mirror: it spins 500 times a second, and the laser only works in the moment it lines up with the other mirror;
+- **a dye that bleaches**: a filter that is dark, but that the light itself makes clear once it is strong enough. Nothing has to be timed.
+
+Which lasers have them: ruby, Nd:glass and Nd:YAG with a flashlamp can have any of the three. The Nd:YAG with diodes can have the bleaching filter, and then, although its pump never stops, it gives a regular train of pulses, one every 0.3 ms. The other lasers have none (their energy cannot be stored).
+
+What the tests check, among others:
+- the closed shutter really holds the light back: the rod fills up exactly as if there were no light at all;
+- the pulse from the shutter matches the book's formulas for its energy, peak power and length, to better than 0.02 %;
+- the rotating prism at full speed gives one pulse. Slowed down 100 times it gives many weak ones, as the book says;
+- the bleaching filter gives one giant pulse with ruby, and the diode-pumped Nd:YAG gives a train of equal pulses at a steady rate.
+
+Some things the owner should look at (the plan marks each one "decided without the owner"):
+- **The book's numbers for a big ruby are not matched.** The book says a 20 cm × 1.5 cm ruby gives 1–2 J in 10⁻⁸ s. The simulation gives the right length (19 billionths of a second) but about 13 J, several times too much. The model pumps the whole rod evenly and uses all of it, which real lasers of that time did not. I did not change the numbers to make it agree.
+- **The prism gives a smaller pulse than the electro-optic shutter** (ruby: 120 MW against 520 MW), because the pulse starts while the prism is still turning into line. This is real physics, and a reason the prism was given up, but the book does not mention it.
+- **The shutter's timing:** by default it opens when the rod is fullest (1 ms after the flash for ruby, 0.6 ms for Nd:glass, 0.55 ms for Nd:YAG).
+- **The filters:** a dye for ruby (cryptocyanine, as in the first Q-switched ruby lasers) and a chromium-doped crystal for the neodymium lasers. Their numbers are not yet checked against printed sources.
+- The engine side only: the page does not show any of this yet. That comes in **stage 8b**, with a dropdown for the Q-switch, sliders for its timing, a drawing of each kind, and numbers for the pulse.
+
+The code review found 9 things; 8 were fixed. Among them: the pulse's length came out as "not a number" for a laser with no output mirror; a very fast prism could make the engine run out of memory; and the "smallest flash that lases" ignored the bleaching filter, which needs a stronger flash (for Nd:glass, 182 J instead of 29 J). The ninth: the prism lines up again on every turn, also before the moment the flash is timed to, so a fast prism gives pulses during the flash. That is how a real spinning prism behaves, so it was kept, and the documents now say so.
+
+### Stage 7d
 
 Each laser is now drawn with its own pump:
 - **laser diodes** (Nd:YAG): a strip under the rod, as before;
@@ -96,7 +123,7 @@ This stage put the choice of laser on the page (above). Two other things came wi
 
 | Stage | What it will add |
 |---|---|
-| 8 | **Q-switching** (next): a shutter between the mirrors that stores energy and then releases it as one giant, very short pulse. Rotating prism, electro-optic shutter, and a dye that bleaches. |
+| 8b | **Q-switching on the page** (next): choosing the shutter, its timing, a drawing of it, and the pulse's numbers. The engine for it is done (8a). |
 | 9 | **Several laser frequencies at once,** with a spectrum panel showing which ones lase. |
 | 10 | **Mirror shapes:** curved mirrors, and which mirror pairs keep the light inside (stable) or lose it (unstable); the width of the beam. |
 | 11 | **Lenses outside the laser:** focusing the beam, tracing rays through glass, and the beam's colour from its wavelength. |

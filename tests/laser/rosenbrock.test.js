@@ -563,3 +563,47 @@ test("hMax holds for a given h0 and for the guess", () => {
   const guessed = solve({ f: decay, t0: 0, state0: [1], t1: 1, hMax: 1e-4, maxSteps: 3 });
   assert.ok(guessed.t <= 3e-4 + 1e-15, "t = " + guessed.t);
 });
+
+/* ---------- peakOf: the top of a short pulse (stage 8a) ---------- */
+
+// A Gaussian pulse 1 high at t = 5, e^(−(t − 5)²): y′ = −2(t − 5)·y.
+const pulse = (t, state) => [-2 * (t - 5) * state[0], 1];
+
+test("peakOf: the highest value of one entry at the accepted points, and when; null without it (both solvers)", () => {
+  // From t = 2, where the pulse is e^(−9), well above atol (a start below
+  // atol is followed only to atol, not to rtol).
+  const inputs = { f: pulse, t0: 2, state0: [Math.exp(-9), 2], t1: 12, atol: 1e-12, maxSteps: 2000 };
+  for (const name of ["rosenbrock", "dopri5"]) {
+    const solver = (params) => ode[name](deepFreeze(Object.assign({}, inputs, params)));
+    const run = solver({ peakOf: 0 });
+    assert.ok(run.reachedEnd, name);
+    // The end state alone has missed it: e^(−49), to within atol.
+    assert.ok(Math.abs(run.state[0]) < 1e-9, name + ": the pulse is over at t1, " + run.state[0]);
+    assertClose(run.peak.value, 1, 1e-2, name + ": its top");
+    assertClose(run.peak.t, 5, 0, name + ": when", 0.1);
+    // The second entry, t itself, is highest at the end.
+    const other = solver({ peakOf: 1 });
+    assert.equal(other.peak.t, 12);
+    assertClose(other.peak.value, 12, 1e-9, name);
+    assert.equal(solver({}).peak, null, name + ": not asked");
+  }
+});
+
+test("peakOf: a value that only falls peaks at t0; out of steps, the peak of the points reached", () => {
+  const falling = solve({ f: decay, t0: 2, state0: [3], t1: 4, peakOf: 0 });
+  assert.deepEqual(plain(falling.peak), { t: 2, value: 3 });
+  // Stopped before the pulse's top: the highest point reached so far.
+  const early = solve({ f: pulse, t0: 2, state0: [Math.exp(-9), 2], t1: 12, atol: 1e-12, peakOf: 0, maxSteps: 5 });
+  assert.equal(early.reachedEnd, false);
+  assert.ok(early.peak.t <= early.t && early.peak.value <= early.state[0] + 1e-300, "the last point is the highest so far");
+});
+
+test("peakOf must name an entry of the state", () => {
+  for (const [peakOf, pattern] of [[-1, /peakOf must be a whole number of at least 0/], [0.5, /peakOf must be a whole number/],
+    ["0", /peakOf must be a whole number/], [2, /peakOf must name an entry of the state \(0 to 1\), got 2/]]) {
+    for (const name of ["rosenbrock", "dopri5"]) {
+      assert.throws(() => ode[name](deepFreeze({ f: pulse, t0: 0, state0: [1, 0], t1: 1, peakOf: peakOf })),
+        (err) => err.message.startsWith("LaserEngine.ode." + name + ": ") && pattern.test(err.message), name + " " + peakOf);
+    }
+  }
+});

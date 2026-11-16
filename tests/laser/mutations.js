@@ -1447,20 +1447,20 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "lnPhi: run.state[1] - d.sOnePhoton",
-    replace: "lnPhi: run.state[1]",
+    find: "next.lnPhi = state[1] - d.sOnePhoton;",
+    replace: "next.lnPhi = state[1];",
     why: "s = ln p kept as ln φ"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "t1: seconds / d.tau,",
-    replace: "t1: seconds,",
+    find: "var to = last ? seconds / tau : (cuts[i] - sim.t) / tau;",
+    replace: "var to = last ? seconds : (cuts[i] - sim.t) / tau;",
     why: "simulated seconds passed to the solver as t′"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "N: Math.max(lowest, run.state[0] * d.N_c),",
-    replace: "N: run.state[0] * d.N_c,",
+    find: "next.N = Math.max(lowest, state[0] * d.N_c);",
+    replace: "next.N = state[0] * d.N_c;",
     why: "a step's tiny negative inversion passed on, so the next call refuses it"
   },
   {
@@ -2693,8 +2693,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var run = E.ode.rosenbrock({",
-    replace: "var run = E.ode.dopri5({",
+    find: "var run = E.ode.rosenbrock({\n        f: f, t0: from,",
+    replace: "var run = E.ode.dopri5({\n        f: f, t0: from,",
     why: "the bench back on the explicit solver: below threshold its step stays below 3.3ε/(1 − y)"
   },
 
@@ -2929,14 +2929,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "if (d.scheme === \"four-level\") {\n      return atPeak / photonFreePeak(d, config, atPeak);",
-    replace: "if (d.scheme !== \"two-level\") {\n      return atPeak / photonFreePeak(d, config, atPeak);",
+    find: "if (d.scheme === \"four-level\") {\n      return target * atPeak / photonFreePeak(d, config, atPeak);",
+    replace: "if (d.scheme !== \"two-level\") {\n      return target * atPeak / photonFreePeak(d, config, atPeak);",
     why: "ruby's flash threshold by the four-level linear shortcut"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "if (photonFreePeak(d, config, middle) < 1) low = middle;\n      else high = middle;",
-    replace: "if (photonFreePeak(d, config, middle) < 1) high = middle;\n      else low = middle;",
+    find: "if (photonFreePeak(d, config, middle) < target) low = middle;\n      else high = middle;",
+    replace: "if (photonFreePeak(d, config, middle) < target) high = middle;\n      else low = middle;",
     why: "the bisection turned the wrong way"
   },
   {
@@ -3045,8 +3045,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var read = readConfig(where, config);\n    if (read.setup.pump !== \"flashlamp\") {\n      check.fail(where, \"needs a config with pump: \\\"flashlamp\\\", got \" + check.describe(config.pump) + \".\");\n    }\n    return {",
-    replace: "var read = readConfig(where, config);\n    return {",
+    find: "var read = readConfig(where, config);\n    if (read.setup.pump !== \"flashlamp\") {\n      check.fail(where, \"needs a config with pump: \\\"flashlamp\\\", got \" + check.describe(config.pump) + \".\");\n    }\n    refuseStrangeSim(where, sim, read, config);\n    var fired",
+    replace: "var read = readConfig(where, config);\n    refuseStrangeSim(where, sim, read, config);\n    var fired",
     why: "a flash fired on a bench without a flashlamp"
   },
   {
@@ -3155,7 +3155,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "    refuseStrayFlash(where, sim, read);\n    var d = compute(where, config, read.medium, read.setup);\n    // The pump as advance runs it",
+    find: "    refuseStrangeSim(where, sim, read, config);\n    var d = compute(where, config, read.medium, read.setup);\n    // The pump as advance runs it",
     replace: "    var d = compute(where, config, read.medium, read.setup);\n    // The pump as advance runs it",
     why: "pumpNow ignoring a flash on a bench without a lamp"
   },
@@ -3904,6 +3904,468 @@ const MUTATIONS = [
     find: "return Math.max(0, y * p) / derived.thresholdRate;",
     replace: "return Math.max(0, y * p);",
     why: "the laser arrow not over the threshold pump rate"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "if (x * -Math.expm1(-middle) - middle > 0) low = middle;",
+    replace: "if (x * -Math.expm1(-middle) - middle < 0) low = middle;",
+    why: "η_E's bisection keeping the wrong half"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "return (low + high) / 2 / x;",
+    replace: "return (low + high) / 2;",
+    why: "η_E given as u = −ln(1 − η)"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var where = at(\"energyUse\");\n    check.finite(where, \"x\", x);\n    if (x <= 1) {",
+    replace: "var where = at(\"energyUse\");\n    check.finite(where, \"x\", x);\n    if (x < 1) {",
+    why: "energyUse accepting x = 1, where there is no pulse"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var share = scheme === \"four-level\" ? 1 : 0.5;",
+    replace: "var share = 1;",
+    why: "three levels' giant pulse not halved"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var outShare = gammaOut / (2 * gamma);",
+    replace: "var outShare = gammaOut / gamma;",
+    why: "the output mirror's share γ₂/γ instead of γ₂/(2γ)"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var peakPower = share * outShare * hnu * V_a * N_p / tau_c * (x - 1 - Math.log(x));",
+    replace: "var peakPower = share * outShare * hnu * V_a * N_p / tau_c * (x - 1);",
+    why: "the peak power without its − ln x"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var energy = share * outShare * eta * x * N_p * V_a * hnu;",
+    replace: "var energy = share * outShare * eta * N_p * V_a * hnu;",
+    why: "the energy from N_p instead of N_i = x·N_p"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "if (gammaOut > 2 * gamma) {",
+    replace: "if (gammaOut > gamma) {",
+    why: "gammaOut checked against the single-pass γ"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "if (scheme !== \"four-level\" && scheme !== \"three-level\") {",
+    replace: "if (scheme !== \"four-level\" && scheme !== \"three-level\" && scheme !== \"two-level\") {",
+    why: "a giant pulse for the two-level atom"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "if (leak === 0) {",
+    replace: "if (leak < 0) {",
+    why: "a shutter that holds back every photon accepted"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "return Math.max(0, -0.5 * Math.log(kept));",
+    replace: "return Math.max(0, -Math.log(kept));",
+    why: "a shutter's round-trip loss used as its single-pass loss"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var share = Math.min(1, Math.max(0, since / switchTime));",
+    replace: "var share = Math.max(0, since / switchTime);",
+    why: "the cell's voltage falling on past 0"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var retardation = (Math.PI / 2) * (1 - share);",
+    replace: "var retardation = Math.PI * (1 - share);",
+    why: "the closed cell at Γ = π, which lets the light through"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "return lossOf(leak + (1 - leak) * cos * cos);",
+    replace: "return lossOf(leak + (1 - leak) * cos);",
+    why: "the cell's transmission cos Γ instead of cos²Γ"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var angle = 2 * Math.PI * (turns - Math.round(turns));",
+    replace: "var angle = 2 * Math.PI * turns;",
+    why: "the prism's angle not wrapped to one turn: it lines up only once"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var turns = since * rotation;",
+    replace: "var turns = since * rotation / (2 * Math.PI);",
+    why: "the prism's rotation taken as rad/s"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "return lossOf(leak + (1 - leak) * Math.exp(-ratio * ratio));",
+    replace: "return lossOf(leak + (1 - leak) * Math.exp(-ratio * ratio / 2));",
+    why: "the prism's window √2 too wide"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "return [rates[0], rates[1] - loss(tPrime) / eps];",
+    replace: "return [rates[0], rates[1] - loss(tPrime)];",
+    why: "the shutter's loss without the 1/ε"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "rates[1] - depth * a / eps,",
+    replace: "rates[1] - depth / eps,",
+    why: "the filter's loss not bleached by the light"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "recovery * (1 - a) - bleach * a * p",
+    replace: "recovery * (1 - a) - bleach * p",
+    why: "the light bleaching molecules that are already bleached"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var p = Math.exp(state[1]);",
+    replace: "var p = state[1];",
+    why: "the filter bleached by s = ln p instead of p"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "\"cr-yag\": Object.freeze({ sigma: 4.3e-18 * cm2, tau: 3.4 * us }),",
+    replace: "\"cr-yag\": Object.freeze({ sigma: 4.3e-18 * cm2, tau: 3.4 * 1e-3 }),",
+    why: "Cr⁴⁺:YAG recovering in 3.4 ms instead of µs"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "\"cryptocyanine\": Object.freeze({ sigma: 8e-16 * cm2, tau: 22 * ps })",
+    replace: "\"cryptocyanine\": Object.freeze({ sigma: 8e-18 * cm2, tau: 22 * ps })",
+    why: "cryptocyanine's cross section 100 times too small"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "if (peak !== null && point.state[peakOf] > peak.value) peak = { t: point.t, value: point.state[peakOf] };",
+    replace: "if (peak !== null) peak = { t: point.t, value: point.state[peakOf] };",
+    why: "the solver's peak as its last point"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "var peak = peakOf === null ? null : { t: t0, value: point.state[peakOf] };",
+    replace: "var peak = peakOf === null ? null : { t: t0, value: -Infinity };",
+    why: "the solver's peak leaving out t0"
+  },
+  {
+    file: "js/laser/engine/ode.js",
+    find: "if (inputs.peakOf >= inputs.state0.length) {",
+    replace: "if (inputs.peakOf > inputs.state0.length) {",
+    why: "peakOf one past the state accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return [\"none\"].concat(setup.qSwitches || []);",
+    replace: "return setup.qSwitches || [\"none\"];",
+    why: "a Q-switched setup without \"none\""
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var LEAK = 1e-4;",
+    replace: "var LEAK = 1e-2;",
+    why: "the shutters leaking 1 %"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var SWITCH_TIME = 5 * ns;",
+    replace: "var SWITCH_TIME = 500 * ns;",
+    why: "the cell switching in 500 ns"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (qSwitch === \"cell\") copy.switchTime = SWITCH_TIME;\n",
+    replace: "",
+    why: "withQSwitch leaving out the cell's switching time"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "COMMON_NAMES.concat(PUMP_NAMES[setup.pump]).forEach(function (name) {",
+    replace: "Object.keys(params.config).forEach(function (name) {",
+    why: "withQSwitch keeping the last switch's fields"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "qSwitches: [\"cell\", \"prism\", \"absorber\"], qDelay: 1 * ms,",
+    replace: "qSwitches: [\"cell\", \"prism\", \"absorber\"], qDelay: 0.5 * ms,",
+    why: "ruby's shutter opening at 0.5 ms, before the inversion's peak"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "qDelay: 0.6 * ms, absorber: \"cr-yag\", absorberT0: 0.8,",
+    replace: "qDelay: 0.6 * ms, absorber: \"cr-yag\", absorberT0: 0.5,",
+    why: "Nd:glass's filter too dark to open"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      check.atLeast(where, \"qDelay\", config.qDelay, 0);\n",
+    replace: "",
+    why: "qDelay not checked"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      if (T0 === 0) check.fail(where, \"absorberT0 must be above 0: a filter that lets no light through can never bleach.\");\n",
+    replace: "",
+    why: "a filter that lets no light through accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "check.params(where, config, COMMON_NAMES.concat(PUMP_NAMES[setup.pump], Q_SWITCH_NAMES[qSwitch]));",
+    replace: "check.params(where, config, COMMON_NAMES.concat(PUMP_NAMES[setup.pump], Q_SWITCH_NAMES.cell, Q_SWITCH_NAMES.prism, Q_SWITCH_NAMES.absorber));",
+    why: "any Q-switch's fields accepted on any bench"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (hasShutter(config)) return E.qswitch.closedLoss(config.leak) / gamma;",
+    replace: "if (hasShutter(config)) return 2 * E.qswitch.closedLoss(config.leak) / gamma;",
+    why: "lossClosed from the shutter's round-trip loss"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (config.qSwitch === \"absorber\") return -Math.log(config.absorberT0) / gamma;",
+    replace: "if (config.qSwitch === \"absorber\") return -0.5 * Math.log(config.absorberT0) / gamma;",
+    why: "the filter's single-pass T₀ halved as if it were a round trip's"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var absorber = config.qSwitch === \"absorber\" ? 1 : null;",
+    replace: "var absorber = config.qSwitch === \"absorber\" ? 0 : null;",
+    why: "the filter starting bleached"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "fired.opensAt = hasShutter(config) ? sim.t + config.qDelay : null;",
+    replace: "fired.opensAt = hasShutter(config) ? config.qDelay : null;",
+    why: "the shutter's opening counted from t = 0, not from the flash"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (sim.opensAt !== null && !hasShutter(config)) {\n      check.fail(where, \"sim.opensAt is \" + sim.opensAt + \" s, but this bench has no shutter (its qSwitch is \" +\n        config.qSwitch + \").\" + again);\n    }\n",
+    replace: "",
+    why: "an opening time on a bench without a shutter accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (config.qSwitch !== \"absorber\" && sim.absorber !== null) {",
+    replace: "    if (config.qSwitch === \"none\" && sim.absorber !== null) {",
+    why: "a filter's state on a bench without a filter accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (sim.absorber !== null) check.between(where, \"sim.absorber\", sim.absorber, 0, 1);",
+    replace: "if (sim.absorber !== null) check.finite(where, \"sim.absorber\", sim.absorber);",
+    why: "a filter share above 1 accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var k = Math.floor((t - opensAt + half) / turn) + 1;",
+    replace: "var k = Math.floor((t - opensAt + half) / turn) + 2;",
+    why: "the prism's window of this turn skipped"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "for (var opens = opensAt + k * turn - half; opens < t + seconds && cuts.length < maxSteps; opens += turn) {",
+    replace: "for (var opens = opensAt + k * turn + half; opens < t + seconds && cuts.length < maxSteps; opens += turn) {",
+    why: "the new solver call started where the prism's window closes, after the pulse"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (opensAt === null || config.qSwitch !== \"prism\") return cuts;\n",
+    replace: "    if (opensAt === null || config.qSwitch !== \"prism\") return cuts;\n    return cuts;\n",
+    why: "no new solver call at the prism's window"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "        tNow = cuts[i];",
+    replace: "        tNow = sim.t + to * tau * 0.5;",
+    why: "out of steps at a cut, the time reported short of where the state is"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var liftBeta = d.beta / (1 + extraLossNow(config, sim, d.gamma));",
+    replace: "var liftBeta = d.beta;",
+    why: "the photons behind a closed switch lifted to the open cavity's seed level"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "loss: function (tPrime) { return shutter(sim.t + tPrime * tau) / d.gamma; }",
+    replace: "loss: function (tPrime) { return shutter(sim.t + tPrime * tau); }",
+    why: "the shutter's loss not in units of γ"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "loss: function (tPrime) { return shutter(sim.t + tPrime * tau) / d.gamma; }",
+    replace: "loss: function (tPrime) { return shutter(sim.t + tPrime) / d.gamma; }",
+    why: "the shutter's time in t′ taken as seconds"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "        depth: closedExtra(config, d.gamma),\n",
+    replace: "        depth: closedExtra(config, d.gamma) / 2,\n",
+    why: "the filter half as deep in the run as in derive"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "recovery: tau / filter.tau,",
+    replace: "recovery: filter.tau / tau,",
+    why: "the filter's recovery rate upside down"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "bleach: filter.sigma * c * tau / (config.area * d.L_e * Math.exp(d.sOnePhoton))",
+    replace: "bleach: filter.sigma * c * tau / (config.area * d.L_e)",
+    why: "the filter bleached per photon of p, not per photon"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "state.push(sim.absorber);",
+    replace: "state.push(1);",
+    why: "the filter recovered at the start of every call"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (run.peak.value > peak.s) peak = { t: sim.t + run.peak.t * tau, s: run.peak.value };",
+    replace: "peak = { t: sim.t + run.peak.t * tau, s: run.peak.value };",
+    why: "advance's peak from its last piece only"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "power: d.powerPerP * Math.exp(peak.s) }",
+    replace: "power: d.powerPerPhoton * Math.exp(peak.s) }",
+    why: "advance's peak power from s as if it were ln φ"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return sim.absorber * closedExtra(config, gamma);",
+    replace: "return closedExtra(config, gamma);",
+    why: "lossNow ignoring how far the filter is bleached"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return 1 + extraLossNow(config, sim, compute(where, config, read.medium, read.setup).gamma);",
+    replace: "return extraLossNow(config, sim, compute(where, config, read.medium, read.setup).gamma);",
+    why: "lossNow without the open cavity's own loss"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "gammaOut: Math.abs(Math.log(config.refl2)),",
+    replace: "gammaOut: Math.abs(Math.log(config.refl1)),",
+    why: "the giant pulse leaving through the back mirror"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "V_a: config.area * config.l_g,",
+    replace: "V_a: config.area * config.L,",
+    why: "the giant pulse's volume from the cavity's length"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "var x = sim.N / d.N_c;",
+    replace: "var x = sim.N / d.N_c + 1;",
+    why: "the giant pulse's x one too high"
+  },
+  {
+    file: "js/laser/engine/constants.js",
+    find: "ps: 1e-12",
+    replace: "ps: 1e-9",
+    why: "a picosecond of 10⁻⁹ s"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var ABSORBERS = Object.freeze({",
+    replace: "var ABSORBERS = ({",
+    why: "the filters' table not frozen"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "\"cryptocyanine\": Object.freeze({ sigma: 8e-16 * cm2, tau: 22 * ps })",
+    replace: "\"cryptocyanine\": ({ sigma: 8e-16 * cm2, tau: 22 * ps })",
+    why: "one filter not frozen"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var depth = check.atLeast(where, \"depth\", params.depth, 0);",
+    replace: "var depth = check.positive(where, \"depth\", params.depth);",
+    why: "a filter of no depth (T₀ = 1) refused"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "var width = tau_c * x * eta / (x - 1 - Math.log(x));",
+    replace: "var width = energy / peakPower;",
+    why: "the giant pulse's width as E/P, NaN with no output mirror"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "return lossOf(readLeak(at(\"closedLoss\"), leak));",
+    replace: "return lossOf(leak);",
+    why: "closedLoss not checking the leak"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "    return function (since) {\n      return cellLossAt(leak, switchTime, since);",
+    replace: "    return function (since) {\n      return cellLossAt(leak, 2 * switchTime, since);",
+    why: "the cell's loss function switching twice as slowly as cellLoss"
+  },
+  {
+    file: "js/laser/engine/qswitch.js",
+    find: "      return prismLossAt(leak, rotation, tolerance, since);",
+    replace: "      return prismLossAt(leak, 2 * rotation, tolerance, since);",
+    why: "the prism's loss function turning twice as fast as prismLoss"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      if (rotation > MAX_ROTATION) {",
+    replace: "      if (rotation > 10 * MAX_ROTATION) {",
+    why: "a prism faster than 10⁵ rev/s accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    var target = config.qSwitch === \"absorber\" ? closedLoss(config, d.gamma) : 1;",
+    replace: "    var target = 1;",
+    why: "flashThreshold behind a filter giving the open cavity's"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      return target * atPeak / photonFreePeak(d, config, atPeak);",
+    replace: "      return atPeak / photonFreePeak(d, config, atPeak);",
+    why: "four levels' flash threshold ignoring the filter"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      if (photonFreePeak(d, config, middle) < target) low = middle;",
+    replace: "      if (photonFreePeak(d, config, middle) < 1) low = middle;",
+    why: "three levels' bisection aiming at the open cavity behind a filter"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (d.scheme === \"three-level\" && target >= d.n_t) return null;\n",
+    replace: "",
+    why: "a filter darker than every ion up can overcome searched for anyway"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (opensAt === null) {\n      var closed = E.qswitch.closedLoss(config.leak);\n      return function () { return closed; };\n    }\n",
+    replace: "",
+    why: "a shutter not yet fired treated as opening at t = 0"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    return function (t) { return loss(t - opensAt); };",
+    replace: "    return function (t) { return loss(t); };",
+    why: "the shutter's loss timed from t = 0, not from its opening"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (config.qSwitch === \"absorber\" && sim.absorber === null) {",
+    replace: "    if (false) {",
+    why: "a filter bench without the filter's state accepted"
   }
 ];
 

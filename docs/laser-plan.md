@@ -100,7 +100,8 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 7b: the engine for every medium and pump the bench runs (`pumps.js`: the flash and the gas discharge; `rates.threeLevel` and `rates.twoLevel`; ruby's N_t and the two-level atom in `media.js`; `bench.js`: the setups, `controls`, `fire`, `flashThreshold`); the page unchanged apart from `start(config)` and its light scale.
 - ✅ Stage 7c: choosing the laser on the page (two dropdowns over every bench of 7b; each bench's pump slider, units, starting slow motion and readout rows; Fire for a flashlamp; `bench.pumpNow`, whose `smallSignal` puts the gauge's dashed line at each medium's own gain; the inversion chart removed; the mutation check about 10× faster). Until 7d every bench is drawn with diodes and four levels.
 - ✅ Stage 7d: each pump drawn as itself on the bench (diodes, flashlamp, gas tube with electrodes and supply, pump laser with its fold mirror) and the level picture for three and two levels (the ground as the lower level, the share bars with the threshold mark, the gauge below zero); `derive` gives `thresholdRate`.
-- Next: stage 8, Q-switching (8a the engine, 8b the page).
+- ✅ Stage 8a: Q-switching in the engine (`qswitch.js`: η_E and §4.3's giant pulse, the Pockels cell's and the rotating prism's loss, the bleachable filter as one more rate equation; `bench.js`: `qSwitchesFor`, `withQSwitch`, the shutter's opening time and the filter's state in the simulation, `lossNow`, `giantPulse`, advance's `peak` and its pieces at the shutter's moments; `ode.js`: `peakOf`); the page unchanged.
+- Next: stage 8b, Q-switching on the page.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking. `docs/laser-progress.md` tells the same story in plain words for the owner; update it with each stage's commit.
 
@@ -1074,6 +1075,79 @@ The pump rate per ion is set for the unpumped medium, as a lamp sets it whatever
   - stop the integration exactly at the switching time; don't step across the jump;
   - φ vs S in the absorber equation;
   - the build-up needs the β seed.
+
+### Stage 8a — Q-switching in the engine (`qswitch.js`, `bench.js`, `ode.js`)
+
+**The owner was away** (16 Nov 2026: "don't ask me any questions for now, just do the work"). Every choice below that would have been theirs is marked *(decided without the owner)*, for them to review.
+
+**The split** *(decided without the owner)*: as in stage 7, the engine first (8a), then the page (8b), one commit each. 8a changes nothing on the page; the page keeps running because the new config and simulation fields have their defaults (`qSwitch: "none"`, `opensAt: null`, `absorber: null`).
+
+**Doc audit** (§4.3, §9.3, §9.4, §9.5, §11.2, §12; every hit of "Q-switch", "shutter", "prism", "Pockels", "bleach", "absorber", "η_E", "giant"):
+- §4.3's three formulas recomputed: x = 3 gives η_E = 0.940480 and Δτ_p = τ_c·xη_E/(x − 1 − ln x) = 3.13011 τ_c, 15.6505 ns for τ_c = 5 ns (§12: "η_E ≈ 0.94, Δτ_p ≈ 16 ns"). P_peak follows from the dimensionless equations with the pump and the decay left out: dp/dy = −(y − 1)/(εy), so p is highest at y = 1, p_peak = (x − 1 − ln x)/ε, which is §4.3's P_peak. E_out follows from the final inversion of x·η = −ln(1 − η).
+- §4.3 said the energy is half for three levels. So is the peak power (p = 2Bτφ: the same p is half the photons), and the width E/P is the same. Fixed in the doc.
+- §9.5's prism: R_eff(θ) = R·exp(−(θ/θ_tol)²) falls to e^(−10⁷) when the prism is turned away, a loss the solver cannot use. So there is a floor *(decided without the owner)*: R_eff = R·(ℓ + (1 − ℓ)·exp(−(θ/θ_tol)²)), with the same leak ℓ = 10⁻⁴ as the Pockels cell's polarizer. θ is wrapped to one turn, so the prism lines up again every turn. Its window is θ_tol/Ω = 0.32 µs at 500 rev/s and 1 mrad, as §9.5 says. Written into §4.3's table and §9.5.
+- §9.3: T = cos²Γ is 0 when the cell is closed, an infinite loss. The same floor: T = ℓ + (1 − ℓ)cos²Γ. Γ falls from π/2 to 0 evenly over the switching time t_s = 5 ns ("~nanoseconds") *(decided without the owner)*. Written into §9.3.
+- §9.4: N_g is a density and S the photon density φ/V (the φ against S trap of D-list). In the rate equations' units the filter's ground share a = N_g/N_a obeys da/dt′ = (τ/τ_a)(1 − a) − b·a·p, with b = σ_a·c·τ/(A_a·L_e·p₁), p₁ the p of one photon (Bτ for four levels, 2Bτ for three). This is the same σc/V that gives the medium's B, with the filter's own σ_a and area. Its loss is a·(−ln T₀) per pass, T₀ its transmission when unbleached. Each photon absorbed bleaches one molecule, so the photon loss and the bleaching are one process (checked: σ_a·c·φ·N_g·l_a/L_e both ways). Written into §9.4, with "under a continuous flash" corrected to "under continuous pumping".
+- §4.3's parasitic end-face cavity (R ≈ 0.076) needs a second photon variable, so it moved to stage 13a, with the Brewster windows *(decided without the owner)*. Noted in §4.3.
+- §11.2's "(y − 1) becomes (y − γ(t)/γ₀)" is what the code does: γ(t)/γ₀ = 1 + q, with q the switch's extra loss over the open cavity's γ.
+
+**Scope card.**
+
+| Function | In | Out | Doc |
+|---|---|---|---|
+| `qswitch.energyUse(x)` | x > 1, the inversion at opening over threshold | η_E, solving x·η = −ln(1 − η) by bisection (in u = −ln(1 − η), so a large x does not round 1 − η to 0) | §4.3 |
+| `qswitch.giantPulse({ x, N_p, V_a, nu, tau_c, gamma, gammaOut, scheme })` | as named; gammaOut = −ln R₂ (a round trip's), at most 2γ; scheme "four-level" or "three-level" | `{ eta_E, energy (J), peakPower (W), width (s) }`, half the energy and peak for three levels | §4.3 |
+| `qswitch.cellLoss({ leak, switchTime, since })` | the leak ℓ, t_s (s), the time since the voltage started to fall (s; below 0: still closed) | the cell's extra single-pass loss −½ ln(ℓ + (1 − ℓ)cos²Γ), Γ = (π/2)(1 − since/t_s) inside [0, t_s] | §9.3 |
+| `qswitch.prismLoss({ leak, rotation, angleTolerance, since })` | rev/s, rad, s since the prism lined up | −½ ln(ℓ + (1 − ℓ)e^(−(θ/θ_tol)²)), θ = 2π·rotation·since, wrapped to one turn | §9.5 |
+| `qswitch.withLoss({ f, eps, loss })` | a rate-equation f, ε, the extra loss over γ as a function of t′ | f with −loss(t′)/ε added to ds/dt′ | §11.2 |
+| `qswitch.withAbsorber({ f, eps, depth, recovery, bleach })` | depth = −ln T₀/γ, recovery = τ/τ_a, bleach = b | f for [y, s, a] | §9.4 |
+| `qswitch.ABSORBERS` | | Cr⁴⁺:YAG (σ_a 4.3×10⁻¹⁸ cm², τ_a 3.4 µs) and cryptocyanine (8×10⁻¹⁶ cm², 22 ps); not verified against printed sources | §9.4 |
+| `ode`: optional `peakOf` | the index of a state entry | `peak: { t, value }`, its highest value at t0 and the accepted points; `null` when not asked | |
+| `bench.qSwitchesFor({ medium, pump })` | | `["none", "cell", "prism", "absorber"]` for the three flashlamp rods, `["none", "absorber"]` for the diode-pumped Nd:YAG, `["none"]` for the rest | |
+| `bench.withQSwitch({ config, qSwitch })` | | a new config, the same bench with that Q-switch and its starting values (and without the fields of the last one) | |
+| `bench.derive` | | gains `qSwitch` and `lossClosed`, the loss with the switch closed in units of the open cavity's (null without one) | |
+| `bench.start`, `bench.fire` | | the simulation gains `opensAt` (when the shutter opens: Fire's time + qDelay; null before Fire and without a shutter) and `absorber` (the filter's ground share, 1 at the start; null without a filter) | |
+| `bench.advance` | | gains `peak: { t, power }`, the highest output at the solver's points within the call; starts a new solver call where each of the prism's windows opens (6 θ_tol before it lines up), so a long call cannot step over it | |
+| `bench.lossNow({ sim, config })` | | the loss now, in units of the open cavity's: 1 + q | |
+| `bench.giantPulse({ sim, config })` | | §4.3's prediction for the inversion of `sim` (null at or below threshold and for the two-level atom) | |
+
+**Decisions** *(all decided without the owner)*:
+- Which benches get a Q-switch: the three flashlamp rods (ruby, Nd:glass, Nd:YAG) get all three switches; the diode-pumped Nd:YAG gets the filter, which gives a train of pulses from continuous pumping (§9.4; this is how small passively Q-switched lasers work). A cell or a prism on a continuous bench would need a repetition rate, which the page has no control for yet; the gases, the dye and Ti:sapphire get none (their gain is too low or their upper level too short to store energy).
+- The shutter opens `qDelay` after Fire, and by default `qDelay` is when the inversion behind the closed shutter is highest at the default flash energy: measured, ruby 1.00 ms, Nd:glass 0.60 ms, Nd:YAG 0.55 ms (y = 4.32, 3.45 and 7.73 there).
+- The filters: cryptocyanine for ruby (the dye of the first Q-switched ruby lasers) with T₀ = 0.5; Cr⁴⁺:YAG for the neodymium lasers, T₀ = 0.8 for Nd:glass (0.5 never opened: the threshold behind it, 6.3, is above Nd:glass's peak, 3.45), 0.5 for the Nd:YAG rod, 0.95 for the diode bench. The filter's beam is as wide as the mode (A_a = A).
+- The prism turns at 500 rev/s (§9.5) with θ_tol = 1 mrad; the cell switches in 5 ns; both leak ℓ = 10⁻⁴.
+- The prism turns all the time, and Fire times the flash so that it lines up `qDelay` later. It also lines up once every turn before and after that: at 500 rev/s these are 2 ms away, outside the flash, but a faster prism gives pulses at each of them. Before the first Fire the prism counts as turned away (there is nothing to time it to, and no inversion to release).
+- The closed shutter's photons: `liftToSeed` raises the photons to the seed's level in the open cavity before each call. Behind a closed switch, which loses 1 + q times as much, that level is too high, so the photons fell back in every call, costing 64 steps a call behind Nd:YAG's closed cell. The bench now lifts with β/(1 + q_now): 4.4 steps a call, and still never above the steady level.
+- The page's frame budget (1500 steps) stays. Ruby's dye filter recovers in 22 ps, and its pulse costs about 3000 steps, so the page falls 1 or 2 frames behind there; the note "behind" needs a quarter of a second's frames, so it does not show.
+
+**Found while building and testing:**
+- The first plan cut the run at the cell's switching and at both edges of the prism's windows, with a step limit inside each. The mistakes check missed three of those guards, so they were measured with one long call across each opening. Only the cut where the prism's window opens matters: without it a 200 µs call steps right over the lined-up prism (12 steps, no pulse). The cell's cut changed no result (7 % fewer steps), and the step limits changed nothing, even at 5 rev/s. Those were removed, and a test now makes the long call.
+- A closed shutter first cost 64 steps a call (Nd:YAG): `liftToSeed` raised the photons to the open cavity's seed level, and they fell back in every call. Lifted with β/(1 + q_now), 4.4.
+- The "no light at all" run used to check the closed shutter still lased with Nd:YAG: β = 0 removes the seed but not the one photon the run starts with, and in ln φ even e^(−10⁵) photons come back above threshold. The test now integrates the photon-free equation itself, as `bench-pumps.test.js` does.
+
+**Test values** (measured in stage 8a):
+- A cell opened at the inversion's peak, 5 ns switching: ruby 6.638 J, 522.2 MW, 12.71 ns; Nd:glass 1.82 J, 47.6 MW, 38.3 ns; Nd:YAG 0.163 J, 10.35 MW, 15.7 ns. That is §4.3's prediction to 0.01–0.02 % for each, with the peak 43–170 ns after the voltage starts to fall. A 0.01 ns switch gives the same.
+- The closed shutter: about 10⁻⁵ W (ruby) and 2×10⁻⁷ W (Nd:YAG) for the whole millisecond; the inversion is that of no light at all to 2×10⁻⁵.
+- The prism at 500 rev/s, ruby: one pulse of 120 MW. It comes before the prism is fully lined up, so it is weaker than the cell's (§9.5, added to the doc). At 5 rev/s: 15 pulses, the largest 0.93 MW. Nd:glass: 46.7 MW at 500 rev/s, 6 pulses at 5 rev/s; Nd:YAG: 2.1 MW at 500 rev/s (its pulse builds up slowly), 18 pulses at 5 rev/s.
+- The filter: ruby, one pulse of 210 MW at 631 µs, the dye bleached to 13 %; Nd:glass (T₀ 0.8), 28.2 MW at 356 µs; the Nd:YAG rod, 7.28 MW at 353 µs; the diode bench, a pulse of 2.57 kW every 299.9 µs (without the filter: a steady 1.7 W).
+- D7, §12's ruby 20 × 1.5 cm, "10⁻⁸ s pulse, 1–2 J, 10–200 MW". The book does not give the lamp or the mirrors; assumed: a 60 cm cavity, a 50 % output mirror, a flash of 1.2 times the threshold (3225 J), the cell opened at the inversion's peak, 1.05 ms. The model gives 18.6 ns, so the width agrees, but 12.7 J and 685 MW: 6–13 times the book's energy. The model pumps the whole rod evenly and puts all of it in the mode, and the book's lasers did neither. Not tuned to agree; the test checks the width's order of magnitude and pins the energy between 1 and 20 J.
+- One long call across the opening, from 100 µs before it: the cell 462 steps (ruby) and 645 (Nd:YAG), the top within 0.02 % of §4.3; the prism (200 µs) 1093 and 1353, the same top as 2 ns calls to 10⁻⁴.
+- Page frames (8 calls at slow motion 10⁴, 60 Hz) around each pulse, the worst of 9 starting times: ruby 427 (cell), 650 (prism), 2567 (filter); Nd:glass 418, 461, 564; Nd:YAG 592, 689, 718; the diode bench's filter 406. Behind the closed switch: at most 18.
+
+**Breaks** (85 for this stage: 77 new, and 8 of earlier stages rewritten for the new `advance`, `fire`, `pumpNow` and `flashThreshold`; 713 in all): `qswitch.js` (η_E's bisection and its answer, x = 1, the three-level half, γ₂/(2γ), the peak's − ln x, the energy's x, the γ₂ check, a two-level pulse, the width as E/P, the leak's check and `closedLoss`, the round-trip loss as single pass, the cell's clamp, its Γ = π, cos instead of cos², the prism's wrap, its rad/s, its width, both loss functions against the checked ones, the 1/ε, the filter's bleaching, depth and p, the filters' σ_a and τ_a, the frozen table, depth 0), `ode.js` (`peakOf`: the last point, t0 left out, one past the state), `bench.js` (the setups' switches and defaults, `LEAK`, `SWITCH_TIME`, `withQSwitch`'s fields, the checks, the closed losses, the filter at the start, `opensAt` from the flash, the strange simulations, a shutter before Fire, the loss over γ and its time, the prism's cuts and the stop at a cut, the lift behind the switch, the filter's depth, recovery, bleaching and state, advance's peak, `lossNow`, `giantPulse`'s mirror, volume and x, `flashThreshold` behind a filter, the rotation's cap) and `constants.js` (`ps`). The first run missed 3 (the cell's cut, the step limit inside the windows and the prism's window skipped: see "Found while building"); the second missed 1 (advance's peak taken from the last piece only: a test now spans two lining-ups). The last run: 713 of 713 caught, in 222 s.
+
+**Browser check** (Claude in Chrome, `http://127.0.0.1:5500/?view=laser`, after a hard reload: the cached `index.html` had no `qswitch.js`): the page runs as in 7d, ruby fires, no console errors. In Chrome the engine's ruby cell pulse is 522.2 MW, as in Node, and a step costs 0.7–1.8 µs warmed up, with or without a Q-switch (12 µs on the first, cold call).
+
+**Review outcome** (`/code-review` on Opus 5.5, xhigh, 9 findings; 8 fixed, 1 kept with a reason):
+- `qswitch.giantPulse` gave a width of NaN with no output mirror (γ₂ = 0, so energy and peak are both 0): the width is now §4.3's τ_c·xη_E/(x − 1 − ln x) written out, which does not depend on the mirrors.
+- The prism lines up every turn after Fire, also before `qDelay` (at 5000 rev/s, a 2.2 MW pulse 200 µs before it), while the comments said `opensAt` is when it opens. **Kept**: the prism really never stops turning, and a fast one does let out pulses during the flash. The comments, the plan's decisions and `CLAUDE.md` now say what `qDelay` means for a prism (a moment it lines up; it does so every 1/rotation), and a test runs a 5000 rev/s prism over two lining-ups.
+- The solver's loss function called the fully checked `cellLoss`/`prismLoss` on every evaluation of f (1.15 µs a call against 0.5 µs): `qswitch.cellLossFunction` and `prismLossFunction` now check once and return an unchecked function, as `rates.*.derivatives` do.
+- `cutsOf` made every cut before any step, so an absurd rotation (10¹⁷ rev/s) or an hour-long call built an array of 10⁹ cuts or more (a `RangeError`). The rotation is now at most 10⁵ rev/s (§9.5's is 500), and at most `maxSteps` cuts are made, since each needs a step; a test makes an hour-long call on the fastest prism.
+- `flashThreshold` gave the open cavity's threshold behind a filter, which must be overcome first: Nd:glass with T₀ = 0.5 showed 29 J for a filter that the default 100 J flash never opened. It now aims at `lossClosed` behind a filter (182 J there), and gives null when even every ion up is short of it.
+- Nine solver calls in `bench-qswitch.test.js` used the answer without checking `reachedEnd`: they now go through `reach()`, which does.
+- The shutter test (`qSwitch` is a cell or a prism) was written out 7 times, and `shutterLoss` had a dead branch: one `hasShutter(config)`, and `shutterLossFunction` is closed (no opening time yet) or the cell's or the prism's function.
+- The closed shutter's loss −½ ln ℓ was written out three times: it is now `qswitch.closedLoss(leak)`, used by `derive` and the run. The leak's check is still in `bench.js` too, on purpose: every error names the function the page called (engine rule).
+- An XOR of two booleans (`(sim.absorber === null) !== (config.qSwitch !== "absorber")`) checked the filter's state: two plain `if`s now, each with its own message.
 
 ### Stage 9 — Spectrum panel and several modes
 - **Build:**

@@ -48,6 +48,7 @@ const ENGINE_FILES = [
   "ode.js",
   "rates.js",
   "pumps.js",
+  "qswitch.js",
   "bench.js"
 ];
 

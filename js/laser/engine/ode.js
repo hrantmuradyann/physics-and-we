@@ -28,7 +28,12 @@
                     6 calls of f. The default, 100 000, is only a safety
                     limit: that many steps take tens of milliseconds, several
                     animation frames, so a page passes its own per-frame budget.
-     returns { t, state, reachedEnd, hNext, accepted, rejected, evaluations }
+       peakOf       the index of one entry of the state to watch: the answer's
+                    peak is its highest value at t0 and at the accepted
+                    points. A pulse far shorter than [t0, t1] (a Q-switch's)
+                    makes the solver take short steps, so its top is seen,
+                    where the end state alone would miss it.
+     returns { t, state, reachedEnd, hNext, accepted, rejected, evaluations, peak }
        reachedEnd true:   t is exactly t1.
        reachedEnd false:  maxSteps ran out first; t and state are the last
                           accepted point, a correct partial result.
@@ -40,6 +45,8 @@
                           grow, a new call does. Either way every step
                           meets the tolerance.
        evaluations:       how many times f was called.
+       peak:              { t, value } of the entry peakOf names (the first
+                          point where it was highest); null without peakOf.
 
    How it works (E. Hairer, S. P. Nørsett, G. Wanner, Solving Ordinary
    Differential Equations I, 2nd ed., §II.4 and §II.5; the coefficients are
@@ -259,7 +266,7 @@
 
   // The inputs both solvers take, checked, with the defaults filled in.
   function readInputs(where, params) {
-    check.params(where, params, ["f", "t0", "state0", "t1", "rtol", "atol", "h0", "hMax", "maxSteps"]);
+    check.params(where, params, ["f", "t0", "state0", "t1", "rtol", "atol", "h0", "hMax", "maxSteps", "peakOf"]);
     var inputs = {};
     inputs.f = check.func(where, "f", params.f);
     inputs.t0 = check.finite(where, "t0", params.t0);
@@ -274,6 +281,14 @@
     inputs.maxSteps = params.maxSteps === undefined ? DEFAULT_MAX_STEPS :
       check.integerAtLeast(where, "maxSteps", params.maxSteps, 1);
     inputs.h0 = params.h0 === undefined ? undefined : check.positive(where, "h0", params.h0);
+    inputs.peakOf = null;
+    if (params.peakOf !== undefined) {
+      inputs.peakOf = check.integerAtLeast(where, "peakOf", params.peakOf, 0);
+      if (inputs.peakOf >= inputs.state0.length) {
+        check.fail(where, "peakOf must name an entry of the state (0 to " + (inputs.state0.length - 1) +
+          "), got " + inputs.peakOf + ".");
+      }
+    }
     return inputs;
   }
 
@@ -310,6 +325,8 @@
     var rejected = 0;
     var justRejected = false;
     var reachedEnd = false;
+    var peakOf = inputs.peakOf;
+    var peak = peakOf === null ? null : { t: t0, value: point.state[peakOf] };
 
     while (accepted + rejected < inputs.maxSteps) {
       var hMin = smallestStep(point.t, t1);
@@ -337,6 +354,7 @@
         justRejected = false;
         // f at the new state is the next step's first (first same as last).
         point = { t: lastStep ? t1 : point.t + hTry, state: step.state, f: step.fNew };
+        if (peak !== null && point.state[peakOf] > peak.value) peak = { t: point.t, value: point.state[peakOf] };
         if (lastStep) {
           reachedEnd = true;
           break;
@@ -356,7 +374,8 @@
       hNext: h,
       accepted: accepted,
       rejected: rejected,
-      evaluations: evaluations
+      evaluations: evaluations,
+      peak: peak
     };
   }
 
