@@ -405,6 +405,174 @@ test("lossNow, the filter: its depth times the share still unbleached", () => {
   assert.equal(B.lossNow({ sim: simAt(cfg, 0, { absorber: 0 }), config: cfg }), 1);
 });
 
+/* ---------- the page's view of the switch (stage 8b) ---------- */
+
+test("controls: the filter's transmission, 20–99 %, for a filter; null for every other switch and none", () => {
+  for (const [medium, pump] of [["ruby", "flashlamp"], ["nd-glass", "flashlamp"], ["nd-yag", "flashlamp"], ["nd-yag", "diode"]]) {
+    for (const qSwitch of B.qSwitchesFor({ medium, pump })) {
+      const cfg = bench(medium, pump, qSwitch);
+      const controls = B.controls(cfg);
+      const label = medium + " " + pump + " " + qSwitch;
+      assert.deepEqual(Object.keys(controls), ["pump", "coupler", "absorberT0"], label);
+      if (qSwitch !== "absorber") {
+        assert.equal(controls.absorberT0, null, label);
+        continue;
+      }
+      assert.equal(JSON.stringify(controls.absorberT0), JSON.stringify({ name: "absorberT0", min: 0.2, max: 0.99, log: false }), label);
+      // The starting value is inside the slider, and both ends derive.
+      assert.ok(cfg.absorberT0 >= 0.2 && cfg.absorberT0 <= 0.99, label + ": starts at " + cfg.absorberT0);
+      for (const end of [0.2, 0.99]) assert.doesNotThrow(() => B.derive(bench(medium, pump, qSwitch, { absorberT0: end })), label + " " + end);
+    }
+  }
+  assert.equal(B.controls(B.configFor({ medium: "he-ne", pump: "discharge" })).absorberT0, null);
+});
+
+test("switchNow: null without a Q-switch; the cell's loss and how open it is, before Fire, while it switches and after", () => {
+  const none = bench("ruby", "flashlamp", "none");
+  assert.equal(B.switchNow(deepFreeze({ sim: B.start(none), config: none })), null);
+  const cfg = bench("ruby", "flashlamp", "cell");
+  const d = B.derive(cfg);
+  const now = (t, opensAt) => B.switchNow(deepFreeze({ sim: simAt(cfg, t, { opensAt }), config: cfg }));
+  const closed = now(0.5e-3, null);
+  assertClose(closed.loss, d.lossClosed, 1e-12, "not fired");
+  assert.equal(closed.open, 0, "closed");
+  assert.deepEqual(Object.keys(closed), ["loss", "open"]);
+  assert.equal(now(0.5e-3, 1e-3).open, 0, "fired, not yet open");
+  // Half way through the switching the loss is lossNow's, and open is
+  // how far it has come down from the closed loss to the open one.
+  const half = now(1e-3 + 2.5e-9, 1e-3);
+  const loss = B.lossNow({ sim: simAt(cfg, 1e-3 + 2.5e-9, { opensAt: 1e-3 }), config: cfg });
+  assertClose(half.loss, loss, 1e-12, "the loss is lossNow's");
+  assertClose(half.open, (d.lossClosed - loss) / (d.lossClosed - 1), 1e-12, "half way");
+  assert.ok(half.open > 0.9 && half.open < 1, "cos²Γ = 1/2 already takes most of the loss away: " + half.open);
+  const open = now(1e-3 + 5e-9, 1e-3);
+  assert.equal(open.loss, 1);
+  assert.equal(open.open, 1, "open");
+});
+
+test("switchNow: the filter is as open as it is bleached; one that holds nothing back is open", () => {
+  const filter = bench("nd-yag", "diode", "absorber");
+  const d = B.derive(filter);
+  const recovered = B.switchNow({ sim: B.start(filter), config: filter });
+  assert.equal(recovered.open, 0, "recovered: closed");
+  assertClose(recovered.loss, d.lossClosed, 1e-12);
+  const quarter = B.switchNow({ sim: simAt(filter, 0, { absorber: 0.25 }), config: filter });
+  assertClose(quarter.open, 0.75, 1e-12, "a quarter unbleached");
+  assertClose(quarter.loss, 1 + 0.25 * (d.lossClosed - 1), 1e-12);
+  assert.equal(B.switchNow({ sim: simAt(filter, 0, { absorber: 0 }), config: filter }).open, 1, "bleached");
+  // A filter that lets everything through holds nothing back: open, not 0/0.
+  const clear = bench("nd-yag", "diode", "absorber", { absorberT0: 1 });
+  assert.equal(JSON.stringify(B.switchNow({ sim: B.start(clear), config: clear })), JSON.stringify({ loss: 1, open: 1 }));
+  const prism = bench("nd-yag", "flashlamp", "prism");
+  assert.throws(() => B.switchNow({ sim: B.start(filter), config: prism }), /^Error: LaserEngine\.bench\.switchNow: /);
+});
+
+test("a steady pump behind the filter pulses: no steady numbers, and its threshold is the closed filter's", () => {
+  const open = B.derive(bench("nd-yag", "diode", "none"));
+  const cfg = bench("nd-yag", "diode", "absorber");
+  const d = B.derive(deepFreeze(cfg));
+  for (const name of ["ySteady", "P_out", "slope", "T_opt", "T_best", "period", "t_damp"]) {
+    assert.equal(d[name], null, name);
+    assert.notEqual(open[name], null, name + " without the filter");
+  }
+  // The inversion without light, x, must reach the closed loss first.
+  assertClose(d.pumpThreshold, open.pumpThreshold * d.lossClosed, 1e-12, "lossClosed times the open cavity's");
+  assertClose(d.x, open.x, 1e-12, "the rate equations' pump is the same");
+  // Checked against a run: just under that threshold no pulse in 4 ms,
+  // just over it one (the review's case: 1.8 × 1.51 W showed x = 1.8 and
+  // never lased).
+  function topIn(pumpPower, seconds) {
+    const c = bench("nd-yag", "diode", "absorber", { pumpPower });
+    let sim = B.start(c);
+    let top = 0;
+    for (let i = 0; i < 40; i++) {
+      const run = B.advance({ sim, config: c, seconds: seconds / 40, maxSteps: 4000 });
+      assert.ok(run.reachedEnd, "within its steps");
+      sim = run.sim;
+      top = Math.max(top, run.peak.power);
+    }
+    return top;
+  }
+  assert.ok(topIn(0.95 * d.pumpThreshold, 4e-3) < 1e-3, "under the threshold: no light");
+  assert.ok(topIn(1.1 * d.pumpThreshold, 4e-3) > 100, "over it: a pulse");
+  // The cell and the prism on a flash bench keep their steady numbers null
+  // anyway (a flash has none), and the open cavity's x.
+  const flash = B.derive(bench("ruby", "flashlamp", "cell"));
+  assert.equal(flash.P_out, null);
+});
+
+test("pumpNow's overThreshold: the pump over the pump that starts the laser, the closed filter's behind one", () => {
+  const filter = bench("nd-yag", "diode", "absorber");
+  const d = B.derive(filter);
+  const now = B.pumpNow(deepFreeze({ sim: B.start(filter), config: filter }));
+  assertClose(now.overThreshold, now.x / d.lossClosed, 1e-12, "four levels: x/L");
+  assertClose(now.overThreshold, filter.pumpPower / d.pumpThreshold, 1e-12, "the readouts agree");
+  const plainBench = bench("nd-yag", "diode", "none");
+  const free = B.pumpNow({ sim: B.start(plainBench), config: plainBench });
+  assert.equal(free.overThreshold, free.x, "no filter: x");
+  // Three levels behind a filter: w over the w that holds y = L without
+  // light, (n_t + L)/(n_t − L).
+  const ruby = bench("ruby", "flashlamp", "absorber");
+  const r = B.derive(ruby);
+  const fired = B.advance({ sim: B.fire({ sim: B.start(ruby), config: ruby }), config: ruby, seconds: 0.3e-3, maxSteps: 3000 });
+  assert.ok(fired.reachedEnd);
+  const flash = B.pumpNow({ sim: fired.sim, config: ruby });
+  const startW = (r.n_t + r.lossClosed) / (r.n_t - r.lossClosed);
+  assertClose(flash.overThreshold, flash.w / startW, 1e-12, "three levels");
+  assert.ok(flash.overThreshold < flash.x, "the filter asks for more pump");
+  // A cell or a prism: the open cavity's (Fire opens them).
+  const cell = bench("ruby", "flashlamp", "cell");
+  const c = B.pumpNow({ sim: fired.sim.absorber === null ? fired.sim : Object.assign({}, fired.sim, { absorber: null }), config: cell });
+  assertClose(c.overThreshold, c.x, 1e-12, "a cell: x");
+  // A filter even every ion up cannot overcome: null.
+  const dark = bench("ruby", "flashlamp", "absorber", { absorberT0: 1e-9 });
+  assert.equal(B.pumpNow({ sim: B.start(dark), config: dark }).overThreshold, null);
+  // The two-level atom: none.
+  const two = B.configFor({ medium: "two-level", pump: "laser" });
+  assert.equal(B.pumpNow({ sim: B.start(two), config: two }).overThreshold, null);
+});
+
+test("carryOver: the run goes on with another Q-switch; a filter turned on is dark, a shutter closed until Fire", () => {
+  const none = bench("ruby", "flashlamp", "none");
+  let sim = B.fire({ sim: B.start(none), config: none });
+  const run = B.advance({ sim, config: none, seconds: 0.4e-3, maxSteps: 4000 });
+  assert.ok(run.reachedEnd);
+  sim = run.sim;
+  const filter = bench("ruby", "flashlamp", "absorber");
+  const on = B.carryOver(deepFreeze({ sim, config: filter }));
+  assert.equal(JSON.stringify(on), JSON.stringify(Object.assign({}, sim, { opensAt: null, absorber: 1 })),
+    "the same atoms, photons, flash and time; the filter dark");
+  assert.doesNotThrow(() => B.advance({ sim: on, config: filter, seconds: 1e-6, maxSteps: 2000 }), "it runs on");
+  const cell = bench("ruby", "flashlamp", "cell");
+  const fired = B.fire({ sim: on, config: filter });
+  const shut = B.carryOver({ sim: Object.assign({}, fired, { absorber: 1 }), config: cell });
+  assert.equal(shut.opensAt, null, "closed until the next Fire");
+  assert.equal(shut.absorber, null);
+  const off = B.carryOver({ sim: on, config: none });
+  assert.equal(JSON.stringify(off), JSON.stringify(sim), "off: as it was");
+  // A cell fired, then switched off: its opening time goes with it.
+  const cellFired = B.fire({ sim: B.carryOver({ sim, config: cell }), config: cell });
+  assert.notEqual(cellFired.opensAt, null, "fired: it opens");
+  assert.equal(B.carryOver({ sim: cellFired, config: none }).opensAt, null, "off: no opening");
+  // A flash cannot be carried to a bench without a lamp.
+  const diode = bench("nd-yag", "diode", "none");
+  assert.throws(() => B.carryOver({ sim, config: diode }), /^Error: LaserEngine\.bench\.carryOver: sim\.flash/);
+  assert.throws(() => B.carryOver({ sim, config: diode, extra: 1 }), /^Error: LaserEngine\.bench\.carryOver: /);
+  // Nor an inversion the medium cannot have: ruby's, every ion down, to
+  // Nd:YAG (four levels start at 0), or more ions up than ruby has.
+  const filtered = bench("nd-yag", "diode", "absorber");
+  const rubyStart = B.start(none);
+  assert.throws(() => B.carryOver({ sim: rubyStart, config: filtered }),
+    /^Error: LaserEngine\.bench\.carryOver: sim\.N/);
+  const N_t = E.media.get("ruby").N_t;
+  assert.throws(() => B.carryOver({ sim: Object.assign({}, rubyStart, { N: 1.01 * N_t }), config: filter }),
+    /^Error: LaserEngine\.bench\.carryOver: sim\.N/);
+  for (const N of [-N_t, 0, N_t]) {
+    assert.doesNotThrow(() => B.carryOver({ sim: Object.assign({}, rubyStart, { N }), config: filter }), "ruby N = " + N);
+  }
+  assert.doesNotThrow(() => B.carryOver({ sim: B.start(filtered), config: filtered }), "Nd:YAG N = 0");
+});
+
 /* ---------- §4.3's prediction ---------- */
 
 test("giantPulse({ sim, config }): §4.3 with the inversion of sim; null at or below threshold and for two levels", () => {
@@ -430,6 +598,23 @@ test("giantPulse({ sim, config }): §4.3 with the inversion of sim; null at or b
   assert.ok(B.giantPulse({ sim: simAt(none, 0, { N: 2 * d.N_c }), config: none }).energy > 0);
   const two = bench("two-level", "flashlamp", "none");
   assert.equal(B.giantPulse({ sim: simAt(two, 0, { N: 0 }), config: two }), null);
+});
+
+test("giantPulse predicts a pulse only from 1 % over threshold: just above it §4.3's pulse is nothing and lasts for ever", () => {
+  for (const medium of ["nd-yag", "ruby"]) {
+    const cfg = bench(medium, "flashlamp", "cell");
+    const d = B.derive(cfg);
+    const at = (x) => B.giantPulse({ sim: simAt(cfg, 0, { N: x * d.N_c }), config: cfg });
+    // At x = 1 + 10⁻⁷ the formula's "pulse" (Δτ_p ∝ η_E·x/(x − 1 − ln x),
+    // about 4/(x − 1)) would be about 10⁷ times longer than at x = 3.
+    assert.equal(at(1 + 1e-7), null, medium + " just above threshold");
+    assert.equal(at(1.005), null, medium + " half a percent over");
+    assert.equal(at(1.0099), null, medium + " just under 1 %");
+    for (const x of [1.0101, 1.02]) {
+      const pulse = at(x);
+      assert.ok(pulse !== null && pulse.energy > 0, medium + " x = " + x);
+    }
+  }
 });
 
 /* ---------- the runs ---------- */

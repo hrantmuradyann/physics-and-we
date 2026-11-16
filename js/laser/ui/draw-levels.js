@@ -4,7 +4,7 @@
 
      LaserUI.levels.draw(view, picture)
        view     what loop.js passes to a draw: { g, w, h, colors, font, … }
-       picture  { scheme, x, smallSignal, y, stim, n_t, words }
+       picture  { scheme, x, smallSignal, y, stim, n_t, loss, words }
                 scheme  "four-level", "three-level" or "two-level"; none
                       is four levels
                 x     pump rate / threshold rate (R_p/R_c): the pump
@@ -20,6 +20,13 @@
                 stim  stimulated emission now, over the threshold pump
                       rate: x − 1 once the laser runs steadily
                 n_t   N_t/N_c, for three and two levels
+                loss  the cavity's loss now over the open cavity's (a
+                      Q-switch's, bench.switchNow); none is 1. The scale
+                      follows it: when a shutter opens it falls from the
+                      closed loss (Nd:YAG's cell, 37) to what the gain
+                      needs, so the clamped gain stays readable (a scale
+                      kept at the closed loss left it in the bottom
+                      fortieth: stage 8b review)
                 words { pumpBand, upper, lower, ground, groundLower, gain,
                       loss, transparent }; a missing word is left out
      LaserUI.levels.layout(w, h)     where everything goes (CSS pixels)
@@ -44,9 +51,11 @@
                    upper bar never passes half (§2.1)
    Right: the gain bar against the loss line, which is the threshold.
    Above threshold the gain rises to the loss and stops there, whatever
-   the pump: gain clamping (§4.1). Units of the threshold, so the loss is
-   always 1. For three and two levels the gauge goes down to −n_t: below
-   its zero line the medium absorbs, and the bar is drawn down, paler.
+   the pump: gain clamping (§4.1). Units of the open cavity's threshold,
+   so the loss is 1, or more behind a closed Q-switch (stage 8b), and the
+   threshold mark on the bars is where the gain reaches the loss now. For
+   three and two levels the gauge goes down to −n_t: below its zero line
+   the medium absorbs, and the bar is drawn down, paler.
 
    Tests: tests/laser/draw-panels.test.js
    ========================================================================== */
@@ -73,11 +82,17 @@
     return picture.scheme === "three-level" || picture.scheme === "two-level";
   }
 
+  // The loss now, over the open cavity's; 1 when the picture does not
+  // give it.
+  function lossOf(picture) {
+    return typeof picture.loss === "number" ? picture.loss : 1;
+  }
+
   // The top of the gauge: it holds the small-signal gain, y and the loss
-  // (1) with room above, so nothing drawn on the scale needs clamping (a
-  // clamp would only hide a wrong scale).
+  // with room above, so nothing drawn on the scale needs clamping (a clamp
+  // would only hide a wrong scale).
   function scaleMax(picture) {
-    var top = Math.max(picture.smallSignal, picture.y, 1) * HEADROOM;
+    var top = Math.max(picture.smallSignal, picture.y, lossOf(picture)) * HEADROOM;
     if (hasIons(picture)) top = Math.max(top, ABOVE_ZERO * picture.n_t);
     return top;
   }
@@ -292,17 +307,20 @@
     }
 
     /* how many atoms are up */
+    // The threshold now: the inversion where the gain reaches the loss,
+    // y = loss (1 without a Q-switch).
+    var loss = lossOf(picture);
     if (scheme === "four-level") {
       // The inversion on the gauge's scale, with a mark at threshold.
       shareBar(g, c, L.bar, picture.y / top);
-      barMark(g, c, L.bar, 1 / top);
+      barMark(g, c, L.bar, loss / top);
     } else {
       // The shares of ions up and down: N₂/N_t = (n_t + y)/(2n_t). At
-      // threshold y = 1, so the mark is at (1 + 1/n_t)/2.
-      // With n_t ≤ 1 even every ion up is short of threshold: no mark.
+      // threshold y = loss, so the mark is at (1 + loss/n_t)/2.
+      // With n_t ≤ loss even every ion up is short of threshold: no mark.
       var up = (picture.n_t + picture.y) / (2 * picture.n_t);
       shareBar(g, c, L.bar, up);
-      if (picture.n_t > 1) barMark(g, c, L.bar, (1 + 1 / picture.n_t) / 2);
+      if (picture.n_t > loss) barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);
       shareBar(g, c, L.groundBar, 1 - up);
     }
 
@@ -346,7 +364,7 @@
       text(g, word(words, "transparent"), wordsLeft, zeroY + L.fontSize, wordsWidth);
     }
     // The loss: gain must reach it to lase.
-    var lossY = gaugeY(1);
+    var lossY = gaugeY(loss);
     g.strokeStyle = c.soft;
     g.lineWidth = 2;
     across(g, G.left, G.right, lossY);

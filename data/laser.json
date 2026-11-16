@@ -9,23 +9,24 @@
       "en": "A laser is made of a few parts: a medium that amplifies light, a pump that gives it energy, and two mirrors that send the light back and forth. Here you will put a laser together from these parts and see when, and why, it starts to shine."
     },
     "status": {
-      "hy": "Լաբորատորիան դեռ կառուցվում է։ Սահիչների վերևում ընտրեք ակտիվ միջավայրը և մղումը։ CaF₂:Dy-ն, կիսահաղորդչային լազերը և մյուս մասերը կավելանան հաջորդ քայլերում։",
-      "en": "This lab is still being built. Choose a gain medium and a pump above the sliders; CaF₂:Dy, the semiconductor laser and more parts come next."
+      "hy": "Լաբորատորիան դեռ կառուցվում է։ Սահիչների վերևում ընտրեք ակտիվ միջավայրը և մղումը, իսկ գծագրի տակ բռնկեք լամպը և միացրեք կամ անջատեք բարորակության մոդուլյատորը։ CaF₂:Dy-ն, կիսահաղորդչային լազերը և մյուս մասերը կավելանան հաջորդ քայլերում։",
+      "en": "This lab is still being built. Choose a gain medium and a pump above the sliders; under the drawing, fire the flashlamp and turn the Q-switch on or off. CaF₂:Dy, the semiconductor laser and more parts come next."
     }
   },
 
   "bench": {
-    "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short. After 'transmission' the drawing writes the number, as in 'Transmission 5.00 %'. 'pumps' is the name written under the pump, one for each kind of pump ('parts.pump' is used for a pump that has none).",
+    "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short. After 'transmission' the drawing writes the number, as in 'Transmission 5.00 %'. 'pumps' is the name written under the pump, one for each kind of pump ('parts.pump' is used for a pump that has none). 'parts.qSwitch' is written by the bleachable filter when it is switched on.",
     "alt": {
-      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, իսկ նրանց միջև՝ ակտիվ միջավայրը և մղումը, որը նրան էներգիա է տալիս․ ձողի տակ՝ լազերային դիոդներ կամ բռնկման լամպ, կամ մեկ այլ լազեր, որի ճառագայթը փոքր հայելին ուղղում է դեպի ձողը, իսկ գազային լազերում՝ էլեկտրական հոսանք գազով լցված խողովակի միջով։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։",
-      "en": "A drawing of the laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, and between them the gain medium with the pump that gives it energy: laser diodes or a flashlamp under a rod, another laser whose beam a small mirror turns up into the rod, or, in a gas laser, an electric current through the tube of gas. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror."
+      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, իսկ նրանց միջև՝ ակտիվ միջավայրը և մղումը, որը նրան էներգիա է տալիս․ ձողի տակ՝ լազերային դիոդներ կամ բռնկման լամպ, կամ մեկ այլ լազեր, որի ճառագայթը փոքր հայելին ուղղում է դեպի ձողը, իսկ գազային լազերում՝ էլեկտրական հոսանք գազով լցված խողովակի միջով։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։ Երբ բարորակության մոդուլյատորը միացված է, հետին հայելու և ձողի միջև կանգնած է հագեցող ֆիլտր։",
+      "en": "A drawing of the laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, and between them the gain medium with the pump that gives it energy: laser diodes or a flashlamp under a rod, another laser whose beam a small mirror turns up into the rod, or, in a gas laser, an electric current through the tube of gas. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror. With the Q-switch on, a bleachable filter stands between the back mirror and the rod."
     },
     "parts": {
       "backMirror": { "hy": "Հետին հայելի", "en": "Back mirror" },
       "outputMirror": { "hy": "Ելքային հայելի", "en": "Output mirror" },
       "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
       "pump": { "hy": "Մղում", "en": "Pump" },
-      "transmission": { "hy": "Թափանցելիություն", "en": "Transmission" }
+      "transmission": { "hy": "Թափանցելիություն", "en": "Transmission" },
+      "qSwitch": { "hy": "Հագեցող ֆիլտր", "en": "Bleachable filter" }
     },
     "pumps": {
       "diode": { "hy": "Մղման դիոդներ", "en": "Pump diodes" },
@@ -36,9 +37,12 @@
   },
 
   "choose": {
-    "_readme": "The two dropdowns above the sliders: the gain medium, and the pumps that medium can use. 'later' is added in brackets after a medium the lab cannot simulate yet.",
+    "_readme": "The dropdowns above the sliders: the gain medium and the pumps that medium can use. 'later' is added in brackets after a medium the lab cannot simulate yet. Under the drawing, for a laser that can have one: the Q-switch's name ('qSwitch') and its On/Off switch ('on', 'off': the word beside the switch).",
     "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
     "pump": { "hy": "Մղում", "en": "Pump" },
+    "qSwitch": { "hy": "Բարորակության մոդուլյատոր (հագեցող ֆիլտր)", "en": "Q-switch (bleachable filter)" },
+    "on": { "hy": "Միացված", "en": "On" },
+    "off": { "hy": "Անջատված", "en": "Off" },
     "later": { "hy": "հետագայում", "en": "coming later" }
   },
 
@@ -66,7 +70,7 @@
   },
 
   "controls": {
-    "_readme": "The names of the sliders. The pump slider's name depends on the pump chosen. Each slider also has a box to type a number in; the units (W, J, A, mA, %, ×) are written by the page.",
+    "_readme": "The names of the sliders. The pump slider's name depends on the pump chosen; the filter's ('absorberT0') is shown only while the Q-switch is on. Each slider also has a box to type a number in; the units (W, J, A, mA, %, ×) are written by the page.",
     "pump": {
       "diode": { "hy": "Մղման հզորություն (կլանված)", "en": "Pump power (absorbed)" },
       "laser": { "hy": "Մղող լազերի հզորություն (կլանված)", "en": "Pump laser power (absorbed)" },
@@ -74,24 +78,28 @@
       "discharge": { "hy": "Պարպման հոսանք", "en": "Discharge current" }
     },
     "coupler": { "hy": "Ելքային հայելու թափանցելիություն", "en": "Output mirror transmission" },
-    "slowMotion": { "hy": "Դանդաղեցում", "en": "Slow motion" }
+    "slowMotion": { "hy": "Դանդաղեցում", "en": "Slow motion" },
+    "absorberT0": { "hy": "Ֆիլտրի թափանցելիությունը (չհագեցած)", "en": "Filter transmission (unbleached)" }
   },
 
   "buttons": {
-    "_readme": "The button that fires the flashlamp; it is shown only when the pump is a flashlamp.",
+    "_readme": "The button that fires the flashlamp, right under the drawing; it is shown only when the pump is a flashlamp.",
     "fire": { "hy": "Բռնկել լամպը", "en": "Fire the flash" }
   },
 
   "readouts": {
-    "_readme": "The names of the numbers the page shows; each pump shows some of them. 'Steady' means the value the laser settles to. 'never' is written instead of a threshold the laser cannot reach.",
+    "_readme": "The names of the numbers the page shows; each pump shows some of them. 'Steady' means the value the laser settles to. 'never' is written instead of a threshold the laser cannot reach. 'peak' names the highest output on a laser with a flash, 'peakStart' on one with a steady pump and the Q-switch on. 'giant' is followed by three numbers: the pulse's energy, its peak power and its length.",
     "pumpThreshold": { "hy": "Շեմային մղման հզորություն", "en": "Threshold pump power" },
     "currentThreshold": { "hy": "Շեմային հոսանք", "en": "Threshold current" },
     "flashThreshold": { "hy": "Բռնկման շեմային էներգիա", "en": "Threshold flash energy" },
     "x": { "hy": "Մղումը հիմա ÷ շեմ", "en": "Pump now ÷ threshold" },
     "gth": { "hy": "Շեմային ուժեղացում", "en": "Threshold gain" },
     "tau_c": { "hy": "Ֆոտոնի կյանքը ռեզոնատորում", "en": "Photon lifetime in the cavity" },
+    "lossNow": { "hy": "Կորուստը հիմա ÷ բաց ռեզոնատորինը", "en": "Loss now ÷ the open cavity's" },
+    "giant": { "hy": "Հսկա իմպուլսը, եթե ֆիլտրը հիմա հագենար (էներգիա · գագաթ · տևողություն)", "en": "Giant pulse if the filter bleached now (energy · peak · length)" },
     "P_out": { "hy": "Ելքային հզորություն (կայուն)", "en": "Output power (steady)" },
     "peak": { "hy": "Ամենաբարձր ելքային հզորությունը բռնկումից ի վեր", "en": "Highest output since the flash" },
+    "peakStart": { "hy": "Ամենաբարձր ելքային հզորությունը սկզբից ի վեր", "en": "Highest output since the start" },
     "powerNow": { "hy": "Ելքային հզորություն հիմա", "en": "Output power now" },
     "T_best": { "hy": "Լավագույն ելքային հայելի", "en": "Best output mirror" },
     "period": { "hy": "Ռելաքսացիոն տատանումների պարբերություն", "en": "Relaxation oscillation period" },
@@ -136,8 +144,8 @@
   "levels": {
     "_readme": "The picture of the energy levels and the gain gauge. 'words' are written on the picture: keep them short. 'groundLower' names the ground level of a three-level medium such as ruby, which is also its lower laser level; 'transparent' is written at the gauge's zero line (three and two levels), below which the medium absorbs.",
     "alt": {
-      "hy": "Ակտիվ միջավայրի էներգետիկ մակարդակները․ մղումը ատոմները բարձրացնում է, նրանք արագ իջնում են վերին լազերային մակարդակ, իսկ լազերային լույսը նրանց իջեցնում է․ սյուները ցույց են տալիս, թե քանի ատոմ է վերևում։ Եռամակարդակ միջավայրում, օրինակ՝ ռուբինում, ստորին լազերային մակարդակը հիմնականն է, ուստի ատոմների կեսից ավելին պետք է վերևում լինի, որպեսզի միջավայրն ուժեղացնի լույսը, իսկ երկմակարդակ ատոմի դեպքում վերևում երբեք կեսից ավելին չի լինում։ Աջում՝ միջավայրի ուժեղացումը ռեզոնատորի կորստի համեմատ․ լազերը լույս է արձակում, երբ ուժեղացումը հասնում է կորստին, իսկ զրոյից ցածր միջավայրը կլանում է սեփական լույսը։",
-      "en": "The energy levels of the gain medium: the pump lifts atoms up, they drop quickly to the upper laser level, and the laser light takes them down; bars show how many atoms are up. In a three-level medium such as ruby the lower laser level is the ground level, so more than half of the atoms must be up before it amplifies light; a two-level atom never gets more than half up. On the right, the gain of the medium against the loss of the cavity: the laser shines when the gain reaches the loss, and below zero the medium absorbs its own light."
+      "hy": "Ակտիվ միջավայրի էներգետիկ մակարդակները․ մղումը ատոմները բարձրացնում է, նրանք արագ իջնում են վերին լազերային մակարդակ, իսկ լազերային լույսը նրանց իջեցնում է․ սյուները ցույց են տալիս, թե քանի ատոմ է վերևում։ Եռամակարդակ միջավայրում, օրինակ՝ ռուբինում, ստորին լազերային մակարդակը հիմնականն է, ուստի ատոմների կեսից ավելին պետք է վերևում լինի, որպեսզի միջավայրն ուժեղացնի լույսը, իսկ երկմակարդակ ատոմի դեպքում վերևում երբեք կեսից ավելին չի լինում։ Աջում՝ միջավայրի ուժեղացումը ռեզոնատորի կորստի համեմատ․ լազերը լույս է արձակում, երբ ուժեղացումը հասնում է կորստին, իսկ զրոյից ցածր միջավայրը կլանում է սեփական լույսը։ Բարորակության մոդուլյատորի դեպքում կորստի գիծը բարձր է, քանի դեռ մոդուլյատորը փակ է, և իջնում է, երբ այն բացվում է։",
+      "en": "The energy levels of the gain medium: the pump lifts atoms up, they drop quickly to the upper laser level, and the laser light takes them down; bars show how many atoms are up. In a three-level medium such as ruby the lower laser level is the ground level, so more than half of the atoms must be up before it amplifies light; a two-level atom never gets more than half up. On the right, the gain of the medium against the loss of the cavity: the laser shines when the gain reaches the loss, and below zero the medium absorbs its own light. With a Q-switch the loss line stands high while the switch is closed and drops when it opens."
     },
     "words": {
       "pumpBand": { "hy": "Մղման գոտի", "en": "Pump band" },
@@ -193,6 +201,13 @@
         "text": {
           "hy": "Դանդաղ տեղաշարժեք ելքային հայելու սահիչը և հետևեք կայուն ելքային հզորությանը։ Այն հայելին, որը գրեթե ոչինչ բաց չի թողնում, լույսը պահում է ներսում, որտեղ այն կորչում է։ Այն հայելին, որը չափազանց շատ է բաց թողնում, բարձրացնում է շեմը, և լազերը մարում է։ Դրանց միջև կա լավագույն հայելի, և էջը ցույց է տալիս, թե որն է այն։",
           "en": "Move the output mirror slider slowly and watch the steady output power. A mirror that lets almost nothing through keeps the light inside, where it is lost. A mirror that lets too much through raises the threshold, and the laser goes out. In between there is a best mirror, and the page shows where it is."
+        }
+      },
+      {
+        "title": { "hy": "Հսկա իմպուլս", "en": "A giant pulse" },
+        "text": {
+          "hy": "Բռնկման լամպը ատոմները գրգռում է մոտ մեկ միլիվայրկյան, բայց լազերը սկսում է աշխատել դրանից շատ առաջ և էներգիան արձակում է փոքր պոռթկումների շարքով։ **Բարորակության մոդուլյատորը** պահում է լույսը․ այն այնքան մեծ կորուստ է ավելացնում, որ լազերը չի կարող սկսել, մինչդեռ մղումը շարունակում է գրգռել ատոմները՝ շեմից շատ վեր։ Հետո մոդուլյատորը միանգամից բացվում է։ Ուժեղացումն այժմ շատ անգամ գերազանցում է կորստին, լույսը մի քանի ֆոտոնից հասնում է իր գագաթին տասնյակ նանովայրկյանների ընթացքում, և կուտակված էներգիան գրեթե ամբողջությամբ դուրս է գալիս մեկ **հսկա իմպուլսով**՝ մի քանի նանովայրկյան տևող մեգավատներով։\n\nԸնտրեք ռուբինը, գծագրի տակ միացրեք բարորակության մոդուլյատորը, բռնկեք լամպը և հետևեք էներգետիկ մակարդակների կողքի սանդղակին․ ինվերսիան բարձրանում է բաց ռեզոնատորի շեմից վեր, իսկ ֆիլտրի կորուստը այն պահում է։ Այստեղ մոդուլյատորը **հագեցող ֆիլտր** է՝ մուգ ֆիլտր, որը բացվում է ինքնիրեն, երբ աճող լույսը հագեցնում է այն, ուստի ոչինչ պետք չէ ժամանակին միացնել։ (Այլ մոդուլյատորներ բացվում են ազդանշանով․ **Պոկելսի բջիջը**՝ երբ նրա լարումն անջատվում է, **պտտվող պրիզման**՝ ամեն անգամ, երբ ուղիղ է կանգնում մյուս հայելու դիմաց։)",
+          "en": "A flashlamp lifts atoms for about a millisecond, but the laser starts long before that is over, and lets the energy out as a row of small spikes. A **Q-switch** holds the light back: it adds so much loss that the laser cannot start, while the pump keeps lifting atoms far above threshold. Then the switch opens at once. The gain is now many times the loss, the light grows from a few photons to its peak within tens of nanoseconds, and nearly all the stored energy leaves as one **giant pulse**: megawatts, for a few nanoseconds.\n\nChoose ruby, turn the Q-switch on under the drawing, fire the flash and watch the gauge beside the energy levels: the inversion climbs past the open cavity's threshold while the filter's loss holds it back. The Q-switch here is a **bleachable filter**: a dark filter that opens by itself, once the growing light has bleached it, so nothing has to be timed. (Other Q-switches open on a signal: a **Pockels cell** when its voltage is switched off, a **turning prism** each time it lines up with the other mirror.)"
         }
       }
     ]

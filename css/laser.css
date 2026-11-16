@@ -18,6 +18,14 @@
      .laser-bench     the box a canvas sits in (it sets the width)
      .laser-choose    the two dropdowns that choose the laser; __item is
                       one with its name, __select the dropdown itself
+     .laser-under     the row right under the drawing: Fire and the
+                      Q-switch
+     .laser-fire      Fire, centred under the drawn lamp: a lightning
+                      __bolt and its word, and a ring of light that swells
+                      out of it while the lamp is dark (data-ready)
+     .laser-switch    the Q-switch in that row: __name and the On/Off
+                      __toggle (its __track and __knob, and the __word On
+                      or Off)
      .laser-field     a number box with its unit, beside a slider's name
      .laser-hint      the line under the slow-motion slider
      .laser-readouts  the numbers, in a panel of their own
@@ -162,17 +170,19 @@
   }
 }
 
-/* js/laser/page.js hides the numbers and the Fire button a bench does not
-   have. Their own display rules (.lab-readout is flex, .btn inline-flex)
-   would beat the hidden attribute and show them again. */
+/* js/laser/page.js hides what a bench does not have: readout rows, Fire,
+   the row under the drawing, the Q-switch's group and the filter's slider
+   row. Their own display rules (.lab-readout and .laser-switch are flex,
+   .btn inline-flex, .laser-under grid) would beat the hidden attribute and
+   show them again. */
 .laser-stage [hidden] {
   display: none;
 }
 
 /* ---------- the choice of laser ---------- */
 
-/* Two dropdowns side by side when the panel is wide, one under the other
-   when it is not. A column is at least 15rem: the longest name a visitor
+/* The two dropdowns side by side when the panel is wide, one under the
+   other when it is not. A column is at least 15rem: the longest name a visitor
    can choose, "Ներկանյութ (ռոդամին 6G)", needs about 14.5rem with the
    dropdown's padding and arrow (at 160px the Armenian names were cut).
    min(…, 100%): on a 320 px phone the panel is narrower than 15rem. */
@@ -214,6 +224,217 @@
 .laser-choose__select:focus-visible {
   outline: 2px solid var(--accent-soft);
   outline-offset: 2px;
+}
+
+/* ---------- under the drawing: Fire and the Q-switch ---------- */
+
+/* A row along the bench's bottom edge, each control under its part of
+   the drawing: Fire in the middle, under the lamp (which is centred), and
+   the Q-switch's name over its On/Off on the left, under the filter. The
+   bench spans the stage's full width from 760 px (.laser-stage); below
+   that the two go one under the other, Fire first. */
+.laser-under {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  padding: 0.9rem 1.1rem 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.laser-under .laser-fire {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.laser-under .laser-switch {
+  grid-column: 1;
+  grid-row: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+@media (max-width: 759px) {
+  .laser-under {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  /* Placed in the order they are written, Fire first: a hidden Fire
+     (a laser without a lamp) then leaves no empty row above the switch. */
+  .laser-under .laser-fire {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .laser-under .laser-switch {
+    grid-column: 1;
+    grid-row: auto;
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* Fire: a big pill with a lightning bolt, the button a visitor who does
+   not know what it is still wants to press (the owner's wish). While the
+   lamp is dark (data-ready="true", js/laser/page.js) a ring of light keeps
+   swelling out of it and the bolt pulses; while a flash is lit it waits.
+   Its colours are .btn--primary's: white on the accent gradient. */
+.laser-fire {
+  position: relative;
+  padding: 0.85rem 1.7rem 0.85rem 1.35rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.laser-fire:active {
+  transform: scale(0.96);
+}
+
+.laser-fire:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 3px;
+}
+
+.laser-fire__bolt {
+  flex-shrink: 0;
+  width: 1.3rem;
+  height: 1.3rem;
+  fill: currentColor;
+}
+
+/* The ring: a copy of the pill's outline that grows and fades. */
+.laser-fire::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  bottom: -2px;
+  left: -2px;
+  border: 2px solid var(--accent);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.laser-fire[data-ready="true"]::after {
+  animation: laser-fire-ring 1.8s ease-out infinite;
+}
+
+.laser-fire[data-ready="true"] .laser-fire__bolt {
+  animation: laser-fire-bolt 1.8s ease-in-out infinite;
+}
+
+@keyframes laser-fire-ring {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12, 1.5);
+  }
+}
+
+@keyframes laser-fire-bolt {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.22) rotate(-10deg);
+  }
+}
+
+.laser-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+}
+
+.laser-switch__name {
+  color: var(--heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* A switch, not a checkbox: a track with a knob, and the word On or Off
+   (role="switch" and aria-checked in sections/laser.html; js/laser/page.js
+   sets them). */
+.laser-switch__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.2rem 0.35rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.laser-switch__toggle:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.laser-switch__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 1.45rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background-color: var(--bg-3);
+  transition: background-color 0.2s;
+}
+
+.laser-switch__knob {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background-color: var(--muted);
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+/* On: the track in the accent, the knob moved to the right. */
+.laser-switch__toggle[aria-checked="true"] .laser-switch__track {
+  border-color: transparent;
+  background-image: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+.laser-switch__toggle[aria-checked="true"] .laser-switch__knob {
+  transform: translateX(1.15rem);
+  background-color: var(--bg);
+}
+
+.laser-switch__word {
+  min-width: 2.2rem;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .laser-switch__track,
+  .laser-switch__knob {
+    transition: none;
+  }
+
+  /* Fire still shows it is ready, with a ring that stands still. */
+  .laser-fire[data-ready="true"]::after,
+  .laser-fire[data-ready="true"] .laser-fire__bolt {
+    animation: none;
+  }
+
+  .laser-fire[data-ready="true"]::after {
+    opacity: 0.6;
+  }
 }
 
 /* ---------- a slider's number box ---------- */

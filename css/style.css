@@ -63,6 +63,8 @@
   --canvas-grid: rgba(255, 255, 255, 0.05);
   --canvas-faint: rgba(255, 255, 255, 0.22);
   --canvas-glow: rgba(47, 128, 237, 0.75);
+  --canvas-flash: #eef4ff;                    /* a lit flashlamp: bluish white, as xenon burns */
+  --canvas-lamp: #9aa6c4;                     /* a flashlamp's glass edge and caps */
 
   --font-main: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --max-width: 1100px;
@@ -111,6 +113,8 @@
   --canvas-grid: rgba(28, 31, 36, 0.10);
   --canvas-faint: rgba(28, 31, 36, 0.30);
   --canvas-glow: rgba(150, 59, 28, 0.30);
+  --canvas-flash: #f39a3d;                    /* a lit flashlamp: warm orange, bright on cream */
+  --canvas-lamp: #e5673b;                     /* a flashlamp's glass edge and caps: bright terracotta */
 }
 
 html,

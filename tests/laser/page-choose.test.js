@@ -418,7 +418,7 @@ test("the threshold flash is found once per bench and per output mirror: not per
   assert.equal(seen.thresholds.length, 4, "a discharge has none");
 });
 
-test("the highest output since Fire: the top of the chart's points since the flash; Reset clears it", () => {
+test("the highest output since Fire: the top of the runs' peaks since the flash, which the chart reaches; Reset clears it", () => {
   // A whole ruby flash on the page at its own slow motion: 1.2 ms, 720
   // frames. Only the bench on screen (a chart of 720 frames takes long to
   // record).
@@ -438,9 +438,14 @@ test("the highest output since Fire: the top of the chart's points since the fla
   assert.ok(worst <= 880, "a frame took " + worst + " steps");
   assert.equal(section.note.hidden, true, "it kept up");
   const d = engine(browser).bench.derive(engine(browser).bench.configFor({ medium: "ruby", pump: "flashlamp" }));
+  // The highest output of every run (bench.advance's peak, stage 8b): a
+  // spike's top falls between the chart's ends of the runs.
   let top = 0;
-  for (const sim of seen.after) top = Math.max(top, d.powerPerPhoton * Math.exp(sim.lnPhi));
+  for (const peak of seen.peaks) top = Math.max(top, peak.power);
+  let ends = 0;
+  for (const sim of seen.after) ends = Math.max(ends, d.powerPerPhoton * Math.exp(sim.lnPhi));
   assert.ok(top > d.powerAtTwiceThreshold, "the ruby lased: " + top + " W");
+  assert.ok(top > ends, "above every run's end: " + top + " W against " + ends + " W");
   section.play.fire("click");
   assert.equal(section.readouts.peak.textContent, F(page).si(top, "W"));
   // The bench drew its beam.

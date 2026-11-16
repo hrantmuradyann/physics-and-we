@@ -15,6 +15,9 @@
      LaserUI.bench.KINDS             the pumps it can draw: "diode",
                                      "laser", "flashlamp", "discharge" (the
                                      engine's pump kinds)
+     LaserUI.bench.Q_KINDS           the Q-switches it can draw: the
+                                     engine's "absorber" (the bleachable
+                                     filter, the one the page offers)
      LaserUI.bench.layout(w, h)      where every part, ray and label goes,
                                      in CSS pixels (plain arithmetic,
                                      tested for every width the page has)
@@ -26,12 +29,13 @@
                                      the photon cartoon's light uses it too
      LaserUI.bench.draw(view, labels, light)
          view    what LaserUI.loop hands its draw function
-         labels  { backMirror, outputMirror, medium, pump, transmission }:
-                 the words, already in the visitor's language; an empty one
-                 is left out. After `transmission` the drawing writes the
-                 output mirror's transmission ("Transmission 5.00 %"), and
-                 without a transmission in `light` it leaves that label out
-         light   optional { beam, pump, transmission, pumpKind }
+         labels  { backMirror, outputMirror, medium, pump, transmission,
+                 qSwitch }: the words, already in the visitor's language; an
+                 empty one is left out. After `transmission` the drawing
+                 writes the output mirror's transmission ("Transmission
+                 5.00 %"), and without a transmission in `light` it leaves
+                 that label out. `qSwitch` is written only with a switch
+         light   optional { beam, pump, transmission, pumpKind, qSwitch }
                  beam          the output power over the output at twice
                                threshold; 0 or none draws no rays
                  pump          the pump over its strongest setting, 0–1;
@@ -39,13 +43,22 @@
                  transmission  the output mirror's, 0–1
                  pumpKind      one of KINDS; none, or one it does not
                                know, draws the diodes
+                 qSwitch       optional { kind, open }: kind one of
+                               Q_KINDS (none, or one it does not know,
+                               draws no switch); open 0 (closed) to 1
 
    THE PUMPS (docs/laser-plan.md, stage 7d)
      diode      a strip of diodes under the rod; its light goes up into
                 the rod
      flashlamp  a tube under the rod with a metal cap (its electrode) at
-                each end; its gas glows as strongly as the flash, and
-                its light goes up into the rod
+                each end. Lit (the owner asked for a flash that is easy
+                to see), its gas burns in the flash colour inside a soft
+                halo, the whole bench lights up, broad beams fan up into
+                the rod, which glows, and short streaks flicker all round
+                the tube: all of it as strong as the flash. The flicker
+                runs in screen time (view.t), like the photon cartoon:
+                an illustration, not physics. For a visitor who asked
+                for less motion (view.still) the streaks stand still
      discharge  no rod: the medium is a gas tube that fills most of the
                 cavity. Its gas glows with the current; two electrodes
                 under it are wired to a power supply on the bench, and
@@ -53,7 +66,17 @@
      laser      a pump laser on the bench under the rod; its beam runs to
                 a small mirror at 45° under the rod's middle, which
                 turns it up into the rod
-   The pump light is the theme's colour, as the laser's own rays are.
+   The pump light is the theme's colour, as the laser's own rays are (the
+   flash's is colors.flash, a bluish white on the dark theme, a warm
+   orange on the light one).
+
+   THE Q-SWITCH (docs/laser-plan.md, stage 8b)
+     absorber  a filter plate on a post in the gap between the back
+               mirror and the rod, shaded by its share still unbleached
+               (1 − open)
+   With a gas tube, which fills the cavity, no switch is drawn (no bench
+   has one there). The filter's name goes on the top row, from the
+   filter, and the transmission beside it then has most of the row.
 
    THE RAYS
    An odd number of rays (3 to 21, as many as fit 5 px apart) run from the
@@ -83,10 +106,17 @@
 
   // The labels, in the order they are written. page.js takes their words
   // from data/laser.json (bench.parts.<name>).
-  var PARTS = Object.freeze(["backMirror", "outputMirror", "medium", "pump", "transmission"]);
+  var PARTS = Object.freeze(["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch"]);
 
   // The pumps it draws: the engine's pump kinds.
   var KINDS = Object.freeze(["diode", "laser", "flashlamp", "discharge"]);
+
+  // The Q-switch it draws: the engine's bleachable filter.
+  var Q_KINDS = Object.freeze(["absorber"]);
+  // The top row with the filter's name: the transmission's share
+  // of it, and the least room the name is given before it moves left.
+  var TRANSMISSION_SHARE = 0.6;
+  var NAME_ROOM = 100;
 
   // A pump under this share of full is drawn off: a flash's tail,
   // (E/t_p)(t/t_p)e^(−t/t_p), reaches 0 only after hundreds of t_p, and a
@@ -96,6 +126,12 @@
 
   // The width of a post's foot on the bench.
   var POST_FOOT = 18;
+
+  // A lit flashlamp's light: the halo's rings, the streaks round the
+  // tube, and how fast they flicker (rad per second of screen time).
+  var HALO_RINGS = 6;               // more, fainter rings: 4 showed as steps
+  var FLASH_STREAKS = 16;
+  var FLICKER_SPEED = 11;
 
   var MAX_RAYS = 21;
   var RAY_GAP = 5;              // px between two rays, at least
@@ -164,6 +200,13 @@
     var pumpLaserY = railY - pumpLaserHeight;
     var beamY = pumpLaserY + pumpLaserHeight / 2;
 
+    // The filter, in the gap between the back mirror's face and the rod,
+    // around every ray, with room after it for the left arrowheads.
+    var gap = rodX - innerLeft;
+    var filterHeight = 0.8 * rodHeight;
+    var filterX = innerLeft + 0.36 * gap;
+    var filterWidth = Math.max(5, 0.12 * gap);
+
     // The rays: an odd number, the middle one on the axis.
     var beamHeight = 0.7 * rodHeight;
     var half = clamp(Math.floor(beamHeight / 2 / RAY_GAP), 1, (MAX_RAYS - 1) / 2);
@@ -173,6 +216,7 @@
     var fontSize = clamp(Math.round(0.05 * h), 11, 15);
     var topRow = mirrorTop - 0.6 * fontSize;        // right above the mirrors
     var nameRow = topRow - 1.35 * fontSize;         // the mirrors' names, above that
+    var sharedRow = shareTopRow(w, pad, fontSize, topRow, filterX);
     var bottomRow = railY + 1.45 * fontSize;
 
     return {
@@ -188,6 +232,11 @@
       lamp: { x: lampX, y: lampY, w: lampLength, h: lampHeight },
       flashTube: { x: lampX, y: lampY, w: lampLength, h: 0.065 * h },
       flashCap: Math.max(3, 0.04 * lampLength),
+      // A lit flashlamp: each of its halo's rings is this much wider than
+      // the last, its streaks at most this long, its gas's bloom this wide.
+      haloStep: 0.02 * h,
+      streak: 0.06 * h,
+      bloom: Math.max(8, 0.06 * h),
       tube: { x: tubeX, y: rodY, w: tubeLength, h: rodHeight },
       bore: { x: tubeX + boreInset, y: axisY - boreHeight / 2, w: tubeLength - 2 * boreInset, h: boreHeight },
       tubePosts: [tubeX + 0.035 * tubeLength, tubeX + 0.965 * tubeLength],
@@ -201,6 +250,7 @@
       pumpLaser: { x: pumpLaserLeft, y: pumpLaserY, w: pumpLaserRight - pumpLaserLeft, h: pumpLaserHeight },
       beamY: beamY,
       fold: { x: foldX, y: beamY, size: Math.max(10, 0.06 * h) },
+      filter: { x: filterX, y: axisY - filterHeight / 2, w: filterWidth, h: filterHeight },
       rays: rays,
       labels: {
         backMirror: { x: pad, y: nameRow, align: "left", maxWidth: w / 2 - pad - fontSize },
@@ -211,8 +261,27 @@
         // whole row to itself: on a phone, under the bench beside the
         // pump's name, "Թափանցելիություն 5.00 %" was squeezed to 40 % of
         // its width (stage 6b review).
-        transmission: { x: w - pad, y: topRow, align: "right", maxWidth: w - 2 * pad }
+        transmission: { x: w - pad, y: topRow, align: "right", maxWidth: w - 2 * pad },
+        // The filter's name shares the top row with the transmission,
+        // which keeps most of it (sharedRow below).
+        qSwitch: sharedRow.name,
+        transmissionShared: sharedRow.transmission
       }
+    };
+  }
+
+  // The top row shared by the filter's name (left) and the transmission
+  // (right), a font size apart. The transmission keeps TRANSMISSION_SHARE
+  // of it: at half, the Armenian "Թափանցելիություն 5.00 %" was squeezed on
+  // a phone (stage 8b review). The name starts above the filter, or
+  // further left, as far as the margin, to keep NAME_ROOM.
+  function shareTopRow(w, pad, fontSize, topRow, switchLeft) {
+    var transmissionWidth = TRANSMISSION_SHARE * (w - 2 * pad - fontSize);
+    var nameRight = w - pad - fontSize - transmissionWidth;
+    var nameLeft = Math.max(pad, Math.min(switchLeft, nameRight - NAME_ROOM));
+    return {
+      name: { x: nameLeft, y: topRow, align: "left", maxWidth: nameRight - nameLeft },
+      transmission: { x: w - pad, y: topRow, align: "right", maxWidth: transmissionWidth }
     };
   }
 
@@ -326,14 +395,28 @@
     return "diode";
   }
 
+  // The Q-switch to draw: the light's, if this file knows it and there is
+  // a rod (a gas tube fills the cavity), else null.
+  function switchOf(light, pumpKind) {
+    if (!light || !light.qSwitch || pumpKind === "discharge") return null;
+    if (Q_KINDS.indexOf(light.qSwitch.kind) === -1) return null;
+    return light.qSwitch;
+  }
+
+  // How far a switch is open, 0 to 1 (anything else counts as closed).
+  function openOf(qSwitch) {
+    var open = qSwitch.open;
+    return typeof open === "number" && isFinite(open) ? clamp(open, 0, 1) : 0;
+  }
+
   // The pump's light going up into the rod: PUMP_ARROWS upright lines with
   // arrowheads, from just above `fromY` to the rod's bottom, spread over
   // the part from x to x + width.
-  function lightUp(g, colors, L, x, width, fromY, pump) {
+  function lightUp(g, color, L, x, width, fromY, pump) {
     var rodBottom = L.rod.y + L.rod.h;
     g.globalAlpha = 0.3 + 0.7 * pump;
-    g.strokeStyle = colors.glow;
-    g.fillStyle = colors.glow;
+    g.strokeStyle = color;
+    g.fillStyle = color;
     g.lineWidth = 2;
     for (var k = 0; k < PUMP_ARROWS; k++) {
       var px = x + (k + 0.5) / PUMP_ARROWS * width;
@@ -350,27 +433,93 @@
     g.strokeStyle = colors.faint;
     g.lineWidth = 1;
     g.strokeRect(L.lamp.x, L.lamp.y, L.lamp.w, L.lamp.h);
-    if (pump > 0) lightUp(g, colors, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);
+    if (pump > 0) lightUp(g, colors.glow, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);
+  }
+
+  // A lit flashlamp, behind every part: the bench lit by the flash, and a
+  // halo round the tube, rings that grow and fade outward.
+  function flashBehind(g, colors, L, w, h, pump) {
+    var F = L.flashTube;
+    g.fillStyle = colors.flash;
+    g.globalAlpha = 0.1 * pump;
+    g.fillRect(0, 0, w, h);
+    g.globalAlpha = 0.06 * pump;
+    for (var k = 1; k <= HALO_RINGS; k++) {
+      g.beginPath();
+      g.ellipse(F.x + F.w / 2, F.y + F.h / 2, F.w / 2 + k * L.haloStep, F.h / 2 + k * L.haloStep, 0, 0, 2 * Math.PI);
+      g.fill();
+    }
+    g.globalAlpha = 1;
+  }
+
+  // Short streaks all round a lit flashlamp's tube, each flickering at its
+  // own phase in screen time t.
+  function flashStreaks(g, colors, L, pump, t) {
+    var F = L.flashTube;
+    var time = typeof t === "number" && isFinite(t) ? t : 0;
+    g.strokeStyle = colors.flash;
+    g.lineWidth = 2;
+    for (var k = 0; k < FLASH_STREAKS; k++) {
+      var angle = 2 * Math.PI * (k + 0.5) / FLASH_STREAKS;
+      var dx = Math.cos(angle);
+      var dy = Math.sin(angle);
+      var flicker = 0.5 + 0.5 * Math.sin(FLICKER_SPEED * time + 2.4 * k);
+      var length = L.streak * pump * (0.4 + 0.6 * flicker);
+      // from just outside the tube, on an ellipse round it
+      var x0 = F.x + F.w / 2 + dx * (F.w / 2 + 3);
+      var y0 = F.y + F.h / 2 + dy * (F.h / 2 + 3);
+      g.globalAlpha = (0.3 + 0.6 * flicker) * pump;
+      line(g, x0, y0, x0 + dx * length, y0 + dy * length);
+    }
+    g.globalAlpha = 1;
+  }
+
+  // A rod lit by the flash it absorbs.
+  function lightRod(g, colors, L, pump) {
+    g.globalAlpha = 0.3 * pump;
+    g.fillStyle = colors.flash;
+    g.fillRect(L.rod.x, L.rod.y, L.rod.w, L.rod.h);
+    g.globalAlpha = 1;
   }
 
   // A flashlamp: a glass tube with a metal cap at each end, its gas
   // glowing as strongly as the flash (dark before it is fired).
-  function drawFlashlamp(g, colors, L, pump) {
+  function drawFlashlamp(g, colors, L, pump, t) {
     var F = L.flashTube;
     var cap = L.flashCap;
     if (pump > 0) {
-      g.globalAlpha = 0.2 + 0.8 * pump;
-      g.fillStyle = colors.glow;
+      // Broad beams, from the tube's lit length up to the rod's whole
+      // bottom (the rod is drawn over their top).
+      var rodBottom = L.rod.y + L.rod.h;
+      g.globalAlpha = 0.15 + 0.35 * pump;
+      g.fillStyle = colors.flash;
+      g.beginPath();
+      g.moveTo(F.x + cap, F.y);
+      g.lineTo(F.x + F.w - cap, F.y);
+      g.lineTo(L.rod.x + L.rod.w, rodBottom);
+      g.lineTo(L.rod.x, rodBottom);
+      g.closePath();
+      g.fill();
+      flashStreaks(g, colors, L, pump, t);
+      // The gas, blooming: a canvas shadow of its own colour, set back
+      // by restore() so no other part blooms.
+      g.save();
+      g.globalAlpha = 0.4 + 0.6 * pump;
+      g.fillStyle = colors.flash;
+      g.shadowColor = colors.flash;
+      g.shadowBlur = L.bloom * pump;
       g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);
-      g.globalAlpha = 1;
+      g.restore();
     }
-    g.strokeStyle = colors.faint;
+    // The glass's edge and the metal caps in the lamp's own colour (the
+    // owner found them dull grey on the light theme).
+    g.strokeStyle = colors.lamp;
     g.lineWidth = 1;
     g.strokeRect(F.x, F.y, F.w, F.h);
-    g.fillStyle = colors.muted;
+    g.fillStyle = colors.lamp;
     g.fillRect(F.x, F.y, cap, F.h);
     g.fillRect(F.x + F.w - cap, F.y, cap, F.h);
-    if (pump > 0) lightUp(g, colors, L, F.x, F.w, F.y, pump);
+    if (pump > 0) lightUp(g, colors.accent, L, F.x, F.w, F.y, pump);
   }
 
   // A discharge: the electrodes under the gas tube, wired to the supply on
@@ -437,6 +586,18 @@
     line(g, fold.x - half, fold.y + half, fold.x + half, fold.y - half);
   }
 
+  // A bleachable filter: a plate, shaded by its share still unbleached.
+  function drawFilter(g, colors, L, open) {
+    var F = L.filter;
+    g.globalAlpha = 0.15 + 0.6 * (1 - open);
+    g.fillStyle = colors.muted;
+    g.fillRect(F.x, F.y, F.w, F.h);
+    g.globalAlpha = 1;
+    g.strokeStyle = colors.faint;
+    g.lineWidth = 1;
+    g.strokeRect(F.x, F.y, F.w, F.h);
+  }
+
   // The rod of gain medium: a see-through fill with a solid edge.
   function drawRod(g, colors, L) {
     g.globalAlpha = 0.28;
@@ -474,10 +635,12 @@
     var beam = light && light.beam > 0 ? light.beam : 0;
     var pump = light && light.pump >= PUMP_OFF ? Math.min(1, light.pump) : 0;
     var kind = kindOf(light);
+    var qSwitch = switchOf(light, kind);
     var rodBottom = L.rod.y + L.rod.h;
 
     g.clearRect(0, 0, view.w, view.h);
     g.save();
+    if (kind === "flashlamp" && pump > 0) flashBehind(g, colors, L, view.w, view.h, pump);
 
     // The bench, and what the parts stand on: the mirrors, and the two ends
     // of the medium (a gas tube's posts stand outside its electrodes).
@@ -487,18 +650,22 @@
     g.fillStyle = colors.faint;
     post(g, L.backMirror.x + L.backMirror.w / 2, L.backMirror.y + L.backMirror.h + 3, L.railY);
     post(g, L.outputMirror.x + L.outputMirror.w / 2, L.outputMirror.y + L.outputMirror.h + 3, L.railY);
+    if (qSwitch) post(g, L.filter.x + L.filter.w / 2, L.filter.y + L.filter.h, L.railY);
     var mediumPosts = kind === "discharge" ? L.tubePosts : L.rodPosts;
     mediumPosts.forEach(function (x) {
       post(g, x, rodBottom, L.railY);
     });
 
     // The pump, then the medium over it.
-    if (kind === "flashlamp") drawFlashlamp(g, colors, L, pump);
+    if (kind === "flashlamp") drawFlashlamp(g, colors, L, pump, view.still ? 0 : view.t);
     else if (kind === "discharge") drawDischarge(g, colors, L, pump);
     else if (kind === "laser") drawPumpLaser(g, colors, L, pump);
     else drawDiodes(g, colors, L, pump);
     if (kind === "discharge") drawTube(g, colors, L, pump);
     else drawRod(g, colors, L);
+    if (kind === "flashlamp" && pump > 0) lightRod(g, colors, L, pump);
+    // The filter in the gap.
+    if (qSwitch) drawFilter(g, colors, L, openOf(qSwitch));
 
     // The light: separate rays between the mirrors, some of them leaving.
     if (beam > 0) {
@@ -508,7 +675,9 @@
       // The arrowheads go in the open gaps between the mirrors and the
       // medium: the rod, or a discharge's gas tube.
       var medium = kind === "discharge" ? L.tube : L.rod;
-      var leftGap = (faceX(L, "back", L.axis.y) + medium.x) / 2;
+      // On the left, between the filter (if any) and the medium.
+      var leftFrom = qSwitch ? L.filter.x + L.filter.w : faceX(L, "back", L.axis.y);
+      var leftGap = (leftFrom + medium.x) / 2;
       var rightGap = (medium.x + medium.w + faceX(L, "output", L.axis.y)) / 2;
       g.globalAlpha = rayAlpha(beam);
       g.strokeStyle = colors.accent2;
@@ -538,10 +707,14 @@
     g.fillStyle = colors.muted;
     g.font = "600 " + L.fontSize + "px " + view.font;
     g.textBaseline = "alphabetic";
+    // The filter's name on the top row, which the transmission then shares.
+    var switchName = qSwitch && labels.qSwitch ? labels.qSwitch : "";
     PARTS.forEach(function (name) {
       var text = name === "transmission" ? transmissionText(labels.transmission, light) : labels[name];
-      if (!text) return;
       var spot = L.labels[name];
+      if (name === "qSwitch") text = switchName;
+      if (name === "transmission" && switchName) spot = L.labels.transmissionShared;
+      if (!text) return;
       g.textAlign = spot.align;
       g.fillText(text, spot.x, spot.y, spot.maxWidth);
     });
@@ -553,6 +726,7 @@
     SIZE: SIZE,
     PARTS: PARTS,
     KINDS: KINDS,
+    Q_KINDS: Q_KINDS,
     PUMP_OFF: PUMP_OFF,
     POST_FOOT: POST_FOOT,
     layout: layout,

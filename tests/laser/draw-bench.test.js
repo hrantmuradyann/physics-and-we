@@ -51,7 +51,8 @@ const LABELS = deepFreeze({
   outputMirror: "Output mirror",
   medium: "Gain medium",
   pump: "Pump diodes",
-  transmission: "Transmission"
+  transmission: "Transmission",
+  qSwitch: "Bleachable filter"
 });
 const NB = "\u00a0";
 
@@ -70,11 +71,26 @@ function lit(kind, pump) {
 const LIGHTS = [undefined, LASING];
 for (const kind of KINDS) LIGHTS.push(lit(kind, 0), lit(kind), { beam: 4, pump: 1, transmission: 0.3, pumpKind: kind });
 
-function drawAt(w, labels, theme, light) {
+// The Q-switch (stage 8b): the bleachable filter, `open` 0 closed (dark)
+// to 1 open (bleached).
+const Q_KINDS = ["absorber"];
+function filtered(open, pumpKind) {
+  return {
+    beam: 1, pump: 0.5, transmission: 0.05, pumpKind: pumpKind || "flashlamp",
+    qSwitch: { kind: "absorber", open: open }
+  };
+}
+const SWITCHED = [filtered(0), filtered(0.5), filtered(1), filtered(0.3, "diode"), filtered(1, "laser")];
+for (const light of SWITCHED) LIGHTS.push(light);
+
+// t: the seconds the loop has run (view.t), 0 if not given; still: the
+// visitor asked for less motion (view.still).
+function drawAt(w, labels, theme, light, t, still) {
   const recorder = fakeContext();
   const view = {
     g: recorder.context, w: w, h: heightFor(w), dpr: 1,
-    colors: deepFreeze(palette(theme || "dark")), font: "Test Sans", t: 0, dt: 0
+    colors: deepFreeze(palette(theme || "dark")), font: "Test Sans", t: t === undefined ? 0 : t, dt: 0,
+    still: still === true
   };
   bench.draw(view, labels || LABELS, light === undefined ? undefined : deepFreeze(light));
   return { recorder: recorder, view: view };
@@ -320,9 +336,14 @@ test("draw: everything it draws is inside the canvas, at every width", () => {
     for (const light of LIGHTS.concat([{ beam: 4, pump: 1, transmission: 0.3 }])) {
       const { recorder, view } = drawAt(w, LABELS, "dark", light);
       for (const call of recorder.calls) {
-        if (!["moveTo", "lineTo", "fillRect", "strokeRect", "quadraticCurveTo", "fillText"].includes(call.name)) continue;
+        if (!["moveTo", "lineTo", "fillRect", "strokeRect", "quadraticCurveTo", "ellipse", "fillText"].includes(call.name)) continue;
         let points = [call.args.slice(0, 2)];
         if (call.name === "fillText") points = [call.args.slice(1, 3)];
+        // An ellipse (x, y, rx, ry, ...): its whole box.
+        if (call.name === "ellipse") {
+          const [x, y, rx, ry] = call.args;
+          points = [[x - rx, y - ry], [x + rx, y + ry]];
+        }
         if (call.name === "quadraticCurveTo") points = [call.args.slice(2, 4)];
         if (call.name === "fillRect" || call.name === "strokeRect") {
           points = [[call.args[0], call.args[1]], [call.args[0] + call.args[2], call.args[1] + call.args[3]]];
@@ -815,6 +836,193 @@ test("draw: the flashlamp glows as strongly as the flash and lights the rod; dar
   assert.ok(light(0.1)[0].alpha < light(1)[0].alpha, "more light with a stronger flash");
 });
 
+/* ---------- a lit flashlamp's light (the owner's wish) ---------- */
+
+// What a drawing paints: every fill and stroke with the colour, alpha and
+// shadow blur it was made with (save() and restore() kept track of, as a
+// canvas does), and for fill() and stroke() the path's calls.
+function painted(recorder) {
+  const list = [];
+  let now = { fillStyle: null, strokeStyle: null, globalAlpha: 1, shadowBlur: 0 };
+  const saved = [];
+  let path = [];
+  for (const entry of recorder.log) {
+    if (entry.set) {
+      if (entry.set in now) now[entry.set] = entry.value;
+      continue;
+    }
+    const name = entry.call;
+    if (name === "save") saved.push(Object.assign({}, now));
+    if (name === "restore") now = saved.pop();
+    if (name === "beginPath") path = [];
+    if (["moveTo", "lineTo", "ellipse", "closePath", "quadraticCurveTo", "arc"].includes(name)) path.push(entry);
+    const fills = ["fill", "fillRect", "fillText"].includes(name);
+    const strokes = ["stroke", "strokeRect"].includes(name);
+    if (fills || strokes) {
+      list.push({
+        call: name, args: entry.args, path: path.slice(),
+        color: fills ? now.fillStyle : now.strokeStyle, alpha: now.globalAlpha, blur: now.shadowBlur
+      });
+    }
+  }
+  return list;
+}
+
+// The flash's light on a bench of width w: what is painted in the flash
+// colour, and the streaks among it (stroked lines).
+function flashLight(w, light, t, theme) {
+  const { recorder } = drawAt(w, LABELS, theme || "dark", light, t);
+  const flash = palette(theme || "dark").flash;
+  const all = painted(recorder);
+  const lit = all.filter((p) => p.color === flash);
+  const streaks = lit.filter((p) => p.call === "stroke").map((p) => {
+    const [from, to] = [p.path[0].args, p.path[1].args];
+    return { x1: from[0], y1: from[1], x2: to[0], y2: to[1], alpha: p.alpha };
+  });
+  return { all: all, lit: lit, streaks: streaks };
+}
+
+function streakLength(s) {
+  return Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+}
+
+test("draw: a lit flashlamp lights the whole bench, a halo round its tube, broad beams and the rod; dark, none of it", () => {
+  const w = 900;
+  const L = bench.layout(w, heightFor(w));
+  const F = L.flashTube;
+  const R = L.rod;
+  // Dark (not fired, or its tail below PUMP_OFF), and every other pump at
+  // its strongest: no flash colour at all.
+  assert.equal(flashLight(w, lit("flashlamp", 0)).lit.length, 0, "not fired");
+  assert.equal(flashLight(w, lit("flashlamp", 0.005)).lit.length, 0, "a tail below PUMP_OFF");
+  for (const kind of ["diode", "laser", "discharge"]) {
+    assert.equal(flashLight(w, lit(kind, 1)).lit.length, 0, kind + ": not a flash");
+  }
+  const { all, lit: light } = flashLight(w, lit("flashlamp", 1));
+  // First of all, the whole bench lit, faintly, under every part.
+  assert.deepEqual({ call: all[0].call, args: all[0].args, color: all[0].color }, { call: "fillRect", args: [0, 0, w, heightFor(w)], color: palette("dark").flash });
+  assert.equal(all[0].alpha, 0.1);
+  // A halo: 6 rings round the tube's middle, each wider than the last by
+  // haloStep, faint, all inside the canvas.
+  const rings = light.filter((p) => p.call === "fill" && p.path.length === 1 && p.path[0].call === "ellipse").map((p) => p.path[0].args);
+  assert.equal(rings.length, 6);
+  rings.forEach((r, i) => {
+    assertClose(r[0], F.x + F.w / 2, 1e-12);
+    assertClose(r[1], F.y + F.h / 2, 1e-12);
+    assertClose(r[2], F.w / 2 + (i + 1) * L.haloStep, 1e-12);
+    assertClose(r[3], F.h / 2 + (i + 1) * L.haloStep, 1e-12);
+  });
+  // Broad beams: from the tube's lit length (between its caps) up to the
+  // rod's whole bottom edge.
+  const fan = light.find((p) => p.call === "fill" && p.path.length === 5 && p.path[0].call === "moveTo");
+  assert.ok(fan, "the beams");
+  assert.deepEqual(fan.path.slice(0, 4).map((c) => c.args), [
+    [F.x + L.flashCap, F.y], [F.x + F.w - L.flashCap, F.y], [R.x + R.w, R.y + R.h], [R.x, R.y + R.h]
+  ]);
+  assert.equal(fan.path[4].call, "closePath");
+  // The gas, burning in the flash colour, and the rod lit by it.
+  const gas = light.find((p) => p.call === "fillRect" && p.args.join(",") === [F.x + L.flashCap, F.y, F.w - 2 * L.flashCap, F.h].join(","));
+  assert.ok(gas, "the gas");
+  assert.equal(gas.alpha, 1);
+  const rod = light.find((p) => p.call === "fillRect" && p.args.join(",") === rectKey(R));
+  assert.ok(rod, "the rod lit");
+  assert.equal(rod.alpha, 0.3);
+  // The rod is lit over its own glass, which is drawn first.
+  const glass = all.findIndex((p) => p.call === "fillRect" && p.args.join(",") === rectKey(R) && p.color === palette("dark").accent);
+  assert.ok(glass !== -1 && glass < all.indexOf(rod));
+});
+
+test("draw: the flash's light grows with the flash: brighter bench, halo, beams and rod, longer and brighter streaks", () => {
+  const w = 900;
+  const L = bench.layout(w, heightFor(w));
+  function measure(pump) {
+    const { lit: light, streaks } = flashLight(w, lit("flashlamp", pump), 0.37);
+    const alphaOf = (find) => light.find(find).alpha;
+    return {
+      bench: alphaOf((p) => p.call === "fillRect" && p.args[0] === 0 && p.args[1] === 0),
+      halo: alphaOf((p) => p.call === "fill" && p.path[0].call === "ellipse"),
+      fan: alphaOf((p) => p.call === "fill" && p.path[0].call === "moveTo"),
+      rod: alphaOf((p) => p.call === "fillRect" && p.args.join(",") === rectKey(L.rod)),
+      streaks: streaks.reduce((total, s) => total + streakLength(s), 0),
+      streakAlpha: streaks.reduce((total, s) => total + s.alpha, 0)
+    };
+  }
+  const weak = measure(0.25);
+  const strong = measure(1);
+  for (const name of Object.keys(weak)) {
+    assert.ok(weak[name] > 0 && weak[name] < strong[name], name + ": " + weak[name] + " < " + strong[name]);
+  }
+  assertClose(strong.bench, 0.1, 1e-12);
+  assertClose(weak.bench, 0.025, 1e-12);
+  assert.deepEqual(measure(3), strong, "never more than fully lit");
+});
+
+test("draw: the streaks flicker round the tube in screen time; the same moment draws the same picture", () => {
+  for (const w of WIDTHS) {
+    const h = heightFor(w);
+    const L = bench.layout(w, h);
+    const F = L.flashTube;
+    const cx = F.x + F.w / 2;
+    const cy = F.y + F.h / 2;
+    for (const t of [0, 0.13, 0.4, 1.7, 1000.25]) {
+      const { streaks } = flashLight(w, lit("flashlamp", 1), t);
+      assert.equal(streaks.length, 16, "w = " + w);
+      for (const s of streaks) {
+        // From just outside the tube, on an ellipse round it, pointing
+        // out along the angle it starts at; at most L.streak long, inside
+        // the canvas.
+        const out = Math.pow((s.x1 - cx) / (F.w / 2), 2) + Math.pow((s.y1 - cy) / (F.h / 2), 2);
+        assert.ok(out > 1, "starts outside the tube");
+        const dx = (s.x1 - cx) / (F.w / 2 + 3);
+        const dy = (s.y1 - cy) / (F.h / 2 + 3);
+        assertClose(Math.hypot(dx, dy), 1, 1e-9);
+        assertClose(Math.atan2(s.y2 - s.y1, s.x2 - s.x1), Math.atan2(dy, dx), 1e-9);
+        assert.ok(streakLength(s) <= L.streak + 1e-9 && streakLength(s) >= 0.4 * L.streak - 1e-9);
+        for (const [x, y] of [[s.x1, s.y1], [s.x2, s.y2]]) assert.ok(x >= 0 && x <= w && y >= 0 && y <= L.railY, "w = " + w + ": " + x + ", " + y);
+      }
+    }
+  }
+  const w = 900;
+  const at = (t) => JSON.stringify(drawAt(w, LABELS, "dark", lit("flashlamp", 0.8), t).recorder.log);
+  assert.notEqual(at(0.3), at(0), "it flickers");
+  assert.equal(at(0.3), at(0.3), "the same moment, the same picture");
+  // No time given (a view without t) draws as the start; so does nonsense.
+  assert.equal(at(null), at(0));
+  assert.equal(at(NaN), at(0));
+  // Each streak flickers at its own phase: at one moment their lengths differ.
+  const lengths = flashLight(w, lit("flashlamp", 1), 0.3).streaks.map(streakLength);
+  assert.ok(Math.max(...lengths) - Math.min(...lengths) > 0.3 * bench.layout(w, heightFor(w)).streak);
+});
+
+test("draw: for a visitor who asked for less motion the streaks stand still, still as strong as the flash", () => {
+  const w = 900;
+  const still = (t, pump) => JSON.stringify(drawAt(w, LABELS, "dark", lit("flashlamp", pump), t, true).recorder.log);
+  for (const t of [0.3, 1.7, 1000.25]) assert.equal(still(t, 0.8), still(0, 0.8), "t = " + t);
+  // The picture of the moment t = 0: the streaks keep their different lengths.
+  assert.equal(still(0.3, 0.8), JSON.stringify(drawAt(w, LABELS, "dark", lit("flashlamp", 0.8), 0).recorder.log));
+  // The flash itself still rises and falls: that is the physics, not decoration.
+  assert.notEqual(still(0.3, 0.3), still(0.3, 0.8));
+});
+
+test("draw: only the lamp's gas blooms; the bloom is set back before anything else is drawn", () => {
+  for (const theme of ["dark", "light"]) {
+    for (const pump of [0.1, 0.6, 1]) {
+      const w = 900;
+      const L = bench.layout(w, heightFor(w));
+      const F = L.flashTube;
+      const blooming = flashLight(w, lit("flashlamp", pump), 0, theme).all.filter((p) => p.blur > 0);
+      assert.equal(blooming.length, 1, theme + " " + pump);
+      assert.equal(blooming[0].args.join(","), [F.x + L.flashCap, F.y, F.w - 2 * L.flashCap, F.h].join(","));
+      assert.equal(blooming[0].color, palette(theme).flash);
+      assertClose(blooming[0].blur, L.bloom * pump, 1e-12);
+    }
+  }
+  // Other pumps never bloom.
+  for (const kind of ["diode", "laser", "discharge"]) {
+    assert.equal(flashLight(900, lit(kind, 1)).all.filter((p) => p.blur > 0).length, 0, kind);
+  }
+});
+
 test("draw: the gas tube is the medium: the rays run inside it, its gas glows with the current, an arrow on each wire", () => {
   const w = 900;
   const L = bench.layout(w, heightFor(w));
@@ -866,4 +1074,139 @@ test("draw: the pump laser's beam runs to the small mirror and up into the rod, 
   assert.ok(weak.across.alpha >= 0.3 && weak.across.alpha < strong.across.alpha, "stronger with more pump");
   assert.equal(beam(5).across.alpha, 1, "alpha never above 1");
   assert.ok(arrowheadAt(drawAt(w, LABELS, "dark", lit("laser", 0.5)).recorder, L.fold.x, rodBottom + 2, -1), "an arrowhead into the rod");
+});
+
+/* ---------- the Q-switch (stage 8b) ---------- */
+
+test("layout: the filter in the gap between the back mirror and the rod, around every ray", () => {
+  for (const w of WIDTHS) {
+    const h = heightFor(w);
+    const L = bench.layout(w, h);
+    const where = "w = " + w;
+    const back = L.backMirror.x + L.backMirror.w;          // the back mirror's inner edge
+    const top = L.rays[0];
+    const bottom = L.rays[L.rays.length - 1];
+    // Between the mirror and the rod, around every ray, with room for the
+    // left arrowheads (6 px, 1 px clear of each side).
+    const F = L.filter;
+    assert.ok(inside(F, w, h), where + ": inside");
+    assert.ok(F.x > back + 2, where + ": right of the back mirror");
+    assert.ok(F.y < top && F.y + F.h > bottom, where + ": around every ray");
+    assertClose(F.y + F.h / 2, L.axis.y, 1e-12, where + ": on the axis");
+    assert.ok(L.rod.x - (F.x + F.w) >= 14, where + ": room for the arrowheads after it");
+    assert.ok(F.w >= 5, where + ": it can be seen");
+  }
+});
+
+test("layout: the switch's name on the top row beside the transmission, which keeps most of the row", () => {
+  for (const w of WIDTHS) {
+    const L = bench.layout(w, heightFor(w));
+    const fs = L.fontSize;
+    const where = "w = " + w;
+    const Q = L.labels.qSwitch;
+    const T = L.labels.transmission;
+    const S = L.labels.transmissionShared;
+    const pad = T.maxWidth === undefined ? 0 : (w - T.maxWidth) / 2;     // the margin: the whole row is w − 2·pad
+    const switchLeft = L.filter.x;
+    assert.equal(Q.align, "left", where);
+    assert.equal(Q.y, T.y, where + ": the top row");
+    // From the filter's left, or further left (never past the margin) to
+    // keep room for the name.
+    assert.ok(Q.x <= switchLeft + 1e-9 && Q.x >= pad - 1e-9, where + ": from " + Q.x);
+    // Moved left only for its room: then it has 100 px, or starts at the margin.
+    if (Q.x < switchLeft - 1e-9) {
+      assert.ok(Math.abs(Q.maxWidth - 100) < 1e-9 || Math.abs(Q.x - pad) < 1e-9, where + ": moved for its room");
+    }
+    assert.ok(Q.maxWidth >= 90, where + ": room for a word, got " + Q.maxWidth);
+    assert.deepEqual([S.x, S.y, S.align], [T.x, T.y, T.align], where + ": the transmission in its own place");
+    assertClose(S.maxWidth, 0.6 * (w - 2 * pad - fs), 1e-12, where + ": the transmission's share");
+    const q = labelBox(Q, fs);
+    const t = labelBox(S, fs);
+    assert.ok(q.right + fs <= t.left + 1e-9, where + ": the two apart");
+    assert.ok(q.left >= 0 && t.right <= w, where + ": inside");
+    // "Թափանցելիություն 5.00 %" needs about 150 px at the smallest font:
+    // at 280 px half the row, 128 px, squeezed it (stage 8b review).
+    assert.ok(S.maxWidth >= 140, where + ": the transmission still has room, got " + S.maxWidth);
+  }
+});
+
+test("draw: a filter is a plate in the gap, shaded by its unbleached share", () => {
+  const w = 900;
+  const L = bench.layout(w, heightFor(w));
+  const darkest = (open) => Math.max(...filledWithAlpha(drawAt(w, LABELS, "dark", filtered(open)).recorder)
+    .filter((f) => f.key === rectKey(L.filter)).map((f) => f.alpha));
+  assert.ok(darkest(0) > darkest(0.5) && darkest(0.5) > darkest(1), "lighter as it bleaches");
+  assert.ok(darkest(1) > 0, "a bleached filter is still there");
+  assertClose(darkest(0), 0.75, 1e-12, "dark: 0.15 + 0.6");
+  assertClose(darkest(1), 0.15, 1e-12, "bleached");
+  const { recorder } = drawAt(w, LABELS, "dark", filtered(0));
+  assert.ok(rects(recorder, "strokeRect").includes(rectKey(L.filter)), "outlined");
+  const standing = posts(recorder, L);
+  assert.ok(standing.includes(L.filter.x + L.filter.w / 2), "on a post");
+  assert.ok(standing.includes(L.backMirror.x + L.backMirror.w / 2), "the back mirror's post");
+  // Without the filter: no plate, no post for it.
+  const none = drawAt(w, LABELS, "dark", lit("flashlamp", 0.5)).recorder;
+  assert.ok(!rects(none, "fillRect").includes(rectKey(L.filter)), "no plate");
+  assert.ok(!posts(none, L).includes(L.filter.x + L.filter.w / 2), "no post");
+  // The rays still run from the back mirror's face to the output mirror's.
+  const rays = strokedLines(recorder).filter((line) => line.y1 === line.y2 &&
+    Math.abs(line.x1 - bench.faceX(L, "back", line.y1)) < 1e-9 && Math.abs(line.x2 - bench.faceX(L, "output", line.y1)) < 1e-9);
+  assert.deepEqual(rays.map((ray) => ray.y1), Array.from(L.rays), "every ray, mirror to mirror");
+});
+
+test("draw: the left arrowheads move between the filter and the rod", () => {
+  for (const w of WIDTHS) {
+    const L = bench.layout(w, heightFor(w));
+    const { recorder } = drawAt(w, LABELS, "dark", filtered(1));
+    const right = L.filter.x + L.filter.w;
+    const leftGap = (right + L.rod.x) / 2;
+    L.rays.forEach((y, i) => {
+      if (i % 2 === 0) return;
+      const where = "w = " + w + ", ray " + i;
+      const head = sideArrowheadAt(recorder, leftGap - 4, y, -1);
+      assert.ok(head, where + ": an arrowhead to the left");
+      assert.ok(head.base <= L.rod.x - 1, where + ": clear of the rod");
+      assert.ok(leftGap - 4 >= right + 1, where + ": clear of the filter");
+    });
+  }
+});
+
+test("draw: the filter's name, beside the transmission on the top row", () => {
+  const w = 600;
+  const L = bench.layout(w, heightFor(w));
+  function writes(light, labels) {
+    const { recorder } = drawAt(w, labels || LABELS, "dark", light);
+    return recorder.calls.filter((c) => c.name === "fillText").map((c) => c.args);
+  }
+  const T = "Transmission 5.00" + NB + "%";
+  const texts = writes(filtered(0));
+  const Q = L.labels.qSwitch;
+  const S = L.labels.transmissionShared;
+  const whole = L.labels.transmission;
+  assert.deepEqual(texts.find((args) => args[0] === "Bleachable filter"), ["Bleachable filter", Q.x, Q.y, Q.maxWidth]);
+  assert.deepEqual(texts.find((args) => args[0] === T), [T, S.x, S.y, S.maxWidth], "the transmission shares the row");
+  assert.ok(texts.some((args) => args[0] === "Back mirror"), "the back mirror is still named");
+  // Without a name for the filter, the transmission keeps the whole row.
+  const nameless = writes(filtered(0), Object.assign({}, LABELS, { qSwitch: "" }));
+  assert.deepEqual(nameless.find((args) => args[0] === T), [T, whole.x, whole.y, whole.maxWidth], "no name");
+  assert.ok(!nameless.some((args) => args[0] === ""), "nothing empty written");
+  // No filter: its name is not written, and the transmission has the row.
+  const free = writes(LASING);
+  assert.ok(!free.some((args) => args[0] === "Bleachable filter"));
+  assert.deepEqual(free.find((args) => args[0] === T), [T, whole.x, whole.y, whole.maxWidth], "no filter");
+});
+
+test("draw: a switch the drawing does not know, or one on a gas tube, draws no switch", () => {
+  const w = 900;
+  const plain = JSON.stringify(drawAt(w, LABELS, "dark", lit("flashlamp", 0.5)).recorder.log);
+  // The engine's cell and prism are not drawn: the page offers only the filter.
+  for (const kind of ["shutter", "cell", "prism"]) {
+    const unknown = Object.assign(lit("flashlamp", 0.5), { qSwitch: { kind: kind, open: 0 } });
+    assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", unknown).recorder.log), plain, kind);
+  }
+  const gas = JSON.stringify(drawAt(w, LABELS, "dark", lit("discharge", 0.5)).recorder.log);
+  const gasFilter = Object.assign(lit("discharge", 0.5), { qSwitch: { kind: "absorber", open: 0 } });
+  assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", gasFilter).recorder.log), gas, "the tube fills the cavity: no room");
+  assert.deepEqual(Array.from(bench.Q_KINDS), Q_KINDS);
+  assert.ok(Object.isFrozen(bench.Q_KINDS));
 });

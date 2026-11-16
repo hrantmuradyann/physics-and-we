@@ -155,7 +155,7 @@
 
   // g₀(ν)/g₀(ν₀): how the small-signal gain falls away from the line centre.
   // 1 at ν₀, ½ at ν₀ ± Δν/2. Multiply by the peak cross section or gain to get
-  // the gain curve the spectrum panel draws.
+  // the gain curve against the frequency.
   // relativeGain({ broadening, nu, nu0, dnu })
   function relativeGain(params) {
     var line = readLine(at("relativeGain"), params);

@@ -14,9 +14,11 @@
   THE BLOCKS OF THE STAGE (css/laser.css places them; on a narrow screen
   they stand one under another, in the order written here):
     more      the button that leads to the theory at the bottom of the page
-    bench     the drawing of the laser
-    controls  the choice of laser (two dropdowns), the sliders, each with a
-              box to type a number in, and the buttons
+    bench     the drawing of the laser, and the row right under it:
+              Fire (on a laser with a flashlamp) and the Q-switch's
+              On/Off (the bleachable filter, on a laser that can have it)
+    controls  the choice of laser (two dropdowns), the sliders, each with
+              a box to type a number in, and the buttons
     side      the chart of the output power, and the numbers under it
     photons   the cartoon of atoms and photons inside the medium
   ══════════════════════════════════════════════════════════════════════════
@@ -56,14 +58,35 @@
 
       <div class="laser-stage__bench laser-bench reveal">
         <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
+        <!-- Right under the laser: Fire (shown by js/laser/page.js only
+             when the pump is a flashlamp), centred under the drawn lamp,
+             and the Q-switch's name with its On/Off switch (only for a
+             laser that can have one), on the left under the drawn filter.
+             The row is hidden when it has neither. Fire asks to be pressed
+             while the lamp is dark (data-ready, set by page.js). Turning
+             the switch on or off keeps the run and the chart going. -->
+        <div class="laser-under" data-laser-under hidden>
+          <button class="btn btn--primary laser-fire" type="button" data-laser-action="fire" data-ready="false" hidden>
+            <svg class="laser-fire__bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.5 2 4.5 13.5h6.2L9.5 22l10-12.5h-6.3z"/></svg>
+            <span data-text="buttons.fire"></span>
+          </button>
+          <div class="laser-switch" data-laser-switch hidden>
+            <span class="laser-switch__name" id="laser-switch-name" data-text="choose.qSwitch"></span>
+            <button class="laser-switch__toggle" type="button" role="switch" aria-checked="false" aria-labelledby="laser-switch-name" data-laser-action="qSwitch">
+              <span class="laser-switch__track" aria-hidden="true"><span class="laser-switch__knob"></span></span>
+              <span class="laser-switch__word" data-laser-name="qSwitchState"></span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- The controls. The two dropdowns choose the laser; js/laser/page.js
+      <!-- The controls. The dropdowns choose the laser; js/laser/page.js
            fills in their options (the names are media.* and pumps.* in
-           data/laser.json). A slider and its number box show the same value;
-           the pump slider's name, the units, the Play/Pause word and the line
-           under the slow-motion slider are written by js/laser/page.js. Fire
-           is shown only when the pump is a flashlamp. -->
+           data/laser.json). A slider and its number box show the same
+           value; the pump slider's name, the units, the Play/Pause word
+           and the line under the slow-motion slider are written by
+           js/laser/page.js, which also shows the filter's slider only
+           while the Q-switch is on (data-laser-slider). -->
       <div class="laser-stage__controls lab__panel reveal">
         <div class="laser-choose">
           <div class="laser-choose__item">
@@ -96,6 +119,16 @@
             </div>
             <input class="lab-control__input" id="laser-coupler" type="range" min="0" max="1000" step="1" data-laser-control="coupler">
           </div>
+          <div class="lab-control" data-laser-slider="absorberT0" hidden>
+            <div class="lab-control__label">
+              <label class="lab-control__name" for="laser-absorberT0" id="laser-absorberT0-name" data-text="controls.absorberT0"></label>
+              <span class="laser-field">
+                <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-absorberT0-name" data-laser-input="absorberT0">
+                <span class="laser-field__unit" data-laser-unit="absorberT0"></span>
+              </span>
+            </div>
+            <input class="lab-control__input" id="laser-absorberT0" type="range" min="0" max="1000" step="1" data-laser-control="absorberT0">
+          </div>
           <div class="lab-control">
             <div class="lab-control__label">
               <label class="lab-control__name" for="laser-slowMotion" id="laser-slowMotion-name" data-text="controls.slowMotion"></label>
@@ -109,7 +142,6 @@
           </div>
         </div>
         <div class="lab__buttons">
-          <button class="btn btn--primary btn--sm" type="button" data-laser-action="fire" data-text="buttons.fire" hidden></button>
           <button class="btn btn--ghost btn--sm" type="button" data-laser-action="play"></button>
           <button class="btn btn--ghost btn--sm" type="button" data-laser-action="reset" data-ui="labReset"></button>
         </div>
@@ -149,12 +181,22 @@
               <span class="lab-readout__label" data-text="readouts.tau_c"></span>
               <span class="lab-readout__value" data-laser-readout="tau_c">—</span>
             </div>
+            <div class="lab-readout" data-laser-row="lossNow">
+              <span class="lab-readout__label" data-text="readouts.lossNow"></span>
+              <span class="lab-readout__value" data-laser-readout="lossNow">—</span>
+            </div>
             <div class="lab-readout" data-laser-row="P_out">
               <span class="lab-readout__label" data-text="readouts.P_out"></span>
               <span class="lab-readout__value" data-laser-readout="P_out">—</span>
             </div>
+            <div class="lab-readout" data-laser-row="giant">
+              <span class="lab-readout__label" data-text="readouts.giant"></span>
+              <span class="lab-readout__value" data-laser-readout="giant">—</span>
+            </div>
+            <!-- Its name is written by js/laser/page.js: since the flash, or
+                 since the start on a laser with a steady pump. -->
             <div class="lab-readout" data-laser-row="peak">
-              <span class="lab-readout__label" data-text="readouts.peak"></span>
+              <span class="lab-readout__label" data-text="readouts.peak" data-laser-name="peak"></span>
               <span class="lab-readout__value" data-laser-readout="peak">—</span>
             </div>
             <div class="lab-readout" data-laser-row="powerNow">

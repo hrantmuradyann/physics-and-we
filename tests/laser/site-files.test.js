@@ -281,9 +281,10 @@ test("the chart canvas, and only it, carries the class that lets a finger move t
 // What js/laser/page.js looks for (tests/laser/page.test.js uses the same
 // names). A name missing from the layout would leave a control dead
 // without any error.
-const PAGE_CONTROLS = ["pump", "coupler", "slowMotion"];
-const PAGE_READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "P_out", "peak",
-  "powerNow", "T_best", "period", "time"];
+const PAGE_CONTROLS = ["pump", "coupler", "absorberT0", "slowMotion"];
+const PAGE_Q_CONTROLS = ["absorberT0"];
+const PAGE_READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "lossNow",
+  "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
 const PAGE_CHOICES = ["medium", "pump"];
 
 test("sections/laser.html: every slider, number box, readout and button page.js needs, once each", () => {
@@ -302,9 +303,41 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
     assert.ok(inside.includes('data-laser-readout="' + PAGE_READOUTS[i] + '"'), PAGE_READOUTS[i] + " is in its own row");
     assert.ok(inside.includes('data-text="readouts.' + PAGE_READOUTS[i] + '"'), PAGE_READOUTS[i] + " is named in its row");
   });
-  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["fire", "learn", "play", "reset"]);
-  // Fire starts hidden: the default bench has no flashlamp.
+  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["fire", "learn", "play", "qSwitch", "reset"]);
+  // Fire starts hidden: the default bench has no flashlamp. It holds a
+  // lightning bolt, hidden from screen readers, and its word, and starts
+  // not asking to be pressed (data-ready, which page.js sets).
   assert.match(html, /<button\b[^>]*\sdata-laser-action="fire"[^>]*\shidden[\s>]/);
+  const fire = html.match(/<button\b[^>]*\sdata-laser-action="fire"[^>]*>([\s\S]*?)<\/button>/);
+  assert.match(fire[0], /^<button\b[^>]*\sdata-ready="false"/);
+  assert.match(fire[1], /<svg\b[^>]*\saria-hidden="true"/, "the bolt, hidden from screen readers");
+  assert.match(fire[1], /<span\b[^>]*\sdata-text="buttons\.fire"/, "its word, inside it beside the bolt");
+  // Right under the drawing (stage 8b, the owner's wish): one row, hidden
+  // until page.js shows it, with Fire and then the Q-switch's group (its
+  // name and its On/Off switch), in the bench's box after its canvas.
+  assert.equal((html.match(/\sdata-laser-under[\s>]/g) || []).length, 1, "one row under the drawing");
+  assert.equal((html.match(/\sdata-laser-switch[\s>]/g) || []).length, 1, "one Q-switch group");
+  const benchCanvas = html.indexOf('data-laser-canvas="bench"');
+  const under = html.slice(html.indexOf("data-laser-under"));
+  assert.ok(html.indexOf("data-laser-under") > benchCanvas, "after the bench's canvas");
+  assert.ok(html.indexOf("data-laser-under") < html.indexOf('data-laser-canvas="power"'), "before the next picture");
+  assert.match(html, /<div\b[^>]*\sdata-laser-under[^>]*\shidden[\s>]/);
+  assert.match(html, /<div\b[^>]*\sdata-laser-switch[^>]*\shidden[\s>]/);
+  const fireAt = under.indexOf('data-laser-action="fire"');
+  const switchAt = under.indexOf("data-laser-switch");
+  const toggleAt = under.indexOf('data-laser-action="qSwitch"');
+  const controlsAt = under.indexOf("laser-stage__controls");
+  assert.ok(fireAt !== -1 && fireAt < switchAt && switchAt < toggleAt && toggleAt < controlsAt, "Fire, then the switch, in the row");
+  // The switch: a button with role="switch", off to start with, named by
+  // the Q-switch's name, with the word On/Off (written by page.js) in it.
+  const toggle = html.match(/<button\b[^>]*\sdata-laser-action="qSwitch"[^>]*>/)[0];
+  assert.match(toggle, /\srole="switch"/);
+  assert.match(toggle, /\saria-checked="false"/);
+  const nameId = (toggle.match(/\saria-labelledby="([^"]+)"/) || [])[1];
+  assert.ok(nameId, "the switch is named");
+  assert.match(html, new RegExp('<span\\b[^>]*\\sid="' + nameId + '"[^>]*\\sdata-text="choose\\.qSwitch"'), "by the Q-switch's name");
+  assert.match(html, /<button\b[^>]*\sdata-laser-action="qSwitch"[^>]*>[\s\S]*?data-laser-name="qSwitchState"[\s\S]*?<\/button>/,
+    "the word inside the switch");
   // The two dropdowns, each a <select> named by its own <label for="...">;
   // page.js fills in their options.
   assert.deepEqual(attributeValues(html, "data-laser-choose"), PAGE_CHOICES);
@@ -315,17 +348,32 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
     assert.ok(id, name + " has an id");
     assert.match(html, new RegExp('<label\\b[^>]*\\sfor="' + id + '"'), name + " has a label");
   }
-  // The pump slider's name is written by page.js (it depends on the pump):
-  // its label has data-laser-name, not data-text.
-  assert.deepEqual(attributeValues(html, "data-laser-name"), ["pump"]);
+  // The switch's On/Off word and the pump slider's name are written by
+  // page.js (they depend on the switch and the pump): they have
+  // data-laser-name, not data-text. The highest output's name has both:
+  // page.js writes the one for a continuous bench over the flash's.
+  assert.deepEqual(attributeValues(html, "data-laser-name"), ["qSwitchState", "pump", "peak"]);
   const pumpName = html.match(/<label\b[^>]*\sdata-laser-name="pump"[^>]*>/);
   assert.match(pumpName[0], /\sfor="laser-pump"/);
   assert.doesNotMatch(pumpName[0], /\sdata-text=/);
+  assert.doesNotMatch(html.match(/<[a-z]+\b[^>]*\sdata-laser-name="qSwitchState"[^>]*>/)[0], /\sdata-text=/);
+  assert.match(html, /<span\b[^>]*\sdata-text="readouts\.peak"[^>]*\sdata-laser-name="peak"/);
+  // The filter's slider, in a row of its own that page.js hides while the
+  // Q-switch is off. The page offers one Q-switch, so there is no dropdown
+  // of kinds (and no cell's or prism's slider).
+  assert.deepEqual(attributeValues(html, "data-laser-slider"), PAGE_Q_CONTROLS);
+  const sliderRows = html.split(/(?=<div\b[^>]*\sdata-laser-slider=")/).slice(1);
+  // Each part runs from one row to the next: its own slider is in it.
+  sliderRows.forEach((row, i) => {
+    assert.ok(row.includes('data-laser-control="' + PAGE_Q_CONTROLS[i] + '"'), PAGE_Q_CONTROLS[i] + " is in its own row");
+    assert.ok(row.includes('data-laser-input="' + PAGE_Q_CONTROLS[i] + '"'), PAGE_Q_CONTROLS[i] + "'s box is in its row");
+  });
+  assert.deepEqual(attributeValues(html, "data-laser-choice"), []);
   assert.deepEqual(attributeValues(html, "data-laser-note"), ["behind"]);
   // The theory the "learn" button scrolls to is on the page, once.
   assert.equal((html.match(/\sdata-laser-learn[\s>]/g) || []).length, 1);
   const page = read("js/laser/page.js");
-  for (const name of PAGE_CONTROLS.concat(PAGE_READOUTS, PAGE_CHOICES, ["fire"])) {
+  for (const name of PAGE_CONTROLS.concat(PAGE_READOUTS, PAGE_CHOICES, ["fire", "qSwitch", "qSwitchState"])) {
     assert.ok(page.includes('"' + name + '"'), "page.js uses " + name);
   }
   // Each slider is a range input, named by its own <label for="...">.
@@ -367,6 +415,48 @@ test("css/laser.css: whatever page.js hides on the stage stays hidden, whatever 
 });
 
 /* ---------- no colour written out ---------- */
+
+test("css/laser.css: every animation stops for a visitor who asks for less motion", () => {
+  const css = read("css/laser.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  // The blocks of @media (prefers-reduced-motion: reduce), found by
+  // counting braces, and the rest of the file.
+  const blocks = [];
+  let rest = "";
+  let from = 0;
+  const opening = /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{/g;
+  let found;
+  while ((found = opening.exec(css)) !== null) {
+    let depth = 1;
+    let end = opening.lastIndex;
+    while (depth > 0) {
+      if (css[end] === "{") depth += 1;
+      if (css[end] === "}") depth -= 1;
+      end += 1;
+    }
+    rest += css.slice(from, found.index);
+    blocks.push(css.slice(opening.lastIndex, end - 1));
+    from = end;
+    opening.lastIndex = end;
+  }
+  rest += css.slice(from);
+  assert.ok(blocks.length >= 1, "css/laser.css has a reduced-motion block");
+  // The selectors the blocks stop: each rule there with "animation: none".
+  const stopped = [];
+  for (const block of blocks) {
+    for (const rule of block.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!/\banimation\s*:\s*none\b/.test(rule[2])) continue;
+      for (const selector of rule[1].split(",")) stopped.push(selector.trim());
+    }
+  }
+  // Every rule elsewhere that runs an animation.
+  const animated = [];
+  for (const rule of rest.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/\banimation\s*:/.test(rule[2]) || /\banimation\s*:\s*none\b/.test(rule[2])) continue;
+    for (const selector of rule[1].split(",")) animated.push(selector.trim());
+  }
+  assert.ok(animated.length >= 2, "Fire's ring and bolt are animated: " + animated);
+  for (const selector of animated) assert.ok(stopped.includes(selector), selector + " keeps moving for a visitor who asked for less");
+});
 
 test("css/laser.css: theme variables only, no colour written out", () => {
   assert.deepEqual(colourLiteralsInCss(read("css/laser.css")), []);

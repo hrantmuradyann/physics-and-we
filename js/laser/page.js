@@ -6,11 +6,13 @@
    js/laser/engine/ (this file only calls LaserEngine.bench and
    LaserEngine.media), the drawing in js/laser/ui/. Two dropdowns choose
    the laser: a gain medium, and one of the pumps the engine runs it with
-   (docs/laser-plan.md, stage 7c). A slider and a number box each set the
-   pump (its power, its flash's energy or its current), the output coupler
-   and the slow motion; Fire fires a flashlamp. Four pictures: the bench,
-   the chart of the output power, the cartoon of atoms and photons, and the
-   energy levels (stages 6 and 6b).
+   (docs/laser-plan.md, stage 7c). Right under the drawing: Fire, which
+   fires a flashlamp, and an On/Off switch for the Q-switch, on a laser
+   that can have one (stage 8b). A slider and a number box each set the
+   pump (its power, its flash's energy or its current), the output coupler,
+   the filter's transmission and the slow motion.
+   Four pictures: the bench, the chart of the output power, the cartoon of
+   atoms and photons, and the energy levels (stages 6 and 6b).
 
    WHY IT TAKES ITSELF DOWN FIRST
    The router (js/router.js) fires "section:ready" for this page more often
@@ -38,9 +40,33 @@
    yet is listed but disabled; if a browser lets the visitor reach it
    anyway, the choice is refused and the dropdown goes back.
 
+   UNDER THE DRAWING
+   A row right under the laser holds what the visitor reaches for most:
+   Fire (only on a flashlamp bench) and the Q-switch's On/Off (only on a
+   bench that can have one). The row is hidden when it has neither.
+
+   THE Q-SWITCH
+   The page offers one Q-switch, the bleachable filter (the engine's
+   "absorber"; the owner chose it over the Pockels cell and the rotating
+   prism, which stay in the engine). It needs no timing: switched on, it
+   holds the light back until the gain beats it, then bleaches and lets a
+   giant pulse out, again and again on a steady pump. Turning it on or off
+   does not start the run again: the bench's settings are kept
+   (bench.withQSwitch) and the simulation goes on from where it is
+   (bench.carryOver), with the chart, the cartoon, the highest output and
+   the slow motion, so the visitor sees the steady beam turn into pulses
+   and back. A filter turned on starts dark. A new medium or pump keeps
+   it on if the new bench can have it. It has its own slider (its
+   transmission, bench.controls) and readouts: the loss now and §4.3's
+   pulse if the filter bleached now. A giant pulse lasts about 10 ns, far
+   less than the time between two chart points, so each run's peak
+   (bench.advance) is a point of the chart when it lies inside the run,
+   and the highest output is taken from the runs' peaks.
+
    TIME
    Each frame moves the simulation by (real seconds) / (slow motion), in
-   pieces (one chart point each) that share FRAME_STEPS solver steps: about
+   pieces (one chart point each, and one more for a pulse's top inside
+   it) that share FRAME_STEPS solver steps: about
    POINTS_PER_SECOND points a second of screen time, so the chart holds the
    same stretch of time on a 60 Hz and a 240 Hz screen. When the steps run
    out the simulation falls behind instead of freezing the page; if that
@@ -53,7 +79,8 @@
    Play, so the visitor can try again. A build that fails part-way takes
    down what it had set up before passing the error on.
 
-   Tests: tests/laser/page.test.js, tests/laser/page-choose.test.js
+   Tests: tests/laser/page.test.js, tests/laser/page-choose.test.js,
+   tests/laser/page-qswitch.test.js
    ========================================================================== */
 (function (root) {
   "use strict";
@@ -88,9 +115,10 @@
   var FRAME_STEPS = 1500;                             // solver steps per frame
   var WINDOW = 5;                                     // s of screen time on the chart
   // Points the chart keeps. 480 a second × WINDOW = 2400 up to 480 Hz; a
-  // faster screen gets one a frame, so 16384 is enough up to 3000 Hz (the
-  // first version kept 8 a frame in 4096 points, which cut the plot short
-  // on a 120 Hz Mac).
+  // faster screen gets one a frame. Each piece may add one more, its
+  // pulse's top, so at most twice that: 4800, and 16384 is enough up to
+  // 1600 Hz (the first version kept 8 a frame in 4096 points, which cut
+  // the plot short on a 120 Hz Mac).
   var HISTORY_SIZE = 16384;
   var READOUT_EVERY = 0.1;                            // s between live readouts
   var BEHIND_EVERY = 1;                               // s of frames judged for the note
@@ -99,14 +127,18 @@
   var PUMP_FULL = 4;                                  // the pump glows fully from 4 × threshold
   var NO_BREAK = "\u00a0";                          // between a number and its unit
 
-  var CONTROLS = ["pump", "coupler", "slowMotion"];
+  // The filter's slider (absorberT0) is shown only while the filter is on
+  // (bench.controls gives null without it).
+  var CONTROLS = ["pump", "coupler", "absorberT0", "slowMotion"];
   var CHOICES = ["medium", "pump"];
+  // The one Q-switch the page offers: the engine's bleachable filter.
+  var FILTER = "absorber";
   // Every number the page can show, and the ones each pump shows (the
   // others are hidden): a threshold in the pump's own terms, and for a
   // flash the highest output since it was fired instead of the steady
   // numbers, which a flash does not have.
-  var READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "P_out", "peak",
-    "powerNow", "T_best", "period", "time"];
+  var READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "lossNow",
+    "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
   var STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"];
   var ROWS = {
     diode: STEADY_ROWS,
@@ -117,8 +149,13 @@
   // The two-level atom has no threshold to measure the pump against, no
   // best mirror and no oscillation.
   var TWO_LEVEL_HIDES = ["x", "T_best", "period"];
+  // The filter adds the loss now and §4.3's pulse. A bench with no steady output (derive gives P_out null: a
+  // flash, or a steady pump behind a filter, which pulses) has no best
+  // mirror or oscillation, and shows the highest output instead.
+  var SWITCH_ROWS = ["lossNow", "giant"];
+  var PULSING_HIDES = ["P_out", "T_best", "period"];
   // The readouts that change while the simulation runs ("x" for a flash).
-  var LIVE_READOUTS = ["x", "peak", "powerNow", "time"];
+  var LIVE_READOUTS = ["x", "lossNow", "giant", "peak", "powerNow", "time"];
   var CANVASES = ["bench", "power", "photons", "levels"];
   var LEVEL_WORDS = ["pumpBand", "upper", "lower", "ground", "groundLower", "gain", "loss", "transparent"];
   var POWER_WORDS = ["title", "steady"];
@@ -138,7 +175,7 @@
   }
 
   function startSlowMotion(config) {
-    var start = START_SLOW_MOTION[config.medium + " " + config.pump];
+    var start = START_SLOW_MOTION[benchName(config)];
     return start === undefined ? DEFAULT_SLOW_MOTION : start;
   }
 
@@ -152,6 +189,23 @@
     return root.LaserEngine.bench.flashThreshold(config);
   }
 
+  // Can this bench have the filter?
+  function hasFilter(config) {
+    return root.LaserEngine.bench.qSwitchesFor({ medium: config.medium, pump: config.pump }).indexOf(FILTER) !== -1;
+  }
+
+  // Where the highest output starts for a new run of the bench: a flash
+  // bench's at Fire (null until then), a steady bench's at the run's start,
+  // whose output is `power`.
+  function peakFrom(config, power) {
+    return config.pump === "flashlamp" ? null : power;
+  }
+
+  // A bench's name in the tables above: "ruby flashlamp".
+  function benchName(config) {
+    return config.medium + " " + config.pump;
+  }
+
   function newState() {
     var bench = root.LaserEngine.bench;
     var config = bench.defaultConfig();
@@ -163,10 +217,17 @@
       slowMotion: startSlowMotion(config),
       playing: !prefersLessMotion(),
       behind: false,
-      peak: null,                                     // the highest output since Fire, W
+      // The highest output since Fire (or the start), W. A run starts with
+      // one photon.
+      peak: peakFrom(config, bench.derive(config).powerPerPhoton),
       flashThreshold: thresholdFlash(config),
-      // True while the output mirror's slider is dragged: the threshold
-      // flash is then the old mirror's, and is found again when it is let go.
+      // The filter's transmission as the visitor last set it on each bench
+      // ({ "ruby flashlamp": 0.3 }), so the filter turned off and on again,
+      // or a visit to another laser and back, keeps it.
+      filterT0: {},
+      // True while the output mirror's or the filter's slider is dragged:
+      // the threshold flash is then the old one, and is found again when
+      // it is let go.
       flashThresholdOld: false
     };
   }
@@ -236,6 +297,9 @@
     function find(selector) {
       return container.querySelector(selector);
     }
+    // Fire, found first: showLamp and showUnderBench, which any later
+    // part of the build may call, read it.
+    var fireButton = find('[data-laser-action="fire"]');
 
     // A listener this build adds, and the way to remove it at teardown.
     function listen(element, type, handler) {
@@ -260,7 +324,8 @@
     /* the words */
     var labels = wordsAt(data, "bench.parts", UI.bench.PARTS);
     // The name under the pump is the chosen pump's (bench.pumps.<kind>; the
-    // drawing's own word if it has none).
+    // drawing's own word if it has none). The other names, the filter's
+    // (parts.qSwitch) among them, are the same for every bench.
     var anyPump = labels.pump;
     function nameThePump() {
       labels.pump = word(data, "bench.pumps." + state.config.pump) || anyPump;
@@ -302,20 +367,31 @@
     function beamNow() {
       return powerNow() / derived.powerAtTwiceThreshold;
     }
-    // The pump at this moment: { x, w, smallSignal } (a flash rises and
-    // falls). bench.pumpNow derives the whole bench again, and the pictures
-    // ask for it several times a frame, so the answer is kept until the
-    // simulation moves on or the bench changes (both are new objects then).
-    var pumpKept = { sim: null, derived: null, pump: null };
-    function pumpNow() {
-      if (pumpKept.sim !== state.sim || pumpKept.derived !== derived) {
-        pumpKept = {
-          sim: state.sim,
-          derived: derived,
-          pump: bench.pumpNow({ sim: state.sim, config: state.config })
-        };
-      }
-      return pumpKept.pump;
+    // An engine answer about this moment, kept until the simulation moves
+    // on or the bench changes (both are new objects then): each is a whole
+    // derive, and the pictures ask several times a frame.
+    function keptForMoment(ask) {
+      var kept = { sim: null, derived: null, answer: null };
+      return function () {
+        if (kept.sim !== state.sim || kept.derived !== derived) {
+          kept = { sim: state.sim, derived: derived, answer: ask() };
+        }
+        return kept.answer;
+      };
+    }
+    // The pump at this moment: { x, w, smallSignal, overThreshold } (a
+    // flash rises and falls).
+    var pumpNow = keptForMoment(function () {
+      return bench.pumpNow({ sim: state.sim, config: state.config });
+    });
+    // The Q-switch at this moment, { loss, open } (bench.switchNow),
+    // or null without one.
+    var switchKept = keptForMoment(function () {
+      return bench.switchNow({ sim: state.sim, config: state.config });
+    });
+    function switchNow() {
+      if (state.config.qSwitch === "none") return null;
+      return switchKept();
     }
     // The pump's strength for the pictures: x, in units of threshold; the
     // two-level atom, which has no threshold, by its W_pτ instead.
@@ -360,12 +436,13 @@
     if (state.history.size() === 0) remember();
 
     // A new simulation of the bench: from the start, with an empty chart,
-    // a new cartoon and no flash.
+    // a new cartoon and no flash. A flash bench's highest output starts at
+    // Fire; a steady bench's now.
     function restart() {
       state.sim = bench.start(state.config);
       state.history.clear();
       state.cartoon = newCartoon();       // no atoms or light left from the old run
-      state.peak = null;
+      state.peak = peakFrom(state.config, powerNow());
       remember();
     }
 
@@ -374,11 +451,19 @@
       var element = find(selector);
       if (element) element.textContent = text;
     }
+    function without(rows, hidden) {
+      return rows.filter(function (name) { return hidden.indexOf(name) === -1; });
+    }
     // The readouts this bench shows.
     function rowsShown() {
       var rows = ROWS[state.config.pump];
-      if (derived.scheme !== "two-level") return rows;
-      return rows.filter(function (name) { return TWO_LEVEL_HIDES.indexOf(name) === -1; });
+      if (derived.scheme === "two-level") rows = without(rows, TWO_LEVEL_HIDES);
+      if (derived.P_out === null) {
+        rows = without(rows, PULSING_HIDES);
+        if (rows.indexOf("peak") === -1) rows = rows.concat(["peak"]);
+      }
+      if (state.config.qSwitch === "none") return rows;
+      return rows.concat(SWITCH_ROWS);
     }
     function showRows() {
       var rows = rowsShown();
@@ -386,18 +471,45 @@
         var row = find('[data-laser-row="' + name + '"]');
         if (row) row.hidden = rows.indexOf(name) === -1;
       });
+      // Since the flash, or since the start on a steady bench.
+      var peakWord = state.config.pump === "flashlamp" ? "readouts.peak" : "readouts.peakStart";
+      setText('[data-laser-name="peak"]', word(data, peakWord));
+    }
+    // §4.3's giant pulse if the filter bleached now, as "6.64 J · 522 MW · 12.7 ns";
+    // "—" when the engine predicts none (below 1 % over threshold, where
+    // §4.3's pulse is nothing and lasts for ever).
+    function giantText() {
+      var pulse = bench.giantPulse({ sim: state.sim, config: state.config });
+      if (pulse === null) return "—";
+      return F.si(pulse.energy, "J") + " · " + F.si(pulse.peakPower, "W") + " · " + F.si(pulse.width, "s");
+    }
+    // A threshold the pump slider cannot reach (none, or past its top:
+    // the diodes behind a dark filter, 69.8 W on a 20 W slider) is never.
+    function thresholdText(value, unit) {
+      if (value === null || value > controls.pump.max) return never;
+      return F.si(value, unit);
     }
     function readoutText(name) {
       var d = derived;
-      if (name === "pumpThreshold") return d.pumpThreshold === null ? never : F.si(d.pumpThreshold, "W");
-      if (name === "currentThreshold") return d.currentThreshold === null ? never : F.si(d.currentThreshold, "A");
+      if (name === "pumpThreshold") return thresholdText(d.pumpThreshold, "W");
+      if (name === "currentThreshold") return thresholdText(d.currentThreshold, "A");
       if (name === "flashThreshold") {
         if (state.flashThresholdOld) return "…";       // found when the slider is let go
-        return state.flashThreshold === null ? never : F.si(state.flashThreshold, "J");
+        return thresholdText(state.flashThreshold, "J");
       }
-      if (name === "x") return F.number(pumpNow().x);  // its row is hidden where x is null
+      if (name === "x") {
+        // Over the pump that starts the laser (behind a filter, its closed
+        // loss's); its row is hidden for the two-level atom.
+        var over = pumpNow().overThreshold;
+        return over === null ? never : F.number(over);
+      }
       if (name === "gth") return F.number(d.gth) + NO_BREAK + "m⁻¹";
       if (name === "tau_c") return F.si(d.tau_c, "s");
+      if (name === "lossNow") {
+        var now = switchNow();
+        return now === null ? "—" : F.number(now.loss) + NO_BREAK + "×";
+      }
+      if (name === "giant") return giantText();
       if (name === "P_out") return F.si(d.P_out, "W");
       if (name === "peak") return state.peak === null ? "—" : F.si(state.peak, "W");
       // 0 when the gain cannot beat the internal loss: no mirror is best.
@@ -416,7 +528,22 @@
     }
     function showAll() {
       showReadouts(READOUTS);
+      showLamp();
       sinceReadout = 0;
+    }
+    // Fire asks to be pressed (data-ready="true": a ring of light swells
+    // out of it, css/laser.css) while the lamp is dark: before the first
+    // flash, and once a flash is past its peak and has faded below the
+    // drawing's "off" (LaserUI.bench.PUMP_OFF). From Fire to the flash's
+    // peak it waits, though the lamp starts dark. Written only when it
+    // changes.
+    function showLamp() {
+      if (!fireButton) return;
+      var flash = state.sim.flash;
+      var ready = flash === null ||
+        (state.sim.t > flash.at + flash.flashTime && benchPumpNow() < UI.bench.PUMP_OFF);
+      var value = state.config.pump === "flashlamp" && ready ? "true" : "false";
+      if (fireButton.getAttribute("data-ready") !== value) fireButton.setAttribute("data-ready", value);
     }
     function showBehind() {
       var note = find('[data-laser-note="behind"]');
@@ -456,12 +583,17 @@
           behind = true;
           break;
         }
+        var from = state.sim.t;
         var run = bench.advance({ sim: state.sim, config: state.config, seconds: piece, maxSteps: stepsLeft });
         state.sim = run.sim;
         stepsLeft -= run.steps;
+        // A pulse shorter than a piece (a giant pulse, ~10 ns) falls between
+        // two points: the run's peak, when it lies inside the run, is a
+        // point too, before the run's end.
+        if (run.peak.t > from && run.peak.t < state.sim.t) state.history.push(run.peak.t, run.peak.power);
         remember();
-        // The highest output since Fire, at the chart's points.
-        if (state.peak !== null) state.peak = Math.max(state.peak, powerNow());
+        // The highest output since Fire (or the start), at the runs' peaks.
+        if (state.peak !== null) state.peak = Math.max(state.peak, run.peak.power);
         if (!run.reachedEnd) {
           behind = true;
           break;
@@ -481,6 +613,7 @@
       if (sinceReadout >= READOUT_EVERY) {
         sinceReadout = 0;
         showReadouts(LIVE_READOUTS);
+        showLamp();
       }
     }
 
@@ -512,18 +645,26 @@
         draw: pauseOnError(draw)
       });
     }
+    // The Q-switch for the bench drawing: { kind, open }, or null.
+    function switchLight() {
+      var now = switchNow();
+      if (now === null) return null;
+      return { kind: state.config.qSwitch, open: now.open };
+    }
     addCanvas("bench", UI.bench.SIZE, function (view) {
       UI.bench.draw(view, labels, {
         beam: beamNow(),
         pump: benchPumpNow(),
         transmission: 1 - state.config.refl2,
-        pumpKind: state.config.pump
+        pumpKind: state.config.pump,
+        qSwitch: switchLight()
       });
     });
     addCanvas("power", UI.plots.SIZE, function (view) {
       var shownTime = WINDOW / state.slowMotion;          // simulated s on the chart
       // A line at the steady output, if there is one above 0: not for a
-      // flash, a laser below threshold, or the two-level atom.
+      // flash, a laser below threshold, the two-level atom, or a steady
+      // pump behind a filter, which pulses (P_out null).
       var lines = [];
       if (derived.P_out !== null && derived.P_out > 0) lines.push({ value: derived.P_out, word: powerWords.steady, tone: "soft" });
       UI.plots.draw(view, {
@@ -543,6 +684,7 @@
       UI.photons.draw(view, state.cartoon, photonWords);
     });
     addCanvas("levels", UI.levels.SIZE, function (view) {
+      var shutter = switchNow();                               // null without a Q-switch
       UI.levels.draw(view, {
         scheme: derived.scheme,
         x: pumpLevel(),
@@ -550,11 +692,13 @@
         y: inversionNow(),
         stim: stimulatedNow(),
         n_t: derived.n_t,
+        loss: shutter === null ? 1 : shutter.loss,
         words: levelWords
       });
     });
 
     /* the choice of laser */
+    var toggle = find('[data-laser-action="qSwitch"]');        // the Q-switch's On/Off
     var selects = {};
     CHOICES.forEach(function (name) {
       selects[name] = find('[data-laser-choose="' + name + '"]');
@@ -572,7 +716,7 @@
         select.appendChild(option);
       });
     }
-    // Both dropdowns, for the bench chosen. A missing name falls back to
+    // The dropdowns, for the bench chosen. A missing name falls back to
     // the engine's id, so no option is ever blank.
     function showChoices() {
       if (selects.medium) {
@@ -591,29 +735,73 @@
         selects.pump.value = state.config.pump;
       }
     }
-    // Fire is there only for a flashlamp.
-    function showFire() {
-      var fire = find('[data-laser-action="fire"]');
-      if (fire) fire.hidden = state.config.pump !== "flashlamp";
+    // The row under the drawing: Fire only for a flashlamp, the filter's
+    // On/Off only for a bench that can have it, the row only with either.
+    function showUnderBench() {
+      var flash = state.config.pump === "flashlamp";
+      var filter = hasFilter(state.config);
+      var on = state.config.qSwitch !== "none";
+      if (fireButton) fireButton.hidden = !flash;
+      var switchGroup = find("[data-laser-switch]");
+      if (switchGroup) switchGroup.hidden = !filter;
+      var under = find("[data-laser-under]");
+      if (under) under.hidden = !flash && !filter;
+      if (toggle) toggle.setAttribute("aria-checked", on ? "true" : "false");
+      setText('[data-laser-name="qSwitchState"]', word(data, on ? "choose.on" : "choose.off"));
     }
-    // A new bench: the engine's setup of that medium and pump.
-    function chooseBench(medium, pump) {
-      var config = bench.configFor({ medium: medium, pump: pump });
+    // A new config is taken in two steps: its numbers (and anything that
+    // can fail) first, then the config. showBench then shows it: the
+    // threshold flash found for it, every control and every readout.
+    function showBench(threshold) {
+      state.flashThreshold = threshold;
+      state.flashThresholdOld = false;
+      showUnderBench();
+      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });
+      showRows();
+      setBehind(false);
+      showAll();
+      loop.redraw();
+    }
+    // A config to run from the start, at its bench's own slow motion: a
+    // new simulation, chart, cartoon and highest output.
+    function startBench(config) {
       var numbers = numbersOf(config);
       var threshold = thresholdFlash(config);
       take(config, numbers);
-      state.flashThreshold = threshold;
-      state.flashThresholdOld = false;
       state.slowMotion = startSlowMotion(config);
       nameThePump();
       restart();
       showChoices();
-      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });
-      showRows();
-      showFire();
-      setBehind(false);
-      showAll();
-      loop.redraw();
+      showBench(threshold);
+    }
+    // The config with the filter on, at the transmission the visitor last
+    // set on this bench (the bench's own at first).
+    function withFilter(config) {
+      var filtered = bench.withQSwitch({ config: config, qSwitch: FILTER });
+      var kept = state.filterT0[benchName(config)];
+      if (kept !== undefined) filtered.absorberT0 = kept;
+      return filtered;
+    }
+    // A new bench: the engine's setup of that medium and pump. The filter
+    // stays on if the new bench can have it; else it is off.
+    function chooseBench(medium, pump) {
+      var config = bench.configFor({ medium: medium, pump: pump });
+      if (state.config.qSwitch === FILTER && hasFilter(config)) config = withFilter(config);
+      startBench(config);
+    }
+    // The same bench with the filter on (FILTER) or off ("none"), going on
+    // from where it is (bench.carryOver): the atoms, the photons, the
+    // flash, the chart, the cartoon, the highest output and the slow motion
+    // are kept. A filter turned on is dark.
+    function turnSwitch(qSwitch) {
+      if (qSwitch === state.config.qSwitch) return;
+      var config = qSwitch === FILTER ? withFilter(state.config) : bench.withQSwitch({ config: state.config, qSwitch: qSwitch });
+      var numbers = numbersOf(config);
+      var threshold = thresholdFlash(config);
+      var sim = bench.carryOver({ sim: state.sim, config: config });
+      take(config, numbers);
+      state.sim = sim;
+      showBench(threshold);
     }
     function connectChoices() {
       if (selects.medium) {
@@ -640,18 +828,27 @@
           chooseBench(state.config.medium, pump);
         });
       }
+      // The filter, on and off.
+      if (toggle) {
+        listen(toggle, "click", function () {
+          if (!hasFilter(state.config)) return;           // a hidden switch: a stray click
+          turnSwitch(state.config.qSwitch === "none" ? FILTER : "none");
+        });
+      }
     }
 
     /* the sliders and their number boxes */
+    // A slider's range: the engine's for the bench, null for the filter's
+    // while the filter is off.
     function rangeOf(name) {
-      if (name === "pump") return controls.pump;
-      if (name === "coupler") return controls.coupler;
-      return SLOW_MOTION;
+      if (name === "slowMotion") return SLOW_MOTION;
+      return controls[name];
     }
     function valueOf(name) {
       if (name === "pump") return state.config[controls.pump.name];
       if (name === "coupler") return 1 - state.config.refl2;
-      return state.slowMotion;
+      if (name === "slowMotion") return state.slowMotion;
+      return state.config[name];                       // the filter's transmission
     }
     // The pump's unit: W of light, J of a flash, A of a current.
     function pumpUnit() {
@@ -665,6 +862,7 @@
     function shownOf(name) {
       if (name === "coupler") return { unit: "%", factor: 100 };
       if (name === "slowMotion") return { unit: "×", factor: 1 };
+      if (name === "absorberT0") return { unit: "%", factor: 100 };
       if (pumpUnit() === "A" && controls.pump.max < 1) return { unit: "mA", factor: 1000 };
       return { unit: pumpUnit(), factor: 1 };
     }
@@ -672,7 +870,7 @@
     // the slow-motion slider.
     function valueText(name, value) {
       if (name === "pump") return F.si(value, pumpUnit());
-      if (name === "coupler") return F.number(100 * value) + NO_BREAK + "%";
+      if (name === "coupler" || name === "absorberT0") return F.number(100 * value) + NO_BREAK + "%";
       // Slow motion: how much simulated time one second on screen shows.
       return "1" + NO_BREAK + "s = " + F.si(1 / value, "s");
     }
@@ -682,9 +880,25 @@
         var slider = find('[data-laser-control="' + name + '"]');
         var box = find('[data-laser-input="' + name + '"]');
 
+        // The filter's slider's row, hidden while the filter is off.
+        var sliderRow = find('[data-laser-slider="' + name + '"]');
+
+        // The filter's slider has no range while the filter is off: its row
+        // is hidden, and a stray event on it changes nothing.
+        function hidden() {
+          return rangeOf(name) === null;
+        }
+        function whileShown(work) {
+          return function () {
+            if (!hidden()) work();
+          };
+        }
+
         // Writes the value everywhere it is shown, with this bench's range
         // and unit.
         function show() {
+          if (sliderRow) sliderRow.hidden = hidden();
+          if (hidden()) return;
           var value = valueOf(name);
           var text = valueText(name, value);
           var shown = shownOf(name);
@@ -708,15 +922,19 @@
             // are worked out.
             var config = Object.assign({}, state.config);
             if (name === "pump") config[controls.pump.name] = value;
-            else config.refl2 = 1 - value;
+            else if (name === "coupler") config.refl2 = 1 - value;
+            else config[name] = value;                 // the filter's transmission
             var numbers = numbersOf(config);
-            // The flash threshold depends on the output mirror, not on the
-            // flash's energy; while the mirror is dragged it waits.
+            // The flash threshold depends on the output mirror and on the
+            // filter, not on the flash's energy; while one of the two is
+            // dragged it waits.
+            var movesThreshold = name === "coupler" || name === "absorberT0";
             var threshold = state.flashThreshold;
-            if (name === "coupler" && settled) threshold = thresholdFlash(config);
+            if (movesThreshold && settled) threshold = thresholdFlash(config);
             take(config, numbers);
             state.flashThreshold = threshold;
-            if (name === "coupler") state.flashThresholdOld = !settled;
+            if (movesThreshold) state.flashThresholdOld = !settled;
+            if (name === "absorberT0") state.filterT0[benchName(config)] = value;
           }
           show();
           setBehind(false);                   // the new setting is judged afresh
@@ -737,15 +955,15 @@
           }
           // "input": every step of a drag; "change": the slider let go, or
           // moved by a key.
-          listen(slider, "input", function () { use(sliderValue(), false); });
-          listen(slider, "change", function () { use(sliderValue(), true); });
+          listen(slider, "input", whileShown(function () { use(sliderValue(), false); }));
+          listen(slider, "change", whileShown(function () { use(sliderValue(), true); }));
         }
         if (box) {
           // "change": Enter, or leaving the box. A typed value is rounded
           // to the digits the box shows (so it shows exactly what is
           // simulated) and held inside the slider's range; text that is no
           // number, or nothing, puts the old value back.
-          listen(box, "change", function () {
+          listen(box, "change", whileShown(function () {
             var typed = readNumber(box.value);
             if (!isFinite(typed)) {
               show();
@@ -754,7 +972,7 @@
             var range = rangeOf(name);
             var rounded = round(typed, BOX_DIGITS) / shownOf(name).factor;
             use(clamp(rounded, range.min, range.max), true);
-          });
+          }));
         }
         show();
       });
@@ -796,7 +1014,6 @@
       // Fire: a flash of the slider's energy, from the moment the
       // simulation has reached. The visitor asked to see a flash, so a
       // paused page starts playing.
-      var fireButton = find('[data-laser-action="fire"]');
       if (fireButton) {
         listen(fireButton, "click", function () {
           if (state.config.pump !== "flashlamp") return;
@@ -854,8 +1071,8 @@
       connectButtons();
       connectPointer();
       showChoices();
+      showUnderBench();
       showRows();
-      showFire();
       showPlay();
       showAll();
       showBehind();

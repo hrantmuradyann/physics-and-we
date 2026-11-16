@@ -71,6 +71,18 @@ const TWO_LEVEL = levelPicture({ scheme: "two-level", n_t: TWO_NT, x: 6.55, smal
 const TWO_OFF = levelPicture({ scheme: "two-level", n_t: TWO_NT, x: 0, smallSignal: -TWO_NT, y: -TWO_NT, stim: 0 });
 const TWO_STRONG = levelPicture({ scheme: "two-level", n_t: TWO_NT, x: 60, smallSignal: -0.063, y: -0.063, stim: 0 });
 
+// With a Q-switch (stage 8b): the loss now, over the open cavity's loss.
+// Nd:YAG behind its closed cell (37 times the open loss, the inversion at
+// 7.7) and after its pulse (the gain held at the open loss), ruby behind
+// its closed cell and just after it opened, ruby behind its unbleached
+// filter.
+const YAG_CLOSED = levelPicture({ x: 7.7, smallSignal: 7.7, y: 7.7, stim: 0, loss: 37 });
+const YAG_AFTER = levelPicture({ x: 2, smallSignal: 2, y: 1, stim: 1, loss: 1 });
+const RUBY_CLOSED = levelPicture({ scheme: "three-level", n_t: RUBY_NT, x: 5.72, smallSignal: 8.59, y: 4.3, stim: 0, loss: 14.1 });
+const RUBY_OPENED = levelPicture({ scheme: "three-level", n_t: RUBY_NT, x: 5.72, smallSignal: 8.59, y: 4.3, stim: 0, loss: 1 });
+const RUBY_FILTER = levelPicture({ scheme: "three-level", n_t: RUBY_NT, x: 5.72, smallSignal: 8.59, y: 2.5, stim: 0, loss: 2.98 });
+const SWITCHED = [YAG_CLOSED, YAG_AFTER, RUBY_CLOSED, RUBY_OPENED, RUBY_FILTER];
+
 const LEVEL_CASES = [
   levelPicture(),
   levelPicture({ x: 0, y: 0, stim: 0 }),
@@ -78,7 +90,7 @@ const LEVEL_CASES = [
   levelPicture({ x: 40, y: 1, stim: 39 }),
   levelPicture({ x: 2, y: 1.7, stim: 1e6 }),
   RUBY_BEFORE, RUBY_PEAK, RUBY_HALF, TWO_LEVEL, TWO_OFF, TWO_STRONG
-];
+].concat(SWITCHED);
 const POSITION_CALLS = ["moveTo", "lineTo", "fillRect", "strokeRect", "rect", "clearRect", "arc", "fillText"];
 
 // Every coordinate a drawing passes to the canvas is a number inside it.
@@ -445,7 +457,7 @@ test("levels: the loss word stays inside the gauge, above its line or under it w
     const G = L.gauge;
     // Every scheme, and the two-level atom over the couplers' range of n_t
     // (n_t ≈ 4.9 at 15 % put the loss line 5.8 px under the top at 220 px).
-    const pictures = [levelPicture(), levelPicture({ x: 0.2, smallSignal: 0.2, y: 0.2, stim: 0 }), RUBY_BEFORE, RUBY_PEAK, RUBY_HALF];
+    const pictures = [levelPicture(), levelPicture({ x: 0.2, smallSignal: 0.2, y: 0.2, stim: 0 }), RUBY_BEFORE, RUBY_PEAK, RUBY_HALF].concat(SWITCHED);
     for (const n_t of [0.9, 1.5, 2, 3, 4.9, 7, 12, 40]) {
       pictures.push(levelPicture({ scheme: "two-level", n_t: n_t, x: 5, smallSignal: -n_t / 11, y: -n_t / 11, stim: 0 }));
       pictures.push(levelPicture({ scheme: "three-level", n_t: n_t, x: 0, smallSignal: -n_t, y: -n_t, stim: 0 }));
@@ -457,7 +469,7 @@ test("levels: the loss word stays inside the gauge, above its line or under it w
       assert.ok(loss, where);
       assert.ok(loss.y - L.fontSize >= G.top - 1e-9, where + ": the word's top inside the gauge (" + (loss.y - L.fontSize) + " < " + G.top + ")");
       assert.ok(loss.y <= G.bottom + 1e-9, where + ": and its foot");
-      const lossY = gaugeY(G, picture, 1);
+      const lossY = gaugeY(G, picture, picture.loss === undefined ? 1 : picture.loss);
       assert.ok(Math.abs(loss.y - (lossY - 4)) < 1e-9 || Math.abs(loss.y - (lossY + L.fontSize + 2)) < 1e-9, where + ": right by the loss line");
     }
   }
@@ -512,4 +524,50 @@ test("levels: three and two levels' gauge goes below zero, where the medium abso
   // Four levels: no zero line and no word for it, even when the word is given.
   const { recorder } = gauge(levelPicture());
   assert.equal(writtenWords(recorder).find((t) => t.text === "Transparent"), undefined);
+});
+
+/* ---------- the Q-switch's loss (stage 8b) ---------- */
+
+test("levels: the scale holds the loss now, and comes down with it when the switch opens", () => {
+  assert.equal(LEVELS.scaleMax(YAG_CLOSED), 37 * 1.15);
+  assert.equal(LEVELS.scaleMax(RUBY_CLOSED), 14.1 * 1.15);
+  // Opened: the scale is the gain's again, so the gain held at the loss
+  // is not pressed into the bottom of the gauge (stage 8b review: kept at
+  // the closed loss, Nd:YAG's held gain was the bottom fortieth).
+  assert.equal(LEVELS.scaleMax(RUBY_OPENED), 8.59 * 1.15, "opened");
+  assert.equal(LEVELS.scaleMax(YAG_AFTER), 2 * 1.15, "after the pulse");
+  assert.equal(LEVELS.scaleMax(levelPicture({ x: 2, smallSignal: 2, y: 1, loss: 5 })), 5 * 1.15);
+  // Without a loss, as before.
+  assert.equal(LEVELS.scaleMax(levelPicture({ x: 3, smallSignal: 3, y: 1 })), 3 * 1.15);
+});
+
+test("levels: the loss line and its word are at the loss now; none given is 1", () => {
+  const w = 800;
+  for (const picture of SWITCHED.concat([levelPicture(), RUBY_PEAK])) {
+    const { recorder, view } = drawWith(LEVELS, w, picture);
+    const L = LEVELS.layout(w, view.h);
+    const G = L.gauge;
+    const loss = picture.loss === undefined ? 1 : picture.loss;
+    const where = (picture.scheme || "four-level") + ", loss " + loss;
+    assert.ok(lineAt(recorder, G.left, gaugeY(G, picture, loss)), where + ": the loss line");
+    if (loss !== 1) assert.ok(!lineAt(recorder, G.left, gaugeY(G, picture, 1)), where + ": none at the open cavity's");
+  }
+});
+
+test("levels: the threshold mark on the bars follows the loss: the inversion where the gain reaches it", () => {
+  const w = 800;
+  const L = LEVELS.layout(w, heightFor(LEVELS.SIZE, w));
+  const slot = L.bar.bottom - L.bar.top;
+  const mark = (picture, share) => lineAt(drawWith(LEVELS, w, picture).recorder, L.bar.x - 3, L.bar.bottom - slot * share);
+  // Four levels: y = loss on the gauge's scale.
+  assert.ok(mark(YAG_CLOSED, 37 / LEVELS.scaleMax(YAG_CLOSED)), "four levels behind the closed cell");
+  assert.ok(!mark(YAG_CLOSED, 1 / LEVELS.scaleMax(YAG_CLOSED)), "not at the open cavity's threshold");
+  // Three levels: the share of ions up at y = loss, (1 + loss/n_t)/2.
+  assert.ok(mark(RUBY_FILTER, (1 + 2.98 / RUBY_NT) / 2), "ruby behind its filter");
+  assert.ok(mark(RUBY_OPENED, (1 + 1 / RUBY_NT) / 2), "ruby opened: at threshold");
+  // A loss no inversion can reach (loss ≥ n_t): no mark.
+  const marks = drawWith(LEVELS, w, RUBY_CLOSED).recorder.calls.filter((c, i, all) => c.name === "moveTo" &&
+    Math.abs(c.args[0] - (L.bar.x - 3)) < 1e-9 && all[i + 1] && all[i + 1].name === "lineTo" &&
+    Math.abs(all[i + 1].args[0] - (L.bar.x + L.bar.w + 3)) < 1e-9);
+  assert.equal(marks.length, 0, "ruby behind its closed cell, 14.1 > n_t: no mark");
 });

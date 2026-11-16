@@ -41,9 +41,11 @@
      loop.destroy()
      LaserUI.loop.liveCount()   loops created and not yet destroyed
 
-   draw(view) gets view = { g, w, h, dpr, colors, font, t, dt }: the 2D
-   context, the size in CSS pixels, the pixel ratio, the theme colours by
-   PALETTE name, the site's font, the seconds the loop has run, the step.
+   draw(view) gets view = { g, w, h, dpr, colors, font, t, dt, still }:
+   the 2D context, the size in CSS pixels, the pixel ratio, the theme
+   colours by PALETTE name, the site's font, the seconds the loop has run,
+   the step, and still: true when the visitor asked for less motion, so
+   a drawing's decoration (not its physics) stands still.
 
    Tests: tests/laser/loop.test.js
    ========================================================================== */
@@ -68,6 +70,8 @@
     grid: "--canvas-grid",
     faint: "--canvas-faint",
     glow: "--canvas-glow",
+    flash: "--canvas-flash",      // a lit flashlamp's light (draw-bench.js)
+    lamp: "--canvas-lamp",        // a flashlamp's glass edge and metal caps
     bg: "--bg"                    // for text on a filled tag, and boxes over a plot
   });
   var FONT_VARIABLE = "--font-main";
@@ -153,7 +157,8 @@
         colors: style.colors,
         font: style.font,
         t: seconds,
-        dt: dt
+        dt: dt,
+        still: reduceMotion
       });
     }
 

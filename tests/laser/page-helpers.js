@@ -13,13 +13,16 @@ const { ROOT, ENGINE_FILES, UI_FILES } = require("./helpers.js");
 const { createBrowser, fakeCanvas, fakeContainer, fakeElement } = require("./fake-browser.js");
 
 const WORDS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "laser.json"), "utf8"));
-const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission"];
+const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch"];
 const CANVASES = ["bench", "power", "photons", "levels"];
-const CONTROLS = ["pump", "coupler", "slowMotion"];
-// Every number the page can show; each bench shows some of them (ROWS in
-// page.js, and page-choose.test.js).
-const READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "P_out", "peak",
-  "powerNow", "T_best", "period", "time"];
+const CONTROLS = ["pump", "coupler", "slowMotion", "absorberT0"];
+// The filter's slider (stage 8b), in a row page.js hides while the
+// Q-switch is off.
+const Q_CONTROLS = ["absorberT0"];
+// Every number the page can show, in the layout's order; each bench shows
+// some of them (ROWS in page.js, and page-choose.test.js).
+const READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "lossNow",
+  "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
 const CHOICES = ["medium", "pump"];
 const UI_WORDS = { labPlay: "Play", labPause: "Pause", labReset: "Reset" };
 const NB = "\u00a0";          // the no-break space between a number and its unit
@@ -89,6 +92,23 @@ function laserSection(boxWidth) {
   }
   section.pumpName = fakeElement("label");              // the pump slider's name
   by['[data-laser-name="pump"]'] = section.pumpName;
+  section.peakName = fakeElement("span");               // the highest output's name
+  by['[data-laser-name="peak"]'] = section.peakName;
+  section.sliders = {};                                 // the filter's slider row
+  for (const name of Q_CONTROLS) {
+    section.sliders[name] = fakeElement("div");
+    by['[data-laser-slider="' + name + '"]'] = section.sliders[name];
+  }
+  // The row under the drawing: Fire (below) and the Q-switch, its On/Off
+  // and the word beside it.
+  section.under = fakeElement("div");
+  by["[data-laser-under]"] = section.under;
+  section.switchRow = fakeElement("div");
+  by["[data-laser-switch]"] = section.switchRow;
+  section.toggle = fakeElement("button");
+  by['[data-laser-action="qSwitch"]'] = section.toggle;
+  section.switchWord = fakeElement("span");
+  by['[data-laser-name="qSwitchState"]'] = section.switchWord;
   section.hint = fakeElement("p");                      // "1 s = 100 µs"
   by['[data-laser-value="slowMotion"]'] = section.hint;
   for (const name of READOUTS) {
@@ -169,6 +189,8 @@ function built(lang, options) {
 //   seen.configs   the config of every derive() call (a slider moved)
 //   seen.thresholds  the config of every flashThreshold() call
 //   seen.pumpCalls  how many times pumpNow() was called
+//   seen.switchCalls  how many times switchNow() was called
+//   seen.peaks     the peak of every advance() call ({ t, power })
 //   seen.levels    every picture given to the level diagram
 //   seen.bench     every { labels, light } given to the bench drawing
 //   seen.chart     the latest chart given to draw-plots, by its key: { P }
@@ -177,14 +199,15 @@ function built(lang, options) {
 //   seen.cartoons  every cartoon given to the photon drawing
 function watch(browser) {
   const seen = {
-    steps: [], sims: [], after: [], configs: [], thresholds: [], pumpCalls: 0, levels: [], bench: [], chart: {}, charts: 0,
-    drives: [], cartoons: []
+    steps: [], sims: [], after: [], configs: [], thresholds: [], pumpCalls: 0, switchCalls: 0, peaks: [], levels: [],
+    bench: [], chart: {}, charts: 0, drives: [], cartoons: []
   };
   const engineNow = browser.window.LaserEngine;
   const advance = engineNow.bench.advance;
   const derive = engineNow.bench.derive;
   const flashThreshold = engineNow.bench.flashThreshold;
   const pumpNow = engineNow.bench.pumpNow;
+  const switchNow = engineNow.bench.switchNow;
   browser.window.LaserEngine = Object.assign({}, engineNow, {
     bench: Object.assign({}, engineNow.bench, {
       advance: function (params) {
@@ -192,6 +215,7 @@ function watch(browser) {
         seen.steps.push(run.steps);
         seen.sims.push(params.sim);
         seen.after.push(run.sim);
+        seen.peaks.push(run.peak);
         return run;
       },
       derive: function (config) {
@@ -205,6 +229,10 @@ function watch(browser) {
       pumpNow: function (params) {
         seen.pumpCalls += 1;
         return pumpNow(params);
+      },
+      switchNow: function (params) {
+        seen.switchCalls += 1;
+        return switchNow(params);
       }
     })
   });
@@ -349,7 +377,7 @@ function assertNoListeners(section, label) {
   for (const name of CHOICES) {
     assert.equal(section.choose[name].listenerCount("change"), 0, label + ": the " + name + " dropdown");
   }
-  for (const name of ["play", "reset", "fire", "learn"]) {
+  for (const name of ["play", "reset", "fire", "learn", "toggle"]) {
     assert.equal(section[name].listenerCount("click"), 0, label + ": the " + name + " button");
   }
   for (const type of ["pointerdown", "pointermove", "pointerleave"]) {
@@ -357,10 +385,16 @@ function assertNoListeners(section, label) {
   }
 }
 
-// Chooses a bench with the dropdowns, as a visitor does: the medium, then
-// (if given) the pump. As in a browser, picking the option already chosen
-// fires no change.
-function choose(section, medium, pump) {
+// Is the Q-switch's On/Off on?
+function switchOn(section) {
+  return section.toggle.getAttribute("aria-checked") === "true";
+}
+
+// Chooses a bench as a visitor does: the medium, then (if given) the pump
+// with the dropdowns, then (if given) the Q-switch: "none" turns it off,
+// "absorber" (the filter, the only one the page offers) on. As in a
+// browser, picking the option already chosen fires no change.
+function choose(section, medium, pump, qSwitch) {
   if (section.choose.medium.value !== medium) {
     section.choose.medium.value = medium;
     section.choose.medium.fire("change");
@@ -369,15 +403,22 @@ function choose(section, medium, pump) {
     section.choose.pump.value = pump;
     section.choose.pump.fire("change");
   }
+  if (qSwitch === undefined) return;
+  assert.ok(qSwitch === "none" || qSwitch === "absorber", "the page offers only the filter, not " + qSwitch);
+  if (switchOn(section) !== (qSwitch === "absorber")) section.toggle.fire("click");
+  // The page ignores a click on a hidden switch: a test that asks for the
+  // filter on a laser that cannot have it must not go on without it.
+  assert.equal(switchOn(section), qSwitch === "absorber",
+    "the filter is " + (qSwitch === "absorber" ? "on" : "off") + " after choosing " + medium + " " + pump);
 }
 
 // Chooses a bench afresh, with its own settings, even if it is the one
 // chosen now: another medium first, then this one. The other is a gas
 // laser, whose bench is quick to set up (a flashlamp's threshold flash is
-// a search: 60 ms in Node for ruby).
-function chooseAfresh(section, medium, pump) {
+// a search: 60 ms in Node for ruby), and has no Q-switch.
+function chooseAfresh(section, medium, pump, qSwitch) {
   choose(section, medium === "he-ne" ? "co2" : "he-ne");
-  choose(section, medium, pump);
+  choose(section, medium, pump, qSwitch);
 }
 
 // A dropdown's options: [{ value, text, disabled }].
@@ -391,7 +432,7 @@ function shownRows(section) {
 }
 
 module.exports = {
-  WORDS, PARTS, CANVASES, CONTROLS, READOUTS, CHOICES, UI_WORDS, NB, FRAME,
+  WORDS, PARTS, CANVASES, CONTROLS, Q_CONTROLS, READOUTS, CHOICES, UI_WORDS, NB, FRAME,
   setup, laserSection, benchOnlySection, sectionReady, texts, switchTheme, built, watch, last, dearer, sum,
-  runFrames, slide, drag, type, engine, assertNoListeners, choose, chooseAfresh, optionsOf, shownRows
+  runFrames, slide, drag, type, engine, assertNoListeners, choose, chooseAfresh, optionsOf, shownRows, switchOn
 };

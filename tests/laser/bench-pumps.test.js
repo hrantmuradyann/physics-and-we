@@ -165,7 +165,8 @@ test("controls: the field the pump slider sets and both sliders' ranges, with th
   // stage-6 page used, is gone since stage 7c).
   assert.deepEqual(plain(B.controls(configFor("nd-yag", "diode"))), {
     pump: { name: "pumpPower", min: 0, max: 20, log: false },
-    coupler: { min: 0.005, max: 0.6, log: true }
+    coupler: { min: 0.005, max: 0.6, log: true },
+    absorberT0: null
   });
   assert.equal(B.RANGES, undefined);
   assert.throws(() => B.controls(Object.assign({}, B.configFor({ medium: "he-ne", pump: "discharge" }), { pump: "laser" })),
@@ -616,8 +617,9 @@ test("pumpNow with a steady pump: derive's x, and the small-signal gain g₀/g_t
     const c = configFor(medium, pump);
     const d = B.derive(c);
     const now = pumpNow(simAt(c, 2e-6), c);
-    assert.deepEqual(Object.keys(now).sort(), ["smallSignal", "w", "x"], medium);
+    assert.deepEqual(Object.keys(now).sort(), ["overThreshold", "smallSignal", "w", "x"], medium);
     assert.equal(now.x, d.x, medium + ": x");
+    assert.equal(now.overThreshold, d.x, medium + ": no Q-switch: over the threshold is x");
     assert.equal(now.w, null, medium + ": four levels have no w");
     assert.equal(now.smallSignal, d.x, medium + ": four levels hold y = x with no light");
   }
@@ -631,6 +633,7 @@ test("pumpNow with a steady pump: derive's x, and the small-signal gain g₀/g_t
   const a = B.derive(atom);
   const now = pumpNow(simAt(atom, 1e-3), atom);
   assert.equal(now.x, null);
+  assert.equal(now.overThreshold, null, "no threshold to be over");
   assert.equal(now.w, a.w);
   assert.ok(now.w > 6, "pumped hard: w = " + now.w);
   assertClose(now.smallSignal, -a.n_t / (1 + 2 * a.w), 1e-12, "two levels without light");
@@ -643,9 +646,9 @@ test("pumpNow with a flashlamp: nothing before Fire; at the flash's peak, derive
   for (const medium of ["ruby", "nd-glass", "nd-yag", "two-level"]) {
     const c = configFor(medium, "flashlamp");
     const d = B.derive(c);
-    const nothing = d.scheme === "four-level" ? { x: 0, w: null, smallSignal: 0 }
-      : d.scheme === "three-level" ? { x: 0, w: 0, smallSignal: -d.n_t }
-      : { x: null, w: 0, smallSignal: -d.n_t };
+    const nothing = d.scheme === "four-level" ? { x: 0, w: null, smallSignal: 0, overThreshold: 0 }
+      : d.scheme === "three-level" ? { x: 0, w: 0, smallSignal: -d.n_t, overThreshold: 0 }
+      : { x: null, w: 0, smallSignal: -d.n_t, overThreshold: null };
     assert.deepEqual(plain(pumpNow(simAt(c, 0), c)), nothing, medium + " before Fire");
     assert.deepEqual(plain(pumpNow(simAt(c, 5e-3), c)), nothing, medium + " later, still no flash");
   }
@@ -657,6 +660,7 @@ test("pumpNow with a flashlamp: nothing before Fire; at the flash's peak, derive
     const flash = { at: 1e-3, flashEnergy: c.flashEnergy, flashTime: c.flashTime };
     const now = pumpNow(simAt(c, 1e-3 + c.flashTime, flash), c);
     assertClose(now.x, d.xPeak, 1e-12, medium + ": the pump at the peak");
+    assertClose(now.overThreshold, d.xPeak, 1e-12, medium + ": no Q-switch: over the threshold is x");
   }
   // Ruby by hand: w at the peak = η·share·P/(hν_p·N_t·V_a)·τ, over w_th =
   // (n_t + 1)/(n_t − 1); with no light it would hold y = n_t(w − 1)/(w + 1)

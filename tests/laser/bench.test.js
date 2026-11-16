@@ -175,7 +175,8 @@ test("every corner of the sliders gives finite numbers (or null), never an error
   }
   assert.deepEqual(plain(R), {
     pump: { name: "pumpPower", min: 0, max: 20, log: false },
-    coupler: { min: 0.005, max: 0.6, log: true }
+    coupler: { min: 0.005, max: 0.6, log: true },
+    absorberT0: null
   });
 });
 

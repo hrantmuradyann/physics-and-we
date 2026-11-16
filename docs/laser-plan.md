@@ -101,7 +101,9 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 7c: choosing the laser on the page (two dropdowns over every bench of 7b; each bench's pump slider, units, starting slow motion and readout rows; Fire for a flashlamp; `bench.pumpNow`, whose `smallSignal` puts the gauge's dashed line at each medium's own gain; the inversion chart removed; the mutation check about 10× faster). Until 7d every bench is drawn with diodes and four levels.
 - ✅ Stage 7d: each pump drawn as itself on the bench (diodes, flashlamp, gas tube with electrodes and supply, pump laser with its fold mirror) and the level picture for three and two levels (the ground as the lower level, the share bars with the threshold mark, the gauge below zero); `derive` gives `thresholdRate`.
 - ✅ Stage 8a: Q-switching in the engine (`qswitch.js`: η_E and §4.3's giant pulse, the Pockels cell's and the rotating prism's loss, the bleachable filter as one more rate equation; `bench.js`: `qSwitchesFor`, `withQSwitch`, the shutter's opening time and the filter's state in the simulation, `lossNow`, `giantPulse`, advance's `peak` and its pieces at the shutter's moments; `ode.js`: `peakOf`); the page unchanged.
-- Next: stage 8b, Q-switching on the page.
+- ✅ Stage 8b: Q-switching on the page (the owner's design: one Q-switch, the bleachable filter, as an On/Off switch right under the laser beside Fire; turning it on or off keeps the run and the chart (`bench.carryOver`); its slider, the loss now and §4.3's prediction, the highest output from the runs' peaks, the pulses' tops on the chart, the filter on the drawing; `derive` and `pumpNow` give the closed filter's threshold on a steady pump).
+- ✖ Stage 9 (several longitudinal modes and a spectrum panel): **dropped by the owner** on 2026-11-16, as it would make everything too complex. The simulator stays one-mode (`docs/laser-physics.md` §11.3). The number is not reused, so later stages keep theirs.
+- Next: stage 10, mirror geometry.
 
 Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking. `docs/laser-progress.md` tells the same story in plain words for the owner; update it with each stage's commit.
 
@@ -559,7 +561,7 @@ Also: f's values at a point by hand; f stays finite at s = −800 with β = 0 (t
 | `LaserUI.format.number(value, digits)` | | the same without a prefix (for m⁻¹, %, ×) | — |
 | `LaserUI.format.fromSlider(range, fraction)`, `toSlider(range, value)` | `{ min, max, log }`, 0–1 | the one place a slider position becomes a value, and back | — |
 | `LaserUI.history.create(capacity)` | integer | a ring buffer of `{ t, P, y }` in simulated seconds: `push`, `points(fromTime)`, `clear`, `size` | — |
-| `LaserUI.levels.draw(view, picture)`, `LaserUI.plots.draw(view, picture)` | the loop's view; numbers and words | the level diagram with the upper-level bar and the gain/loss gauge; P(t) and y(t) | §11.6 items 1, 2, 5 |
+| `LaserUI.levels.draw(view, picture)`, `LaserUI.plots.draw(view, picture)` | the loop's view; numbers and words | the level diagram with the upper-level bar and the gain/loss gauge; P(t) and y(t) | §11.6 items 1, 2, 4 |
 
 The model (decisions, below): R_p = η·P_pump/(hν_p·V_a), spread evenly over the active volume A·l (the plane-wave §4.1 model); x = R_p/R_c; g₀ = σR_pτ; pumpThreshold = hν_p·A·γ/(στη); P_out = (γ₂/2)·A·I_sat·(x − 1), 0 below threshold (§4.1, no seed); slope = powerPerP/pumpThreshold = η·(λ_p/λ)·γ₂/(2γ) (§3.6 with η); T_opt = `cavity.optimumCoupler({ g0, l_g, L_i: 2α_i·l_g })` (§3.6); T_best = 1 − e^(−T_opt), the transmission where this model's P_out(T) peaks; period = 2π/ω (damped, §4.2) and t_damp = 2τ/x, null at or below threshold.
 
@@ -1149,21 +1151,107 @@ The pump rate per ion is set for the unpumped medium, as a lamp sets it whatever
 - The closed shutter's loss −½ ln ℓ was written out three times: it is now `qswitch.closedLoss(leak)`, used by `derive` and the run. The leak's check is still in `bench.js` too, on purpose: every error names the function the page called (engine rule).
 - An XOR of two booleans (`(sim.absorber === null) !== (config.qSwitch !== "absorber")`) checked the filter's state: two plain `if`s now, each with its own message.
 
-### Stage 9 — Spectrum panel and several modes
-- **Build:**
-  - one photon variable per longitudinal mode, with gain σ(ν_q)·ΔN;
-  - homogeneous: one shared ΔN;
-  - inhomogeneous: spectral classes, where each mode burns its own hole;
-  - simulate at most ~64 modes nearest line centre and draw the rest as the gain envelope;
-  - a spectrum panel with log axes.
-- **Tests:**
-  - modes above threshold vs the §3.3 formula;
-  - homogeneous: the centre mode wins;
-  - inhomogeneous: about N_modes coexist;
-  - the sum over modes equals the single-mode power of stage 4.
-- **Traps:**
-  - stiffness and cost grow with the mode count: keep the step-budget test;
-  - spatial hole burning is outside the model, and the doc says so.
+### Stage 8b — Q-switching on the page ✅
+
+**The owner was away for the first build** (as for 8a), which offered all three of 8a's Q-switches. Choices made then are marked *(decided without the owner)*. The owner then came back mid-stage and asked for three changes, which this card describes as built:
+- the Q-switch as an **On/Off switch right under the laser**, not a dropdown, and turning it on or off **must not start the chart again**;
+- **one Q-switch only**: asked which, the owner chose the bleachable filter (the engine's `"absorber"`) over the Pockels cell and the rotating prism. The cell and the prism stay in the engine (8a), with their tests; the page and the drawing no longer use them;
+- **Fire right under the laser too**, beside the switch;
+- then: **Fire right under the lamp, looking like a button anyone would press, and a flash that is much easier to see**, with visual effects;
+- then: the lamp's **grey caps and glass edge on the light theme in a bright colour** ("only change the color").
+
+**Scope card** (as built). The page shows what stage 8a built, for the filter. A few engine additions, so that `page.js` keeps doing no physics.
+
+| Part | What it does |
+|---|---|
+| `bench.controls(config)` | gains `absorberT0`, `{ name, min, max, log }` like `pump`: 0.2–0.99, linear; null without a filter |
+| `bench.switchNow({ sim, config })` | `{ loss, open }` for a bench with a Q-switch, null without: `loss` = `lossNow`; `open` = (lossClosed − loss)/(lossClosed − 1), 0 closed to 1 open (for the filter, the share bleached; 1 when the closed switch adds nothing) |
+| `bench.carryOver({ sim, config })` | the simulation going on with the config's Q-switch: atoms, photons, flash and time kept; `opensAt` null (a shutter closed until the next Fire), `absorber` 1 (a dark filter) or null. The On/Off uses it, so the run is not started again |
+| `derive` behind a switch on a steady pump | no steady state (`ySteady`, `P_out`, `slope`, `T_opt`, `T_best`, `period`, `t_damp` null: it pulses), and behind a filter `pumpThreshold` is the closed filter's, `lossClosed` times the open cavity's |
+| `bench.pumpNow` | gains `overThreshold`: the pump over the pump that starts the laser now (x without a switch; behind a filter x/L for four levels, w over (n_t + L)/(n_t − L) for three, null when n_t ≤ L; null for two levels). The page's "Pump now ÷ threshold" reads it |
+| The row under the drawing | `data-laser-under`, right under the bench's canvas, a grid: Fire in the middle, under the drawn lamp (moved there from the buttons under the sliders; shown on a flashlamp bench), and the Q-switch's group on the left, under the drawn filter (`data-laser-switch`: its name "Q-switch (bleachable filter)" over a `<button role="switch" aria-checked>` with a track, a knob and the word On/Off; shown on the four benches whose `qSwitchesFor` has the filter). Under 760 px the two stack, Fire first. The row is hidden when it has neither |
+| Fire | a big `.btn--primary` pill (`.laser-fire`) with a lightning bolt and "Fire the flash". While the lamp is dark (`data-ready="true"`: before the first flash, and once a flash is past its peak and drawn off) a ring of light swells out of it and the bolt pulses; from Fire to the flash's peak, and while it is lit, it waits. Both stand still for reduced motion |
+| The flash on the bench | lit, all of it as strong as the flash: the whole bench tinted with the flash colour (`--canvas-flash`: bluish white on dark, warm orange on light), a halo of 6 rings round the tube, broad beams up into the rod, 16 streaks round the tube flickering in screen time, the gas blooming (a canvas shadow, nothing else blooms), arrows into the rod, and the rod tinted by what it absorbs. The lamp's caps and glass edge have their own colour (`--canvas-lamp`: the old blue-grey on dark, bright terracotta on light) |
+| On/Off | turns the filter on or off: `withQSwitch(state.config)` (keeping the pump, the coupler and the slow motion), its numbers and threshold flash worked out first, then `carryOver`: the chart, the cartoon, the highest output and Play/Pause go on. A new medium or pump keeps the filter on if the new bench can have it |
+| The filter's slider | one more slider row (`data-laser-slider="absorberT0"`, hidden while the filter is off), in %, with its number box. A move changes the config through the same `numbersOf`/`take` as the others and moves the threshold flash (found when the slider is let go, as for the coupler); a threshold flash past the pump slider's top reads "never reached" |
+| Readouts | `lossNow` (the loss now over the open cavity's: "3.00 ×"), `giant` (§4.3's pulse if the filter bleached now, from `bench.giantPulse`: "4.03 J · 216 MW · 18.7 ns", "—" at or below threshold), both live, while the filter is on. A bench with no steady output (`derived.P_out` null: a flash, or the diodes behind the filter) hides `P_out`, `T_best` and `period`, and shows `peak`, named "Highest output since the start" on a steady pump (`readouts.peakStart`, written into `data-laser-name="peak"`; a flash bench keeps `readouts.peak`) |
+| The highest output | from each `advance` call's `peak`, not from the chart's points: a 13 ns pulse falls between two points (0.2 µs apart at slow motion 10⁴). A flash bench starts it at Fire, as before; a continuous bench at its start (choice, Reset, the page's first build) |
+| The chart | each piece whose `peak` lies strictly inside it adds that point before its end point, so a pulse between two points shows at its true top. At most one extra point a piece: 4800 in the 5 s window up to 480 Hz, within the history's 16384 up to 1600 Hz. The steady line only when `derived.P_out` is above 0 |
+| The level gauge | `picture.loss` (the loss now; none is 1). The loss line, its word and the bars' threshold mark follow it (four levels at y = loss; three and two at (1 + loss/n_t)/2, none when loss ≥ n_t); the scale's top is max(small-signal gain, y, loss)·1.15 |
+| The bench | `light.qSwitch` = `{ kind, open }` or none, and `labels.qSwitch` = `bench.parts.qSwitch` ("Bleachable filter"). The filter: a plate on a post in the gap between the back mirror and the rod, shaded by its unbleached share; the left arrowheads between it and the rod. Its name on the top row's left; the transmission then has 0.6 of that row |
+| Words | `choose.qSwitch`, `choose.on`, `choose.off`, `bench.parts.qSwitch`, `controls.absorberT0`, `readouts.lossNow`, `readouts.giant`, `readouts.peakStart`; the bench's alt text; the status line and the giant-pulse chapter (the On/Off under the drawing, the filter; the cell and the prism named only as other kinds) |
+
+**Decisions:**
+- Only the filter, as an On/Off under the drawing, beside Fire: **the owner's**. Its name on the page says what it is: "Q-switch (bleachable filter)".
+- Fire under the lamp, inviting, and a flash with effects: **the owner's** wish; how it looks (the ring, the bolt, the halo, the streaks, the colours) *(decided without the owner)*. The streaks' flicker is an illustration in screen time, like the photon cartoon; everything else follows the pump.
+- Stage 9 (several modes and a spectrum panel): **dropped by the owner** (2026-11-16), as too complex; see "Status".
+- The filter's slider 20–99 % (20 % holds ruby back past the default flash, so the visitor sees that a filter can be too dark; Nd:glass's 20 % needs 383 J, past its 300 J slider, and reads "never reached") *(decided without the owner)*.
+- A filter turned on mid-run starts dark (recovered); turned off, the photons and atoms go on as they are *(decided without the owner)*.
+- §4.3's prediction is "if the filter bleached now", live: the filter has no opening time. Paused before the pulse it can be compared with the highest output *(decided without the owner)*.
+- The pulse's shape (13 ns) is not visible at the starting slow motion; a close-up of the last pulse is left for later (stage 12's indicators) *(decided without the owner)*.
+- Behind the filter the diode bench's threshold and "Pump now ÷ threshold" are the closed filter's (the review's finding: the open cavity's 1.51 W never lases behind it; it needs 3.69 W). The gauge and the "Loss now" readout still show the loss in units of the open cavity's.
+
+**Found while building and testing:**
+- The first build (a third dropdown, all three switches) started a fresh run on every switch choice, which wiped the chart: the owner wanted to see the steady beam turn into pulses, so the switch now carries the run over (`carryOver`).
+- With the switch on, the steady pump's numbers were the open cavity's, so the page decided by itself that the bench pulses. `derive` now says so (P_out null), and the page reads that.
+- A shutter's angle jumped at Fire, and a prism slider moved mid-shot moved the opening: fixed in the engine for the first build (the parked prism, `newRotation`), then removed with the prism.
+- The gauge's scale held the closed switch's loss (37 for Nd:YAG's cell) after the opening, pressing the clamped gain into the bottom fortieth: it follows the loss now.
+- `.btn--sm` (`css/labs.css`) grows to fill its row; under the drawing it stretched Fire across half the bench and pushed the switch to the far end. The row is a grid now, and Fire a `.laser-fire` (no `.btn--sm`).
+- The halo was first 4 rings, which showed as steps in the browser: 6 fainter ones closer together look smooth.
+- The equivalent mistake: "a flash showing a steady output" (`P_out` in the flashlamp's rows) was missed, because a flash has no steady output, so the pulsing rule takes `P_out` out and puts `peak` back: the same rows. It now adds the steady pump's threshold, which a test does catch.
+- Measured in the first build (the numbers `page-qswitch.test.js` bounds at 1.5×): a frame's worst steps with the filter, through a whole flash (or 600 µs of the diodes) at 10⁴ and 60 Hz: ruby 1500 (its 22 ps dye uses the frame's whole budget for 2 frames, too few for the "behind" note), Nd:glass 955, Nd:YAG with a flashlamp 871, the diodes 562; the pulses' tops as in 8a (210 MW, 28.2 MW, 7.28 MW, 2.57 kW).
+
+**Tests:**
+- `bench-qswitch.test.js`: `controls`' filter range (null for every other switch); `switchNow` for the cell (closed, switching, open) and the filter (its bleached share, a clear filter open); the filter on the diode bench (no steady numbers, the closed filter's threshold, checked by runs just under and over it); `overThreshold` for four and three levels, a filter nothing can beat and the two-level atom; `carryOver` (the run kept, the filter dark, a shutter's opening dropped, a flash refused on a bench without a lamp).
+- `page-qswitch.test.js` (new): the row under the drawing per bench (Fire, the switch, neither); Fire from the row; On/Off keeping the run, the chart, the flash, the highest output and the settings; the filter kept across a medium or pump; its slider (shown, ranged, %, typed values, a stray event while off); the threshold flash waiting for the slider to be let go and "never reached" past the slider; the readouts with and without the filter; the closed filter's threshold on the diode bench; the loss and the prediction live through a pulse; the chart's peak points; the level picture's loss; the bench's filter and its name in both languages; a language switch; the frame cost of every filter bench.
+- `draw-bench.test.js`: the filter's place at every width, its shade, post and outline, the rays mirror to mirror, the left arrowheads clear of it, its name beside the transmission; the cell, the prism and an unknown kind draw nothing.
+- `draw-panels.test.js`: the loss line at `loss`; the scale with the loss, coming down after the pulse.
+- `site-files.test.js`: the row under the drawing (once, hidden, after the bench's canvas; Fire, then the switch, named by the Q-switch's name, with its word); Fire's bolt (`aria-hidden`), its word and `data-ready="false"`; no dropdown of kinds; the filter's slider row; every animation in `css/laser.css` stopped for reduced motion.
+- `page-qswitch.test.js` (the lamp and the second review): Fire's `data-ready` through a whole flash (ready, waiting from Fire, ready again only past the peak and once the lamp is drawn off, written twice in all), none on a bench without a lamp; the filter's transmission kept per bench (off and on, another laser and back, a bench never set); a pump threshold past the slider's top reads "never reached"; §4.3's pulse at 0.5 % and 2 % over threshold (a run made to end there).
+- `draw-bench.test.js` (the flash): no flash colour while dark or for another pump; the bench tint first of all, the halo's rings, the beams' corners, the gas and the rod lit; everything brighter, longer or wider with a stronger flash; the streaks outside the tube, pointing out, inside the canvas at every width and moment, flickering, each at its own phase; a view without a time drawn as t = 0; only the gas blooms.
+
+**Breaks** (807 in all): 91 new for this stage (the first build's entries for the cell, the prism, the dropdown and the `lossTop` scale removed with them; 35 for the lamp's button, its light and the second review's fixes), and earlier stages' entries rewritten for the changed code (two pairs became one each where `startBench` and `turnSwitch` now share `showBench`). The run before the lamp: 768 of 769 caught (the equivalent entry above). After the lamp: 803 of 803 caught. After the third review: **807 of 807 caught** (324 s).
+
+**Browser check of the lamp** (Claude in Chrome, the changed files fetched afresh): Fire sits centred under the lamp and its name, the switch on the left; the ring swells round it while ready. Fired, the dark theme's lamp burns white with its halo, streaks and beams, the rod and the bench lit; the light theme's glows orange between terracotta caps (the grey caps the owner disliked are gone). At slow motion 10³ Fire waits through ruby's flash and asks again 2.4 s after the press. A 390 px frame in Armenian: Fire centred, the switch under it, nothing past the edge. One loop, the off-screen canvas not running, no console errors after a reload.
+
+**Browser check** (first build; Claude in Chrome, `http://127.0.0.1:5500/?view=laser`, with the changed files fetched afresh: the server's cache kept the old `css/laser.css`): the row sits right under the bench, "Q-switch (bleachable filter)", the switch and Off; a real click turns it on, the filter appears on the drawing, the diode bench pulses every 0.3 ms (2.57 kW), the threshold reads 3.69 W and the simulated time goes on from where it was (1.49 → 2.51 ms, the chart not cleared). Ruby keeps the filter on; Fire sits beside the switch (after the `.btn--sm` fix) and gives the 210 MW pulse. At 360 px in Armenian with the light theme the row wraps (Fire; the name; the switch) with nothing past the edge. One loop; the canvases off screen are not running; no console errors after a reload.
+
+**Review outcome, first build** (`/code-review` on Opus 5.5, xhigh, 13 findings, on the three-switch dropdown; 12 fixed, 1 declined):
+- The diode bench behind a filter showed the open cavity's threshold (1.51 W) and x, so 2 W read "above threshold" and never lased: `derive` gives the closed filter's threshold (3.69 W), and `pumpNow` the pump over it (`overThreshold`).
+- The page decided for itself which benches pulse: `derive` now says so (P_out null on a steady pump behind a switch), and the page hides the steady rows from that.
+- The gauge's scale kept the closed switch's loss after the opening (`lossTop`), pressing the clamped gain into the bottom fortieth: the scale follows the loss now.
+- A threshold flash past the pump slider's top (Nd:glass behind a 20 % filter, 383 J on a 300 J slider) was shown as if it could be fired: it reads "never reached".
+- The transmission's half of the top row squeezed the Armenian word on a phone: it has 0.6 of the row, and the switch's name moves left (to the margin at most) to keep 100 px.
+- Moving the prism's speed mid-shot moved its opening, and the prism jumped at Fire: fixed in the engine (`newRotation`, the prism parked at Fire's angle), then removed with the prism.
+- Two copies of the "worked out once a moment" cache (the pump, the switch): one `keptForMoment`. The filter's state clamped by hand in `advance`: `clampShare`.
+- `CLAUDE.md`, stale comments in `page.js`, `css/laser.css` and `sections/laser.html` ("two dropdowns"): updated.
+- **Declined**: the threshold flash is searched again on every switch change (8 ms in Chrome for ruby, on a click, never in a frame). Keeping it would need the page to know which inputs the search depends on (the switch, the coupler, the filter's transmission and every field of the setup), a second copy of the engine's knowledge that could fall out of step with it.
+
+**Review outcome, final build** (`/code-review` on Opus 5.5, xhigh, 12 findings on the filter-only page; all fixed, except one part of the eleventh, declined):
+- Turning the filter off and on again reset its transmission to the bench's own (the visitor's 30 % back at 95 %): the page keeps it per bench (`state.filterT0`, `withFilter`), also across a visit to another laser.
+- Behind a dark filter the diodes' threshold (69.8 W) was shown although the slider stops at 20 W: every threshold past the pump slider's top reads "never reached" (`thresholdText`), as the threshold flash already did.
+- §4.3's pulse just above threshold is nothing and lasts for ever (1 + 10⁻⁹: a 128 s "pulse"): the readout shows "—" until the inversion is 1 % over threshold (`GIANT_FROM`).
+- The status line and the giant-pulse chapter still described the dropdown and the three switches: rewritten in both languages for the On/Off and the filter.
+- `Instructions/HTML-CLASSES.md` still had Fire in the buttons row and no `.laser-under`/`.laser-switch`: added, with `.laser-fire`.
+- `CLAUDE.md`: `page-helpers.js` also serves `page-qswitch.test.js`; "both sliders" is now "the sliders".
+- `turnSwitch` repeated a dozen lines of `startBench`: both end in `showBench`, and `startBench` works out its own slow motion.
+- `nameTheParts` set only the pump's name: `nameThePump` again, called only for a new bench.
+- `newState` and `restart` each had the rule for where the highest output starts: `peakFrom`.
+- A discharge's Q-switch line in `derive` could never run (`readConfig` refuses a switch a setup does not list): removed.
+- The "hidden filter slider does nothing" check was written four times: once, `whileShown`.
+- `.laser-stage [hidden]`'s comment named only the readouts and Fire: it lists everything it keeps hidden.
+- **Declined**: the page's `switchNow()` wrapper, called redundant, skips a whole `derive` every frame on a bench without a switch; it stays, with that reason in its comment.
+
+**Review outcome, third review** (`/code-review` on Opus 5.5, xhigh, on the whole stage including the lamp; 11 findings, all fixed):
+- The flash's streaks flickered for a visitor who asked for less motion: the loop's view has `still`, and the streaks stand still with it (the flash still rises and falls: that is the physics).
+- `carryOver` took any inversion: one the medium cannot have (ruby's −N_t to Nd:YAG, more ions up than N_t) is refused, naming `carryOver`.
+- Fire was looked up 450 lines after the functions that read it: found first in the build.
+- On a phone the switch was pinned to the row's second line, so without Fire an empty line stood above it: both follow the written order (not yet seen in the browser; see "Where we stopped").
+- `choose(…, "absorber")` in `page-helpers.js` did not check that the switch came on: it does.
+- The page's own 1 % limit for §4.3's pulse (`GIANT_FROM`) moved into the engine (`bench.giantPulse`, `PULSE_FROM`), so every caller gets it.
+- `compute` worked out the steady numbers behind a Q-switch only to null them: skipped.
+- `switchNow()` called twice for the level picture; a `slider()` helper used once: tidied.
+- Stale references: the plan's "§11.6 items 1, 2, 5" (now 4), the physics doc's §11.6 numbered 7 after 5, `sections/laser.html`'s header comment.
 
 ### Stage 10 — Mirror geometry (`optics.js`, part 1)
 - **Build:**

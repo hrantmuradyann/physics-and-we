@@ -974,7 +974,7 @@ This is not code yet, but the logic to agree on before writing code. The main di
 | Medium config | levels, transitions, σ(ν), τ, n, thermal properties (table 5.1) | when the medium is changed; dynamics reset |
 | Resonator config | L, R₁, R₂ (radii), mirror reflectivities, aperture, list of elements with positions | on any change → stability, w, τ_c, g_th |
 | Pump config | type, P(t) or I(t), spectrum, pump optics | continuously |
-| Dynamics | populations Nᵢ (or N for a diode), photons φ per mode and polarization, absorber N_g, rod temperature | every integrator step |
+| Dynamics | populations Nᵢ (or N for a diode), photons φ in the one mode (per polarization), absorber N_g, rod temperature | every integrator step |
 | Output optics | list of lenses, crystals, targets with positions | on change → recompute rays and q(z) |
 
 A key principle: every optical element implements the same set of methods — ABCD matrices for x and y, exact surface geometry for ray tracing, transmission for each polarization, and wavelength dependence. Then a lens, a mirror, a Brewster window and a Kerr lens are interchangeable, and the lens selector is simply replacing one object in a list.
@@ -1016,7 +1016,7 @@ Without light the inversion settles at y = n_t(w − 1)/(w + 1): gain once w > 1
 - **Dynamic range.** It is convenient to integrate s = ln p: ds/dt′ = [(y − 1) + βy·e^(−s)]/ε. Then growth from one photon to 10¹⁸ is linear growth of s, with no overflow and no loss of precision. Start from one photon, p = Bτ (s ≈ −26 for a small Nd:YAG laser), since s = ln 0 does not exist. Compute the seed βy·e^(−s) as one exponential, e^(ln β + ln y − s): it is about 1 at the seed level, but e^(−s) on its own overflows once s < −709, which happens with a tiny β, and would happen with the pump off if the seed followed y all the way down (see the floor below). With β = 0 the seed is simply 0 (written as β·y·e^(−s) it would be 0·∞ = NaN): below threshold s then falls without limit (one photon decays; for Nd:YAG to s ≈ −1600 before threshold is reached).
 - **Photons far below the seed.** ln p has its own trap: when p ≪ βy, ds/dt′ ≈ βy/(εp) is huge and changes as fast as p does, so the step must shrink below what floating-point time can hold and the solver gives up. A real laser leaves that state within about τ_c (spontaneous emission alone gives p ≈ βy after one τ_c), so the code may skip it: before each run, raise s to at least ln(β·(max(y, 0) + 10⁻¹²)). The moment that needs it is β turned on after a run with β = 0 (s may be −300). The right-hand side adds 10⁻¹² to y in the seed too, β·(max(y, 0) + 10⁻¹²)·e^(−s): with the pump off, y falls past 10⁻³⁰⁰ within 700τ, and a seed that followed it made the photons climb hundreds of e-folds when the pump came back; worse, with no seed at y ≤ 0 the seed's slope just above y = 0, β·e^(−s), grew past 10³³ and stopped the implicit solver. The floor is added, not taken as max(y, 10⁻¹²): that form has a corner at y = 10⁻¹², which the solver's difference in y (about 5×10⁻¹¹) reaches across, and frames with the pump off cost up to 580 steps; the corner of max(y, 0) is at y = 0, which a decaying y never crosses. With the floor the photons settle at p ≈ β·10⁻¹², a light of about 10⁻¹² of the seed at threshold. Three and two levels need a larger floor, as a share of N_t: their seed counts the upper level, n_t + y, and as the ions all fall back down (y → −n_t) that sum is known only to the rounding of n_t, about 2×10⁻¹⁶·n_t. Next to a floor of 10⁻¹² the rounding was noise of 10⁻³ in the seed, and the implicit solver took about 10⁵ steps per 10τ; their floor is 10⁻⁷·n_t (seed β·(max(n_t + y, 0) + 10⁻⁷·n_t)·e^(−s)), which the rounding cannot disturb whatever n_t is, and the same decay takes under 10 steps. Their lift is to ln(β·(max(n_t + y, 0) + 10⁻⁷·n_t)/(1 + n_t)): below threshold their photons sit at β(n_t + y)/(1 − y), and 1 − y can be as large as 1 + n_t (every ion down), so without the 1/(1 + n_t) the lift would raise ruby's resting state 12 times.
 - **On-screen time.** Real time cannot be shown. You need a "slow-motion" slider (10³–10¹² times) and logarithmic time axes on the plots. Otherwise a 1 ms flash and a 10 ns pulse cannot be seen on one plot.
-- **Multiple modes.** Each longitudinal mode q has its own φ_q and its own gain g(ν_q) = σ(ν_q)ΔN. With homogeneous broadening all modes share one ΔN, and competition comes out by itself. With inhomogeneous broadening ΔN is split into spectral classes (velocity classes for a gas); each mode burns its own classes, producing "holes" in the gain curve.
+- **One mode.** The simulator follows a single longitudinal mode at the line centre. Several modes, each with its own φ_q and gain σ(ν_q)ΔN (sharing one ΔN when the line is homogeneous, burning their own spectral holes when it is inhomogeneous), were planned and then dropped by the owner (build stage 9, 2026-11-16) as too complex for the page. Mode competition, hole burning and ruby's irregular spiking far above threshold (§4.2) are therefore outside the model; §3.3's mode count can still be given as a number.
 - **Mode locking** does not enter the rate equations (they have no phases). It is easier to show as a separate scene using the formula of 4.5, with mode amplitudes taken from the gain curve.
 
 ### 11.4 Ray tracing and the beam
@@ -1034,11 +1034,10 @@ The visible range 380–780 nm is converted to RGB by a piecewise-linear approxi
 
 1. Level diagram of the medium with population bars and animated transition arrows (thickness = rate).
 2. A "round-trip gain / round-trip loss" gauge with a threshold line.
-3. Spectrum: gain curve g₀(ν), the comb of longitudinal modes and the threshold line; modes above threshold highlighted.
-4. Stability diagram (g₁, g₂) with a point for the current resonator.
-5. Plots of P_out(t), N(t) and pump(t) on one time axis.
-6. Beam profile in cross-section (TEM_mn, diode ellipse) and at the lens focus.
-7. The efficiency "waterfall" from Section 6.
+3. Stability diagram (g₁, g₂) with a point for the current resonator.
+4. Plots of P_out(t), N(t) and pump(t) on one time axis.
+5. Beam profile in cross-section (TEM_mn, diode ellipse) and at the lens focus.
+6. The efficiency "waterfall" from Section 6.
 
 ## 12. Test values for the simulator
 

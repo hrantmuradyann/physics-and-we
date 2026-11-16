@@ -30,7 +30,7 @@ function setup(options) {
     maxHeight: 400,
     draw(view) {
       events.push(["draw", {
-        w: view.w, h: view.h, dpr: view.dpr, dt: view.dt, t: view.t,
+        w: view.w, h: view.h, dpr: view.dpr, dt: view.dt, t: view.t, still: view.still,
         colors: Object.assign({}, view.colors), font: view.font, g: view.g
       }]);
     }
@@ -181,6 +181,7 @@ test("a visitor who asked for less motion gets a paused loop that still draws on
   assert.equal(s.browser.pendingFrames(), 0);
   assert.equal(s.canvas.getAttribute("data-running"), "false");
   assert.equal(draws(s.events).length, 1, "the still picture is there");
+  assert.equal(draws(s.events)[0].still, true, "the drawing is told to keep its decoration still");
   s.loop.play();
   assert.equal(s.browser.pendingFrames(), 1);
   s.loop.destroy();
@@ -193,7 +194,16 @@ test("a visitor who asked for less motion gets a paused loop that still draws on
   const forced = setup({ browser: { reducedMotion: true }, loop: { running: true } });
   forced.browser.setOnScreen(forced.canvas, true);
   assert.equal(forced.browser.pendingFrames(), 1, "running: true overrides the default");
+  forced.browser.runFrame(16);
+  assert.ok(draws(forced.events).every((view) => view.still === true), "running or not, still for this visitor");
   forced.loop.destroy();
+
+  const usual = setup();
+  usual.browser.setOnScreen(usual.canvas, true);
+  usual.browser.runFrame(16);
+  assert.ok(draws(usual.events).length > 0 && draws(usual.events).every((view) => view.still === false),
+    "other visitors: still is false");
+  usual.loop.destroy();
 });
 
 test("theme switch: the colours are read again; a paused loop draws once with them", () => {

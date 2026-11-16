@@ -19,7 +19,8 @@
                                           its starting values
      LaserEngine.bench.controls(config)   the sliders of that bench:
                                           { pump: { name, min, max, log },
-                                            coupler: { min, max, log } }
+                                            coupler: { min, max, log },
+                                            absorberT0: the filter's, or null }
      LaserEngine.bench.defaultConfig()    a new config: the default bench
                                           (Nd:YAG with diodes)
      LaserEngine.bench.derive(config)     threshold, output power, best
@@ -32,13 +33,19 @@
      LaserEngine.bench.advance({ sim, config, seconds, maxSteps })
                                           -> { sim, reachedEnd, steps, peak }
      LaserEngine.bench.pumpNow({ sim, config })   the pump at the moment
-                                          of sim: { x, w, smallSignal }
+                                          of sim: { x, w, smallSignal,
+                                          overThreshold }
      LaserEngine.bench.flashThreshold(config)   the smallest flash energy
                                           that reaches threshold (J), or null;
                                           behind a filter, its closed loss
      LaserEngine.bench.lossNow({ sim, config })   the cavity's loss at the
                                           moment of sim, in units of the open
                                           cavity's: 1 + the Q-switch's
+     LaserEngine.bench.switchNow({ sim, config })   the Q-switch at the
+                                          moment of sim: { loss, open }, or null
+     LaserEngine.bench.carryOver({ sim, config })   the simulation going on
+                                          for the same bench with another
+                                          Q-switch (or none)
      LaserEngine.bench.giantPulse({ sim, config })   §4.3's giant pulse for
                                           the inversion of sim, if the shutter
                                           opened now: { eta_E, energy,
@@ -158,6 +165,10 @@
   // The config field each pump's slider sets.
   var CONTROL_NAMES = { diode: "pumpPower", laser: "pumpPower", flashlamp: "flashEnergy", discharge: "current" };
   var SIM_NAMES = ["t", "N", "lnPhi", "flash", "opensAt", "absorber"];
+  // giantPulse predicts a pulse only from 1 % over threshold. Just above
+  // it §4.3's pulse is nothing and lasts for ever (at x = 1 + 10⁻⁹ a
+  // "pulse" of 128 s): no prediction to give.
+  var PULSE_FROM = 1.01;
   // The config fields of each Q-switch.
   var Q_SWITCH_NAMES = {
     none: [],
@@ -199,6 +210,10 @@
   // The output coupler's slider, T = 1 − R₂, for every setup: up to
   // ruby's 50 % (§3.1) and a little more.
   var COUPLER_RANGE = { min: 0.005, max: 0.6, log: true };
+
+  // The filter's slider (docs/laser-plan.md, stage 8b): its transmission
+  // from 20 %, which holds ruby back past its default flash, to 99 %.
+  var ABSORBER_T0_RANGE = { min: 0.2, max: 0.99, log: false };
 
   // The two-level atom absorbs at its own line: there is no other level.
   var TWO_LEVEL_LINE = E.media.get("two-level").lam;
@@ -380,10 +395,13 @@
     return copy;
   }
 
-  // controls(config) -> { pump: { name, min, max, log }, coupler: { min, max, log } }
-  // The pump slider sets the config field `name`; a discharge's top is the
-  // highest current its law allows for this config's currentPeak. The
-  // coupler slider sets T = 1 − refl2.
+  // controls(config) -> { pump, coupler, absorberT0 }
+  // The pump slider { name, min, max, log } sets the config field `name`;
+  // a discharge's top is the highest current its law allows for this
+  // config's currentPeak. The coupler slider { min, max, log } sets
+  // T = 1 − refl2. The filter's slider { name, min, max, log } sets
+  // absorberT0; null without a filter. (The page offers the filter only;
+  // a cell's or a prism's timing has no slider.)
   function controls(config) {
     var read = readConfig(at("controls"), config);
     var setup = read.setup;
@@ -393,7 +411,10 @@
     }
     return {
       pump: { name: CONTROL_NAMES[setup.pump], min: 0, max: top, log: false },
-      coupler: { min: COUPLER_RANGE.min, max: COUPLER_RANGE.max, log: COUPLER_RANGE.log }
+      coupler: { min: COUPLER_RANGE.min, max: COUPLER_RANGE.max, log: COUPLER_RANGE.log },
+      absorberT0: config.qSwitch === "absorber" ? {
+        name: "absorberT0", min: ABSORBER_T0_RANGE.min, max: ABSORBER_T0_RANGE.max, log: ABSORBER_T0_RANGE.log
+      } : null
     };
   }
 
@@ -566,6 +587,27 @@
     return config.qSwitch === "none" ? null : 1 + closedExtra(config, gamma);
   }
 
+  // The loss, over the open cavity's, that the inversion must overcome
+  // before any light builds up: the unbleached filter's, which only the
+  // light itself can open; 1 otherwise (a shutter is opened by Fire, and
+  // then the open cavity's threshold is the one that counts).
+  function startingLoss(config, gamma) {
+    return config.qSwitch === "absorber" ? closedLoss(config, gamma) : 1;
+  }
+
+  // A steady pump behind a Q-switch never settles: the filter lets the
+  // light out in a train of pulses (§9.4). Its steady numbers would be the
+  // open cavity's, which it never reaches: none.
+  function noSteadyState(d) {
+    d.ySteady = null;
+    d.P_out = null;
+    d.slope = null;
+    d.T_opt = null;
+    d.T_best = null;
+    d.period = null;
+    d.t_damp = null;
+  }
+
   // The still numbers of a checked config (see derive below).
   function compute(where, config, medium, setup) {
     var fourLevel = medium.scheme === "four-level";
@@ -658,7 +700,7 @@
       d.currentThreshold = E.pumps.dischargeThreshold({
         law: setup.law, currentPeak: config.currentPeak, gainPeak: config.gainPeak, gth: gth
       });
-      steadyFourLevel(d, config, g0);
+      steadyFourLevel(d, config, g0);                    // no discharge has a Q-switch (readConfig)
       return d;
     }
 
@@ -681,7 +723,15 @@
     d.pumpThreshold = d.R_c * U.photonEnergy(config.pumpLam) * config.area * config.l_g / config.eta;
     d.slope = d.powerPerP / d.pumpThreshold;             // W of output per W of pump
     d.g0 = medium.sigma * d.R_p * medium.tau;
-    steadyFourLevel(d, config, d.g0);
+    if (config.qSwitch === "none") {
+      steadyFourLevel(d, config, d.g0);
+    } else {
+      // Behind the filter the inversion without light, x, must reach the
+      // closed loss before the laser starts: that much more pump. It
+      // pulses, so it has no steady numbers (none worked out).
+      d.pumpThreshold *= startingLoss(config, d.gamma);
+      noSteadyState(d);
+    }
     return d;
   }
 
@@ -703,7 +753,10 @@
   //   with a Q-switch: qSwitch, and lossClosed, the loss with it closed
   //   (the filter unbleached) over the open cavity's, so the inversion it
   //   holds back; null without one. The other numbers are the open
-  //   cavity's.
+  //   cavity's, except for a steady pump behind a Q-switch, which pulses:
+  //   no steady numbers (ySteady, P_out, slope, T_opt, T_best, period and
+  //   t_damp null), and pumpThreshold the pump that starts it behind the
+  //   closed filter (lossClosed times the open cavity's).
   //   Every number a bench does not have is null.
   function derive(config) {
     var where = at("derive");
@@ -713,13 +766,19 @@
 
   /* ---------- the simulation ---------- */
 
+  // The lowest inversion a medium can have: none for four levels, every
+  // ion down (ΔN = −N_t) for three and two.
+  function lowestN(medium) {
+    return medium.scheme === "four-level" ? 0 : -medium.N_t;
+  }
+
   // start(config) -> { t, N, lnPhi, flash, opensAt, absorber }: no
   // inversion for four levels, every ion down (ΔN = −N_t) for three and
   // two, one photon (ln 1 = 0), no flash yet, a shutter that has not
   // opened, a filter that has recovered (absorber 1) if there is one.
   function start(config) {
     var read = readConfig(at("start"), config);
-    var N = read.medium.scheme === "four-level" ? 0 : -read.medium.N_t;
+    var N = lowestN(read.medium);
     var absorber = config.qSwitch === "absorber" ? 1 : null;
     return { t: 0, N: N, lnPhi: 0, flash: null, opensAt: null, absorber: absorber };
   }
@@ -880,8 +939,7 @@
     var sim = readSim(where, params.sim);
     var config = params.config;
     var read = readConfig(where, config);
-    // The lowest inversion there is: none, or every ion down.
-    var lowest = read.medium.scheme === "four-level" ? 0 : -read.medium.N_t;
+    var lowest = lowestN(read.medium);
     check.atLeast(where, "sim.N", sim.N, lowest);
     refuseStrangeSim(where, sim, read, config);
     var seconds = check.atLeast(where, "seconds", params.seconds, 0);
@@ -985,7 +1043,7 @@
     // the same reason.
     next.N = Math.max(lowest, state[0] * d.N_c);
     next.lnPhi = state[1] - d.sOnePhoton;
-    if (config.qSwitch === "absorber") next.absorber = Math.min(1, Math.max(0, state[2]));
+    if (config.qSwitch === "absorber") next.absorber = clampShare(state[2]);
     return {
       sim: next,
       reachedEnd: reachedEnd,
@@ -994,12 +1052,18 @@
     };
   }
 
-  // pumpNow({ sim, config }) -> { x, w, smallSignal }
+  // pumpNow({ sim, config }) -> { x, w, smallSignal, overThreshold }
   // The pump at the moment of sim: steady, or the flash fired last (none
   // before Fire), with the energy and t_p it was fired with.
-  //   x            the pump in units of threshold: R_p/R_c for four levels
-  //                (a discharge: its x), w/w_th for three; null for the
-  //                two-level atom, which has no threshold
+  //   x            the pump in units of the open cavity's threshold: R_p/R_c
+  //                for four levels (a discharge: its x), w/w_th for three;
+  //                null for the two-level atom, which has no threshold
+  //   overThreshold  the pump over the pump that starts the laser: x,
+  //                except behind a filter, whose closed loss L the
+  //                inversion must reach first: x/L for four levels,
+  //                w/w_th(L) with w_th(L) = (n_t + L)/(n_t − L) for three
+  //                (null when n_t ≤ L: even every ion up is short of it);
+  //                null for the two-level atom
   //   w            W_p·τ for three and two levels; null for four
   //   smallSignal  the small-signal gain over the threshold gain, g₀/g_th:
   //                the inversion y this pump would hold with no light
@@ -1022,15 +1086,21 @@
     } else {
       level = d.scheme === "four-level" ? d.x : d.w;
     }
-    if (d.scheme === "four-level") return { x: level, w: null, smallSignal: level };
+    var startLoss = startingLoss(config, d.gamma);
+    if (d.scheme === "four-level") {
+      return { x: level, w: null, smallSignal: level, overThreshold: level / startLoss };
+    }
     if (d.scheme === "three-level") {
+      // The photon-free y = n_t(w − 1)/(w + 1) reaches L at this w (§2.2).
+      var startW = d.n_t > startLoss ? (d.n_t + startLoss) / (d.n_t - startLoss) : null;
       return {
         x: d.wThreshold === null ? null : level / d.wThreshold,
         w: level,
-        smallSignal: d.n_t * (level - 1) / (level + 1)
+        smallSignal: d.n_t * (level - 1) / (level + 1),
+        overThreshold: startW === null ? null : level / startW
       };
     }
-    return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level) };
+    return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level), overThreshold: null };
   }
 
   // The Q-switch's extra single-pass loss at the moment of sim, over γ.
@@ -1054,10 +1124,68 @@
     return 1 + extraLossNow(config, sim, compute(where, config, read.medium, read.setup).gamma);
   }
 
+  // switchNow({ sim, config }) -> { loss, open }, or null without a
+  // Q-switch: what the page draws of the switch at the moment of sim.
+  //   loss   the cavity's loss over the open cavity's (lossNow)
+  //   open   how far the loss has come down from the closed switch's to
+  //          the open cavity's: (lossClosed − loss)/(lossClosed − 1), 0
+  //          closed to 1 open; for the filter, the share bleached
+  function switchNow(params) {
+    var where = at("switchNow");
+    check.params(where, params, ["sim", "config"]);
+    var sim = readSim(where, params.sim);
+    var config = params.config;
+    var read = readConfig(where, config);
+    refuseStrangeSim(where, sim, read, config);
+    if (config.qSwitch === "none") return null;
+    var d = compute(where, config, read.medium, read.setup);
+    var loss = 1 + extraLossNow(config, sim, d.gamma);
+    // A filter that lets all the light through (T₀ = 1), or a shutter
+    // whose leak is 1, holds nothing back: always open.
+    var open = d.lossClosed > 1 ? clampShare((d.lossClosed - loss) / (d.lossClosed - 1)) : 1;
+    return { loss: loss, open: open };
+  }
+
+  function clampShare(value) {
+    return Math.min(1, Math.max(0, value));
+  }
+
+  // carryOver({ sim, config }) -> a copy of sim for `config`, the same
+  // bench with another Q-switch (or none): the atoms, the photons, the
+  // flash and the time go on; the new switch starts closed: a shutter
+  // until the next Fire (no opening time), a filter dark (absorber 1, as
+  // recovered); nothing for no switch. The page turns its filter on or
+  // off this way without starting the run again.
+  function carryOver(params) {
+    var where = at("carryOver");
+    check.params(where, params, ["sim", "config"]);
+    var sim = readSim(where, params.sim);
+    var config = params.config;
+    var read = readConfig(where, config);
+    if (sim.flash !== null && read.setup.pump !== "flashlamp") {
+      check.fail(where, "sim.flash is a flash fired at " + sim.flash.at + " s, but this bench has no " +
+        "flashlamp (its pump is " + read.setup.pump + "): carryOver only changes the Q-switch.");
+    }
+    // An inversion this medium cannot have is refused here, not later by
+    // advance: a ruby simulation (every ion down) carried to Nd:YAG. (A
+    // four-level simulation inside three levels' range cannot be told
+    // from a three-level one: the caller carries only its own bench's.)
+    if (read.medium.scheme === "four-level") {
+      check.atLeast(where, "sim.N", sim.N, 0);
+    } else {
+      check.between(where, "sim.N", sim.N, -read.medium.N_t, read.medium.N_t);
+    }
+    var next = copySim(sim);
+    next.opensAt = null;
+    next.absorber = config.qSwitch === "absorber" ? 1 : null;
+    return next;
+  }
+
   // giantPulse({ sim, config }) -> { eta_E, energy, peakPower, width }, or
   // null: §4.3's giant pulse if the cavity opened fully now, with the
   // inversion of sim (x = N/N_c over the open cavity's threshold). null
-  // at or below threshold and for the two-level atom, which never lases.
+  // below PULSE_FROM times threshold, and for the two-level atom, which
+  // never lases.
   function giantPulse(params) {
     var where = at("giantPulse");
     check.params(where, params, ["sim", "config"]);
@@ -1067,7 +1195,7 @@
     refuseStrangeSim(where, sim, read, config);
     var d = compute(where, config, read.medium, read.setup);
     var x = sim.N / d.N_c;
-    if (d.scheme === "two-level" || !(x > 1)) return null;
+    if (d.scheme === "two-level" || !(x >= PULSE_FROM)) return null;
     return E.qswitch.giantPulse({
       x: x,
       N_p: d.N_c,
@@ -1138,7 +1266,7 @@
       check.fail(where, "needs a config with pump: \"flashlamp\", got " + check.describe(config.pump) + ".");
     }
     var d = compute(where, config, read.medium, read.setup);
-    var target = config.qSwitch === "absorber" ? closedLoss(config, d.gamma) : 1;
+    var target = startingLoss(config, d.gamma);
     if (d.scheme === "two-level") return null;
     if (d.scheme === "three-level" && target >= d.n_t) return null;
     // The energy whose peak pump is the threshold pump: the peak of y lags
@@ -1180,6 +1308,8 @@
     qSwitchesFor: qSwitchesFor,
     withQSwitch: withQSwitch,
     lossNow: lossNow,
+    switchNow: switchNow,
+    carryOver: carryOver,
     giantPulse: giantPulse
   });
 })(this);

@@ -713,7 +713,21 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
     <div class="container container--laser">
       <div class="laser-stage">
         <div class="laser-stage__more"><button class="btn btn--primary" data-laser-action="learn">Dig deeper …</button></div>
-        <div class="laser-stage__bench laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas></div>
+        <div class="laser-stage__bench laser-bench">
+          <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
+          <div class="laser-under" data-laser-under hidden>   <!-- right under the drawing -->
+            <button class="btn btn--primary laser-fire" data-laser-action="fire" data-ready="false" hidden>
+              <svg class="laser-fire__bolt" aria-hidden="true">…</svg><span>Fire the flash</span>
+            </button>
+            <div class="laser-switch" data-laser-switch hidden>
+              <span class="laser-switch__name" id="laser-switch-name">Q-switch (bleachable filter)</span>
+              <button class="laser-switch__toggle" role="switch" aria-checked="false" aria-labelledby="laser-switch-name" data-laser-action="qSwitch">
+                <span class="laser-switch__track"><span class="laser-switch__knob"></span></span>
+                <span class="laser-switch__word" data-laser-name="qSwitchState">Off</span>
+              </button>
+            </div>
+          </div>
+        </div>
         <div class="laser-stage__controls lab__panel">
           <div class="laser-choose">
             <div class="laser-choose__item">
@@ -735,7 +749,7 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
             </div>
             … the other sliders; the last has <p class="laser-hint" data-laser-value="slowMotion"> under it …
           </div>
-          <div class="lab__buttons"> … Fire (data-laser-action="fire", hidden), Play (data-laser-action="play"), Reset … </div>
+          <div class="lab__buttons"> … Play (data-laser-action="play"), Reset … </div>
           <p class="laser-note" data-laser-note="behind" hidden>…</p>
         </div>
         <div class="laser-stage__side">
@@ -772,6 +786,10 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
 | `.laser-bench` | The box around a picture of the lab (the bench, a chart, the photons, the energy levels): rounded corners, a thin border, a soft glow at the top and a deep shadow — the same look as the frame of the other labs. It sets the width of the canvas inside it. | [css/laser.css](css/laser.css) |
 | `.laser-bench__canvas` | A canvas the lab draws on, as wide as its box. Its height is set by `js/laser/ui/loop.js`. | [css/laser.css](css/laser.css) |
 | `.laser-bench__canvas--chart` | The chart of the output power: the mouse pointer is a crosshair, and on a touch screen a sideways drag moves the chart's crosshair while an up-and-down drag still scrolls the page (`touch-action: pan-y`). | [css/laser.css](css/laser.css) |
+| `.laser-under` | The row right under the drawing of the laser, inside the bench's box, with a thin line above it: the Q-switch on the left (under the drawn filter), Fire in the middle (under the drawn lamp, which is centred). On a screen under 760 px wide the two go one under the other, Fire first. It starts `hidden`; `js/laser/page.js` shows it on a laser that has Fire or the Q-switch. | [css/laser.css](css/laser.css) |
+| `.laser-fire` | Fire (also a `.btn .btn--primary`): a big pill with a lightning bolt (`.laser-fire__bolt`) and its word, white on the accent gradient. While the lamp is dark (`data-ready="true"`, set by `js/laser/page.js`) a ring of light keeps swelling out of it and the bolt pulses, so a visitor who does not know what it is still wants to press it; while a flash is lit it waits. For a visitor who asks for less motion the ring stands still. | [css/laser.css](css/laser.css) |
+| `.laser-switch` | The Q-switch's group in that row: its name (`.laser-switch__name`) over the On/Off (beside it on a narrow screen). Starts `hidden`; shown on a laser that can have the filter. | [css/laser.css](css/laser.css) |
+| `.laser-switch__toggle` | The On/Off: a button with `role="switch"`, a rounded track (`__track`) that fills with the accent gradient when on, while its knob (`__knob`) slides right, and the word On or Off (`__word`, written by `js/laser/page.js`). | [css/laser.css](css/laser.css) |
 | `.laser-choose` | The two dropdowns that choose the laser (the medium, then its pump), at the top of the controls, with a thin line under them. Side by side when the panel is wide enough, one under the other when it is not: a column is at least 15rem, so the longest Armenian name is not cut. | [css/laser.css](css/laser.css) |
 | `.laser-choose__item` | One dropdown with its name above it. The name is a `.lab-control__name`, like a slider's. | [css/laser.css](css/laser.css) |
 | `.laser-choose__select` | The dropdown itself: as wide as its column, bold, on the page's second background colour with a thin border. Its options are made by `js/laser/page.js` (the names are `media.*` and `pumps.*` in `data/laser.json`); a medium that cannot be simulated yet is greyed out, with "(coming later)" after its name. | [css/laser.css](css/laser.css) |

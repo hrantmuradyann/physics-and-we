@@ -43,7 +43,8 @@ The simulator has two halves:
 | 7b | **The engine for every other material and pump:** ruby, Nd:glass and Nd:YAG with a flashlamp; helium-neon, argon and CO₂ with an electric current; dye and titanium-sapphire with another laser; and the "two-level atom", which never lases. |
 | 7c | **Choosing the laser on the page** (see below). |
 | 7d | **Each laser drawn as it really is** (see below): its own pump on the bench, and the energy-level picture for ruby and the two-level atom. |
-| 8a | **Q-switching in the engine** (see below): the giant pulse. Not on the page yet; that is stage 8b. |
+| 8a | **Q-switching in the engine** (see below): the giant pulse, with three kinds of Q-switch. |
+| 8b | **The Q-switch on the page** (see below): an On/Off switch right under the laser, beside a Fire button that moved there too. |
 
 ### What you can see on the page today
 
@@ -51,7 +52,8 @@ Every laser the engine can run. Two dropdowns at the top of the controls choose 
 
 For each laser the page sets itself up to suit it:
 - **the pump slider** becomes pump power (W), flash energy (J) or electric current (A, or mA for small currents);
-- **a "Fire" button** appears with a flashlamp: each press fires one flash, and the chart shows the light it makes, spikes and all;
+- **a "Fire" button** appears with a flashlamp, right under the drawing of the laser: each press fires one flash, and the chart shows the light it makes, spikes and all;
+- **a Q-switch On/Off switch** sits beside it on the four lasers that can have one (ruby, Nd:glass, and Nd:YAG with a flashlamp or with diodes). See stage 8b below;
 - **the slow motion** starts at a speed that suits the laser: one second on screen is 1 ms of the two-level atom, 100 µs of ruby, but only 100 ns of the argon and dye lasers, which change within nanoseconds;
 - **the numbers under the chart** are the ones that laser has: a flashlamp shows the smallest flash that makes it lase and the highest output since Fire; a gas laser shows its threshold current; the two-level atom says its threshold is "never reached";
 - **the energy-level picture** shows how strongly each material is pumped, and its gauge shows its own gain without light. For ruby it rises faster than the pump once the pump is past threshold (at the flash's peak, 8.6 times the loss for a pump 5.7 times its threshold); for the two-level atom it stays below zero: it never gains, it only absorbs less.
@@ -60,7 +62,37 @@ The small chart of the excited atoms is gone (the owner's choice): the bar in th
 
 Ruby fired with a 1000 J flash lights up after a fraction of a millisecond and fires spikes reaching about 460 kW, as in stage 7b. The light and dark themes and both languages work, and the dropdowns fit on a 320 px phone.
 
-### Stage 8a, just finished: the giant pulse, in the engine
+### Stage 8b, just finished: the Q-switch on the page
+
+Right under the drawing of the laser there is now a row with two things you reach for most:
+- **Fire the flash** (on lasers with a flashlamp), moved here from under the sliders and centred right under the drawn lamp. It is a big button with a lightning bolt, and while the lamp is dark a ring of light keeps swelling out of it, so even a visitor who does not know what it is wants to press it. While a flash is lit it stops inviting, and it starts again once the flash has faded. For visitors whose computer asks for less motion the ring stands still;
+- **Q-switch (bleachable filter)** with an **On/Off switch** (on the four lasers that can have one), on the left, under the drawn filter.
+
+**The flash is now hard to miss.** When the lamp fires, its gas burns white-hot (warm orange on the light theme) with a soft glow round it, the whole bench lights up, broad beams of light go up into the rod, which lights up too, and short streaks flicker all round the lamp. All of it is as strong as the flash, so a weak flash is a dim glow and a strong one a burst of light. On the light theme the lamp's caps and glass edge are no longer grey but a bright terracotta.
+
+As you asked, there is only one Q-switch: the **bleachable filter**, a dark filter that the laser's own light turns clear. Nothing has to be timed. The engine still knows the other two (the electro-optic shutter and the rotating prism), but the page does not show them.
+
+**Turning it on or off does not start anything again.** The chart, the time, a flash that is running and the "highest output" all carry on, so you can watch the change happen:
+- the diode-pumped Nd:YAG shines steadily at 1.7 W. Switch the filter on and, a moment later, the steady line turns into a train of sharp pulses of 2.6 kW, one every 0.3 ms. Switch it off and it settles back to a steady beam;
+- ruby with the filter gives one giant pulse of about 210 MW from a flash, against about 460 kW spikes without it.
+
+With the filter on you also get:
+- **the filter on the drawing**, between the back mirror and the rod. It is dark while closed and turns pale as the light bleaches it;
+- **a slider for how dark the filter is** ("Filter transmission (unbleached)", 20 % to 99 %). A darker filter holds more energy back for a bigger pulse, but needs a stronger pump. At 20 % Nd:glass needs a 383 J flash, more than its slider goes to, so the page says "never reached";
+- **two numbers**: how much more the filter loses than the open laser ("3.00 ×"), and the giant pulse the book's formula predicts if the filter bleached right now (energy, peak power, length);
+- the threshold and "Pump now ÷ threshold" now count the filter: the diode laser needs 3.69 W behind it, not 1.51 W.
+
+Checked in Chrome: in English and Armenian, light and dark, and on a phone-sized screen, where the row wraps neatly (Fire; the name; the switch).
+
+The code review of the first version found 13 things, the review of the final version 12 more, and a last review of everything, the lamp included, 11 small ones (for example: for visitors who ask for less motion, the streaks round the lamp now stand still). All but two small parts were fixed. Those you could see on the page:
+- turning the filter off and on again forgot how dark you had set it. Now each laser remembers its own setting;
+- behind a very dark filter, the diode laser's threshold was shown as 69.8 W although the slider stops at 20 W. Now it says "never reached";
+- the "giant pulse if the filter bleached now" readout showed silly numbers just above threshold (a "pulse" 128 seconds long). Now it shows "—" until the laser is 1 % above threshold;
+- the line under the title and the theory chapter still talked about the old dropdown.
+
+In the first review, among others: the diode laser's threshold ignored the filter, so 2 W said "above threshold" but never lased; the energy gauge stayed squeezed after the shutter opened; and a long Armenian word on the drawing was squeezed on phones. The 13th was a suggestion to save 8 thousandths of a second when the switch is clicked, at the cost of more complicated code. It was left out, as was one suggestion of the second review (removing a shortcut that saves the computer some work every frame); the plan explains both.
+
+### Stage 8a: the giant pulse, in the engine
 
 A **Q-switch** is a shutter between the two mirrors. While it is closed the light cannot bounce back and forth, so the laser cannot start, and the flash stores far more energy in the rod than a laser could ever hold on its own. When the shutter opens, all that energy comes out at once as one **giant pulse**, about 10 billionths of a second long. Ruby's normal spikes reach about 460 kW; its giant pulse reaches about 520 MW, over a thousand times more.
 
@@ -82,7 +114,7 @@ Some things the owner should look at (the plan marks each one "decided without t
 - **The prism gives a smaller pulse than the electro-optic shutter** (ruby: 120 MW against 520 MW), because the pulse starts while the prism is still turning into line. This is real physics, and a reason the prism was given up, but the book does not mention it.
 - **The shutter's timing:** by default it opens when the rod is fullest (1 ms after the flash for ruby, 0.6 ms for Nd:glass, 0.55 ms for Nd:YAG).
 - **The filters:** a dye for ruby (cryptocyanine, as in the first Q-switched ruby lasers) and a chromium-doped crystal for the neodymium lasers. Their numbers are not yet checked against printed sources.
-- The engine side only: the page does not show any of this yet. That comes in **stage 8b**, with a dropdown for the Q-switch, sliders for its timing, a drawing of each kind, and numbers for the pulse.
+- The engine side only. Stage 8b put the bleaching filter on the page (your choice of the three).
 
 The code review found 9 things; 8 were fixed. Among them: the pulse's length came out as "not a number" for a laser with no output mirror; a very fast prism could make the engine run out of memory; and the "smallest flash that lases" ignored the bleaching filter, which needs a stronger flash (for Nd:glass, 182 J instead of 29 J). The ninth: the prism lines up again on every turn, also before the moment the flash is timed to, so a fast prism gives pulses during the flash. That is how a real spinning prism behaves, so it was kept, and the documents now say so.
 
@@ -121,11 +153,11 @@ This stage put the choice of laser on the page (above). Two other things came wi
 
 ## What is left
 
+Stage 9 (several laser frequencies at once, with a spectrum panel) was dropped at your request: it would have made everything too complex. The laser stays one frequency.
+
 | Stage | What it will add |
 |---|---|
-| 8b | **Q-switching on the page** (next): choosing the shutter, its timing, a drawing of it, and the pulse's numbers. The engine for it is done (8a). |
-| 9 | **Several laser frequencies at once,** with a spectrum panel showing which ones lase. |
-| 10 | **Mirror shapes:** curved mirrors, and which mirror pairs keep the light inside (stable) or lose it (unstable); the width of the beam. |
+| 10 | **Mirror shapes** (next): curved mirrors, and which mirror pairs keep the light inside (stable) or lose it (unstable); the width of the beam. |
 | 11 | **Lenses outside the laser:** focusing the beam, tracing rays through glass, and the beam's colour from its wavelength. |
 | 12 | **The "learn" section:** chapters in both languages, each with a "try it on the bench" button that sets up the right example. |
 | 13 | **Extras,** one at a time: polarisation and Brewster windows; doubling the frequency (green light from infrared); heat in the rod acting as a lens; mode-locking (very short pulses); self-focusing; the semiconductor diode laser; and the pump in more detail (lamp reflectors, discharge). |
@@ -134,7 +166,7 @@ This stage put the choice of laser on the page (above). Two other things came wi
 ## Things to know or check before going public
 
 - **Most of the material numbers are textbook values not yet checked against printed sources.** Some choices were made where the sources disagree or say nothing; the plan marks each one "not verified". Examples: how much of the flash light reaches ruby's upper level (0.7), and the square law for argon. A physicist should look these over.
-- **Ruby's spikes only partly match a real ruby laser.** With a flash a little above threshold (700–1000 J), the simulated ruby spikes for as long as it gives light, as the book describes. With a much stronger flash (2000 J or more), the spikes smooth out into a steady glow within about 0.3 ms, while a real ruby laser keeps spiking irregularly. Getting that right needs several frequencies and the heating of the rod, which this model leaves out. This is a known limit, not a bug.
+- **Ruby's spikes only partly match a real ruby laser.** With a flash a little above threshold (700–1000 J), the simulated ruby spikes for as long as it gives light, as the book describes. With a much stronger flash (2000 J or more), the spikes smooth out into a steady glow within about 0.3 ms, while a real ruby laser keeps spiking irregularly. Getting that right needs several frequencies and the heating of the rod, which this model leaves out (several frequencies were stage 9, which you dropped). This is a known limit, not a bug.
 - **The CO₂ laser gives about 8 W**, while a real tube of that size gives 40–60 W, because the model spreads the light evenly across the tube. This is fine for showing how it works, but the number should not be presented as realistic.
 - **The Armenian text should be read by a fluent speaker** before the page goes public.
 - The code is saved on the `feature/laser` branch, stage by stage. Nothing has been pushed or published.

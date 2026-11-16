@@ -1338,8 +1338,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"transmission\"]);",
-    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\"]);",
+    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"transmission\", \"qSwitch\"]);",
+    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"qSwitch\"]);",
     why: "a part left out of PARTS: its label never written"
   },
   {
@@ -1585,14 +1585,14 @@ const MUTATIONS = [
   /* ---------- stage 6: draw-levels.js ---------- */
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var top = Math.max(picture.smallSignal, picture.y, 1) * HEADROOM;",
+    find: "var top = Math.max(picture.smallSignal, picture.y, lossOf(picture)) * HEADROOM;",
     replace: "var top = Math.max(picture.smallSignal, picture.y) * HEADROOM;",
     why: "the scale forgets the loss: below threshold the loss line is off the gauge"
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var top = Math.max(picture.smallSignal, picture.y, 1) * HEADROOM;",
-    replace: "var top = Math.max(picture.smallSignal, 1) * HEADROOM;",
+    find: "var top = Math.max(picture.smallSignal, picture.y, lossOf(picture)) * HEADROOM;",
+    replace: "var top = Math.max(picture.smallSignal, lossOf(picture)) * HEADROOM;",
     why: "the scale forgets the inversion: a spike runs off the bar"
   },
   {
@@ -1603,7 +1603,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var lossY = gaugeY(1);",
+    find: "var lossY = gaugeY(loss);",
     replace: "var lossY = gaugeY(picture.smallSignal);",
     why: "the loss line drawn at the small-signal gain"
   },
@@ -1747,8 +1747,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "else config.refl2 = 1 - value;",
-    replace: "else config.refl2 = value;",
+    find: "else if (name === \"coupler\") config.refl2 = 1 - value;",
+    replace: "else if (name === \"coupler\") config.refl2 = value;",
     why: "the coupler's transmission used as its reflectivity"
   },
   {
@@ -2067,14 +2067,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (pump > 0) lightUp(g, colors, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);",
-    replace: "    lightUp(g, colors, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);",
+    find: "    if (pump > 0) lightUp(g, colors.glow, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);",
+    replace: "    lightUp(g, colors.glow, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);",
     why: "pump light drawn with the pump off"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "\n    g.globalAlpha = 0.3 + 0.7 * pump;\n    g.strokeStyle = colors.glow;",
-    replace: "\n    g.globalAlpha = 1;\n    g.strokeStyle = colors.glow;",
+    find: "\n    g.globalAlpha = 0.3 + 0.7 * pump;\n    g.strokeStyle = color;",
+    replace: "\n    g.globalAlpha = 1;\n    g.strokeStyle = color;",
     why: "pump light as strong at 1 W as at 20 W"
   },
   {
@@ -2875,14 +2875,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var lowest = read.medium.scheme === \"four-level\" ? 0 : -read.medium.N_t;",
-    replace: "var lowest = 0;",
+    find: "    var lowest = lowestN(read.medium);",
+    replace: "    var lowest = 0;",
     why: "three levels clamped at ΔN = 0 instead of −N_t"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var N = read.medium.scheme === \"four-level\" ? 0 : -read.medium.N_t;",
-    replace: "var N = 0;",
+    find: "    var N = lowestN(read.medium);",
+    replace: "    var N = 0;",
     why: "ruby starts half inverted, not with every ion down"
   },
   {
@@ -2965,8 +2965,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "if (sim.flash !== null && read.setup.pump !== \"flashlamp\") {",
-    replace: "if (false) {",
+    find: "    if (sim.flash !== null && read.setup.pump !== \"flashlamp\") {\n      check.fail(where, \"sim.flash is a flash fired at \" + sim.flash.at + \" s, but this bench has no \" +\n        \"flashlamp (its pump is \" + read.setup.pump + \").\" + again);",
+    replace: "    if (false) {\n      check.fail(where, \"sim.flash is a flash fired at \" + sim.flash.at + \" s, but this bench has no \" +\n        \"flashlamp (its pump is \" + read.setup.pump + \").\" + again);",
     why: "a fired flash carried to a bench without a flashlamp"
   },
   {
@@ -3119,8 +3119,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level) };",
-    replace: "return { x: 0, w: level, smallSignal: -d.n_t / (1 + 2 * level) };",
+    find: "return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level), overThreshold: null };",
+    replace: "return { x: 0, w: level, smallSignal: -d.n_t / (1 + 2 * level), overThreshold: null };",
     why: "pumpNow giving the two-level atom x = 0, a threshold it does not have"
   },
   {
@@ -3173,7 +3173,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "var start = START_SLOW_MOTION[config.medium + \" \" + config.pump];",
+    find: "var start = START_SLOW_MOTION[benchName(config)];",
     replace: "var start = START_SLOW_MOTION[config.medium];",
     why: "the starting slow motion looked up by the medium alone"
   },
@@ -3210,8 +3210,8 @@ const MUTATIONS = [
   {
     file: "js/laser/page.js",
     find: "flashlamp: [\"flashThreshold\", \"x\", \"gth\", \"tau_c\", \"peak\", \"powerNow\", \"time\"]",
-    replace: "flashlamp: [\"flashThreshold\", \"x\", \"gth\", \"tau_c\", \"P_out\", \"powerNow\", \"time\"]",
-    why: "a flash showing a steady output it does not have"
+    replace: "flashlamp: [\"flashThreshold\", \"pumpThreshold\", \"x\", \"gth\", \"tau_c\", \"peak\", \"powerNow\", \"time\"]",
+    why: "a flash showing a steady pump's threshold, which it does not have"
   },
   {
     file: "js/laser/page.js",
@@ -3221,19 +3221,19 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "if (name === \"currentThreshold\") return d.currentThreshold === null ? never :",
-    replace: "if (name === \"currentThreshold\") return d.currentThreshold === null ? \"—\" :",
+    find: "      if (name === \"currentThreshold\") return thresholdText(d.currentThreshold, \"A\");",
+    replace: "      if (name === \"currentThreshold\") return d.currentThreshold === null ? \"—\" : F.si(d.currentThreshold, \"A\");",
     why: "a threshold the tube never reaches written as a dash, not 'never reached'"
   },
   {
     file: "js/laser/page.js",
-    find: "if (name === \"coupler\" && settled) threshold = thresholdFlash(config);",
+    find: "if (movesThreshold && settled) threshold = thresholdFlash(config);",
     replace: "threshold = thresholdFlash(config);",
     why: "the threshold flash searched again on every slider move"
   },
   {
     file: "js/laser/page.js",
-    find: "            if (name === \"coupler\" && settled) threshold = thresholdFlash(config);\n",
+    find: "            if (movesThreshold && settled) threshold = thresholdFlash(config);\n",
     replace: "",
     why: "the threshold flash not found again for a new output mirror"
   },
@@ -3245,8 +3245,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      state.slowMotion = startSlowMotion(config);\n",
-    replace: "",
+    find: "      state.slowMotion = startSlowMotion(config);\n      nameThePump();",
+    replace: "      nameThePump();",
     why: "a new bench keeping the old slow motion"
   },
   {
@@ -3293,14 +3293,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        selects.pump.value = state.config.pump;\n      }\n    }",
-    replace: "      }\n    }",
+    find: "        selects.pump.value = state.config.pump;\n      }\n    }\n    // The row under the drawing",
+    replace: "      }\n    }\n    // The row under the drawing",
     why: "the pump dropdown not showing the bench's pump"
   },
   {
     file: "js/laser/page.js",
-    find: "if (fire) fire.hidden = state.config.pump !== \"flashlamp\";",
-    replace: "if (fire) fire.hidden = false;",
+    find: "if (fireButton) fireButton.hidden = !flash;",
+    replace: "if (fireButton) fireButton.hidden = false;",
     why: "Fire shown on a bench without a flashlamp"
   },
   {
@@ -3317,13 +3317,13 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        if (state.peak !== null) state.peak = Math.max(state.peak, powerNow());\n",
+    find: "        if (state.peak !== null) state.peak = Math.max(state.peak, run.peak.power);\n",
     replace: "",
     why: "the highest output since Fire never updated"
   },
   {
     file: "js/laser/page.js",
-    find: "      state.peak = null;\n      remember();",
+    find: "      state.peak = peakFrom(state.config, powerNow());\n      remember();",
     replace: "      remember();",
     why: "Reset keeping the old flash's highest output"
   },
@@ -3355,7 +3355,7 @@ const MUTATIONS = [
     file: "js/laser/page.js",
     find: "if (derived.P_out !== null && derived.P_out > 0) lines.push(",
     replace: "if (true) lines.push(",
-    why: "a steady-output line on a flash's chart"
+    why: "a steady-output line on a flash's chart, and on the filter's pulse train"
   },
   {
     file: "js/laser/page.js",
@@ -3365,20 +3365,20 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });\n",
-    replace: "",
-    why: "a new bench's sliders left at the old bench's values and ranges"
+    find: "      showUnderBench();\n      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });\n      showRows();",
+    replace: "      showUnderBench();\n      showRows();",
+    why: "a new bench, or the filter turned on, leaving the sliders as they were (the filter's hidden)"
   },
   {
     file: "js/laser/page.js",
-    find: "      showRows();\n      showFire();\n      setBehind(false);",
-    replace: "      showFire();\n      setBehind(false);",
-    why: "a new bench showing the old bench's readouts"
+    find: "      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });\n      showRows();\n      setBehind(false);",
+    replace: "      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });\n      setBehind(false);",
+    why: "a new bench, or the filter turned on or off, showing the readouts it had before"
   },
   {
     file: "sections/laser.html",
-    find: "data-laser-action=\"fire\" data-text=\"buttons.fire\" hidden>",
-    replace: "data-laser-action=\"fire\" data-text=\"buttons.fire\">",
+    find: "data-laser-action=\"fire\" data-ready=\"false\" hidden>",
+    replace: "data-laser-action=\"fire\" data-ready=\"false\">",
     why: "Fire shown before page.js has run"
   },
   {
@@ -3403,8 +3403,8 @@ const MUTATIONS = [
   /* ---------- stage 7c: the review's fixes ---------- */
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "var top = Math.max(picture.smallSignal, picture.y, 1) * HEADROOM;",
-    replace: "var top = Math.max(picture.y, 1) * HEADROOM;",
+    find: "var top = Math.max(picture.smallSignal, picture.y, lossOf(picture)) * HEADROOM;",
+    replace: "var top = Math.max(picture.y, lossOf(picture)) * HEADROOM;",
     why: "the scale forgets the small-signal gain: ruby's dashed line above the gauge"
   },
   {
@@ -3415,8 +3415,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "if (d.scheme === \"four-level\") return { x: level, w: null, smallSignal: level };",
-    replace: "if (d.scheme === \"four-level\") return { x: level, w: level, smallSignal: level };",
+    find: "return { x: level, w: null, smallSignal: level, overThreshold: level / startLoss };",
+    replace: "return { x: level, w: level, smallSignal: level, overThreshold: level / startLoss };",
     why: "pumpNow giving four levels a w"
   },
   {
@@ -3433,8 +3433,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level) };",
-    replace: "return { x: null, w: level, smallSignal: -d.n_t / (1 + level) };",
+    find: "return { x: null, w: level, smallSignal: -d.n_t / (1 + 2 * level), overThreshold: null };",
+    replace: "return { x: null, w: level, smallSignal: -d.n_t / (1 + level), overThreshold: null };",
     why: "two levels' small-signal gain without the pump's own emission (2w)"
   },
   {
@@ -3451,19 +3451,19 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "if (name === \"coupler\" && settled) threshold = thresholdFlash(config);",
-    replace: "if (name === \"coupler\") threshold = thresholdFlash(config);",
+    find: "if (movesThreshold && settled) threshold = thresholdFlash(config);",
+    replace: "if (movesThreshold) threshold = thresholdFlash(config);",
     why: "the threshold flash searched at every step of a drag"
   },
   {
     file: "js/laser/page.js",
-    find: "            if (name === \"coupler\") state.flashThresholdOld = !settled;\n",
+    find: "            if (movesThreshold) state.flashThresholdOld = !settled;\n",
     replace: "",
     why: "a drag of the output mirror showing the old mirror's threshold flash"
   },
   {
     file: "js/laser/page.js",
-    find: "          listen(slider, \"change\", function () { use(sliderValue(), true); });\n",
+    find: "          listen(slider, \"change\", whileShown(function () { use(sliderValue(), true); }));\n",
     replace: "",
     why: "a slider let go never settles: the threshold flash waits for ever"
   },
@@ -3499,14 +3499,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      if (pumpKept.sim !== state.sim || pumpKept.derived !== derived) {",
-    replace: "      if (true) {",
-    why: "the pump worked out again for every picture"
+    find: "        if (kept.sim !== state.sim || kept.derived !== derived) {",
+    replace: "        if (true) {",
+    why: "the pump and the filter worked out again for every picture"
   },
   {
     file: "js/laser/page.js",
-    find: "      if (pumpKept.sim !== state.sim || pumpKept.derived !== derived) {",
-    replace: "      if (pumpKept.sim !== state.sim) {",
+    find: "        if (kept.sim !== state.sim || kept.derived !== derived) {",
+    replace: "        if (kept.sim !== state.sim) {",
     why: "the pump kept after a slider move"
   },
   {
@@ -3568,14 +3568,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (pump > 0) {\n      g.globalAlpha = 0.2 + 0.8 * pump;",
-    replace: "    if (true) {\n      g.globalAlpha = 0.2 + 0.8 * pump;",
+    find: "    if (pump > 0) {\n      // Broad beams",
+    replace: "    if (true) {\n      // Broad beams",
     why: "the flashlamp glowing before it is fired"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "g.globalAlpha = 0.2 + 0.8 * pump;",
-    replace: "g.globalAlpha = 1;",
+    find: "      g.globalAlpha = 0.4 + 0.6 * pump;",
+    replace: "      g.globalAlpha = 1;",
     why: "the flashlamp as bright for a weak flash as for a strong one"
   },
   {
@@ -3586,7 +3586,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (pump > 0) lightUp(g, colors, L, F.x, F.w, F.y, pump);\n",
+    find: "    if (pump > 0) lightUp(g, colors.accent, L, F.x, F.w, F.y, pump);\n",
     replace: "",
     why: "the flashlamp's light not reaching the rod"
   },
@@ -3760,7 +3760,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "barMark(g, c, L.bar, (1 + 1 / picture.n_t) / 2);",
+    find: "barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
     replace: "barMark(g, c, L.bar, 0.5);",
     why: "the threshold mark at half the ions up: ruby's 54 % lost"
   },
@@ -3802,8 +3802,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        transmission: 1 - state.config.refl2,\n        pumpKind: state.config.pump\n",
-    replace: "        transmission: 1 - state.config.refl2\n",
+    find: "        transmission: 1 - state.config.refl2,\n        pumpKind: state.config.pump,\n",
+    replace: "        transmission: 1 - state.config.refl2,\n",
     why: "every pump drawn as diodes on the page"
   },
   {
@@ -3889,8 +3889,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-levels.js",
-    find: "if (picture.n_t > 1) barMark(g, c, L.bar, (1 + 1 / picture.n_t) / 2);",
-    replace: "barMark(g, c, L.bar, (1 + 1 / picture.n_t) / 2);",
+    find: "if (picture.n_t > loss) barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
+    replace: "barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
     why: "the threshold mark above its bar when n_t ≤ 1"
   },
   {
@@ -4327,7 +4327,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "    var target = config.qSwitch === \"absorber\" ? closedLoss(config, d.gamma) : 1;",
+    find: "    var target = startingLoss(config, d.gamma);",
     replace: "    var target = 1;",
     why: "flashThreshold behind a filter giving the open cavity's"
   },
@@ -4366,7 +4366,575 @@ const MUTATIONS = [
     find: "    if (config.qSwitch === \"absorber\" && sim.absorber === null) {",
     replace: "    if (false) {",
     why: "a filter bench without the filter's state accepted"
-  }
+  },
+  /* ---------- stage 8b: the Q-switch on the page ---------- */
+  {
+    file: "js/laser/engine/bench.js",
+    find: "  var ABSORBER_T0_RANGE = { min: 0.2, max: 0.99, log: false };",
+    replace: "  var ABSORBER_T0_RANGE = { min: 0.2, max: 1, log: false };",
+    why: "the filter's slider up to 100 %: a filter that holds nothing back"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      absorberT0: config.qSwitch === \"absorber\" ? {",
+    replace: "      absorberT0: false ? {",
+    why: "the filter's transmission without its slider"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    var open = d.lossClosed > 1 ? clampShare((d.lossClosed - loss) / (d.lossClosed - 1)) : 1;",
+    replace: "    var open = d.lossClosed > 1 ? clampShare((loss - 1) / (d.lossClosed - 1)) : 1;",
+    why: "how open the switch is turned upside down (1 closed, 0 open)"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    var open = d.lossClosed > 1 ? clampShare((d.lossClosed - loss) / (d.lossClosed - 1)) : 1;",
+    replace: "    var open = clampShare((d.lossClosed - loss) / (d.lossClosed - 1));",
+    why: "a filter that holds nothing back: open as 0/0"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "  var Q_KINDS = Object.freeze([\"absorber\"]);",
+    replace: "  var Q_KINDS = Object.freeze([]);",
+    why: "the filter not drawn: a switch kind left out"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (!light || !light.qSwitch || pumpKind === \"discharge\") return null;",
+    replace: "    if (!light || !light.qSwitch) return null;",
+    why: "a switch drawn inside a gas tube that fills the cavity"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var filterX = innerLeft + 0.36 * gap;",
+    replace: "    var filterX = innerLeft + 0.8 * gap;",
+    why: "the filter against the rod, over the left arrowheads"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.globalAlpha = 0.15 + 0.6 * (1 - open);",
+    replace: "    g.globalAlpha = 0.15 + 0.6 * open;",
+    why: "the filter darker as it bleaches"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      if (name === \"transmission\" && switchName) spot = L.labels.transmissionShared;\n",
+    replace: "",
+    why: "the transmission keeps the whole top row and runs into the switch's name"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "    var lossY = gaugeY(loss);",
+    replace: "    var lossY = gaugeY(1);",
+    why: "the loss line stays at the open cavity's while the switch is closed"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "      barMark(g, c, L.bar, loss / top);",
+    replace: "      barMark(g, c, L.bar, 1 / top);",
+    why: "the four-level threshold mark at the open cavity's threshold behind a closed switch"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "      if (picture.n_t > loss) barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
+    replace: "      if (picture.n_t > 1) barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
+    why: "a three-level threshold mark above its bar when the loss is out of reach"
+  },
+  {
+    file: "js/laser/ui/draw-levels.js",
+    find: "    return typeof picture.loss === \"number\" ? picture.loss : 1;",
+    replace: "    return 1;",
+    why: "the level picture ignores the loss it is given"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        if (run.peak.t > from && run.peak.t < state.sim.t) state.history.push(run.peak.t, run.peak.power);",
+    replace: "",
+    why: "a giant pulse between two chart points left off the chart"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        if (run.peak.t > from && run.peak.t < state.sim.t) state.history.push(run.peak.t, run.peak.power);",
+    replace: "        if (run.peak.t >= from && run.peak.t <= state.sim.t) state.history.push(run.peak.t, run.peak.power);",
+    why: "a run's peak at its start or end pushed twice onto the chart"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        if (state.peak !== null) state.peak = Math.max(state.peak, run.peak.power);",
+    replace: "        if (state.peak !== null) state.peak = Math.max(state.peak, powerNow());",
+    why: "the highest output from the chart's ends, which miss a 13 ns pulse"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      state.peak = peakFrom(state.config, powerNow());",
+    replace: "      state.peak = null;",
+    why: "a steady bench behind a filter never shows its highest output"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (derived.P_out === null) {\n        rows = without(rows, PULSING_HIDES);",
+    replace: "      if (false) {\n        rows = without(rows, PULSING_HIDES);",
+    why: "the diode bench behind a filter shows a steady output it never has"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var peakWord = state.config.pump === \"flashlamp\" ? \"readouts.peak\" : \"readouts.peakStart\";",
+    replace: "      var peakWord = \"readouts.peak\";",
+    why: "a bench without a flash names its highest output \"since the flash\""
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      return F.si(pulse.energy, \"J\") + \" · \" + F.si(pulse.peakPower, \"W\") + \" · \" + F.si(pulse.width, \"s\");",
+    replace: "      return F.si(pulse.energy, \"J\") + \" · \" + F.si(pulse.peakPower, \"W\") + \" · \" + F.si(pulse.energy / pulse.peakPower / 2, \"s\");",
+    why: "the pulse's length worked out on the page, and wrongly"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var LIVE_READOUTS = [\"x\", \"lossNow\", \"giant\", \"peak\", \"powerNow\", \"time\"];",
+    replace: "  var LIVE_READOUTS = [\"x\", \"peak\", \"powerNow\", \"time\"];",
+    why: "the loss now and §4.3's pulse written only when a control moves"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        loss: shutter === null ? 1 : shutter.loss,",
+    replace: "        loss: 1,",
+    why: "the level gauge's loss line stays at the open cavity's"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (state.config.qSwitch === FILTER && hasFilter(config)) config = withFilter(config);",
+    replace: "      if (false) config = withFilter(config);",
+    why: "a new medium drops the filter it can also have"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          if (!hasFilter(state.config)) return;           // a hidden switch: a stray click\n",
+    replace: "",
+    why: "a hidden switch's stray click asks the engine for a filter the bench cannot have"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var filtered = bench.withQSwitch({ config: config, qSwitch: FILTER });",
+    replace: "      var filtered = bench.withQSwitch({ config: bench.configFor({ medium: config.medium, pump: config.pump }), qSwitch: FILTER });",
+    why: "turning the filter on puts the pump and the coupler back to the bench's own"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      take(config, numbers);\n      state.sim = sim;",
+    replace: "      take(config, numbers);\n      state.slowMotion = startSlowMotion(config);\n      state.sim = sim;",
+    why: "turning the filter on puts the slow motion back"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          if (sliderRow) sliderRow.hidden = hidden();",
+    replace: "",
+    why: "the Q-switch's slider rows never shown or hidden"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (name === \"absorberT0\") return { unit: \"%\", factor: 100 };",
+    replace: "      if (name === \"absorberT0\") return { unit: \"%\", factor: 1 };",
+    why: "the filter's transmission typed as a share under the unit %"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            var movesThreshold = name === \"coupler\" || name === \"absorberT0\";",
+    replace: "            var movesThreshold = name === \"coupler\";",
+    why: "the threshold flash not found again for a new filter"
+  },
+  {
+    file: "data/laser.json",
+    find: "    \"peakStart\": { \"hy\": \"Ամենաբարձր ելքային հզորությունը սկզբից ի վեր\", \"en\": \"Highest output since the start\" },",
+    replace: "    \"peakStart\": { \"hy\": \"\", \"en\": \"Highest output since the start\" },",
+    why: "a word missing in Armenian"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (sim.flash !== null && read.setup.pump !== \"flashlamp\") {\n      check.fail(where, \"sim.flash is a flash fired at \" + sim.flash.at + \" s, but this bench has no \" +\n        \"flashlamp (its pump is \" + read.setup.pump + \"): carryOver only changes the Q-switch.\");",
+    replace: "    if (false) {\n      check.fail(where, \"sim.flash is a flash fired at \" + sim.flash.at + \" s, but this bench has no \" +\n        \"flashlamp (its pump is \" + read.setup.pump + \"): carryOver only changes the Q-switch.\");",
+    why: "carryOver lets a flash onto a bench without a flashlamp"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    next.absorber = config.qSwitch === \"absorber\" ? 1 : null;",
+    replace: "    next.absorber = config.qSwitch === \"absorber\" ? 0 : null;",
+    why: "a filter turned on starts bleached, not dark"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    next.opensAt = null;\n",
+    replace: "",
+    why: "a shutter switched off keeps its opening time"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      d.pumpThreshold *= startingLoss(config, d.gamma);\n",
+    replace: "",
+    why: "the diode bench behind a filter reads the open cavity's threshold, which never lases"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      d.pumpThreshold *= startingLoss(config, d.gamma);\n      noSteadyState(d);",
+    replace: "      d.pumpThreshold *= startingLoss(config, d.gamma);",
+    why: "a steady pump behind a filter given a steady output it never has"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "overThreshold: level / startLoss };",
+    replace: "overThreshold: level };",
+    why: "the pump over threshold read against the open cavity behind a filter"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      var startW = d.n_t > startLoss ? (d.n_t + startLoss) / (d.n_t - startLoss) : null;",
+    replace: "      var startW = d.n_t > startLoss ? (d.n_t + 1) / (d.n_t - 1) : null;",
+    why: "three levels' pump over threshold ignores the filter"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      var startW = d.n_t > startLoss ?",
+    replace: "      var startW = d.n_t > 0 ?",
+    why: "a filter no inversion can beat gives a negative pump over threshold"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var FILTER = \"absorber\";",
+    replace: "  var FILTER = \"cell\";",
+    why: "the switch turns on the engine's Pockels cell, not the filter"
+  },
+  {
+    file: "js/laser/page.js",
+    find: ".indexOf(FILTER) !== -1;",
+    replace: ".indexOf(FILTER) === -1;",
+    why: "the switch shown only where there can be no filter"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (switchGroup) switchGroup.hidden = !filter;",
+    replace: "      if (switchGroup) switchGroup.hidden = false;",
+    why: "the switch shown on a bench that cannot have a filter"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (under) under.hidden = !flash && !filter;",
+    replace: "      if (under) under.hidden = false;",
+    why: "an empty row under the drawing"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (toggle) toggle.setAttribute(\"aria-checked\", on ? \"true\" : \"false\");",
+    replace: "      if (toggle) toggle.setAttribute(\"aria-checked\", \"false\");",
+    why: "the switch always drawn off"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      setText('[data-laser-name=\"qSwitchState\"]', word(data, on ? \"choose.on\" : \"choose.off\"));",
+    replace: "      setText('[data-laser-name=\"qSwitchState\"]', word(data, \"choose.off\"));",
+    why: "the switch's word always Off"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      state.flashThresholdOld = false;\n      showUnderBench();\n",
+    replace: "      state.flashThresholdOld = false;\n",
+    why: "the row under the drawing not redrawn: the switch's On/Off, Fire on a new bench"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var threshold = thresholdFlash(config);\n      var sim = bench.carryOver(",
+    replace: "      var threshold = state.flashThreshold;\n      var sim = bench.carryOver(",
+    why: "turning the filter on keeps the open cavity's threshold flash"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      state.sim = sim;\n      showBench(threshold);",
+    replace: "      state.sim = bench.start(config);\n      showBench(threshold);",
+    why: "turning the filter on starts the run again"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          turnSwitch(state.config.qSwitch === \"none\" ? FILTER : \"none\");",
+    replace: "          turnSwitch(FILTER);",
+    why: "the switch never turns off"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        var over = pumpNow().overThreshold;",
+    replace: "        var over = pumpNow().x;",
+    why: "the pump over threshold read against the open cavity behind a filter (page)"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (value === null || value > controls.pump.max) return never;",
+    replace: "      if (value === null) return never;",
+    why: "a threshold past the pump slider's top (a flash, a pump power) shown as if it could be reached"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (qSwitch) post(g, L.filter.x + L.filter.w / 2, L.filter.y + L.filter.h, L.railY);\n",
+    replace: "",
+    why: "the filter floating in the air"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var leftFrom = qSwitch ? L.filter.x + L.filter.w : faceX(L, \"back\", L.axis.y);",
+    replace: "    var leftFrom = faceX(L, \"back\", L.axis.y);",
+    why: "the left arrowheads on top of the filter"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.globalAlpha = 0.15 + 0.6 * (1 - open);",
+    replace: "    g.globalAlpha = 0.15 + 0.6 * open;",
+    why: "the filter drawn darker as it bleaches"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var sharedRow = shareTopRow(w, pad, fontSize, topRow, filterX);",
+    replace: "    var sharedRow = shareTopRow(w, pad, fontSize, topRow, w / 2);",
+    why: "the filter's name written away from the filter"
+  },
+
+  /* ---------- stage 8b: the lamp's button and its light, the review's fixes ---------- */
+  {
+    file: "js/laser/page.js",
+    find: "      var value = state.config.pump === \"flashlamp\" && ready ? \"true\" : \"false\";",
+    replace: "      var value = ready ? \"true\" : \"false\";",
+    why: "Fire asking to be pressed on a bench without a lamp"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        (state.sim.t > flash.at + flash.flashTime && benchPumpNow() < UI.bench.PUMP_OFF);",
+    replace: "        (benchPumpNow() < UI.bench.PUMP_OFF);",
+    why: "Fire asking again right after it is pressed, before the lamp lights"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        (state.sim.t > flash.at + flash.flashTime && benchPumpNow() < UI.bench.PUMP_OFF);",
+    replace: "        (state.sim.t > flash.at + flash.flashTime);",
+    why: "Fire asking again while the lamp is still lit"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        showReadouts(LIVE_READOUTS);\n        showLamp();",
+    replace: "        showReadouts(LIVE_READOUTS);",
+    why: "Fire never asking again once a flash has faded"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      showReadouts(READOUTS);\n      showLamp();",
+    replace: "      showReadouts(READOUTS);",
+    why: "Fire not asking on a new flashlamp bench, nor waiting at a press"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (fireButton.getAttribute(\"data-ready\") !== value) fireButton.setAttribute(\"data-ready\", value);",
+    replace: "      fireButton.setAttribute(\"data-ready\", value);",
+    why: "Fire's state written ten times a second"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  function peakFrom(config, power) {\n    return config.pump === \"flashlamp\" ? null : power;",
+    replace: "  function peakFrom(config, power) {\n    return null;",
+    why: "a steady bench's highest output never started"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (name === \"pumpThreshold\") return thresholdText(d.pumpThreshold, \"W\");",
+    replace: "      if (name === \"pumpThreshold\") return d.pumpThreshold === null ? never : F.si(d.pumpThreshold, \"W\");",
+    why: "the diodes' threshold behind a dark filter shown past the slider's top"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (d.scheme === \"two-level\" || !(x >= PULSE_FROM)) return null;",
+    replace: "    if (d.scheme === \"two-level\" || !(x > 1)) return null;",
+    why: "§4.3's pulse predicted just above threshold, where it lasts for ever"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "  var PULSE_FROM = 1.01;",
+    replace: "  var PULSE_FROM = 1.03;",
+    why: "§4.3's pulse hidden at 2 % over threshold"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "  var PULSE_FROM = 1.01;",
+    replace: "  var PULSE_FROM = 1.001;",
+    why: "§4.3's pulse shown at half a percent over threshold"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (kept !== undefined) filtered.absorberT0 = kept;\n",
+    replace: "",
+    why: "the filter turned off and on again forgetting its transmission"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            if (name === \"absorberT0\") state.filterT0[benchName(config)] = value;",
+    replace: "            if (name === \"absorberT0\") state.filterT0[config.pump] = value;",
+    why: "one flashlamp bench's filter transmission given to another"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var config = qSwitch === FILTER ? withFilter(state.config) : bench.withQSwitch({ config: state.config, qSwitch: qSwitch });",
+    replace: "      var config = bench.withQSwitch({ config: state.config, qSwitch: qSwitch });",
+    why: "the filter's On forgetting the transmission the visitor set"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          if (hidden()) return;\n",
+    replace: "",
+    why: "the filter's hidden slider written as if it had a range"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            if (!hidden()) work();",
+    replace: "            work();",
+    why: "a stray event on the filter's hidden slider changing the bench"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (kind === \"flashlamp\" && pump > 0) flashBehind(g, colors, L, view.w, view.h, pump);",
+    replace: "    if (kind === \"flashlamp\") flashBehind(g, colors, L, view.w, view.h, pump);",
+    why: "the bench lit by a lamp not yet fired"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.globalAlpha = 0.1 * pump;\n    g.fillRect(0, 0, w, h);",
+    replace: "    g.globalAlpha = 0.1;\n    g.fillRect(0, 0, w, h);",
+    why: "the bench as brightly lit by a weak flash as by a strong one"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "F.w / 2 + k * L.haloStep, F.h / 2 + k * L.haloStep",
+    replace: "F.w / 2 + L.haloStep, F.h / 2 + L.haloStep",
+    why: "the halo's rings all one size"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.globalAlpha = 0.06 * pump;\n    for (var k = 1",
+    replace: "    g.globalAlpha = 0.06;\n    for (var k = 1",
+    why: "the halo as bright for a weak flash as for a strong one"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      var length = L.streak * pump * (0.4 + 0.6 * flicker);",
+    replace: "      var length = L.streak * (0.4 + 0.6 * flicker);",
+    why: "the streaks as long for a weak flash as for a strong one"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      var flicker = 0.5 + 0.5 * Math.sin(FLICKER_SPEED * time + 2.4 * k);",
+    replace: "      var flicker = 0.5 + 0.5 * Math.sin(2.4 * k);",
+    why: "the streaks standing still"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      var flicker = 0.5 + 0.5 * Math.sin(FLICKER_SPEED * time + 2.4 * k);",
+    replace: "      var flicker = 0.5 + 0.5 * Math.sin(FLICKER_SPEED * time);",
+    why: "every streak flickering as one"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var time = typeof t === \"number\" && isFinite(t) ? t : 0;",
+    replace: "    var time = t;",
+    why: "a view without a time drawing streaks at NaN"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      var x0 = F.x + F.w / 2 + dx * (F.w / 2 + 3);",
+    replace: "      var x0 = F.x + F.w / 2 + dx * (F.w / 2);",
+    why: "the streaks starting inside the tube"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.lineTo(L.rod.x + L.rod.w, rodBottom);",
+    replace: "      g.lineTo(F.x + F.w - cap, rodBottom);",
+    why: "the flash's beams not reaching across the rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.globalAlpha = 0.15 + 0.35 * pump;",
+    replace: "      g.globalAlpha = 0.5;",
+    why: "the flash's beams as bright for a weak flash as for a strong one"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.shadowBlur = L.bloom * pump;",
+    replace: "      g.shadowBlur = L.bloom;",
+    why: "the gas blooming as wide for a weak flash"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);\n      g.restore();\n    }",
+    replace: "      g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);\n      g.restore();\n      g.shadowBlur = L.bloom * pump;\n    }",
+    why: "the bloom left on, so every part after the lamp blooms"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (kind === \"flashlamp\" && pump > 0) lightRod(g, colors, L, pump);\n",
+    replace: "",
+    why: "the rod dark in the flash"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.globalAlpha = 0.3 * pump;\n    g.fillStyle = colors.flash;",
+    replace: "    g.globalAlpha = 0.3;\n    g.fillStyle = colors.flash;",
+    why: "the rod as brightly lit by a weak flash as by a strong one"
+  },
+  {
+    file: "css/style.css",
+    find: "  --canvas-flash: #f39a3d;                    /* a lit flashlamp: warm orange, bright on cream */\n",
+    replace: "",
+    why: "the light theme without the flash colour"
+  },
+  {
+    file: "css/laser.css",
+    find: "  .laser-fire[data-ready=\"true\"]::after,\n  .laser-fire[data-ready=\"true\"] .laser-fire__bolt {\n    animation: none;\n  }",
+    replace: "  .laser-fire[data-ready=\"true\"]::after {\n    animation: none;\n  }",
+    why: "Fire's bolt still pulsing for a visitor who asked for less motion"
+  },
+  {
+    file: "sections/laser.html",
+    find: "<svg class=\"laser-fire__bolt\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\">",
+    replace: "<svg class=\"laser-fire__bolt\" viewBox=\"0 0 24 24\" focusable=\"false\">",
+    why: "Fire's bolt read out to screen readers"
+  },
+  {
+    file: "sections/laser.html",
+    find: "            <span data-text=\"buttons.fire\"></span>",
+    replace: "            <span></span>",
+    why: "Fire without its word"
+  },
+  {
+    file: "css/style.css",
+    find: "  --canvas-lamp: #e5673b;                     /* a flashlamp's glass edge and caps: bright terracotta */\n",
+    replace: "",
+    why: "the light theme without the lamp's own colour"
+  },
+  // stage 8b, the third review's fixes
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      check.atLeast(where, \"sim.N\", sim.N, 0);\n",
+    replace: "",
+    why: "a ruby simulation, every ion down, carried to Nd:YAG"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      check.between(where, \"sim.N\", sim.N, -read.medium.N_t, read.medium.N_t);",
+    replace: "      check.atLeast(where, \"sim.N\", sim.N, -read.medium.N_t);",
+    why: "more ruby ions up than there are, carried over"
+  },
+  {
+    file: "js/laser/ui/loop.js",
+    find: "        still: reduceMotion\n",
+    replace: "        still: false\n",
+    why: "the drawings never told that the visitor asked for less motion"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "drawFlashlamp(g, colors, L, pump, view.still ? 0 : view.t);",
+    replace: "drawFlashlamp(g, colors, L, pump, view.t);",
+    why: "the lamp's streaks flicker for a visitor who asked for less motion"
+  },
 ];
 
 module.exports = { MUTATIONS };
