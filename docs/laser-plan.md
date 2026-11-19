@@ -105,27 +105,23 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✖ Stage 9 (several longitudinal modes and a spectrum panel): **dropped by the owner** on 2026-11-16, as it would make everything too complex. The simulator stays one-mode (`docs/laser-physics.md` §11.3). The number is not reused, so later stages keep theirs.
 - ✅ Stage 10a: mirror optics in the engine (`optics.js`: ray matrices, stability, the Gaussian mode, each mirror's F, a ray trace, and the mirrors' loss across every stability edge, §7.7; `bench.js`: each bench's real mirrors (§5.9), the mirrors' loss in every threshold, `derive`'s `resonator`); the page unchanged.
 - ✅ After 10a, at the owner's request (2026-11-19): the energy levels with their gain/loss gauge removed from the page (`draw-levels.js`, its canvas, words and tests; the theory's pointer to it now points to the power chart).
-- Next: stage 10b, the mirrors on the page (see "Where we stopped" just below).
+- ✅ Stage 10b: the mirrors on the page (each mirror flat, concave or convex, a curved one's radius slider; the hourglass, traced rays that fade and walk out, each mirror's F, "Widths × k"; the readouts of the pair; the stability diagram beside the chart; `bench.controls`' radii and `bench.beamPath`).
+- Next: stage 10c, a bench that looks real (see "Where we stopped" just below).
 
-### Where we stopped (2026-11-19), for the next session
+### Where we stopped (2026-11-20), for the next session
 
-- **Last commit:** "Laser simulator stage 10a: mirror optics in the engine", on `feature/laser`. **Nothing is pushed**; push only when the owner says so. `docs/laser-guide.md` (the owner's learning material, written by another AI) is untracked on purpose: not part of a stage.
-- **Stage 10a is finished:** 700 tests pass, 854 of 854 deliberate mistakes are caught, and one `/code-review xhigh` (15 findings) is fixed except two declined with reasons (see stage 10a's scope card). The page is unchanged. The decisions taken without the owner (D15: losses only; the min interpolation; each bench's mirrors) are listed there for review.
-- **The levels picture is gone** (the owner asked, 2026-11-19, with a screenshot of the whole panel: the levels and the gain gauge). Its own commit, after 10a.
-- **Next is stage 10b** (the mirrors on the page, above). The owner answered its questions on 2026-11-19: **one choice per mirror**, and **yes to the stability diagram**, placed "where it'll be comfortable to look at while the laser is working", so beside the bench and the chart, not under the stage where the levels were. Then the doc audit, the scope card, the recipe. Stage 8b's one unseen check still stands: on a 390 px screen, the Nd:YAG diode bench should show no empty line above the switch.
-- **The owner, at the start of 10b and 10c:**
-  - 10b: one mirror choice per mirror, or one for both (recommended: per mirror);
-  - 10b: a stability diagram, yes or no;
-  - 10c: end- or side-pumped diodes (recommended: end, which matches §6.3 and the engine's numbers). Show pictures.
+- **Last commit:** "Laser simulator stage 10b: the mirrors on the page", on `feature/laser`. **Nothing is pushed**; push only when the owner says so. `docs/laser-guide.md` (the owner's learning material, written by another AI) is untracked on purpose: not part of a stage.
+- **Stage 10b is finished:** 708 tests pass, 861 of 861 deliberate mistakes are caught, and one `/code-review xhigh` (15 findings) is fixed except one declined with its reason (see stage 10b's scope card). The decisions taken without the owner are listed there for review. Not yet seen in a browser: the 760–1100 px layout (the diagram under the chart beside the numbers) and a 320 px phone (the shape buttons should wrap); stage 8b's unseen check (no empty line above the switch at 390 px) still stands.
+- **Next is stage 10c** (a bench that looks real, below). **Ask the owner first:** end- or side-pumped diodes (recommended: end, which matches §6.3 and the engine's numbers); show pictures. Then the research of §5.10, the doc audit, the scope card, the recipe.
 - **Questions still open with the owner** (asked, no answer yet):
-  - a short "check the numbers" stage before 10 (CO₂'s I_sat/gain against sources, the §5.1 media numbers, ruby's flash share);
-  - the Armenian terms «Բարորակության մոդուլյատոր» (Q-switch) and «Հագեցող ֆիլտր» (bleachable filter), and a fluent reader for all the Armenian;
-  - ruby's ~13 J against the book's 1–2 J (partly fixable in 10a, if the mode fills only part of the rod);
+  - a short "check the numbers" stage (CO₂'s I_sat/gain against sources, the §5.1 media numbers, ruby's flash share);
+  - the Armenian terms «Բարորակության մոդուլյատոր» (Q-switch) and «Հագեցող ֆիլտր» (bleachable filter), and a fluent reader for all the Armenian (10b added the mirror words: «Հարթ», «Գոգավոր», «Ուռուցիկ», «կորության շառավիղ»);
+  - ruby's ~13 J against the book's 1–2 J;
   - pushing `feature/laser`.
 - **What the owner values** (from their requests): a page that is simple and inviting for someone who knows nothing about lasers, and now also realistic to look at. Small asks get small changes (e.g. "only change the color").
 - **Practical:**
   - serve the site with `python3 -m http.server 5500 --bind 127.0.0.1` and open `http://127.0.0.1:5500/?view=laser`. The server caches: fetch changed files with `cache: "reload"` before reloading;
-  - `node --test` takes about 30 s; `node tests/laser/mutation-check.js` about 5.5 min;
+  - `node --test` takes about 30 s; `node tests/laser/mutation-check.js` about 6 min;
   - edit nothing under `js/`, `css/`, `data/`, `sections/`, `index.html` or `tests/` while the mutation check runs (docs are safe);
   - use the Edit tool, not shell scripts, for Armenian text;
   - the review runs as `/code-review xhigh`.
@@ -1380,7 +1376,7 @@ Three sub-stages, one commit each, each through the whole recipe (§3):
 14. bench.js's header lists `bench-mirrors.test.js` and the mirrors.
 15. The shadowed `plain` in a test renamed `airOnly`.
 
-#### Stage 10b — The mirrors on the page
+#### Stage 10b — The mirrors on the page ✅
 - **Build:**
   - For each mirror, a choice of flat, concave or convex (three buttons with a little picture of each), and a radius slider (log) shown only for a curved mirror. Its range comes from the scope card, and it must reach confocal (R = L) and concentric (R = L/2).
   - The drawing:
@@ -1398,6 +1394,25 @@ Three sub-stages, one commit each, each through the whole recipe (§3):
 - **Tests:**
   - page and draw tests: the controls, every width, rays straight between reflections, F at R/2 along the drawing's axis scale, the off-canvas arrow, an unstable ray leaving;
   - the browser check of the look with the owner.
+- **Scope card (2026-11-19)** ✅. Decisions taken without the owner, for review:
+  - **Engine:** `bench.controls(config)` gives `Rc1` and `Rc2` (`{ name, min, max, log }`, null for a flat mirror): from L/4 (so it reaches concentric, R = L/2, and confocal, R = L) to 50 m, log. `bench.beamPath({ config, starts, roundTrips, points })` gives what the page draws: the mode's radius at `points` + 1 places from mirror 1 to L (null without a Gaussian mode) and `optics.traceRay` from mirror 1 at each height of `starts` (inside the aperture), along the axis; at most 100 round trips and 1000 points. The page traces 4 rays (0.9, 0.45, −0.45, −0.9 of the mode's half-width on mirror 1, or of half the aperture without a mode) for 4 round trips, and the mode at 40 pieces, only when the config changes (never per frame).
+  - **Widths:** the aperture is drawn as the mirrors' half-height, so the widths are drawn many times larger than the lengths; "Widths × 26" (the Nd:YAG diode bench) on the picture's bottom-left says by how much.
+  - **The beam:** the mode's hourglass, shaded (alpha 0.45 × the beam's ray strength); without a mode (flat-flat on the edge, or unstable) a band half the aperture wide. The traced rays are always drawn, faintly with the laser dark (alpha 0.3), fading by 0.72 each round trip; a ray that walks out goes on past the mirror for 6 % of the picture's width, and every traced ray is clipped to a band a quarter of a mirror above and below the mirrors (found in the browser: with the widths × 26 the last piece of an escaping ray ran steeply across the whole picture and its words).
+  - **The light leaving** through the output mirror: the old parallel rays (round(count·T) of them), across the mode's width there.
+  - **F:** a dot on the axis, solid in front (real), hollow and dashed behind (virtual); off the picture an arrowhead at the edge it lies beyond and "F 500 mm" on its own row near the bottom (back mirror's row, output mirror's row).
+  - **Controls:** under the coupler, each mirror's name and three toggle buttons (`aria-pressed`, a little picture of the face with the laser on its side, and the word), then its radius slider with its number box in m, shown only for a curved mirror. A click keeps the run (as a slider does), finds the threshold flash again, and lights the button; a flat mirror keeps its radius for the next bend. Toggle buttons rather than radios, so no arrow-key handling is promised.
+  - **Readouts**, on every bench: the mirror pair (stable, unstable, or "on the edge of stable" for m = ±1: two flat mirrors), the beam at its narrowest (w₀, "—" without a mode), the light lost at the mirrors per round trip ("< 0.01 %" under 10⁻⁴).
+  - **The stability diagram** (`js/laser/ui/draw-stability.js`, canvas `stability`): g₁ across, g₂ up, from −2 to 2; the region 0 < g₁g₂ < 1 shaded with its two hyperbola edges; the pair a dot, in the accent when stable, muted when not, hollow at the edge when past ±2. It sits in the side column right under the power chart: beside the bench above 1100 px, under the chart beside the numbers from 760 to 1100 px, in the single column below.
+- **Review** (`/code-review xhigh`, 15 findings; 14 fixed, 1 declined):
+  - the shape icons showed concave and convex the wrong way round (now pinned by `site-files.test.js`: a concave picture's middle lies away from the laser);
+  - "the beam at its narrowest" showed w₀ even when a convex mirror puts the waist behind a mirror; now the smaller mirror spot then;
+  - the aperture was drawn as the mirrors' half-height, so the hourglass ran outside the rod or a gas tube's bore (CO₂, He-Ne, Ar⁺ as they load); now the rod's half-height, or the bore's on a discharge;
+  - an F off the picture was written in the margin over the mirror's post, and could not tell real from virtual or which mirror: now an arrowhead in the margin (filled real, outlined virtual) and "F₂ 500 mm" just inside the mirror, no wider than the gap to the rod or the discharge's electrode; F₁ and F₂ name the mirrors, as g₁ and g₂ on the diagram;
+  - "on the edge" was an exact float test, |m| = 1; now within 10⁻⁹;
+  - the cavity was traced again on every pump, coupler or filter move; now only when its own fields change (`CAVITY_FIELDS`);
+  - the shape buttons wrap on a narrow panel; the diagram's g₁ sits above the axis, clear of the "1" under it; the teardown test covers the shape buttons; a CSS comment put back over its rule; the headers of `bench.js`, `page.js` and `draw-bench.js`, and `CLAUDE.md`, brought up to date; the progress doc's placeholders filled;
+  - **declined:** drawing the stability diagram only when it changes. The loop draws every canvas on screen each frame by design (`loop.js`: a canvas resize or a theme change resets it), and the diagram costs about 200 path calls a frame, far below the bench's; a skip would need the loop to know a picture is unchanged, for every canvas.
+- **Measured in the browser** (1512 px, both themes): the Nd:YAG diode bench shows the hourglass with F 500 mm off the left; its output mirror bent convex shows the rays walking out, F behind it off the right, the dot outside the region, and the output falling to 0 at once.
 
 #### Stage 10c — A bench that looks real
 - **Research first (D14),** written into `docs/laser-physics.md` as a new §5.10 "What each medium looks like" (§5.9 is the mirrors, since stage 10a), with sources:

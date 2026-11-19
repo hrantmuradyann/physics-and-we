@@ -52,7 +52,9 @@ const LABELS = deepFreeze({
   medium: "Gain medium",
   pump: "Pump diodes",
   transmission: "Transmission",
-  qSwitch: "Bleachable filter"
+  qSwitch: "Bleachable filter",
+  widths: "Widths ×",
+  focus: "F"
 });
 const NB = "\u00a0";
 
@@ -82,6 +84,38 @@ function filtered(open, pumpKind) {
 }
 const SWITCHED = [filtered(0), filtered(0.5), filtered(1), filtered(0.3, "diode"), filtered(1, "laser")];
 for (const light of SWITCHED) LIGHTS.push(light);
+
+// The cavity's numbers (stage 10b), as page.js passes them: a He-Ne-like
+// pair, flat and concave (R = 45 cm, F 22.5 cm in front of it) in a 30 cm
+// cavity of 0.75 mm aperture, with a mode and two traced rays; and an
+// unstable pair, a concave back mirror whose F lies 2.5 m away (off the
+// picture) and a convex output mirror, whose rays walk out.
+const HENE = deepFreeze({
+  length: 0.3, aperture: 0.75e-3,
+  shapes: { back: "flat", output: "concave" },
+  focus: { back: null, output: 0.225 },
+  mode: [0, 0.075, 0.15, 0.225, 0.3].map((z) => ({ z: z, w: 0.2e-3 + 0.5e-3 * z })),
+  rays: [
+    { y0: 0.2e-3, hits: [{ mirror: 2, y: 0.2e-3, theta: -0.9e-3 }, { mirror: 1, y: -0.07e-3, theta: -0.9e-3 },
+      { mirror: 2, y: -0.34e-3, theta: 0.6e-3 }, { mirror: 1, y: -0.16e-3, theta: 0.6e-3 }], escaped: null },
+    { y0: -0.1e-3, hits: [{ mirror: 2, y: -0.1e-3, theta: 0.44e-3 }, { mirror: 1, y: 0.03e-3, theta: 0.44e-3 }], escaped: null }
+  ]
+});
+const UNSTABLE = deepFreeze({
+  length: 0.5, aperture: 5e-3,
+  shapes: { back: "concave", output: "convex" },
+  focus: { back: 2.5, output: -2.5 },
+  mode: null,
+  rays: [
+    { y0: 2e-3, hits: [{ mirror: 2, y: 2e-3, theta: 0.8e-3 }, { mirror: 1, y: 2.4e-3, theta: 0.8e-3 },
+      { mirror: 2, y: 3.5e-3, theta: 4e-3 }, { mirror: 1, y: 5.5e-3, theta: 4e-3 }], escaped: { mirror: 1, roundTrip: 2 } }
+  ]
+});
+function withCavity(cavity, light) {
+  return Object.assign({ beam: 1, pump: 0.25, transmission: 0.05, pumpKind: "discharge" }, light || {}, { cavity: cavity });
+}
+for (const light of [withCavity(HENE), withCavity(UNSTABLE, { pumpKind: "flashlamp" }), withCavity(HENE, { beam: 0 }),
+  withCavity(UNSTABLE, { beam: 0, pumpKind: "diode" })]) LIGHTS.push(light);
 
 // t: the seconds the loop has run (view.t), 0 if not given; still: the
 // visitor asked for less motion (view.still).
@@ -258,7 +292,9 @@ test("layout: labels inside the canvas, readable, and never on top of each other
     const where = "w = " + w;
     assert.ok(fs >= 11 && fs <= 16, where + ": font size " + fs);
     const box = {};
-    for (const name of bench.PARTS) {
+    // Every word with a place of its own: each focal point's "F" is
+    // written where the point is, so it has none.
+    for (const name of bench.PARTS.filter((part) => part !== "focus")) {
       const label = L.labels[name];
       assert.ok(["left", "center", "right"].includes(label.align), where + ": " + name);
       assert.ok(label.maxWidth >= 60, where + ": " + name + " has room for a word, got " + label.maxWidth);
@@ -1209,4 +1245,257 @@ test("draw: a switch the drawing does not know, or one on a gas tube, draws no s
   assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", gasFilter).recorder.log), gas, "the tube fills the cavity: no room");
   assert.deepEqual(Array.from(bench.Q_KINDS), Q_KINDS);
   assert.ok(Object.isFrozen(bench.Q_KINDS));
+});
+
+/* ---------- stage 10b: the mirrors, the beam's path, F ---------- */
+
+// The scales a cavity is drawn at: metres along the axis and across it.
+// The aperture is drawn as the bore's half-height on a discharge (what
+// withCavity draws unless told otherwise), the rod's on every other pump.
+function scalesOf(L, cavity, kind) {
+  const perX = (L.axis.x2 - L.axis.x1) / cavity.length;
+  const half = (kind || "discharge") === "discharge" ? L.boreHalf : L.apertureHalf;
+  const perY = half / cavity.aperture;
+  return { perX, perY };
+}
+
+test("the aperture is drawn as the rod's half-height, or the bore's on a discharge: the beam stays inside the medium", () => {
+  for (const w of [280, 327, 800, 1400]) {
+    const L = bench.layout(w, heightFor(w));
+    assertClose(L.apertureHalf, L.rod.h / 2, 1e-12, "w " + w + ": the rod");
+    assertClose(L.boreHalf, L.bore.h / 2, 1e-12, "w " + w + ": the bore");
+  }
+  // A mode as wide as the aperture all along: its outline is the rod's
+  // edge on a rod bench, the bore's on a discharge.
+  const full = Object.assign({}, HENE, { mode: [0, 0.15, 0.3].map((z) => ({ z: z, w: HENE.aperture })) });
+  for (const [kind, edge] of [["diode", "rod"], ["discharge", "bore"]]) {
+    const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(full, { pumpKind: kind }));
+    const L = bench.layout(800, view.h);
+    const top = edge === "rod" ? L.rod.y : L.bore.y;
+    assert.ok(recorder.calls.some((c) => c.name === "moveTo" && Math.abs(c.args[1] - top) < 1e-9), kind + ": the outline on the " + edge + "'s edge");
+  }
+});
+
+test("the mirrors' faces follow their shapes: concave into the glass, convex out of it, flat straight", () => {
+  const L = bench.layout(800, heightFor(800));
+  const y = L.axis.y;
+  const backInner = L.backMirror.x + L.backMirror.w;
+  const outInner = L.outputMirror.x;
+  assert.equal(bench.faceX(L, "back", y, "flat"), backInner);
+  assert.equal(bench.faceX(L, "output", y, "flat"), outInner);
+  assertClose(bench.faceX(L, "back", y, "concave"), backInner - L.sag, 1e-12, "concave back, sag into the glass");
+  assertClose(bench.faceX(L, "output", y, "concave"), outInner + L.sag, 1e-12, "concave output");
+  assertClose(bench.faceX(L, "back", y, "convex"), backInner + L.sag, 1e-12, "convex back bulges into the cavity");
+  assertClose(bench.faceX(L, "output", y, "convex"), outInner - L.sag, 1e-12, "convex output");
+  // Without a shape (no cavity numbers), as before stage 10b: concave.
+  assert.equal(bench.faceX(L, "back", y), bench.faceX(L, "back", y, "concave"));
+  // At the top and bottom every face meets the mirror's edge.
+  for (const shape of bench.SHAPES) assert.equal(bench.faceX(L, "back", L.backMirror.y, shape), backInner, shape);
+  assert.deepEqual(Array.from(bench.SHAPES), ["flat", "concave", "convex"]);
+  // The drawn faces: the curve's control point is 2·sag into the glass,
+  // out of it, or on the edge.
+  const curves = (light) => drawAt(800, LABELS, "dark", light).recorder.calls.filter((c) => c.name === "quadraticCurveTo");
+  const flatConcave = curves(withCavity(HENE));
+  assert.ok(flatConcave.some((c) => c.args[0] === backInner), "the flat back mirror's face is straight");
+  assert.ok(flatConcave.some((c) => Math.abs(c.args[0] - (outInner + 2 * L.sag)) < 1e-9), "the concave output mirror");
+  const unstable = curves(withCavity(UNSTABLE));
+  assert.ok(unstable.some((c) => Math.abs(c.args[0] - (outInner - 2 * L.sag)) < 1e-9), "the convex output mirror bulges");
+  assert.ok(unstable.some((c) => Math.abs(c.args[0] - (backInner - 2 * L.sag)) < 1e-9), "the concave back mirror");
+});
+
+test("the traced rays: straight from mirror face to mirror face, at the heights the engine traced, fainter each round trip", () => {
+  for (const w of [327, 800, 1400]) {
+    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(HENE));
+    const L = bench.layout(w, view.h);
+    const { perY } = scalesOf(L, HENE);
+    const lines = strokedLines(recorder);
+    const shapes = HENE.shapes;
+    const at = (mirror, y) => {
+      const Y = L.axis.y - y * perY;
+      const which = mirror === 1 ? "back" : "output";
+      return { x: bench.faceX(L, which, Y, shapes[which]), y: Y };
+    };
+    for (const ray of HENE.rays) {
+      let from = at(1, ray.y0);
+      ray.hits.forEach((hit, k) => {
+        const to = at(hit.mirror, hit.y);
+        const found = lines.find((l) => Math.abs(l.x1 - from.x) < 1e-9 && Math.abs(l.y1 - from.y) < 1e-9 &&
+          Math.abs(l.x2 - to.x) < 1e-9 && Math.abs(l.y2 - to.y) < 1e-9);
+        assert.ok(found, "w " + w + ": piece " + k + " of the ray from " + ray.y0);
+        // Lasing: full strength on the first round trip, × 0.72 on each next.
+        assertClose(found.alpha, Math.pow(0.72, Math.floor(k / 2)), 1e-12, "fade " + k);
+        from = to;
+      });
+    }
+  }
+  // A dark laser still shows the path, faintly (0.3).
+  const dark = strokedLines(drawAt(800, LABELS, "dark", withCavity(HENE, { beam: 0 })).recorder);
+  const L = bench.layout(800, heightFor(800));
+  const first = dark.find((l) => Math.abs(l.x1 - bench.faceX(L, "back", 0, "flat")) < 1e-9 && l.x2 > l.x1 + 100);
+  assert.ok(first, "a path from the back mirror");
+  assertClose(first.alpha, 0.3, 1e-12, "a dark laser's path");
+});
+
+test("the beam's shape: the mode's width along the cavity, as an hourglass; a band without a mode; nothing when dark", () => {
+  const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE));
+  const L = bench.layout(800, view.h);
+  const { perX, perY } = scalesOf(L, HENE);
+  const calls = recorder.calls;
+  // The shaded outline: moveTo at the first point, then along the top and back along the bottom.
+  const start = calls.findIndex((c) => c.name === "moveTo" &&
+    Math.abs(c.args[0] - L.axis.x1) < 1e-9 && Math.abs(c.args[1] - (L.axis.y - HENE.mode[0].w * perY)) < 1e-9);
+  assert.ok(start >= 0, "the outline starts at mirror 1, one width above the axis");
+  HENE.mode.slice(1).forEach((point, k) => {
+    const call = calls[start + 1 + k];
+    assert.equal(call.name, "lineTo");
+    assertClose(call.args[0], L.axis.x1 + point.z * perX, 1e-12, "x " + k);
+    assertClose(call.args[1], L.axis.y - point.w * perY, 1e-12, "top " + k);
+  });
+  const back = calls[start + HENE.mode.length];
+  assertClose(back.args[1], L.axis.y + HENE.mode[HENE.mode.length - 1].w * perY, 1e-12, "and back along the bottom");
+  // No mode (unstable): a band half the aperture wide.
+  const band = drawAt(800, LABELS, "dark", withCavity(UNSTABLE)).recorder.calls;
+  assert.ok(band.some((c) => c.name === "moveTo" && Math.abs(c.args[1] - (L.axis.y - L.boreHalf / 2)) < 1e-9), "a band");
+  // Dark: no shaded beam, no light leaving.
+  const dark = drawAt(800, LABELS, "dark", withCavity(HENE, { beam: 0 }));
+  // (The outline is the one path of more than three lineTo's in a row.)
+  const outlines = (calls) => calls.filter((c, i) => c.name === "moveTo" &&
+    calls.slice(i + 1, i + 5).every((next) => next.name === "lineTo")).length;
+  assert.equal(outlines(calls), 1, "one outline, lasing");
+  assert.equal(outlines(dark.recorder.calls), 0, "no shaded beam");
+  assert.equal(raysLeaving(dark.recorder, L, dark.view).length, 0, "no light leaves a dark laser");
+});
+
+test("the light leaving: round(rays × transmission) of the rays across the beam at the output mirror", () => {
+  for (const T of [0.05, 0.3, 1]) {
+    const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE, { transmission: T }));
+    const L = bench.layout(800, view.h);
+    const { perY } = scalesOf(L, HENE);
+    const spot = HENE.mode[HENE.mode.length - 1].w * perY;
+    const half = Math.min(10, Math.floor(spot / 5));
+    const count = 2 * half + 1;
+    const leaving = raysLeaving(recorder, L, view);
+    assert.equal(leaving.length, bench.raysOut(count, T), "T " + T);
+    for (const l of leaving) assert.ok(Math.abs(l.y1 - L.axis.y) <= spot + 1e-9, "inside the spot");
+  }
+});
+
+test("a ray that walks out goes on past the mirror's edge, straight, for a short run (6 % of the width), never off the picture", () => {
+  for (const w of [327, 800, 1400]) {
+    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(UNSTABLE));
+    const L = bench.layout(w, view.h);
+    const { perX, perY } = scalesOf(L, UNSTABLE);
+    const last = UNSTABLE.rays[0].hits[3];               // past the aperture at mirror 1
+    const Y = L.axis.y - last.y * perY;
+    assert.ok(Y < L.axis.y - L.boreHalf, "it meets mirror 1's plane past the bore");
+    const out = strokedLines(recorder).find((l) => Math.abs(l.y1 - Y) < 1e-9 && l.x2 < l.x1);
+    assert.ok(out, "w " + w + ": the piece going on to the left");
+    // Straight on: θ per metre travelled, leftwards; the picture's slope.
+    const slope = (out.y2 - out.y1) / (out.x1 - out.x2);
+    assertClose(slope, -last.theta * perY / perX, 1e-9, "its slope");
+    // A short run: 6 % of the width across, or less where it meets the
+    // picture's edge (the left one or the top).
+    const across = out.x1 - out.x2;
+    const atEdge = Math.abs(out.x2) < 1e-6 || Math.abs(out.y2) < 1e-6;
+    assert.ok(Math.abs(across - 0.06 * w) < 1e-9 || (atEdge && across < 0.06 * w + 1e-9), "w " + w + ": " + across);
+    assert.ok(out.x2 >= -1e-9 && out.y2 >= -1e-9, "on the picture");
+  }
+});
+
+test("F₁, F₂: R/2 from each curved mirror on the drawing's axis scale; solid in front, hollow and dashed behind; off the picture, an arrow at its edge", () => {
+  const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE));
+  const L = bench.layout(800, view.h);
+  const { perX } = scalesOf(L, HENE);
+  // The concave output mirror's F, 22.5 cm in front of it.
+  const x = L.axis.x2 - 0.225 * perX;
+  const arcs = recorder.calls.filter((c) => c.name === "arc" && c.args[1] === L.axis.y);
+  assert.equal(arcs.length, 1, "one F: the flat mirror has none");
+  assertClose(arcs[0].args[0], x, 1e-12, "F at R/2");
+  const words = recorder.calls.filter((c) => c.name === "fillText" && /^F/.test(c.args[0]));
+  assert.equal(words.length, 1);
+  assert.equal(words[0].args[0], "F₂", "the output mirror's");
+  assertClose(words[0].args[1], x, 1e-12, "the word on the point");
+  // Solid: filled right after its arc.
+  const i = recorder.calls.indexOf(arcs[0]);
+  assert.equal(recorder.calls[i + 1].name, "fill");
+
+  // A virtual F behind a convex mirror, on the picture: hollow and dashed.
+  const near = withCavity(Object.assign({}, UNSTABLE, { focus: { back: null, output: -0.05 } }));
+  const drawn = drawAt(800, LABELS, "dark", near).recorder.calls;
+  const arc = drawn.find((c) => c.name === "arc" && c.args[1] === L.axis.y);
+  assertClose(arc.args[0], L.axis.x2 + 0.05 * scalesOf(L, UNSTABLE).perX, 1e-12, "behind the mirror");
+  const k = drawn.indexOf(arc);
+  assert.equal(drawn[k + 1].name, "setLineDash");
+  assert.deepEqual(Array.from(drawn[k + 1].args[0]), [2, 2]);
+  assert.equal(drawn[k + 2].name, "stroke");
+
+  // 2.5 m away on a 50 cm cavity: off the picture, an arrowhead in the
+  // margin and the words just inside the mirror, on each mirror's row
+  // (back first), no wider than the gap before the electrode on a
+  // discharge, before the rod otherwise (the review: in the margin they
+  // ran over the mirror's post).
+  for (const [kind, room] of [["discharge", L.focusRoom.discharge], ["flashlamp", L.focusRoom.rod]]) {
+    const far = drawAt(800, LABELS, "dark", withCavity(UNSTABLE, { pumpKind: kind }));
+    const texts = far.recorder.calls.filter((c) => c.name === "fillText" && /^F. /.test(c.args[0]));
+    assert.deepEqual(texts.map((t) => t.args[0]), ["F₁ 2.50" + NB + "m", "F₂ 2.50" + NB + "m"], kind);
+    assert.equal(texts[0].args[2], L.focusRows[0], "the back mirror's on the first row");
+    assert.equal(texts[1].args[2], L.focusRows[1], "the output mirror's on the second");
+    // Both lie to the right (the back mirror's F in front of it, the convex
+    // mirror's behind it): right-aligned just inside the output mirror.
+    for (const t of texts) {
+      assertClose(t.args[1], L.axis.x2 - 8, 1e-12, "inside the output mirror, clear of a convex face");
+      assert.ok(8 > L.sag, "the gap is more than the face's bulge");
+      assert.equal(t.args[3], room, kind + ": its room");
+    }
+    assert.ok(room < L.rod.x - L.axis.x1, "never past the rod's start");
+    // Arrowheads at the right edge: the real F₁'s filled, the virtual F₂'s
+    // outlined.
+    const calls = far.recorder.calls;
+    const tips = calls.filter((c) => c.name === "moveTo" && c.args[0] === 800 - 2);
+    assert.equal(tips.length, 2);
+    const after = (tip) => calls.slice(calls.indexOf(tip)).find((c) => c.name === "fill" || c.name === "stroke").name;
+    assert.deepEqual(tips.map(after), ["fill", "stroke"], "solid for the real F, hollow for the virtual one");
+    assert.equal(calls.filter((c) => c.name === "arc" && c.args[1] === L.axis.y).length, 0, "no dot on the picture");
+  }
+  // Without a word for F, only the distance.
+  const bare = drawAt(800, Object.assign({}, LABELS, { focus: "" }), "dark", withCavity(UNSTABLE)).recorder.calls;
+  assert.ok(bare.some((c) => c.name === "fillText" && c.args[0] === "2.50" + NB + "m"));
+});
+
+test("'Widths × k': how many times wider than the lengths the widths are drawn, bottom left", () => {
+  for (const w of [327, 800]) {
+    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(HENE));
+    const L = bench.layout(w, view.h);
+    const { perX, perY } = scalesOf(L, HENE);
+    const text = recorder.calls.find((c) => c.name === "fillText" && /^Widths × /.test(c.args[0]));
+    assert.ok(text, "w " + w);
+    assert.equal(text.args[0], "Widths × " + String(Number((perY / perX).toPrecision(2))));
+    assert.deepEqual(text.args.slice(1), [L.labels.widths.x, L.labels.widths.y, L.labels.widths.maxWidth]);
+    // Left of the pump's name.
+    assert.ok(L.labels.widths.x + L.labels.widths.maxWidth < L.labels.pump.x - L.labels.pump.maxWidth / 2, "beside the pump's name");
+  }
+  // Without the cavity's numbers, not written (the scale means nothing).
+  assert.ok(!drawAt(800, LABELS, "dark", LASING).recorder.calls.some((c) => c.name === "fillText" && /^Widths/.test(c.args[0])));
+});
+
+test("the traced rays are clipped to a band a quarter of a mirror above and below the mirrors, inside save/restore", () => {
+  for (const w of [327, 800, 1400]) {
+    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(UNSTABLE));
+    const L = bench.layout(w, view.h);
+    const clips = recorder.calls.filter((c) => c.name === "clip");
+    assert.equal(clips.length, 1, "w " + w);
+    const at = recorder.calls.indexOf(clips[0]);
+    const rect = recorder.calls.slice(0, at).filter((c) => c.name === "rect").pop();
+    const m = L.backMirror;
+    assertClose(rect.args[1], Math.max(0, m.y - 0.25 * m.h), 1e-9, "top");
+    assertClose(rect.args[1] + rect.args[3], Math.min(view.h, m.y + 1.25 * m.h), 1e-9, "bottom");
+    assert.equal(rect.args[0], 0);
+    assert.equal(rect.args[2], w);
+    // The clip ends with its restore before the output rays are drawn.
+    const saves = recorder.calls.slice(0, at).filter((c) => c.name === "save").length;
+    const restores = recorder.calls.slice(0, at).filter((c) => c.name === "restore").length;
+    assert.ok(saves - restores >= 2, "inside its own save, within the drawing's");
+  }
+  // Without a cavity: no clip.
+  assert.equal(drawAt(800, LABELS, "dark", LIGHTS[0]).recorder.calls.filter((c) => c.name === "clip").length, 0);
 });

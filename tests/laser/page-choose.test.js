@@ -37,11 +37,11 @@ const BENCHES = [
 ];
 
 // The numbers each kind of bench shows, in the layout's order.
-const STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"];
-const DISCHARGE_ROWS = ["currentThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"];
-const FLASH_ROWS = ["flashThreshold", "x", "gth", "tau_c", "peak", "powerNow", "time"];
-const TWO_LEVEL_LIGHT_ROWS = ["pumpThreshold", "gth", "tau_c", "P_out", "powerNow", "time"];
-const TWO_LEVEL_FLASH_ROWS = ["flashThreshold", "gth", "tau_c", "peak", "powerNow", "time"];
+const STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"];
+const DISCHARGE_ROWS = ["currentThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"];
+const FLASH_ROWS = ["flashThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "peak", "powerNow", "time"];
+const TWO_LEVEL_LIGHT_ROWS = ["pumpThreshold", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "time"];
+const TWO_LEVEL_FLASH_ROWS = ["flashThreshold", "gth", "tau_c", "stability", "waist", "mirrorLoss", "peak", "powerNow", "time"];
 const PUMP_KINDS = ["diode", "laser", "flashlamp", "discharge"];
 
 function F(page) {

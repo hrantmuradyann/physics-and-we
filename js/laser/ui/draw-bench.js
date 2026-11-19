@@ -21,8 +21,13 @@
      LaserUI.bench.layout(w, h)      where every part, ray and label goes,
                                      in CSS pixels (plain arithmetic,
                                      tested for every width the page has)
-     LaserUI.bench.faceX(L, which, y)   the x of a mirror's curved face at
-                                     height y; which is "back" or "output"
+     LaserUI.bench.SHAPES            the mirror shapes it draws: "flat",
+                                     "concave", "convex"
+     LaserUI.bench.faceX(L, which, y, shape)   the x of a mirror's face at
+                                     height y; which is "back" or "output";
+                                     shape one of SHAPES (none, or one it
+                                     does not know: concave, the drawing's
+                                     shape before stage 10b)
      LaserUI.bench.raysOut(count, transmission)   how many of `count` rays
                                      leave through the output mirror
      LaserUI.bench.rayAlpha(beam)    how strongly the rays are drawn, 0–1;
@@ -30,12 +35,15 @@
      LaserUI.bench.draw(view, labels, light)
          view    what LaserUI.loop hands its draw function
          labels  { backMirror, outputMirror, medium, pump, transmission,
-                 qSwitch }: the words, already in the visitor's language; an
+                 qSwitch, widths, focus }: the words, already in the
+                 visitor's language (widths: "Widths ×", written with its
+                 number; focus: "F", written F₁ and F₂); an
                  empty one is left out. After `transmission` the drawing
                  writes the output mirror's transmission ("Transmission
                  5.00 %"), and without a transmission in `light` it leaves
                  that label out. `qSwitch` is written only with a switch
-         light   optional { beam, pump, transmission, pumpKind, qSwitch }
+         light   optional { beam, pump, transmission, pumpKind, qSwitch,
+                 cavity }
                  beam          the output power over the output at twice
                                threshold; 0 or none draws no rays
                  pump          the pump over its strongest setting, 0–1;
@@ -46,6 +54,16 @@
                  qSwitch       optional { kind, open }: kind one of
                                Q_KINDS (none, or one it does not know,
                                draws no switch); open 0 (closed) to 1
+                 cavity        optional (stage 10b) { length, aperture,
+                               shapes: { back, output }, focus: { back,
+                               output } (R/2, m; negative behind, null
+                               flat), mode: [{ z, w }] or null, rays:
+                               [{ y0, hits, escaped }] (the engine's
+                               traceRay from mirror 1 at height y0) }.
+                               With it: the mirrors in their shapes, the
+                               mode's hourglass (a band without a mode),
+                               the traced rays, F, "Widths × k"; without
+                               it, the parallel rays of stage 6b
 
    THE PUMPS (docs/laser-plan.md, stage 7d)
      diode      a strip of diodes under the rod; its light goes up into
@@ -106,7 +124,29 @@
 
   // The labels, in the order they are written. page.js takes their words
   // from data/laser.json (bench.parts.<name>).
-  var PARTS = Object.freeze(["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch"]);
+  var PARTS = Object.freeze(["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch", "widths", "focus"]);
+  // The words written with the cavity's own numbers, not in PARTS' places:
+  // "Widths × 90" (bottom left) and each focal point's "F".
+  var CAVITY_WORDS = ["widths", "focus"];
+
+  // The mirrors' shapes it can draw (the engine's bench.MIRROR_SHAPES).
+  var SHAPES = Object.freeze(["flat", "concave", "convex"]);
+  // A traced ray is drawn this much fainter on each round trip, and at
+  // least this strong when the laser is dark: it is the path light would
+  // take, shown whether or not there is light.
+  var RAY_FADE = 0.72;
+  var PATH_ALPHA = 0.3;
+  // How far a ray that walks out is drawn past the mirror: this share of
+  // the picture's width.
+  var ESCAPE_RUN = 0.06;
+  // After the word F: which mirror's focus it is.
+  var FOCUS_MARKS = ["₁", "₂"];
+  // An F's words start this far inside the mirror's face edge: clear of a
+  // convex face, which bulges into the cavity by L.sag.
+  var FOCUS_GAP = 8;
+  // The traced rays are drawn only this share of a mirror's height above
+  // and below the mirrors.
+  var PATH_BAND = 0.25;
 
   // The pumps it draws: the engine's pump kinds.
   var KINDS = Object.freeze(["diode", "laser", "flashlamp", "discharge"]);
@@ -252,6 +292,21 @@
       fold: { x: foldX, y: beamY, size: Math.max(10, 0.06 * h) },
       filter: { x: filterX, y: axisY - filterHeight / 2, w: filterWidth, h: filterHeight },
       rays: rays,
+      // With the cavity's numbers: the aperture (the rod's radius, or the
+      // gas tube's bore) is drawn as the rod's half-height, or the bore's
+      // on a discharge, so the beam and the rays stay inside the medium
+      // that limits them (stage 10b review). An F off the picture is an
+      // arrowhead in the margin beside its edge, and its words just inside
+      // the mirror, on its mirror's row under the rod, no wider than the
+      // gap before the rod (`focusRoom.rod`) or, on a discharge, before
+      // the electrode (`focusRoom.discharge`).
+      apertureHalf: rodHeight / 2,
+      boreHalf: boreHeight / 2,
+      focusRows: [axisY + 0.17 * h, axisY + 0.17 * h + 1.15 * fontSize],
+      focusRoom: {
+        rod: Math.max(fontSize, rodX - innerLeft - 8),
+        discharge: Math.max(fontSize, electrodes[0].x - innerLeft - 6)
+      },
       labels: {
         backMirror: { x: pad, y: nameRow, align: "left", maxWidth: w / 2 - pad - fontSize },
         outputMirror: { x: w - pad, y: nameRow, align: "right", maxWidth: w / 2 - pad - fontSize },
@@ -265,7 +320,9 @@
         // The filter's name shares the top row with the transmission,
         // which keeps most of it (sharedRow below).
         qSwitch: sharedRow.name,
-        transmissionShared: sharedRow.transmission
+        transmissionShared: sharedRow.transmission,
+        // "Widths × 90": bottom left, beside the pump's name.
+        widths: { x: pad, y: bottomRow, align: "left", maxWidth: Math.max(fontSize, lampX - pad - fontSize) }
       }
     };
   }
@@ -285,13 +342,23 @@
     };
   }
 
-  // A mirror's face is curved inwards (concave towards the rod): it lies
-  // at the mirror's inner edge at the top and bottom and `sag` deeper in
-  // the middle. This is the curve quadraticCurveTo draws in mirror().
-  function faceX(L, which, y) {
+  // How a face curves: +1 into the glass (concave, as seen from the
+  // cavity), −1 out of it (convex), 0 flat. Anything else is concave, the
+  // drawing's shape before the page chose mirrors.
+  function bendOf(shape) {
+    if (shape === "flat") return 0;
+    if (shape === "convex") return -1;
+    return 1;
+  }
+
+  // A mirror's face: at the mirror's inner edge at the top and bottom, and
+  // `sag` into the glass in the middle for a concave mirror (the default),
+  // `sag` out of it for a convex one, straight for a flat one. This is the
+  // curve quadraticCurveTo draws in mirror().
+  function faceX(L, which, y, shape) {
     var mirror = which === "back" ? L.backMirror : L.outputMirror;
     var u = clamp((y - mirror.y) / mirror.h, 0, 1);
-    var depth = 4 * L.sag * u * (1 - u);
+    var depth = 4 * L.sag * u * (1 - u) * bendOf(shape);
     return which === "back" ? mirror.x + mirror.w - depth : mirror.x + depth;
   }
 
@@ -323,6 +390,16 @@
 
   // A filled arrowhead with its tip at (x, y), pointing along (dx, dy),
   // which is (±1, 0) or (0, ±1).
+  // The same arrowhead, pointing along the x axis (dx ±1), outlined.
+  function hollowArrowHead(g, x, y, dx, size) {
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x - dx * size, y - 0.55 * size);
+    g.lineTo(x - dx * size, y + 0.55 * size);
+    g.closePath();
+    g.stroke();
+  }
+
   function arrowHead(g, x, y, dx, dy, size) {
     g.beginPath();
     g.moveTo(x, y);
@@ -341,12 +418,14 @@
   // A mirror: a piece of glass with a curved, coated face, held at the
   // top and the bottom. `strong` is the mirror that reflects everything;
   // the output mirror's coating is thinner and paler.
-  function mirror(g, colors, L, which, strong) {
+  function mirror(g, colors, L, which, strong, shape) {
     var m = which === "back" ? L.backMirror : L.outputMirror;
     var outer = which === "back" ? m.x : m.x + m.w;
     var inner = which === "back" ? m.x + m.w : m.x;
     var towardsGlass = which === "back" ? -1 : 1;
-    var controlX = inner + towardsGlass * 2 * L.sag;       // the curve passes `sag` deep
+    // The curve passes `sag` into the glass (concave), out of it (convex),
+    // or not at all (flat).
+    var controlX = inner + towardsGlass * 2 * L.sag * bendOf(shape);
     var middleY = m.y + m.h / 2;
 
     // the glass
@@ -628,6 +707,208 @@
     g.strokeRect(T.x, T.y, T.w, T.h);
   }
 
+  /* ---------- the cavity's own numbers (stage 10b) ---------- */
+
+  // The cavity the light carries, if it has a length and an aperture.
+  function cavityOf(light) {
+    var cavity = light ? light.cavity : null;
+    if (!cavity || !(cavity.length > 0) || !(cavity.aperture > 0)) return null;
+    return cavity;
+  }
+
+  // A mirror's shape, if the cavity gives one this file knows.
+  function shapeOf(cavity, which) {
+    if (!cavity || !cavity.shapes) return undefined;
+    var shape = cavity.shapes[which];
+    return SHAPES.indexOf(shape) === -1 ? undefined : shape;
+  }
+
+  // From the cavity's metres to the picture's pixels. Along the axis the
+  // cavity's length spans the faces' edges; across it the aperture is the
+  // mirrors' half-height, so the widths are drawn `widths` times larger
+  // than the lengths (written on the picture).
+  function cavityScale(L, cavity, kind) {
+    var half = kind === "discharge" ? L.boreHalf : L.apertureHalf;
+    var perMetreX = (L.axis.x2 - L.axis.x1) / cavity.length;
+    var perMetreY = half / cavity.aperture;
+    return {
+      x1: L.axis.x1, x2: L.axis.x2, perMetreX: perMetreX, perMetreY: perMetreY, widths: perMetreY / perMetreX,
+      half: half, room: kind === "discharge" ? L.focusRoom.discharge : L.focusRoom.rod
+    };
+  }
+
+  // Where a ray meets mirror 1 (back) or 2 (output) at height y (m): on
+  // the mirror's face, or, past the aperture, beside the mirror's edge.
+  function onMirror(L, S, shapes, mirrorNumber, y) {
+    var Y = L.axis.y - y * S.perMetreY;
+    var which = mirrorNumber === 1 ? "back" : "output";
+    return { x: faceX(L, which, Y, shapes[which]), y: Y };
+  }
+
+  // The beam inside the cavity, shaded: the lowest mode's width along the
+  // cavity (an hourglass), or, with no mode (two flat mirrors, unstable
+  // mirrors), a band half as wide as the aperture. Never wider than the
+  // mirrors.
+  function drawBeamBand(g, colors, L, S, cavity, beam) {
+    var top = [];
+    var bottom = [];
+    if (cavity.mode && cavity.mode.length > 1) {
+      cavity.mode.forEach(function (point) {
+        var x = S.x1 + point.z * S.perMetreX;
+        var half = Math.min(point.w * S.perMetreY, S.half);
+        top.push({ x: x, y: L.axis.y - half });
+        bottom.push({ x: x, y: L.axis.y + half });
+      });
+    } else {
+      var band = S.half / 2;
+      top = [{ x: S.x1, y: L.axis.y - band }, { x: S.x2, y: L.axis.y - band }];
+      bottom = [{ x: S.x1, y: L.axis.y + band }, { x: S.x2, y: L.axis.y + band }];
+    }
+    g.globalAlpha = 0.45 * rayAlpha(beam);
+    g.fillStyle = colors.accent2;
+    g.beginPath();
+    g.moveTo(top[0].x, top[0].y);
+    for (var i = 1; i < top.length; i++) g.lineTo(top[i].x, top[i].y);
+    for (var k = bottom.length - 1; k >= 0; k--) g.lineTo(bottom[k].x, bottom[k].y);
+    g.closePath();
+    g.fill();
+    g.globalAlpha = 1;
+  }
+
+  // The traced rays (`cavity.rays`: { y0, hits, escaped }, the engine's
+  // ray trace from mirror 1): straight pieces from mirror to mirror,
+  // fainter on each round trip. A ray that walks out goes on past the
+  // mirror's edge, still straight, for a short run (ESCAPE_RUN of the
+  // picture's width, less at the picture's edge), so it does not cross
+  // the whole drawing and its words. They show
+  // the path light would take, so they are drawn faintly with the laser
+  // dark, and strongly with it shining.
+  function drawPaths(g, colors, L, S, shapes, cavity, beam, w, h) {
+    if (!cavity.rays) return;
+    // Only inside a band a quarter of a mirror taller than the mirrors at
+    // each side: the widths are drawn many times wider than they are, so
+    // a ray that walks out would otherwise run steeply across the whole
+    // picture and its words.
+    var mirror = L.backMirror;
+    var bandTop = Math.max(0, mirror.y - PATH_BAND * mirror.h);
+    var bandBottom = Math.min(h, mirror.y + (1 + PATH_BAND) * mirror.h);
+    g.save();
+    g.beginPath();
+    g.rect(0, bandTop, w, bandBottom - bandTop);
+    g.clip();
+    var strength = PATH_ALPHA + (1 - PATH_ALPHA) * rayAlpha(beam);
+    g.strokeStyle = colors.accent2;
+    g.lineWidth = 1.2;
+    cavity.rays.forEach(function (ray) {
+      if (!ray || !ray.hits || ray.hits.length === 0) return;
+      var from = onMirror(L, S, shapes, 1, ray.y0);
+      var fade = strength;
+      ray.hits.forEach(function (hit, k) {
+        var to = onMirror(L, S, shapes, hit.mirror, hit.y);
+        fade = strength * Math.pow(RAY_FADE, Math.floor(k / 2));
+        g.globalAlpha = fade;
+        line(g, from.x, from.y, to.x, to.y);
+        from = to;
+      });
+      if (ray.escaped) {
+        var last = ray.hits[ray.hits.length - 1];
+        // It goes on the way it travelled: right past mirror 2, left past
+        // mirror 1, its height changing by θ per metre travelled.
+        var direction = last.mirror === 2 ? 1 : -1;
+        var drop = -last.theta * S.perMetreY / S.perMetreX;     // screen y per pixel travelled
+        var room = Math.min(ESCAPE_RUN * w, direction > 0 ? w - from.x : from.x);
+        if (drop < 0) room = Math.min(room, from.y / -drop);
+        if (drop > 0) room = Math.min(room, (h - from.y) / drop);
+        g.globalAlpha = 0.6 * fade;
+        line(g, from.x, from.y, from.x + direction * room, from.y + drop * room);
+      }
+    });
+    g.restore();
+  }
+
+  // The light that leaves through the output mirror: round(rays ×
+  // transmission) of the rays across the beam at the output mirror (as
+  // before stage 10b, so the transmission can be counted), straight on to
+  // the edge.
+  function drawOutput(g, colors, L, S, cavity, light, beam, w) {
+    var spot = S.half / 2;
+    if (cavity.mode && cavity.mode.length > 0) {
+      spot = Math.min(cavity.mode[cavity.mode.length - 1].w * S.perMetreY, S.half);
+    }
+    var half = clamp(Math.floor(spot / RAY_GAP), 0, (MAX_RAYS - 1) / 2);
+    var count = 2 * half + 1;
+    var heights = [];
+    for (var i = -half; i <= half; i++) heights.push(half === 0 ? L.axis.y : L.axis.y + i * spot / half);
+    var outLeft = L.outputMirror.x + L.outputMirror.w;
+    g.globalAlpha = rayAlpha(beam);
+    g.strokeStyle = colors.accent2;
+    g.fillStyle = colors.accent2;
+    g.lineWidth = 1.4;
+    middleRays(count, raysOut(count, light.transmission)).forEach(function (index) {
+      var y = heights[index];
+      line(g, outLeft, y, w, y);
+      arrowHead(g, w - 0.4 * L.pad, y, 1, 0, 6);
+    });
+    g.globalAlpha = 1;
+  }
+
+  // Each curved mirror's focal point F, R/2 from it along the axis
+  // (`cavity.focus`: m, positive in front of the mirror, negative behind
+  // it, null for a flat mirror): a dot on the axis, solid for a real focus,
+  // hollow and dashed for a virtual one (a convex mirror's, behind it). One
+  // off the picture is written at its edge, with its distance from the
+  // mirror and an arrow: "F 2.50 m".
+  function drawFocus(g, colors, L, S, cavity, word, view) {
+    var w = view.w;
+    var size = Math.max(9, L.fontSize - 2);
+    g.font = "600 " + size + "px " + view.font;
+    g.textBaseline = "alphabetic";
+    ["back", "output"].forEach(function (which, index) {
+      // F₁ for the back mirror, F₂ for the output mirror, as g₁ and g₂ on
+      // the stability diagram.
+      var name = word + FOCUS_MARKS[index];
+      var f = cavity.focus ? cavity.focus[which] : null;
+      if (typeof f !== "number" || !isFinite(f) || f === 0) return;
+      var x = which === "back" ? S.x1 + f * S.perMetreX : S.x2 - f * S.perMetreX;
+      var real = f > 0;
+      g.fillStyle = colors.heading;
+      g.strokeStyle = colors.heading;
+      if (x >= L.pad && x <= w - L.pad) {
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.arc(x, L.axis.y, 3.5, 0, 2 * Math.PI);
+        if (real) {
+          g.fill();
+        } else {
+          g.setLineDash([2, 2]);
+          g.stroke();
+          g.setLineDash([]);
+        }
+        if (word) {
+          g.textAlign = "center";
+          g.fillText(name, x, L.axis.y - 7, 3 * size);
+        }
+        return;
+      }
+      // Off the picture: an arrowhead in the margin at the edge it lies
+      // beyond, solid for a real F and hollow for a virtual one, and the
+      // words just inside the mirror on that side.
+      var right = x > w - L.pad;
+      var rowY = L.focusRows[index];
+      var text = (word ? name + " " : "") + UI.format.si(Math.abs(f), "m");
+      var tip = right ? w - 2 : 2;
+      var dx = right ? 1 : -1;
+      if (real) {
+        arrowHead(g, tip, rowY - 0.35 * size, dx, 0, 5);
+      } else {
+        g.lineWidth = 1;
+        hollowArrowHead(g, tip, rowY - 0.35 * size, dx, 5);
+      }
+      g.textAlign = right ? "right" : "left";
+      g.fillText(text, right ? S.x2 - FOCUS_GAP : S.x1 + FOCUS_GAP, rowY, S.room);
+    });
+  }
+
   function draw(view, labels, light) {
     var g = view.g;
     var colors = view.colors;
@@ -637,6 +918,8 @@
     var kind = kindOf(light);
     var qSwitch = switchOf(light, kind);
     var rodBottom = L.rod.y + L.rod.h;
+    var cavity = cavityOf(light);
+    var shapes = { back: shapeOf(cavity, "back"), output: shapeOf(cavity, "output") };
 
     g.clearRect(0, 0, view.w, view.h);
     g.save();
@@ -667,8 +950,15 @@
     // The filter in the gap.
     if (qSwitch) drawFilter(g, colors, L, openOf(qSwitch));
 
-    // The light: separate rays between the mirrors, some of them leaving.
-    if (beam > 0) {
+    // The light. With the cavity's numbers: the beam's shape, the traced
+    // rays, and the light leaving. Without them: separate rays between the
+    // mirrors, some of them leaving.
+    var S = cavity ? cavityScale(L, cavity, kind) : null;
+    if (cavity) {
+      if (beam > 0) drawBeamBand(g, colors, L, S, cavity, beam);
+      drawPaths(g, colors, L, S, shapes, cavity, beam, view.w, view.h);
+      if (beam > 0) drawOutput(g, colors, L, S, cavity, light, beam, view.w);
+    } else if (beam > 0) {
       var count = L.rays.length;
       var leaving = middleRays(count, raysOut(count, light.transmission));
       var outLeft = L.outputMirror.x + L.outputMirror.w;
@@ -698,8 +988,9 @@
     }
 
     // The mirrors, over the ends of the rays.
-    mirror(g, colors, L, "back", true);
-    mirror(g, colors, L, "output", false);
+    mirror(g, colors, L, "back", true, shapes.back);
+    mirror(g, colors, L, "output", false, shapes.output);
+    if (cavity) drawFocus(g, colors, L, S, cavity, labels.focus, view);
 
     // The names of the parts. fillText's fourth argument squeezes a word
     // that is too long for its place instead of letting it run into the
@@ -710,6 +1001,7 @@
     // The filter's name on the top row, which the transmission then shares.
     var switchName = qSwitch && labels.qSwitch ? labels.qSwitch : "";
     PARTS.forEach(function (name) {
+      if (CAVITY_WORDS.indexOf(name) !== -1) return;
       var text = name === "transmission" ? transmissionText(labels.transmission, light) : labels[name];
       var spot = L.labels[name];
       if (name === "qSwitch") text = switchName;
@@ -718,6 +1010,12 @@
       g.textAlign = spot.align;
       g.fillText(text, spot.x, spot.y, spot.maxWidth);
     });
+    // "Widths × 90": how much wider than the lengths the widths are drawn.
+    if (cavity && labels.widths) {
+      var spot = L.labels.widths;
+      g.textAlign = spot.align;
+      g.fillText(labels.widths + " " + String(Number(S.widths.toPrecision(2))), spot.x, spot.y, spot.maxWidth);
+    }
 
     g.restore();
   }
@@ -729,6 +1027,7 @@
     Q_KINDS: Q_KINDS,
     PUMP_OFF: PUMP_OFF,
     POST_FOOT: POST_FOOT,
+    SHAPES: SHAPES,
     layout: layout,
     faceX: faceX,
     raysOut: raysOut,

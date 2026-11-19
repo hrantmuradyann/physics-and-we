@@ -196,10 +196,23 @@ test("every corner of the sliders gives finite numbers (or null), never an error
       }
     }
   }
+  // The output mirror's radius at both ends of its slider (stage 10b):
+  // 7.5 cm is far past concentric, unstable, and still finite.
+  for (const Rc2 of [R.Rc2.min, R.Rc2.max]) {
+    const d = derive({ Rc2: Rc2 });
+    for (const [name, value] of Object.entries(d)) {
+      if (typeof value === "number") assert.ok(Number.isFinite(value), name + " at R₂ = " + Rc2);
+    }
+    for (const [name, value] of Object.entries(d.resonator)) {
+      if (typeof value === "number") assert.ok(Number.isFinite(value), "resonator." + name + " at R₂ = " + Rc2);
+    }
+  }
   assert.deepEqual(plain(R), {
     pump: { name: "pumpPower", min: 0, max: 20, log: false },
     coupler: { min: 0.005, max: 0.6, log: true },
-    absorberT0: null
+    absorberT0: null,
+    Rc1: null,
+    Rc2: { name: "Rc2", min: 0.075, max: 50, log: true }
   });
 });
 

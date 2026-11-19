@@ -13,16 +13,22 @@ const { ROOT, ENGINE_FILES, UI_FILES } = require("./helpers.js");
 const { createBrowser, fakeCanvas, fakeContainer, fakeElement } = require("./fake-browser.js");
 
 const WORDS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "laser.json"), "utf8"));
-const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch"];
-const CANVASES = ["bench", "power", "photons"];
-const CONTROLS = ["pump", "coupler", "slowMotion", "absorberT0"];
+const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch", "widths", "focus"];
+const CANVASES = ["bench", "power", "photons", "stability"];
+const CONTROLS = ["pump", "coupler", "Rc1", "Rc2", "slowMotion", "absorberT0"];
+// The sliders in rows page.js hides: each curved mirror's radius (stage
+// 10b), shown only for a curved mirror.
+const MIRROR_CONTROLS = ["Rc1", "Rc2"];
+// Each mirror's shape buttons (stage 10b).
+const MIRRORS = ["mirror1", "mirror2"];
+const SHAPES = ["flat", "concave", "convex"];
 // The filter's slider (stage 8b), in a row page.js hides while the
 // Q-switch is off.
 const Q_CONTROLS = ["absorberT0"];
 // Every number the page can show, in the layout's order; each bench shows
 // some of them (ROWS in page.js, and page-choose.test.js).
-const READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "lossNow",
-  "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+const READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
+  "stability", "waist", "mirrorLoss", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
 const CHOICES = ["medium", "pump"];
 const UI_WORDS = { labPlay: "Play", labPause: "Pause", labReset: "Reset" };
 const NB = "\u00a0";          // the no-break space between a number and its unit
@@ -95,9 +101,18 @@ function laserSection(boxWidth) {
   section.peakName = fakeElement("span");               // the highest output's name
   by['[data-laser-name="peak"]'] = section.peakName;
   section.sliders = {};                                 // the filter's slider row
-  for (const name of Q_CONTROLS) {
+  for (const name of Q_CONTROLS.concat(MIRROR_CONTROLS)) {
     section.sliders[name] = fakeElement("div");
     by['[data-laser-slider="' + name + '"]'] = section.sliders[name];
+  }
+  // Each mirror's shape buttons: section.shapes.mirror1.concave.
+  section.shapes = {};
+  for (const mirror of MIRRORS) {
+    section.shapes[mirror] = {};
+    for (const shape of SHAPES) {
+      section.shapes[mirror][shape] = fakeElement("button");
+      by['[data-laser-mirror="' + mirror + '"] [data-laser-shape="' + shape + '"]'] = section.shapes[mirror][shape];
+    }
   }
   // The row under the drawing: Fire (below) and the Q-switch, its On/Off
   // and the word beside it.
@@ -196,10 +211,12 @@ function built(lang, options) {
 //   seen.charts    how many charts were drawn
 //   seen.drives    every { dt, drive } the photon cartoon was stepped with
 //   seen.cartoons  every cartoon given to the photon drawing
+//   seen.paths     the params of every beamPath() call (the mirrors' rays)
+//   seen.pairs     every { words, pair } given to the stability diagram
 function watch(browser) {
   const seen = {
     steps: [], sims: [], after: [], configs: [], thresholds: [], pumpCalls: 0, switchCalls: 0, peaks: [],
-    bench: [], chart: {}, charts: 0, drives: [], cartoons: []
+    bench: [], chart: {}, charts: 0, drives: [], cartoons: [], paths: [], pairs: []
   };
   const engineNow = browser.window.LaserEngine;
   const advance = engineNow.bench.advance;
@@ -207,6 +224,7 @@ function watch(browser) {
   const flashThreshold = engineNow.bench.flashThreshold;
   const pumpNow = engineNow.bench.pumpNow;
   const switchNow = engineNow.bench.switchNow;
+  const beamPath = engineNow.bench.beamPath;
   browser.window.LaserEngine = Object.assign({}, engineNow, {
     bench: Object.assign({}, engineNow.bench, {
       advance: function (params) {
@@ -232,6 +250,10 @@ function watch(browser) {
       switchNow: function (params) {
         seen.switchCalls += 1;
         return switchNow(params);
+      },
+      beamPath: function (params) {
+        seen.paths.push(Object.assign({}, params));
+        return beamPath(params);
       }
     })
   });
@@ -249,6 +271,13 @@ function watch(browser) {
     draw: function (view, labels, light) {
       seen.bench.push({ labels: Object.assign({}, labels), light: light });
       return bench(view, labels, light);
+    }
+  });
+  const stability = UI.stability.draw;
+  UI.stability = Object.assign({}, UI.stability, {
+    draw: function (view, words, pair) {
+      seen.pairs.push({ words: Object.assign({}, words), pair: pair });
+      return stability(view, words, pair);
     }
   });
   const photons = UI.photons;
@@ -372,6 +401,11 @@ function assertNoListeners(section, label) {
   for (const name of ["play", "reset", "fire", "learn", "toggle"]) {
     assert.equal(section[name].listenerCount("click"), 0, label + ": the " + name + " button");
   }
+  for (const mirror of MIRRORS) {
+    for (const shape of SHAPES) {
+      assert.equal(section.shapes[mirror][shape].listenerCount("click"), 0, label + ": " + mirror + "'s " + shape + " button");
+    }
+  }
   for (const type of ["pointerdown", "pointermove", "pointerleave"]) {
     assert.equal(section.canvases.power.listenerCount(type), 0, label + ": " + type + " over the chart");
   }
@@ -424,7 +458,7 @@ function shownRows(section) {
 }
 
 module.exports = {
-  WORDS, PARTS, CANVASES, CONTROLS, Q_CONTROLS, READOUTS, CHOICES, UI_WORDS, NB, FRAME,
+  WORDS, PARTS, CANVASES, CONTROLS, Q_CONTROLS, MIRROR_CONTROLS, MIRRORS, SHAPES, READOUTS, CHOICES, UI_WORDS, NB, FRAME,
   setup, laserSection, benchOnlySection, sectionReady, texts, switchTheme, built, watch, last, dearer, sum,
   runFrames, slide, drag, type, engine, assertNoListeners, choose, chooseAfresh, optionsOf, shownRows, switchOn
 };

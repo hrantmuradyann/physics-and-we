@@ -246,9 +246,9 @@ test("sections/laser.html: no styles, scripts, <header> or <footer>; the silver 
 
 // The pictures js/laser/page.js draws, by their data-laser-canvas names
 // (tests/laser/page.test.js uses the same list).
-const PAGE_CANVASES = ["bench", "power", "photons"];
+const PAGE_CANVASES = ["bench", "power", "photons", "stability"];
 
-test("sections/laser.html: the four canvases, each a picture for screen readers, each described in the data", () => {
+test("sections/laser.html: the canvases, each a picture for screen readers, each described in the data", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
   const canvases = html.match(/<canvas\b[^>]*>/g) || [];
   assert.deepEqual(canvases.map((tag) => (tag.match(/\sdata-laser-canvas="([^"]*)"/) || [])[1]).sort(),
@@ -281,10 +281,12 @@ test("the chart canvas, and only it, carries the class that lets a finger move t
 // What js/laser/page.js looks for (tests/laser/page.test.js uses the same
 // names). A name missing from the layout would leave a control dead
 // without any error.
-const PAGE_CONTROLS = ["pump", "coupler", "absorberT0", "slowMotion"];
-const PAGE_Q_CONTROLS = ["absorberT0"];
-const PAGE_READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "lossNow",
-  "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+const PAGE_CONTROLS = ["pump", "coupler", "Rc1", "Rc2", "absorberT0", "slowMotion"];
+// The sliders in rows page.js hides: each curved mirror's radius (stage
+// 10b) and the filter's.
+const PAGE_Q_CONTROLS = ["Rc1", "Rc2", "absorberT0"];
+const PAGE_READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
+  "stability", "waist", "mirrorLoss", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
 const PAGE_CHOICES = ["medium", "pump"];
 
 test("sections/laser.html: every slider, number box, readout and button page.js needs, once each", () => {
@@ -369,6 +371,46 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
     assert.ok(row.includes('data-laser-input="' + PAGE_Q_CONTROLS[i] + '"'), PAGE_Q_CONTROLS[i] + "'s box is in its row");
   });
   assert.deepEqual(attributeValues(html, "data-laser-choice"), []);
+  // Each mirror's shapes (stage 10b): a group named by the mirror's name,
+  // with three toggle buttons (aria-pressed, set by page.js), each with
+  // its picture (hidden from screen readers) and its word; then that
+  // mirror's radius slider.
+  assert.deepEqual(attributeValues(html, "data-laser-mirror"), ["mirror1", "mirror2"]);
+  const mirrorParts = html.split(/(?=<div\b[^>]*\sdata-laser-mirror=")/).slice(1);
+  mirrorParts.forEach((part, i) => {
+    const name = "mirror" + (i + 1);
+    const group = part.match(/<div\b[^>]*\srole="group"[^>]*>/);
+    assert.ok(group, name + "'s shapes are a group");
+    const nameId = (group[0].match(/\saria-labelledby="([^"]+)"/) || [])[1];
+    assert.match(part, new RegExp('<span\\b[^>]*\\sid="' + nameId + '"[^>]*\\sdata-text="bench\\.parts\\.' +
+      (i === 0 ? "backMirror" : "outputMirror") + '"'), name + "'s group named by the mirror's name");
+    const buttons = part.match(/<button\b[^>]*\sdata-laser-shape="[^"]+"[^>]*>[\s\S]*?<\/button>/g);
+    assert.deepEqual(buttons.map((b) => b.match(/data-laser-shape="([^"]+)"/)[1]), ["flat", "concave", "convex"], name);
+    for (const button of buttons) {
+      assert.match(button, /^<button\b[^>]*\saria-pressed="false"/);
+      assert.match(button, /<svg\b[^>]*\saria-hidden="true"/);
+      assert.match(button, /<span\b[^>]*\sdata-text="controls\.shapes\.(flat|concave|convex)"/);
+    }
+    // Each picture is the face as the bench draws it, the laser on the
+    // back mirror's right and the output mirror's left: a concave face is
+    // a cup open towards the laser, so its middle lies away from the laser
+    // (the review found them the wrong way round). "M x y q dx dy …": dx
+    // is how far the curve's middle is pulled; towards the laser is +1 for
+    // the back mirror, −1 for the output mirror.
+    const towardsLaser = i === 0 ? 1 : -1;
+    for (const button of buttons) {
+      const shape = button.match(/data-laser-shape="([^"]+)"/)[1];
+      const d = button.match(/<path d="([^"]+)"/)[1];
+      const pull = d.match(/q(-?\d+(?:\.\d+)?)/);
+      if (shape === "flat") {
+        assert.equal(pull, null, name + " flat: a straight line, " + d);
+        continue;
+      }
+      const sign = Math.sign(Number(pull[1])) * towardsLaser;
+      assert.equal(sign, shape === "concave" ? -1 : 1, name + " " + shape + ": " + d);
+    }
+    assert.ok(part.indexOf('data-laser-slider="Rc' + (i + 1) + '"') !== -1, name + "'s radius slider after its shapes");
+  });
   assert.deepEqual(attributeValues(html, "data-laser-note"), ["behind"]);
   // The theory the "learn" button scrolls to is on the page, once.
   assert.equal((html.match(/\sdata-laser-learn[\s>]/g) || []).length, 1);

@@ -10,10 +10,13 @@
    fires a flashlamp, and an On/Off switch for the Q-switch, on a laser
    that can have one (stage 8b). A slider and a number box each set the
    pump (its power, its flash's energy or its current), the output coupler,
-   the filter's transmission and the slow motion.
-   Three pictures: the bench, the chart of the output power and the cartoon
-   of atoms and photons (stages 6 and 6b; the energy levels with their gain
-   gauge were a fourth until the owner had them removed, after stage 10a).
+   the filter's transmission, a curved mirror's radius and the slow motion;
+   three buttons per mirror make it flat, concave or convex (stage 10b).
+   Four pictures: the bench (with the mirrors' beam, traced rays and F
+   since stage 10b), the chart of the output power, the cartoon of atoms
+   and photons (stages 6 and 6b), and the mirrors' stability diagram
+   (stage 10b). The energy levels with their gain gauge were drawn until
+   the owner had them removed, after stage 10a.
 
    WHY IT TAKES ITSELF DOWN FIRST
    The router (js/router.js) fires "section:ready" for this page more often
@@ -81,7 +84,7 @@
    down what it had set up before passing the error on.
 
    Tests: tests/laser/page.test.js, tests/laser/page-choose.test.js,
-   tests/laser/page-qswitch.test.js
+   tests/laser/page-qswitch.test.js, tests/laser/page-mirrors.test.js
    ========================================================================== */
 (function (root) {
   "use strict";
@@ -130,7 +133,23 @@
 
   // The filter's slider (absorberT0) is shown only while the filter is on
   // (bench.controls gives null without it).
-  var CONTROLS = ["pump", "coupler", "absorberT0", "slowMotion"];
+  var CONTROLS = ["pump", "coupler", "Rc1", "Rc2", "absorberT0", "slowMotion"];
+  // The mirrors' shapes (stage 10b): each mirror's three buttons, and the
+  // radius slider a curved one has (Rc1, Rc2 above).
+  var MIRRORS = ["mirror1", "mirror2"];
+  var SHAPES = ["flat", "concave", "convex"];
+  // The rays traced through the mirrors for the drawing: from mirror 1, at
+  // these shares of the beam's half-width there (the mode's, or half the
+  // aperture without one), for this many round trips; the mode's width
+  // at this many pieces of the cavity.
+  var RAY_STARTS = [0.9, 0.45, -0.45, -0.9];
+  var RAY_ROUND_TRIPS = 4;
+  var MODE_PIECES = 40;
+  // How close to 1 |m| must be for the pair to read "on the edge of stable".
+  var EDGE_TOLERANCE = 1e-9;
+  // The config fields the drawn cavity (cavityOf) depends on: the mirrors,
+  // the lengths, the aperture and the medium (its index n and λ).
+  var CAVITY_FIELDS = ["medium", "L", "l_g", "aperture", "mirror1", "mirror2", "Rc1", "Rc2"];
   var CHOICES = ["medium", "pump"];
   // The one Q-switch the page offers: the engine's bleachable filter.
   var FILTER = "absorber";
@@ -138,14 +157,17 @@
   // others are hidden): a threshold in the pump's own terms, and for a
   // flash the highest output since it was fired instead of the steady
   // numbers, which a flash does not have.
-  var READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c", "lossNow",
-    "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
-  var STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"];
+  // Every bench shows its mirrors: stable or not, the beam's narrowest
+  // radius and the light they lose (stage 10b).
+  var READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
+    "stability", "waist", "mirrorLoss", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+  var MIRROR_ROWS = ["stability", "waist", "mirrorLoss"];
+  var STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c"].concat(MIRROR_ROWS, ["P_out", "powerNow", "T_best", "period", "time"]);
   var ROWS = {
     diode: STEADY_ROWS,
     laser: STEADY_ROWS,
-    discharge: ["currentThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"],
-    flashlamp: ["flashThreshold", "x", "gth", "tau_c", "peak", "powerNow", "time"]
+    discharge: ["currentThreshold", "x", "gth", "tau_c"].concat(MIRROR_ROWS, ["P_out", "powerNow", "T_best", "period", "time"]),
+    flashlamp: ["flashThreshold", "x", "gth", "tau_c"].concat(MIRROR_ROWS, ["peak", "powerNow", "time"])
   };
   // The two-level atom has no threshold to measure the pump against, no
   // best mirror and no oscillation.
@@ -157,7 +179,7 @@
   var PULSING_HIDES = ["P_out", "T_best", "period"];
   // The readouts that change while the simulation runs ("x" for a flash).
   var LIVE_READOUTS = ["x", "lossNow", "giant", "peak", "powerNow", "time"];
-  var CANVASES = ["bench", "power", "photons"];
+  var CANVASES = ["bench", "power", "photons", "stability"];
   var POWER_WORDS = ["title", "steady"];
 
   var teardown = null;          // takes the current build down, or null
@@ -307,10 +329,37 @@
       unhook.push(function () { element.removeEventListener(type, handler); });
     }
 
-    // The still numbers and the sliders' ranges of a config.
+    // The still numbers and the sliders' ranges of a config, and what the
+    // drawing shows of its mirrors.
+    // The cavity is traced again only when its own fields change: a pump,
+    // coupler or filter move keeps it (stage 10b review).
     function numbersOf(config) {
-      return { derived: bench.derive(config), controls: bench.controls(config) };
+      var d = bench.derive(config);
+      var sameCavity = cavity !== null && CAVITY_FIELDS.every(function (field) {
+        return config[field] === state.config[field];
+      });
+      return { derived: d, controls: bench.controls(config), cavity: sameCavity ? cavity : cavityOf(config, d) };
     }
+    // The mirrors for the bench drawing (draw-bench.js's light.cavity): the
+    // cavity's length and aperture, each mirror's shape and focal point,
+    // the mode's width along the cavity and a few traced rays.
+    function cavityOf(config, d) {
+      var r = d.resonator;
+      var half = r.w1 === null ? config.aperture / 2 : Math.min(r.w1, 0.9 * config.aperture);
+      var starts = RAY_STARTS.map(function (share) { return share * half; });
+      var path = bench.beamPath({ config: config, starts: starts, roundTrips: RAY_ROUND_TRIPS, points: MODE_PIECES });
+      return {
+        length: config.L,
+        aperture: config.aperture,
+        shapes: { back: config.mirror1, output: config.mirror2 },
+        focus: { back: r.focus1, output: r.focus2 },
+        mode: path.mode,
+        rays: path.rays.map(function (ray, i) {
+          return { y0: starts[i], hits: ray.hits, escaped: ray.escaped };
+        })
+      };
+    }
+    var cavity = null;          // cavityOf(state.config, derived)
     // A new config and its numbers, taken together. Whatever can fail (a
     // config the engine refuses, a threshold search) is worked out before,
     // so a failure leaves the old bench as it was.
@@ -318,6 +367,7 @@
       state.config = config;
       derived = numbers.derived;
       controls = numbers.controls;
+      cavity = numbers.cavity;
     }
     take(state.config, numbersOf(state.config));
 
@@ -332,6 +382,7 @@
     }
     nameThePump();
     var powerWords = wordsAt(data, "power.words", POWER_WORDS);
+    var stabilityWords = wordsAt(data, "stability.words", UI.stability.WORDS);
     var photonWords = wordsAt(data, "photons.words", UI.photons.WORDS);
     var never = word(data, "readouts.never") || "—";
 
@@ -496,6 +547,12 @@
       }
       if (name === "gth") return F.number(d.gth) + NO_BREAK + "m⁻¹";
       if (name === "tau_c") return F.si(d.tau_c, "s");
+      if (name === "stability") return word(data, "readouts." + stabilityOf(d.resonator)) || "—";
+      if (name === "waist") {
+        var narrowest = narrowestOf(d.resonator, state.config.L);
+        return narrowest === null ? "—" : F.si(narrowest, "m");
+      }
+      if (name === "mirrorLoss") return lossText(d.resonator.loss);
       if (name === "lossNow") {
         var now = switchNow();
         return now === null ? "—" : F.number(now.loss) + NO_BREAK + "×";
@@ -508,6 +565,32 @@
       if (name === "period") return d.period === null ? "—" : F.si(d.period, "s");
       if (name === "powerNow") return F.si(powerNow(), "W");
       return F.si(state.sim.t, "s");                       // "time"
+    }
+    // The mirror pair in words: "stable", "unstable", or "edge" right on
+    // the edge of the stable region (m = ±1: two flat mirrors, a
+    // concentric pair).
+    // Both edges (g₁g₂ = 1, and g₁ or g₂ = 0) are |m| = 1. Reached with a
+    // slider on a rod bench, m is 1 only to the rounding of L* = L − l + l/n
+    // (stage 10b review), so "on the edge" holds within EDGE_TOLERANCE.
+    function stabilityOf(r) {
+      if (Math.abs(Math.abs(r.m) - 1) <= EDGE_TOLERANCE) return "edge";
+      return r.stable ? "stable" : "unstable";
+    }
+    // The beam's narrowest radius between the mirrors: the waist w₀ when it
+    // lies between them, else the smaller of the beam's radii on the two
+    // mirrors (a convex mirror can put the waist behind a mirror, where
+    // the beam is narrower than anywhere inside; stage 10b review). null
+    // without a Gaussian mode.
+    function narrowestOf(r, L) {
+      if (r.w0 === null) return null;
+      if (r.waistAt >= 0 && r.waistAt <= L) return r.w0;
+      return Math.min(r.w1, r.w2);
+    }
+    // A share of the light as a percentage; under 0.01 % as "< 0.01 %"
+    // (the stable pairs lose 10⁻²⁰ and less).
+    function lossText(share) {
+      if (share < 1e-4) return "<" + NO_BREAK + "0.01" + NO_BREAK + "%";
+      return F.number(100 * share) + NO_BREAK + "%";
     }
     // Writes the readouts `names` that this bench shows.
     function showReadouts(names) {
@@ -648,8 +731,13 @@
         pump: benchPumpNow(),
         transmission: 1 - state.config.refl2,
         pumpKind: state.config.pump,
-        qSwitch: switchLight()
+        qSwitch: switchLight(),
+        cavity: cavity
       });
+    });
+    addCanvas("stability", UI.stability.SIZE, function (view) {
+      var r = derived.resonator;
+      UI.stability.draw(view, stabilityWords, { g1: r.g1, g2: r.g2, stable: r.stable });
     });
     addCanvas("power", UI.plots.SIZE, function (view) {
       var shownTime = WINDOW / state.slowMotion;          // simulated s on the chart
@@ -734,6 +822,7 @@
       state.flashThreshold = threshold;
       state.flashThresholdOld = false;
       showUnderBench();
+      showMirrors();
       CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });
       showRows();
       setBehind(false);
@@ -815,6 +904,40 @@
       }
     }
 
+    /* the mirrors' shapes (stage 10b) */
+    function shapeButton(mirror, shape) {
+      return find('[data-laser-mirror="' + mirror + '"] [data-laser-shape="' + shape + '"]');
+    }
+    // Lights the chosen shape of each mirror.
+    function showMirrors() {
+      MIRRORS.forEach(function (mirror) {
+        SHAPES.forEach(function (shape) {
+          var button = shapeButton(mirror, shape);
+          if (button) button.setAttribute("aria-pressed", state.config[mirror] === shape ? "true" : "false");
+        });
+      });
+    }
+    // A mirror bent to `shape`: the run goes on (as when a slider moves),
+    // with the new mirrors' numbers, rays and threshold flash; a curved
+    // mirror's radius slider shows at the radius it kept.
+    function bendMirror(mirror, shape) {
+      if (state.config[mirror] === shape) return;
+      var config = Object.assign({}, state.config);
+      config[mirror] = shape;
+      var numbers = numbersOf(config);
+      var threshold = thresholdFlash(config);
+      take(config, numbers);
+      showBench(threshold);
+    }
+    function connectMirrors() {
+      MIRRORS.forEach(function (mirror) {
+        SHAPES.forEach(function (shape) {
+          var button = shapeButton(mirror, shape);
+          if (button) listen(button, "click", function () { bendMirror(mirror, shape); });
+        });
+      });
+    }
+
     /* the sliders and their number boxes */
     // A slider's range: the engine's for the bench, null for the filter's
     // while the filter is off.
@@ -826,7 +949,7 @@
       if (name === "pump") return state.config[controls.pump.name];
       if (name === "coupler") return 1 - state.config.refl2;
       if (name === "slowMotion") return state.slowMotion;
-      return state.config[name];                       // the filter's transmission
+      return state.config[name];                       // the filter's transmission, a radius
     }
     // The pump's unit: W of light, J of a flash, A of a current.
     function pumpUnit() {
@@ -841,6 +964,7 @@
       if (name === "coupler") return { unit: "%", factor: 100 };
       if (name === "slowMotion") return { unit: "×", factor: 1 };
       if (name === "absorberT0") return { unit: "%", factor: 100 };
+      if (name === "Rc1" || name === "Rc2") return { unit: "m", factor: 1 };
       if (pumpUnit() === "A" && controls.pump.max < 1) return { unit: "mA", factor: 1000 };
       return { unit: pumpUnit(), factor: 1 };
     }
@@ -849,6 +973,7 @@
     function valueText(name, value) {
       if (name === "pump") return F.si(value, pumpUnit());
       if (name === "coupler" || name === "absorberT0") return F.number(100 * value) + NO_BREAK + "%";
+      if (name === "Rc1" || name === "Rc2") return F.si(value, "m");
       // Slow motion: how much simulated time one second on screen shows.
       return "1" + NO_BREAK + "s = " + F.si(1 / value, "s");
     }
@@ -901,12 +1026,12 @@
             var config = Object.assign({}, state.config);
             if (name === "pump") config[controls.pump.name] = value;
             else if (name === "coupler") config.refl2 = 1 - value;
-            else config[name] = value;                 // the filter's transmission
+            else config[name] = value;                 // the filter's transmission, a radius
             var numbers = numbersOf(config);
-            // The flash threshold depends on the output mirror and on the
-            // filter, not on the flash's energy; while one of the two is
-            // dragged it waits.
-            var movesThreshold = name === "coupler" || name === "absorberT0";
+            // The flash threshold depends on the mirrors and on the filter,
+            // not on the flash's energy; while one of them is dragged it
+            // waits.
+            var movesThreshold = name !== "pump";
             var threshold = state.flashThreshold;
             if (movesThreshold && settled) threshold = thresholdFlash(config);
             take(config, numbers);
@@ -1045,10 +1170,12 @@
     var loop = UI.loop.create({ canvases: canvases, update: pauseOnError(update), running: state.playing });
     try {
       connectChoices();
+      connectMirrors();
       connectControls();
       connectButtons();
       connectPointer();
       showChoices();
+      showMirrors();
       showUnderBench();
       showRows();
       showPlay();

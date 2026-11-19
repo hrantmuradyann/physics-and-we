@@ -20,7 +20,13 @@
      LaserEngine.bench.controls(config)   the sliders of that bench:
                                           { pump: { name, min, max, log },
                                             coupler: { min, max, log },
+                                            Rc1, Rc2: a curved mirror's
+                                              radius slider, or null,
                                             absorberT0: the filter's, or null }
+     LaserEngine.bench.beamPath({ config, starts, roundTrips, points })
+                                          what the page draws of the
+                                          mirrors: { mode: [{ z, w }] or
+                                          null, rays: traceRay's answers }
      LaserEngine.bench.defaultConfig()    a new config: the default bench
                                           (Nd:YAG with diodes)
      LaserEngine.bench.derive(config)     threshold, output power, best
@@ -240,6 +246,17 @@
   // from 20 %, which holds ruby back past its default flash, to 99 %.
   var ABSORBER_T0_RANGE = { min: 0.2, max: 0.99, log: false };
 
+  // A curved mirror's radius slider (stage 10b): from a quarter of the
+  // cavity's length, which reaches past the concentric pair (R = L/2,
+  // §7.1) and the confocal one (R = L), to 50 m, nearly flat; log. Every
+  // setup's own radius lies inside it (bench-mirrors.test.js).
+  var RADIUS_RANGE = { minShare: 0.25, max: 50, log: true };
+
+  // beamPath's limits: a picture needs a few round trips and a few dozen
+  // points, and a call must stay cheap.
+  var MAX_PATH_ROUND_TRIPS = 100;
+  var MAX_PATH_POINTS = 1000;
+
   // The two-level atom absorbs at its own line: there is no other level.
   var TWO_LEVEL_LINE = E.media.get("two-level").lam;
 
@@ -431,13 +448,15 @@
     return copy;
   }
 
-  // controls(config) -> { pump, coupler, absorberT0 }
+  // controls(config) -> { pump, coupler, Rc1, Rc2, absorberT0 }
   // The pump slider { name, min, max, log } sets the config field `name`;
   // a discharge's top is the highest current its law allows for this
   // config's currentPeak. The coupler slider { min, max, log } sets
   // T = 1 − refl2. The filter's slider { name, min, max, log } sets
   // absorberT0; null without a filter. (The page offers the filter only;
-  // a cell's or a prism's timing has no slider.)
+  // a cell's or a prism's timing has no slider.) Rc1 and Rc2, each
+  // { name, min, max, log }, set a curved mirror's radius; null for a
+  // flat one (stage 10b).
   function controls(config) {
     var read = readConfig(at("controls"), config);
     var setup = read.setup;
@@ -450,8 +469,62 @@
       coupler: { min: COUPLER_RANGE.min, max: COUPLER_RANGE.max, log: COUPLER_RANGE.log },
       absorberT0: config.qSwitch === "absorber" ? {
         name: "absorberT0", min: ABSORBER_T0_RANGE.min, max: ABSORBER_T0_RANGE.max, log: ABSORBER_T0_RANGE.log
-      } : null
+      } : null,
+      Rc1: radiusRange(config, config.mirror1, "Rc1"),
+      Rc2: radiusRange(config, config.mirror2, "Rc2")
     };
+  }
+
+  // A mirror's radius slider, or null for a flat mirror (its radius is
+  // kept, unused, for when it is bent).
+  function radiusRange(config, shape, name) {
+    if (shape === "flat") return null;
+    return { name: name, min: RADIUS_RANGE.minShare * config.L, max: RADIUS_RANGE.max, log: RADIUS_RANGE.log };
+  }
+
+  // What the page draws of the mirrors (stage 10b): the lowest mode's
+  // radius w (m) at `points` + 1 evenly spaced real distances z from
+  // mirror 1 (0 to L; null when the pair has no Gaussian mode: on a
+  // stability edge or outside), and a ray traced from mirror 1 for each
+  // height in `starts` (m, inside the aperture), along the axis
+  // (θ = 0), for `roundTrips` round trips: optics.traceRay's answers.
+  function beamPath(params) {
+    var where = at("beamPath");
+    check.params(where, params, ["config", "starts", "roundTrips", "points"]);
+    var config = params.config;
+    var read = readConfig(where, config);
+    var starts = check.finiteArray(where, "starts", params.starts);
+    var roundTrips = check.integerAtLeast(where, "roundTrips", params.roundTrips, 1);
+    if (roundTrips > MAX_PATH_ROUND_TRIPS) {
+      check.fail(where, "roundTrips must be at most " + MAX_PATH_ROUND_TRIPS + ", got " + roundTrips + ".");
+    }
+    var points = check.integerAtLeast(where, "points", params.points, 1);
+    if (points > MAX_PATH_POINTS) {
+      check.fail(where, "points must be at most " + MAX_PATH_POINTS + ", got " + points + ".");
+    }
+    starts.forEach(function (y, i) {
+      if (Math.abs(y) > config.aperture) {
+        check.fail(where, "starts[" + i + "] (y = " + y + " m) is outside the aperture (" + config.aperture + " m).");
+      }
+    });
+    var medium = read.medium;
+    var mirrors = {
+      L: config.L, l_g: config.l_g, n: medium.n,
+      c1: curvatureOf(config.mirror1, config.Rc1), c2: curvatureOf(config.mirror2, config.Rc2)
+    };
+    var mode = null;
+    if (read.resonator.w0 !== null) {
+      mode = [];
+      for (var k = 0; k <= points; k++) {
+        // The last point exactly at L, not one rounding past it.
+        var z = k === points ? config.L : k * config.L / points;
+        mode.push({ z: z, w: E.optics.beamRadius(Object.assign({ lam: medium.lam, z: z }, mirrors)) });
+      }
+    }
+    var rays = starts.map(function (y) {
+      return E.optics.traceRay(Object.assign({ aperture: config.aperture, y: y, theta: 0, roundTrips: roundTrips }, mirrors));
+    });
+    return { mode: mode, rays: rays };
   }
 
   function defaultConfig() {
@@ -1405,6 +1478,7 @@
     switchNow: switchNow,
     carryOver: carryOver,
     giantPulse: giantPulse,
+    beamPath: beamPath,
     MIRROR_SHAPES: MIRROR_SHAPES
   });
 })(this);

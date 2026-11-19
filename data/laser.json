@@ -26,7 +26,9 @@
       "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
       "pump": { "hy": "Մղում", "en": "Pump" },
       "transmission": { "hy": "Թափանցելիություն", "en": "Transmission" },
-      "qSwitch": { "hy": "Հագեցող ֆիլտր", "en": "Bleachable filter" }
+      "qSwitch": { "hy": "Հագեցող ֆիլտր", "en": "Bleachable filter" },
+      "widths": { "hy": "Լայնությունները ×", "en": "Widths ×" },
+      "focus": { "hy": "F", "en": "F" }
     },
     "pumps": {
       "diode": { "hy": "Մղման դիոդներ", "en": "Pump diodes" },
@@ -79,7 +81,14 @@
     },
     "coupler": { "hy": "Ելքային հայելու թափանցելիություն", "en": "Output mirror transmission" },
     "slowMotion": { "hy": "Դանդաղեցում", "en": "Slow motion" },
-    "absorberT0": { "hy": "Ֆիլտրի թափանցելիությունը (չհագեցած)", "en": "Filter transmission (unbleached)" }
+    "absorberT0": { "hy": "Ֆիլտրի թափանցելիությունը (չհագեցած)", "en": "Filter transmission (unbleached)" },
+    "shapes": {
+      "flat": { "hy": "Հարթ", "en": "Flat" },
+      "concave": { "hy": "Գոգավոր", "en": "Concave" },
+      "convex": { "hy": "Ուռուցիկ", "en": "Convex" }
+    },
+    "Rc1": { "hy": "Հետին հայելու կորության շառավիղ", "en": "Back mirror's radius of curvature" },
+    "Rc2": { "hy": "Ելքային հայելու կորության շառավիղ", "en": "Output mirror's radius of curvature" }
   },
 
   "buttons": {
@@ -104,7 +113,13 @@
     "T_best": { "hy": "Լավագույն ելքային հայելի", "en": "Best output mirror" },
     "period": { "hy": "Ռելաքսացիոն տատանումների պարբերություն", "en": "Relaxation oscillation period" },
     "time": { "hy": "Մոդելավորված ժամանակ", "en": "Simulated time" },
-    "never": { "hy": "անհասանելի", "en": "never reached" }
+    "never": { "hy": "անհասանելի", "en": "never reached" },
+    "stability": { "hy": "Հայելիների զույգը", "en": "The mirror pair" },
+    "stable": { "hy": "կայուն", "en": "stable" },
+    "unstable": { "hy": "անկայուն", "en": "unstable" },
+    "edge": { "hy": "կայունության սահմանին", "en": "on the edge of stable" },
+    "waist": { "hy": "Փնջի ամենանեղ տեղը (շառավիղ)", "en": "Beam at its narrowest (radius)" },
+    "mirrorLoss": { "hy": "Հայելիներում կորած լույսը (մեկ շրջապտույտում)", "en": "Light lost at the mirrors (per round trip)" }
   },
 
   "notes": {
@@ -141,6 +156,20 @@
     }
   },
 
+
+  "stability": {
+    "_readme": "The stability diagram of the two mirrors, beside the chart. 'title' is written above it, 'stable' inside the shaded region, 'g1' and 'g2' at the ends of the axes: keep them short.",
+    "alt": {
+      "hy": "Երկու հայելիների կայունության դիագրամը․ յուրաքանչյուր հայելու g = 1 − L/R թիվը մեկ առանցքի վրա է։ Ստվերագծված տիրույթում հայելիների զույգը լույսը պահում է իրենց միջև, իսկ դրանից դուրս լույսը կողքով դուրս է գնում։ Կետը սարքի հայելիների զույգն է և շարժվում է, երբ հայելին ծռում եք։",
+      "en": "The stability diagram of the two mirrors: each mirror's g = 1 − L/R on one axis. Inside the shaded region the pair keeps the light between the mirrors; outside it the light walks out sideways. The dot is the pair on the bench, and it moves as you bend a mirror."
+    },
+    "words": {
+      "title": { "hy": "Հայելիների կայունություն", "en": "Mirror stability" },
+      "stable": { "hy": "կայուն", "en": "stable" },
+      "g1": { "hy": "g₁ հետին", "en": "g₁ back" },
+      "g2": { "hy": "g₂ ելքային", "en": "g₂ output" }
+    }
+  },
 
   "learn": {
     "_readme": "The theory at the bottom of the page. 'button' is the button above the bench that leads to it. 'chapters' is a list: add, remove or reorder chapters freely. In a chapter's 'text', an empty line (\\n\\n) starts a new paragraph and **two stars** make words bold.",

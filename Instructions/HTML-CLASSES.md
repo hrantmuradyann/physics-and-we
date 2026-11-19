@@ -747,19 +747,28 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
               </div>
               <input class="lab-control__input" id="laser-pump" type="range" data-laser-control="pump">
             </div>
-            … the other sliders; the last has <p class="laser-hint" data-laser-value="slowMotion"> under it …
+            … the output mirror's slider, then each mirror's shapes: …
+            <div class="laser-mirror" data-laser-mirror="mirror1">
+              <span class="lab-control__name" id="laser-mirror1-name">Back mirror</span>
+              <div class="laser-shapes" role="group" aria-labelledby="laser-mirror1-name">
+                <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="flat">
+                  <svg class="laser-shape__icon" aria-hidden="true">…</svg><span>Flat</span>
+                </button>
+                … concave, convex …
+              </div>
+            </div>
+            <div class="lab-control" data-laser-slider="Rc1" hidden> … its radius slider, like the pump's … </div>
+            … the same for the output mirror (mirror2, Rc2), the filter's slider, and the slow motion, which has <p class="laser-hint" data-laser-value="slowMotion"> under it …
           </div>
           <div class="lab__buttons"> … Play (data-laser-action="play"), Reset … </div>
           <p class="laser-note" data-laser-note="behind" hidden>…</p>
         </div>
         <div class="laser-stage__side">
-          <div class="laser-bench"><canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="power" role="img"></canvas></div>
-          <div class="lab__panel"><div class="lab__readouts laser-readouts"> … one .lab-readout data-laser-row="…" per number … </div></div>
+          <div class="laser-side__chart laser-bench"><canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="power" role="img"></canvas></div>
+          <div class="laser-side__stability laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="stability" role="img"></canvas></div>
+          <div class="laser-side__numbers lab__panel"><div class="lab__readouts laser-readouts"> … one .lab-readout data-laser-row="…" per number … </div></div>
         </div>
         <div class="laser-stage__photons laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas></div>
-      </div>
-      <div class="laser-panels">
-        <div class="laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="levels" role="img"></canvas></div>
       </div>
     </div>
   </section>
@@ -782,7 +791,11 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
 | `.band--laser` | The stripe the bench sits in. Less padding on top than an ordinary `.band`, so the bench is on the first screen. | [css/laser.css](css/laser.css) |
 | `.laser-stage` | The grid of the page's main blocks. Wide screens (1100 px and up): three columns, with the bench over the first two, the controls and the photon picture under it, and the chart with the numbers down the third. From 760 px: two columns (controls beside photons; the chart beside its numbers). Narrower: one column, in the order the blocks are written. | [css/laser.css](css/laser.css) |
 | `.laser-stage__more` | The row with the "dig deeper" button, centred over the bench. | [css/laser.css](css/laser.css) |
-| `.laser-stage__bench`, `__controls`, `__photons`, `__side` | Where each block goes in the grid. `__side` holds the big chart and the panel of numbers. | [css/laser.css](css/laser.css) |
+| `.laser-stage__bench`, `__controls`, `__photons`, `__side` | Where each block goes in the grid. `__side` holds the big chart, the mirrors' stability diagram and the panel of numbers. | [css/laser.css](css/laser.css) |
+| `.laser-side__chart`, `__stability`, `__numbers` | The three blocks of the side column. On a wide screen (1100 px and up) they stand one under the other beside the bench: the chart, the stability diagram right under it (to watch while the laser runs), the numbers. From 760 px the chart and the diagram stand on the left with the numbers beside them. | [css/laser.css](css/laser.css) |
+| `.laser-mirror` | One mirror's name and its three shape buttons, on one line (wrapping on a narrow panel). | [css/laser.css](css/laser.css) |
+| `.laser-shapes` | The group of the three buttons (`role="group"`, named by the mirror's name). | [css/laser.css](css/laser.css) |
+| `.laser-shape` | One shape: a small button with a picture of the mirror's face (`.laser-shape__icon`, drawn in the text colour) and its word. The chosen one (`aria-pressed="true"`, set by `js/laser/page.js`) has an accent border, bold words and an accent picture. | [css/laser.css](css/laser.css) |
 | `.laser-bench` | The box around a picture of the lab (the bench, the chart, the photons): rounded corners, a thin border, a soft glow at the top and a deep shadow — the same look as the frame of the other labs. It sets the width of the canvas inside it. | [css/laser.css](css/laser.css) |
 | `.laser-bench__canvas` | A canvas the lab draws on, as wide as its box. Its height is set by `js/laser/ui/loop.js`. | [css/laser.css](css/laser.css) |
 | `.laser-bench__canvas--chart` | The chart of the output power: the mouse pointer is a crosshair, and on a touch screen a sideways drag moves the chart's crosshair while an up-and-down drag still scrolls the page (`touch-action: pan-y`). | [css/laser.css](css/laser.css) |

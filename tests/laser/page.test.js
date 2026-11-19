@@ -77,9 +77,16 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     const expected = ["backMirror", "outputMirror", "medium"].map((part) => WORDS.bench.parts[part][lang]);
     expected.push(WORDS.bench.pumps.diode[lang]);
     expected.push(WORDS.bench.parts.transmission[lang] + " 5.00" + NB + "%");
+    // The mirrors (stage 10b): the concave output mirror's F, 50 cm in front
+    // of it, off the 30 cm cavity's picture, and how much wider the widths
+    // are drawn.
+    expected.push(WORDS.bench.parts.focus[lang] + "₂ 500" + NB + "mm");
+    const widths = texts(section.recorder).find((text) => text.indexOf(WORDS.bench.parts.widths[lang] + " ") === 0);
+    assert.ok(widths && /× \d+$/.test(widths), "the widths' scale: " + widths);
+    expected.push(widths);
     assert.deepEqual(texts(section.recorder).sort(), expected.sort(), lang);
     // Each canvas has the height its drawing asks for.
-    const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE };
+    const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE, stability: UI.stability.SIZE };
     for (const name of CANVASES) {
       const size = sizes[name];
       const height = Math.max(size.minHeight, Math.min(600 / size.aspect, size.maxHeight));
@@ -154,7 +161,7 @@ test("the readouts show derive()'s numbers for the bench, formatted", () => {
   // Only the numbers of a bench with steady light are shown (each bench's
   // are tested in page-choose.test.js).
   assert.deepEqual(shownRows(section),
-    ["pumpThreshold", "x", "gth", "tau_c", "P_out", "powerNow", "T_best", "period", "time"]);
+    ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"]);
 });
 
 test("moving a slider while paused also rewrites the output now (it depends on the mirror)", () => {
@@ -794,6 +801,11 @@ test("a built page has one listener on each control, dropdown and button, so a t
     assert.equal(section.inputs[name].listenerCount("change"), 1, name);
   }
   for (const name of ["play", "reset", "fire", "learn"]) assert.equal(section[name].listenerCount("click"), 1, name);
+  for (const mirror of ["mirror1", "mirror2"]) {
+    for (const shape of ["flat", "concave", "convex"]) {
+      assert.equal(section.shapes[mirror][shape].listenerCount("click"), 1, mirror + " " + shape);
+    }
+  }
   for (const name of ["medium", "pump"]) assert.equal(section.choose[name].listenerCount("change"), 1, name);
   for (const type of ["pointerdown", "pointermove", "pointerleave"]) {
     assert.equal(section.canvases.power.listenerCount(type), 1, type);
@@ -932,8 +944,10 @@ test("words missing from the data: the page still builds and runs, with no 'unde
   page.browser.runFrame(page.clock);
   runFrames(page, 10);
   assert.equal(page.browser.window.LaserUI.loop.liveCount(), 1);
-  // The bench has no names to write, only the mirror's number.
-  assert.ok(texts(page.section.recorder).every((text) => text === "5.00" + NB + "%"), texts(page.section.recorder).join(" | "));
+  // The bench has no names to write, only the mirror's number and the
+  // distance to the output mirror's F (off the picture).
+  assert.ok(texts(page.section.recorder).every((text) => text === "5.00" + NB + "%" || text === "500" + NB + "mm"),
+    texts(page.section.recorder).join(" | "));
   assert.deepEqual(texts(page.section.recorders.photons), [], "no legend to write");
   for (const recorder of Object.values(page.section.recorders)) {
     for (const text of texts(recorder)) assert.ok(!/undefined|NaN/.test(text), text);

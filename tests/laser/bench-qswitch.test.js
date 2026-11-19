@@ -414,7 +414,7 @@ test("controls: the filter's transmission, 20–99 %, for a filter; null for eve
       const cfg = bench(medium, pump, qSwitch);
       const controls = B.controls(cfg);
       const label = medium + " " + pump + " " + qSwitch;
-      assert.deepEqual(Object.keys(controls), ["pump", "coupler", "absorberT0"], label);
+      assert.deepEqual(Object.keys(controls), ["pump", "coupler", "absorberT0", "Rc1", "Rc2"], label);
       if (qSwitch !== "absorber") {
         assert.equal(controls.absorberT0, null, label);
         continue;

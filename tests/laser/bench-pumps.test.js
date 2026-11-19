@@ -167,7 +167,11 @@ test("controls: the field the pump slider sets and both sliders' ranges, with th
   assert.deepEqual(plain(B.controls(configFor("nd-yag", "diode"))), {
     pump: { name: "pumpPower", min: 0, max: 20, log: false },
     coupler: { min: 0.005, max: 0.6, log: true },
-    absorberT0: null
+    absorberT0: null,
+    // Its flat back mirror has no radius slider; its 1 m output mirror
+    // has one (stage 10b).
+    Rc1: null,
+    Rc2: { name: "Rc2", min: 0.075, max: 50, log: true }
   });
   assert.equal(B.RANGES, undefined);
   assert.throws(() => B.controls(Object.assign({}, B.configFor({ medium: "he-ne", pump: "discharge" }), { pump: "laser" })),

@@ -181,3 +181,98 @@ test("a Q-switch, and carrying the run over to it, keep the mirrors", () => {
   const carried = B.carryOver(deepFreeze({ sim: B.start(c), config: filtered }));
   assert.equal(carried.absorber, 1);
 });
+
+/* ---------- stage 10b: what the page needs for the mirrors ---------- */
+
+test("controls: a radius slider for each curved mirror, from L/4 (past concentric, L/2) to 50 m, log; none for a flat mirror", () => {
+  for (const key of Object.keys(MIRRORS)) {
+    const [medium, pump] = key.split(" ");
+    const c = configFor(medium, pump);
+    const R = B.controls(c);
+    for (const [shape, name] of [[c.mirror1, "Rc1"], [c.mirror2, "Rc2"]]) {
+      if (shape === "flat") {
+        assert.equal(R[name], null, key + " " + name);
+        continue;
+      }
+      assert.equal(R[name].name, name);
+      assertClose(R[name].min, c.L / 4, 1e-12, key + " " + name + " min");
+      assert.equal(R[name].max, 50);
+      assert.equal(R[name].log, true);
+      // It reaches the concentric (R = L/2) and confocal (R = L) pairs,
+      // and every bench's own mirror lies inside it.
+      assert.ok(R[name].min < c.L / 2 && R[name].max > c.L, key);
+      assert.ok(c[name] >= R[name].min && c[name] <= R[name].max, key + " " + name + " = " + c[name]);
+    }
+  }
+  // Bent, a flat mirror gets its slider, at the radius it kept.
+  const bent = configFor("ruby", "flashlamp", { mirror2: "concave" });
+  const R = B.controls(bent);
+  assert.equal(R.Rc1, null);
+  assert.equal(R.Rc2.name, "Rc2");
+  assert.ok(bent.Rc2 >= R.Rc2.min && bent.Rc2 <= R.Rc2.max, "ruby's kept radius " + bent.Rc2);
+});
+
+test("beamPath: the mode's width along the cavity and the traced rays, from the config's mirrors", () => {
+  const c = configFor("he-ne", "discharge");
+  const medium = E.media.get("he-ne");
+  const base = {
+    L: c.L, l_g: c.l_g, n: medium.n,
+    c1: mirrorCurvature(c.mirror1, c.Rc1), c2: mirrorCurvature(c.mirror2, c.Rc2)
+  };
+  const path = B.beamPath(deepFreeze({ config: c, starts: [0.2e-3, -0.1e-3], roundTrips: 3, points: 10 }));
+  // 11 points from mirror 1 (z = 0) to mirror 2 (z = L), each optics.beamRadius.
+  assert.equal(path.mode.length, 11);
+  path.mode.forEach((point, k) => {
+    assertClose(point.z, k * c.L / 10, 1e-12, "z " + k, 1e-15);
+    assertClose(point.w, E.optics.beamRadius(Object.assign({ lam: medium.lam, z: point.z }, base)), 1e-12, "w " + k);
+  });
+  // Each ray is optics.traceRay from mirror 1, starting along the axis.
+  assert.equal(path.rays.length, 2);
+  [0.2e-3, -0.1e-3].forEach((y, k) => {
+    const expected = E.optics.traceRay(Object.assign({ aperture: c.aperture, y: y, theta: 0, roundTrips: 3 }, base));
+    assert.deepEqual(plain(path.rays[k]), plain(expected), "ray " + k);
+  });
+  // The rod counts l/n: on the diode bench a ray is traced with the rod in it.
+  const d = configFor("nd-yag", "diode");
+  const yag = E.media.get("nd-yag");
+  const ray = B.beamPath(deepFreeze({ config: d, starts: [0.3e-3], roundTrips: 2, points: 4 })).rays[0];
+  const expected = E.optics.traceRay({
+    L: d.L, l_g: d.l_g, n: yag.n, c1: 0, c2: 1 / d.Rc2, aperture: d.aperture, y: 0.3e-3, theta: 0, roundTrips: 2
+  });
+  assert.deepEqual(plain(ray), plain(expected));
+});
+
+test("beamPath: no mode for mirrors outside the stable region or on its edge; an unstable ray walks out", () => {
+  // Ruby's flat pair (the edge) and a convex output mirror (unstable).
+  const flat = B.beamPath(deepFreeze({ config: configFor("ruby", "flashlamp"), starts: [2e-3], roundTrips: 4, points: 8 }));
+  assert.equal(flat.mode, null);
+  assert.equal(flat.rays[0].escaped, null, "a ray along the axis between flat mirrors stays");
+  const convex = configFor("ruby", "flashlamp", { mirror2: "convex", Rc2: 5 });
+  const out = B.beamPath(deepFreeze({ config: convex, starts: [2e-3], roundTrips: 10, points: 8 }));
+  assert.equal(out.mode, null);
+  assert.notEqual(out.rays[0].escaped, null, "it walks out");
+  assert.ok(out.rays[0].escaped.roundTrip <= 3, "M = 1.8: out within 3 round trips");
+});
+
+test("beamPath: its inputs are checked, and every error names it", () => {
+  const c = configFor("he-ne", "discharge");
+  const cases = [
+    [{ config: c, starts: [1e-3], roundTrips: 2, points: 4 }, /y/],                 // past the 0.75 mm aperture
+    [{ config: c, starts: "0", roundTrips: 2, points: 4 }, /starts/],
+    [{ config: c, starts: [0], roundTrips: 0, points: 4 }, /roundTrips/],
+    [{ config: c, starts: [0], roundTrips: 2, points: 0 }, /points/],
+    [{ config: c, starts: [0], roundTrips: 2, points: 2.5 }, /points/],
+    // At most 100 round trips and 1000 points: the page's drawing, not a
+    // run of its own; the edges themselves are allowed (below).
+    [{ config: c, starts: [0], roundTrips: 101, points: 4 }, /roundTrips must be at most 100/],
+    [{ config: c, starts: [0], roundTrips: 2, points: 1001 }, /points must be at most 1000/],
+    [{ config: c, starts: [0], roundTrips: 2, points: 4, extra: 1 }, /extra/],
+    [{ config: Object.assign({}, c, { Rc2: -1 }), starts: [0], roundTrips: 2, points: 4 }, /Rc2/]
+  ];
+  for (const [params, pattern] of cases) {
+    assert.throws(() => B.beamPath(params), (err) => /^LaserEngine\.bench\.beamPath: /.test(err.message) && pattern.test(err.message),
+      JSON.stringify(Object.keys(params)));
+  }
+  const most = B.beamPath({ config: c, starts: [0], roundTrips: 100, points: 1000 });
+  assert.equal(most.mode.length, 1001);
+});

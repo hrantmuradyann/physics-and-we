@@ -1130,8 +1130,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    g.restore();\n  }",
-    replace: "  }",
+    find: "      g.fillText(labels.widths + \" \" + String(Number(S.widths.toPrecision(2))), spot.x, spot.y, spot.maxWidth);\n    }\n\n    g.restore();\n  }",
+    replace: "      g.fillText(labels.widths + \" \" + String(Number(S.widths.toPrecision(2))), spot.x, spot.y, spot.maxWidth);\n    }\n\n  }",
     why: "the context's settings left changed for the next drawing"
   },
   {
@@ -1260,7 +1260,7 @@ const MUTATIONS = [
   },
   {
     file: "index.html",
-    find: "<script src=\"js/laser/ui/draw-photons.js\"></script>\n  <script src=\"js/laser/page.js\"></script>",
+    find: "<script src=\"js/laser/ui/draw-photons.js\"></script>",
     replace: "<script src=\"js/laser/page.js\"></script>\n  <script src=\"js/laser/ui/draw-photons.js\"></script>",
     why: "page.js loaded before a drawing file"
   },
@@ -1338,8 +1338,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"transmission\", \"qSwitch\"]);",
-    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"qSwitch\"]);",
+    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"transmission\", \"qSwitch\", \"widths\", \"focus\"]);",
+    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"qSwitch\", \"widths\", \"focus\"]);",
     why: "a part left out of PARTS: its label never written"
   },
   {
@@ -1623,14 +1623,14 @@ const MUTATIONS = [
   /* ---------- stage 6: draw-bench.js ---------- */
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "g.globalAlpha = rayAlpha(beam);",
-    replace: "g.globalAlpha = Math.min(1, beam);",
+    find: "      g.globalAlpha = rayAlpha(beam);\n      g.strokeStyle = colors.accent2;\n      g.fillStyle = colors.accent2;",
+    replace: "      g.globalAlpha = Math.min(1, beam);\n      g.strokeStyle = colors.accent2;\n      g.fillStyle = colors.accent2;",
     why: "the beam's alpha linear in the power: a weak laser looks dark"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (beam > 0) {",
-    replace: "    if (beam >= 0) {",
+    find: "    } else if (beam > 0) {\n      var count = L.rays.length;",
+    replace: "    } else if (beam >= 0) {\n      var count = L.rays.length;",
     why: "an invisible beam drawn with no light"
   },
   {
@@ -1975,7 +1975,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var depth = 4 * L.sag * u * (1 - u);",
+    find: "var depth = 4 * L.sag * u * (1 - u) * bendOf(shape);",
     replace: "var depth = 0;",
     why: "the rays end at the mirror's edge, not on its curved face"
   },
@@ -3153,8 +3153,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "flashlamp: [\"flashThreshold\", \"x\", \"gth\", \"tau_c\", \"peak\", \"powerNow\", \"time\"]",
-    replace: "flashlamp: [\"flashThreshold\", \"pumpThreshold\", \"x\", \"gth\", \"tau_c\", \"peak\", \"powerNow\", \"time\"]",
+    find: "flashlamp: [\"flashThreshold\", \"x\", \"gth\", \"tau_c\"].concat(MIRROR_ROWS, [\"peak\", \"powerNow\", \"time\"])",
+    replace: "flashlamp: [\"flashThreshold\", \"pumpThreshold\", \"x\", \"gth\", \"tau_c\"].concat(MIRROR_ROWS, [\"peak\", \"powerNow\", \"time\"])",
     why: "a flash showing a steady pump's threshold, which it does not have"
   },
   {
@@ -3297,8 +3297,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      showUnderBench();\n      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });\n      showRows();",
-    replace: "      showUnderBench();\n      showRows();",
+    find: "      showMirrors();\n      CONTROLS.forEach(function (name) { if (shows[name]) shows[name](); });\n      showRows();",
+    replace: "      showMirrors();\n      showRows();",
     why: "a new bench, or the filter turned on, leaving the sliders as they were (the filter's hidden)"
   },
   {
@@ -3389,8 +3389,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      var threshold = thresholdFlash(config);\n      take(config, numbers);",
-    replace: "      take(config, numbers);\n      var threshold = thresholdFlash(config);",
+    find: "      var numbers = numbersOf(config);\n      var threshold = thresholdFlash(config);\n      take(config, numbers);\n      state.slowMotion",
+    replace: "      var numbers = numbersOf(config);\n      take(config, numbers);\n      var threshold = thresholdFlash(config);\n      state.slowMotion",
     why: "a new bench taken before its threshold search: a failed search leaves it half-taken"
   },
   {
@@ -4251,8 +4251,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "            var movesThreshold = name === \"coupler\" || name === \"absorberT0\";",
-    replace: "            var movesThreshold = name === \"coupler\";",
+    find: "            var movesThreshold = name !== \"pump\";",
+    replace: "            var movesThreshold = name !== \"pump\" && name !== \"absorberT0\";",
     why: "the threshold flash not found again for a new filter"
   },
   {
@@ -4849,8 +4849,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "      L: config.L, l_g: config.l_g, n: medium.n,",
-    replace: "      L: config.L, l_g: config.l_g, n: 1,",
+    find: "  function resonatorOf(config, medium) {\n    return E.optics.resonator({\n      L: config.L, l_g: config.l_g, n: medium.n,",
+    replace: "  function resonatorOf(config, medium) {\n    return E.optics.resonator({\n      L: config.L, l_g: config.l_g, n: 1,",
     why: "the rod counted as air"
   },
   {
@@ -4931,6 +4931,332 @@ const MUTATIONS = [
     find: "    if (!isFinite(loss)) {\n      check.fail(where, \"the mirrors lose too much light",
     replace: "    if (false) {\n      check.fail(where, \"the mirrors lose too much light",
     why: "an infinite mirror loss passed on"
+  },
+  // stage 10b: the mirrors on the page
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    return { name: name, min: RADIUS_RANGE.minShare * config.L, max: RADIUS_RANGE.max, log: RADIUS_RANGE.log };",
+    replace: "    return { name: name, min: RADIUS_RANGE.minShare, max: RADIUS_RANGE.max, log: RADIUS_RANGE.log };",
+    why: "the radius slider's bottom not scaled by the cavity's length"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (shape === \"flat\") return null;\n    return { name: name, min:",
+    replace: "    return { name: name, min:",
+    why: "a flat mirror given a radius slider"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      Rc2: radiusRange(config, config.mirror2, \"Rc2\")",
+    replace: "      Rc2: radiusRange(config, config.mirror1, \"Rc2\")",
+    why: "the output mirror's slider from the back mirror's shape"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "  var RADIUS_RANGE = { minShare: 0.25, max: 50, log: true };",
+    replace: "  var RADIUS_RANGE = { minShare: 0.25, max: 50, log: false };",
+    why: "the radius slider linear"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (read.resonator.w0 !== null) {\n      mode = [];",
+    replace: "    if (true) {\n      mode = [];",
+    why: "a mode drawn for an unstable pair"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "        var z = k === points ? config.L : k * config.L / points;",
+    replace: "        var z = k * config.L / (points + 1);",
+    why: "the mode's samples stopping short of mirror 2"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      return E.optics.traceRay(Object.assign({ aperture: config.aperture, y: y, theta: 0, roundTrips: roundTrips }, mirrors));",
+    replace: "      return E.optics.traceRay(Object.assign({ aperture: config.aperture, y: y, theta: 0, roundTrips: 1 }, mirrors));",
+    why: "the rays traced for one round trip whatever was asked"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      if (Math.abs(y) > config.aperture) {",
+    replace: "      if (Math.abs(y) > 2 * config.aperture) {",
+    why: "a ray starting outside the aperture accepted"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (roundTrips > MAX_PATH_ROUND_TRIPS) {",
+    replace: "    if (false) {",
+    why: "no limit on beamPath's round trips"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (points > MAX_PATH_POINTS) {",
+    replace: "    if (false) {",
+    why: "no limit on beamPath's points"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (shape === \"convex\") return -1;",
+    replace: "    if (shape === \"convex\") return 1;",
+    why: "a convex mirror drawn concave"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (shape === \"flat\") return 0;\n    if (shape === \"convex\")",
+    replace: "    if (shape === \"convex\")",
+    why: "a flat mirror drawn curved"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "x1: L.axis.x1, x2: L.axis.x2, perMetreX: perMetreX, perMetreY: perMetreY, widths: perMetreY / perMetreX,",
+    replace: "x1: L.axis.x1, x2: L.axis.x2, perMetreX: perMetreX, perMetreY: perMetreY, widths: perMetreX / perMetreY,",
+    why: "the widths' scale upside down"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "        fade = strength * Math.pow(RAY_FADE, Math.floor(k / 2));",
+    replace: "        fade = strength;",
+    why: "the traced rays not fading round trip by round trip"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "        var direction = last.mirror === 2 ? 1 : -1;",
+    replace: "        var direction = 1;",
+    why: "a ray walking out of mirror 1 drawn going right"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "        var drop = -last.theta * S.perMetreY / S.perMetreX;     // screen y per pixel travelled",
+    replace: "        var drop = last.theta * S.perMetreY / S.perMetreX;     // screen y per pixel travelled",
+    why: "a ray walking out bent the wrong way"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      var x = which === \"back\" ? S.x1 + f * S.perMetreX : S.x2 - f * S.perMetreX;",
+    replace: "      var x = which === \"back\" ? S.x1 + f * S.perMetreX : S.x2 + f * S.perMetreX;",
+    why: "the output mirror's F behind it"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "        if (real) {\n          g.fill();",
+    replace: "        if (true) {\n          g.fill();",
+    why: "a virtual F drawn solid"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "  var ESCAPE_RUN = 0.06;",
+    replace: "  var ESCAPE_RUN = 1;",
+    why: "a ray walking out drawn across the whole picture"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.rect(0, bandTop, w, bandBottom - bandTop);\n    g.clip();",
+    replace: "    g.rect(0, 0, w, h);\n    g.clip();",
+    why: "the traced rays not clipped to the mirrors' band"
+  },
+  {
+    file: "js/laser/ui/draw-stability.js",
+    find: "      if (inside) {\n        g.fillStyle",
+    replace: "      if (true) {\n        g.fillStyle",
+    why: "a pair past the axes drawn as a solid dot"
+  },
+  {
+    file: "js/laser/ui/draw-stability.js",
+    find: "        g.fillStyle = pair.stable ? colors.accent2 : colors.muted;",
+    replace: "        g.fillStyle = colors.accent2;",
+    why: "an unstable pair's dot in the stable colour"
+  },
+  {
+    file: "js/laser/ui/draw-stability.js",
+    find: "    return { x: P.center.x + g1 * P.perUnit, y: P.center.y - g2 * P.perUnit };",
+    replace: "    return { x: P.center.x + g1 * P.perUnit, y: P.center.y + g2 * P.perUnit };",
+    why: "g₂ drawn downwards"
+  },
+  {
+    file: "js/laser/ui/draw-stability.js",
+    find: "      var point = toPlot(P, sign * g1, sign / g1);\n      g.lineTo(point.x, point.y);\n    }\n    var across",
+    replace: "      var point = toPlot(P, sign * g1, sign * 0.5 / g1);\n      g.lineTo(point.x, point.y);\n    }\n    var across",
+    why: "the shaded region bounded by g₁g₂ = 1/2"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var CANVASES = [\"bench\", \"power\", \"photons\", \"stability\"];",
+    replace: "  var CANVASES = [\"bench\", \"power\", \"photons\"];",
+    why: "the stability diagram not drawn"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      UI.stability.draw(view, stabilityWords, { g1: r.g1, g2: r.g2, stable: r.stable });",
+    replace: "      UI.stability.draw(view, stabilityWords, { g1: r.g2, g2: r.g1, stable: r.stable });",
+    why: "the diagram's g₁ and g₂ swapped"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (state.config[mirror] === shape) return;\n",
+    replace: "",
+    why: "clicking the lit shape takes the config again"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      config[mirror] = shape;\n      var numbers",
+    replace: "      var numbers",
+    why: "a shape click changing nothing"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          if (button) button.setAttribute(\"aria-pressed\", state.config[mirror] === shape ? \"true\" : \"false\");",
+    replace: "          if (button) button.setAttribute(\"aria-pressed\", \"false\");",
+    why: "no shape lit"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var threshold = thresholdFlash(config);\n      take(config, numbers);\n      showBench(threshold);",
+    replace: "      take(config, numbers);\n      showBench(state.flashThreshold);",
+    why: "the threshold flash not found again for bent mirrors"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var half = r.w1 === null ? config.aperture / 2 : Math.min(r.w1, 0.9 * config.aperture);",
+    replace: "      var half = config.aperture / 2;",
+    why: "the rays not started across the mode"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        cavity: cavity\n      });",
+    replace: "        cavity: null\n      });",
+    why: "the bench drawing not given the cavity"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (name === \"stability\") return word(data, \"readouts.\" + stabilityOf(d.resonator)) || \"—\";",
+    replace: "      if (name === \"stability\") return word(data, \"readouts.stable\") || \"—\";",
+    why: "every pair read out as stable"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (Math.abs(Math.abs(r.m) - 1) <= EDGE_TOLERANCE) return \"edge\";\n",
+    replace: "",
+    why: "two flat mirrors read out as unstable, not on the edge"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (r.waistAt >= 0 && r.waistAt <= L) return r.w0;\n      return Math.min(r.w1, r.w2);",
+    replace: "      if (r.waistAt >= 0 && r.waistAt <= L) return r.w1;\n      return Math.min(r.w1, r.w2);",
+    why: "the waist read out as the beam on mirror 1"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (share < 1e-4) return \"<\" + NO_BREAK + \"0.01\" + NO_BREAK + \"%\";",
+    replace: "      if (share < 1e-6) return \"<\" + NO_BREAK + \"0.01\" + NO_BREAK + \"%\";",
+    why: "a tiny mirror loss written as 0.00…"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (name === \"Rc1\" || name === \"Rc2\") return { unit: \"m\", factor: 1 };",
+    replace: "      if (name === \"Rc1\" || name === \"Rc2\") return { unit: \"m\", factor: 100 };",
+    why: "the radius typed in cm under an m"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "            var movesThreshold = name !== \"pump\";",
+    replace: "            var movesThreshold = name === \"coupler\" || name === \"absorberT0\";",
+    why: "the threshold flash not found again for a new radius"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var CONTROLS = [\"pump\", \"coupler\", \"Rc1\", \"Rc2\", \"absorberT0\", \"slowMotion\"];",
+    replace: "  var CONTROLS = [\"pump\", \"coupler\", \"Rc1\", \"absorberT0\", \"slowMotion\"];",
+    why: "the output mirror's radius slider not wired"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var RAY_ROUND_TRIPS = 4;",
+    replace: "  var RAY_ROUND_TRIPS = 1;",
+    why: "one round trip traced"
+  },
+  {
+    file: "sections/laser.html",
+    find: "data-laser-canvas=\"stability\"",
+    replace: "data-laser-canvas=\"stabilty\"",
+    why: "the stability canvas misnamed"
+  },
+  {
+    file: "sections/laser.html",
+    find: "<div class=\"laser-mirror\" data-laser-mirror=\"mirror2\">",
+    replace: "<div class=\"laser-mirror\" data-laser-mirror=\"mirror1\">",
+    why: "two blocks for the back mirror"
+  },
+  {
+    file: "index.html",
+    find: "  <script src=\"js/laser/ui/draw-stability.js\"></script>\n",
+    replace: "",
+    why: "the page without draw-stability.js"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"g1\": { \"hy\": \"g₁ հետին\", \"en\": \"g₁ back\" }",
+    replace: "\"g1\": { \"en\": \"g₁ back\" }",
+    why: "the diagram's g₁ without Armenian"
+  },
+  // stage 10b, the review's fixes
+  {
+    file: "js/laser/page.js",
+    find: "      if (r.waistAt >= 0 && r.waistAt <= L) return r.w0;",
+    replace: "      return r.w0;",
+    why: "the narrowest beam read out as a waist behind a convex mirror"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var sameCavity = cavity !== null && CAVITY_FIELDS.every(function (field) {",
+    replace: "      var sameCavity = false && CAVITY_FIELDS.every(function (field) {",
+    why: "the cavity traced again on every pump move"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var CAVITY_FIELDS = [\"medium\", \"L\", \"l_g\", \"aperture\", \"mirror1\", \"mirror2\", \"Rc1\", \"Rc2\"];",
+    replace: "  var CAVITY_FIELDS = [\"medium\", \"L\", \"l_g\", \"aperture\", \"mirror1\", \"mirror2\", \"Rc1\"];",
+    why: "a new output-mirror radius keeping the old cavity drawn"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var half = kind === \"discharge\" ? L.boreHalf : L.apertureHalf;",
+    replace: "    var half = L.apertureHalf;",
+    why: "a discharge's beam drawn through its tube's wall"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      apertureHalf: rodHeight / 2,",
+    replace: "      apertureHalf: mirrorHeight / 2,",
+    why: "the beam drawn wider than the rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      if (real) {\n        arrowHead(g, tip, rowY - 0.35 * size, dx, 0, 5);",
+    replace: "      if (true) {\n        arrowHead(g, tip, rowY - 0.35 * size, dx, 0, 5);",
+    why: "a virtual F off the picture with a solid arrowhead"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.fillText(text, right ? S.x2 - FOCUS_GAP : S.x1 + FOCUS_GAP, rowY, S.room);",
+    replace: "      g.fillText(text, right ? S.x2 - FOCUS_GAP : S.x1 + FOCUS_GAP, rowY, 0.4 * w);",
+    why: "an F's words running past the rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "  var FOCUS_MARKS = [\"₁\", \"₂\"];",
+    replace: "  var FOCUS_MARKS = [\"\", \"\"];",
+    why: "F not saying which mirror's it is"
+  },
+  {
+    file: "js/laser/ui/draw-stability.js",
+    find: "        g1: { x: plot.x + size, y: center.y - 0.45 * fontSize,",
+    replace: "        g1: { x: plot.x + size, y: center.y + 1.3 * fontSize,",
+    why: "g₁ written over the axis's tick numbers"
+  },
+  {
+    file: "sections/laser.html",
+    find: "<path d=\"M15 3q-8 9 0 18\"/></svg>\n                <span data-text=\"controls.shapes.concave\">",
+    replace: "<path d=\"M9 3q8 9 0 18\"/></svg>\n                <span data-text=\"controls.shapes.concave\">",
+    why: "the back mirror's concave picture bulging towards the laser"
   },
 ];
 

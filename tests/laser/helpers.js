@@ -65,7 +65,8 @@ const UI_FILES = [
   "history.js",
   "draw-bench.js",
   "draw-plots.js",
-  "draw-photons.js"
+  "draw-photons.js",
+  "draw-stability.js"
 ];
 
 // Loads the engine into a fresh, empty sandbox and returns

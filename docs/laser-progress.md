@@ -1,6 +1,6 @@
 # The laser simulator: what is done and what is left
 
-*Last updated: 19 November 2026, at the end of stage 10a.*
+*Last updated: 19 November 2026, at the end of stage 10b.*
 
 This page explains, in plain words, how far the laser simulator has got. The technical details are in `docs/laser-plan.md` (the build plan) and `docs/laser-physics.md` (the physics).
 
@@ -47,6 +47,7 @@ The simulator has two halves:
 | 8b | **The Q-switch on the page** (see below): an On/Off switch right under the laser, beside a Fire button that moved there too. |
 | 10a | **Mirror physics in the engine** (see below): flat, concave and convex mirrors, which pairs keep the light, the beam's width, the focal points, and the light the mirrors lose. Each laser now has its real mirrors. Not on the page yet. |
 | — | **The energy-levels picture removed**, as you asked (19 November): the levels and the gain gauge under the laser. The theory chapter about the giant pulse now tells the visitor to watch the power chart instead. |
+| 10b | **The mirrors on the page** (see below): each mirror flat, concave or convex, the light's path bounce by bounce, the focal points, and a stability diagram beside the chart. |
 
 ### What you can see on the page today
 
@@ -58,13 +59,32 @@ For each laser the page sets itself up to suit it:
 - **a Q-switch On/Off switch** sits beside it on the four lasers that can have one (ruby, Nd:glass, and Nd:YAG with a flashlamp or with diodes). See stage 8b below;
 - **the slow motion** starts at a speed that suits the laser: one second on screen is 1 ms of the two-level atom, 100 µs of ruby, but only 100 ns of the argon and dye lasers, which change within nanoseconds;
 - **the numbers under the chart** are the ones that laser has: a flashlamp shows the smallest flash that makes it lase and the highest output since Fire; a gas laser shows its threshold current; the two-level atom says its threshold is "never reached";
-- **the energy-level picture** shows how strongly each material is pumped, and its gauge shows its own gain without light. For ruby it rises faster than the pump once the pump is past threshold (at the flash's peak, 8.6 times the loss for a pump 5.7 times its threshold); for the two-level atom it stays below zero: it never gains, it only absorbs less.
-
-The small chart of the excited atoms is gone (the owner's choice): the bar in the energy-level picture shows the same thing.
+- **the two mirrors** can each be made flat, concave or convex, and a curved one gets a slider for its radius (stage 10b, below).
 
 Ruby fired with a 1000 J flash lights up after a fraction of a millisecond and fires spikes reaching about 460 kW, as in stage 7b. The light and dark themes and both languages work, and the dropdowns fit on a 320 px phone.
 
-### Stage 10a, just finished: the mirrors, in the engine
+### Stage 10b, just finished: the mirrors on the page
+
+**What you can try now:**
+- under the output mirror's slider, each mirror has **three buttons**, Flat, Concave and Convex, each with a little picture of the mirror's face. A curved mirror also gets a **slider for its radius** (from a quarter of the laser's length to 50 m) with a box to type it in metres. Changing a mirror does not restart the laser: the chart carries on, so you see what the change does;
+- the drawing now shows **the beam's real shape**: between stable mirrors it narrows to a "waist" and widens again, like an hourglass (shaded). Over it, four **light rays bounce from mirror to mirror** in straight lines, each bounce a little fainter. The rays are drawn faintly even when the laser is dark, to show the path light would take;
+- the beam is far thinner than the laser is long, so the picture draws the widths larger than the lengths. A note at the bottom left says by how much ("Widths × 26" for the Nd:YAG laser);
+- each curved mirror's **focal point F** is marked on the axis: a solid dot in front of a concave mirror, a hollow dashed one behind a convex one (an imaginary focus). When it lies outside the picture, an arrow at the edge shows which way and how far ("F 500 mm");
+- **bend a mirror too far** and the rays walk out past the mirror's edge, and the laser dims or stops. For example, make the Nd:YAG laser's output mirror convex: its light goes out at once. He-Ne stops too when its output mirror's radius goes under its 30 cm tube;
+- three **new numbers** under the chart, for every laser: whether the mirror pair keeps the light (stable, unstable, or "on the edge of stable", which is where two flat mirrors sit, like the first ruby laser's), the beam's narrowest radius, and how much light the mirrors lose per round trip;
+- the **stability diagram**, as you asked, sits right under the power chart, so you can watch both while the laser runs. Each mirror pair is a point on it; the shaded area is where the mirrors keep the light. The dot moves as you bend a mirror.
+
+**Choices I made without asking you** (all listed in the plan's 10b notes, easy to change):
+- the radius slider runs from a quarter of the laser's length to 50 m;
+- the rays are always drawn, faintly when the laser is dark;
+- a ray that walks out is drawn only a short way past the mirror. In the browser I saw that, drawn all the way to the edge, it ran steeply across the whole picture and its words;
+- the shape buttons are plain buttons that light up when chosen.
+
+**What the review caught** (and I fixed): the little Concave and Convex pictures on the buttons were the wrong way round; the "narrowest beam" number could show a width the beam never has inside the laser (with a convex mirror); the beam was drawn wider than the gas tube of He-Ne, CO₂ and argon; and an F outside the picture was written over a mirror's stand and did not say which mirror it belonged to. Now they read F₁ (back mirror) and F₂ (output mirror), like g₁ and g₂ on the diagram, with a filled arrow for a real focus and an outlined one for an imaginary one.
+
+**Checks:** 708 automatic tests pass. The deliberate-mistakes checker makes 861 mistakes (54 new for this stage) and catches every one. I looked at the page in Chrome, in both themes. Not yet seen on screen: the middle layout (a screen 760 to 1100 px wide, where the diagram sits under the chart beside the numbers) and a 320 px phone.
+
+### Stage 10a: the mirrors, in the engine
 
 This stage is all physics behind the scenes: the page looks the same until stage 10b puts the mirror choices on it.
 
@@ -189,14 +209,13 @@ This stage put the choice of laser on the page (above). Two other things came wi
 
 Stage 9 (several laser frequencies at once, with a spectrum panel) was dropped at your request: it would have made everything too complex. The laser stays one frequency.
 
-Stage 10 was rewritten on 16 November from your requests (the mirrors, the focal points, the light's path, real-looking materials and diodes) and split into three parts, each finished, checked and saved on its own. The first part, 10a, is done (above). Three things I will ask you when we get there: one mirror choice per mirror or one for both; whether to add a small "stability diagram"; and whether the diodes pump the crystal from its end (my recommendation: it matches the physics already in the simulator, and the pump light is easy to see) or from its side.
+Stage 10 was rewritten on 16 November from your requests (the mirrors, the focal points, the light's path, real-looking materials and diodes) and split into three parts, each finished, checked and saved on its own. The first two parts, 10a and 10b, are done (above). One thing I will ask you at the start of 10c: the diodes pump the crystal from its end (my recommendation: it matches the physics already in the simulator, and the pump light is easy to see) or from its side.
 
 **A note on "curved light":** light goes in straight lines between the mirrors, and it only turns at a mirror. What looks curved is the whole beam narrowing and widening. Inside a crystal heated by the pump it does bend a little; that is stage 13 (heat in the rod).
 
 | Stage | What it will add |
 |---|---|
-| 10b | **Mirrors on the page** (next; you chose one choice per mirror, and a stability diagram where it is easy to watch while the laser runs): for each mirror, flat, concave or convex, and a slider for the radius of a curved one. The light's path drawn bounce by bounce: straight between the mirrors, changing direction at each one, so the beam narrows to a "waist" and widens again like an hourglass. The focal points marked **F**. With mirrors that do not keep the light, you see the rays walk out and the laser dim or stop (a weak laser like He-Ne stops; a very strong one like ruby can still flash, as real high-power lasers do). |
-| 10c | **A bench that looks real:** ruby as a red rod, Nd:YAG pale lilac, Ti:sapphire pink, dye as a coloured liquid in a glass cell, the gases in glass tubes glowing in their real colours with atoms moving inside; more realistic diodes, with the pump light visibly going into the crystal and being absorbed; the laser beam in its real colour (and the invisible infrared ones in a marked false colour). |
+| 10c | **A bench that looks real** (next): ruby as a red rod, Nd:YAG pale lilac, Ti:sapphire pink, dye as a coloured liquid in a glass cell, the gases in glass tubes glowing in their real colours with atoms moving inside; more realistic diodes, with the pump light visibly going into the crystal and being absorbed; the laser beam in its real colour (and the invisible infrared ones in a marked false colour). |
 | 11 | **Lenses outside the laser:** focusing the beam and tracing rays through glass. |
 | 12 | **The "learn" section:** chapters in both languages, each with a "try it on the bench" button that sets up the right example. |
 | 13 | **Extras,** one at a time: polarisation and Brewster windows; doubling the frequency (green light from infrared); heat in the rod acting as a lens; mode-locking (very short pulses); self-focusing; the semiconductor diode laser; and the pump in more detail (lamp reflectors, discharge). |

@@ -26,6 +26,12 @@
      .laser-switch    the Q-switch in that row: __name and the On/Off
                       __toggle (its __track and __knob, and the __word On
                       or Off)
+     .laser-mirror    one mirror's name and its __shapes: three buttons
+                      (.laser-shape, a toggle button each, with an __icon of the
+                      face and its word), the chosen one lit
+     .laser-side__chart, __stability, __numbers   the three blocks of the
+                      side column: the chart, the stability diagram and
+                      the numbers
      .laser-field     a number box with its unit, beside a slider's name
      .laser-hint      the line under the slow-motion slider
      .laser-readouts  the numbers, in a panel of their own
@@ -148,10 +154,17 @@
   .laser-stage__photons { grid-area: photons; }
   .laser-stage__side { grid-area: side; }
 
-  /* The chart beside its numbers. */
+  /* The chart and the stability diagram under it, beside the numbers. */
   .laser-stage__side {
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-areas:
+      "chart     numbers"
+      "stability numbers";
   }
+
+  .laser-side__chart { grid-area: chart; }
+  .laser-side__stability { grid-area: stability; }
+  .laser-side__numbers { grid-area: numbers; }
 }
 
 @media (min-width: 1100px) {
@@ -163,9 +176,15 @@
       "controls photons side";
   }
 
-  /* The chart over its numbers. */
+  /* Beside the bench: the chart, the stability diagram right under it
+     (the owner wanted it where it can be watched while the laser runs),
+     then the numbers. */
   .laser-stage__side {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "chart"
+      "stability"
+      "numbers";
   }
 }
 
@@ -176,6 +195,64 @@
    show them again. */
 .laser-stage [hidden] {
   display: none;
+}
+
+/* ---------- the mirrors' shapes ---------- */
+
+.laser-mirror {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.8rem;
+}
+
+/* The three buttons wrap onto a second line on a narrow panel (a 320 px
+   phone, with the Armenian words). */
+.laser-shapes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* One shape: a small picture of the face and its word. The chosen one
+   (aria-pressed, set by js/laser/page.js) is lit in the accent. */
+.laser-shape {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.55rem 0.3rem 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-3);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.laser-shape:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.laser-shape[aria-pressed="true"] {
+  border-color: var(--accent-soft);
+  color: var(--heading);
+  font-weight: 600;
+}
+
+.laser-shape__icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.laser-shape[aria-pressed="true"] .laser-shape__icon {
+  stroke: var(--accent-soft);
 }
 
 /* ---------- the choice of laser ---------- */
