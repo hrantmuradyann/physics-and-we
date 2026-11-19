@@ -30,7 +30,6 @@
      .laser-hint      the line under the slow-motion slider
      .laser-readouts  the numbers, in a panel of their own
      .laser-note      the note shown when the computer cannot keep up
-     .laser-panels    the picture of the levels under the stage
      .laser-learn     the theory at the bottom; .laser-chapter is one chapter
      .lab-feature     the big banner on the Labs page (sections/labs.html)
 
@@ -492,15 +491,6 @@
   font-size: 0.85rem;
   line-height: 1.45;
   color: var(--accent-soft);
-}
-
-/* ---------- under the stage ---------- */
-
-/* One picture now (the inversion chart beside it went in stage 7c): not
-   stretched over the whole page, where its levels would be far apart. */
-.laser-panels {
-  max-width: 760px;
-  margin: 1.3rem auto 0;
 }
 
 /* ============================================================================

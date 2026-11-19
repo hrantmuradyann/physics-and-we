@@ -1582,56 +1582,6 @@ const MUTATIONS = [
     why: "clear() forgets nothing"
   },
 
-  /* ---------- stage 6: draw-levels.js ---------- */
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var top = Math.max(picture.smallSignal, picture.y, lossOf(picture)) * HEADROOM;",
-    replace: "var top = Math.max(picture.smallSignal, picture.y) * HEADROOM;",
-    why: "the scale forgets the loss: below threshold the loss line is off the gauge"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var top = Math.max(picture.smallSignal, picture.y, lossOf(picture)) * HEADROOM;",
-    replace: "var top = Math.max(picture.smallSignal, lossOf(picture)) * HEADROOM;",
-    why: "the scale forgets the inversion: a spike runs off the bar"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "g.fillRect(G.gainX, gainY, G.gainW, zeroY - gainY);",
-    replace: "g.fillRect(G.gainX, G.top, G.gainW, zeroY - gainY);",
-    why: "the gain bar hanging from the top"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var lossY = gaugeY(loss);",
-    replace: "var lossY = gaugeY(picture.smallSignal);",
-    why: "the loss line drawn at the small-signal gain"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var smallY = gaugeY(picture.smallSignal);",
-    replace: "var smallY = gaugeY(picture.y);",
-    why: "the small-signal gain drawn at the gain"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "shareBar(g, c, L.bar, picture.y / top);",
-    replace: "shareBar(g, c, L.bar, picture.x / top);",
-    why: "the upper-level bar showing the pump, not the inversion"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var laserShare = clamp(picture.stim / ARROW_FULL, 0, 1);",
-    replace: "var laserShare = clamp(picture.x / ARROW_FULL, 0, 1);",
-    why: "the laser arrow drawn from the pump, so it shows before the laser starts"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "      g.strokeStyle = c.glow;",
-    replace: "      g.strokeStyle = c.glo;",
-    why: "a palette name misspelt: the colour is undefined"
-  },
-
   /* ---------- stage 6: draw-plots.js ---------- */
   {
     file: "js/laser/ui/draw-plots.js",
@@ -1768,12 +1718,6 @@ const MUTATIONS = [
     find: "        beam: beamNow(),\n        pump: benchPumpNow(),",
     replace: "        beam: 1,\n        pump: benchPumpNow(),",
     why: "the beam drawn whatever the output"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "return Math.max(0, y * p) / derived.thresholdRate;",
-    replace: "return Math.max(0, y) / derived.thresholdRate;",
-    why: "the laser arrow drawn from the inversion alone, before there is any light"
   },
   {
     file: "js/laser/page.js",
@@ -3335,18 +3279,6 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        y: inversionNow(),\n",
-    replace: "        y: Math.max(0, inversionNow()),\n",
-    why: "three levels' inversion clamped at 0 again: ruby before Fire shows no ion down"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "        x: pumpLevel(),\n",
-    replace: "        x: derived.x,\n",
-    why: "the level picture's pump from the steady numbers: none for a flash"
-  },
-  {
-    file: "js/laser/page.js",
     find: "        pump: benchPumpNow(),\n        transmission",
     replace: "        pump: 1,\n        transmission",
     why: "the pump on the bench always glowing fully"
@@ -3401,18 +3333,6 @@ const MUTATIONS = [
   },
 
   /* ---------- stage 7c: the review's fixes ---------- */
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var top = Math.max(picture.smallSignal, picture.y, lossOf(picture)) * HEADROOM;",
-    replace: "var top = Math.max(picture.y, lossOf(picture)) * HEADROOM;",
-    why: "the scale forgets the small-signal gain: ruby's dashed line above the gauge"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var smallY = gaugeY(picture.smallSignal);",
-    replace: "var smallY = gaugeY(picture.x);",
-    why: "the dashed small-signal line drawn at the pump x: wrong for three levels"
-  },
   {
     file: "js/laser/engine/bench.js",
     find: "return { x: level, w: null, smallSignal: level, overThreshold: level / startLoss };",
@@ -3478,18 +3398,6 @@ const MUTATIONS = [
     find: "            var config = Object.assign({}, state.config);",
     replace: "            var config = state.config;",
     why: "a slider changing the config in place: a failed search leaves it changed"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "        smallSignal: pumpNow().smallSignal,\n",
-    replace: "        smallSignal: pumpLevel(),\n",
-    why: "the gauge's dashed line at the pump, not at g₀/g_th"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "        smallSignal: pumpNow().smallSignal,\n",
-    replace: "        smallSignal: Math.max(0, pumpNow().smallSignal),\n",
-    why: "the small-signal gain clamped at 0: the two-level atom seems on the edge of gaining"
   },
   {
     file: "js/laser/page.js",
@@ -3693,130 +3601,10 @@ const MUTATIONS = [
     why: "the pump beam leaving from the box's bottom edge"
   },
   {
-    file: "js/laser/ui/draw-levels.js",
-    find: "return picture.scheme === \"three-level\" || picture.scheme === \"two-level\";",
-    replace: "return picture.scheme === \"three-level\";",
-    why: "the two-level atom drawn as four levels"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "return hasIons(picture) ? -picture.n_t * HEADROOM : 0;",
-    replace: "return hasIons(picture) ? -picture.n_t : 0;",
-    why: "no room below every ion down"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "    if (hasIons(picture)) top = Math.max(top, ABOVE_ZERO * picture.n_t);\n",
-    replace: "",
-    why: "no room above zero: ruby's loss word off the canvas before Fire"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "        { y: L.pumpBand, word: word(words, \"pumpBand\") },\n        { y: L.upper, word: word(words, \"upper\") },\n        { y: L.ground, word: word(words, \"groundLower\") || word(words, \"ground\") }",
-    replace: "        { y: L.pumpBand, word: word(words, \"pumpBand\") },\n        { y: L.upper, word: word(words, \"upper\") },\n        { y: L.lower, word: word(words, \"lower\") },\n        { y: L.ground, word: word(words, \"groundLower\") || word(words, \"ground\") }",
-    why: "ruby drawn with a lower laser level it does not have"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "word(words, \"groundLower\") || word(words, \"ground\")",
-    replace: "word(words, \"ground\")",
-    why: "ruby's ground not named as its lower laser level"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var laserEnd = scheme === \"four-level\" ? L.lower : L.ground;",
-    replace: "var laserEnd = L.lower;",
-    why: "ruby lasing down to a lower level it does not have"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "        arrow(g, L.arrows.pumpDown, L.upper, L.ground, pumpWidth);\n",
-    replace: "",
-    why: "the two-level atom's pump only lifting atoms"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "        arrow(g, L.arrows.pump, L.ground, L.upper, pumpWidth);",
-    replace: "        arrow(g, L.arrows.pump, L.ground, L.pumpBand, pumpWidth);",
-    why: "the two-level atom pumped to a band it does not have"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "      if (scheme === \"four-level\") {\n        g.moveTo(L.arrows.relaxBottom",
-    replace: "      if (true) {\n        g.moveTo(L.arrows.relaxBottom",
-    why: "ruby drawn with a relaxation from a lower level it does not have"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "    if (scheme !== \"two-level\") {\n      g.strokeStyle = c.faint;",
-    replace: "    if (true) {\n      g.strokeStyle = c.faint;",
-    why: "the two-level atom drawn with a pump band's relaxation"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "var up = (picture.n_t + picture.y) / (2 * picture.n_t);",
-    replace: "var up = (picture.n_t + picture.y) / picture.n_t;",
-    why: "the share of ions up written as 2N₂/N_t"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
-    replace: "barMark(g, c, L.bar, 0.5);",
-    why: "the threshold mark at half the ions up: ruby's 54 % lost"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "shareBar(g, c, L.groundBar, 1 - up);",
-    replace: "shareBar(g, c, L.groundBar, up);",
-    why: "the ground bar showing the ions up"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "      g.globalAlpha = 0.4;\n      g.fillRect(G.gainX, zeroY, G.gainW, gainY - zeroY);",
-    replace: "      g.globalAlpha = 1;\n      g.fillRect(G.gainX, zeroY, G.gainW, gainY - zeroY);",
-    why: "absorption drawn as solid as gain"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "    } else if (gainY > zeroY) {",
-    replace: "    } else if (false) {",
-    why: "a medium that absorbs drawn with no bar"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "    if (low < 0) {",
-    replace: "    if (false) {",
-    why: "no zero line: where absorption ends is not shown"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "text(g, word(words, \"transparent\"), wordsLeft, zeroY + L.fontSize, wordsWidth);",
-    replace: "text(g, word(words, \"transparent\"), wordsLeft, zeroY - 4, wordsWidth);",
-    why: "the zero line's word above it, on the loss line's side"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "return G.bottom - span * (value - low) / (top - low);",
-    replace: "return G.bottom - span * value / top;",
-    why: "the gauge without its part below zero"
-  },
-  {
     file: "js/laser/page.js",
     find: "        transmission: 1 - state.config.refl2,\n        pumpKind: state.config.pump,\n",
     replace: "        transmission: 1 - state.config.refl2,\n",
     why: "every pump drawn as diodes on the page"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "        scheme: derived.scheme,\n",
-    replace: "",
-    why: "the level picture always four levels"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "        n_t: derived.n_t,\n",
-    replace: "",
-    why: "the level picture without n_t"
   },
   {
     file: "js/laser/engine/bench.js",
@@ -3829,33 +3617,6 @@ const MUTATIONS = [
     find: "var thresholdRate = fourLevel ? 1 : scales.n_t + 1;",
     replace: "var thresholdRate = fourLevel ? 1 : scales.n_t;",
     why: "the threshold pump rate taken as n_t, not n_t + 1"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "var LEVEL_WORDS = [\"pumpBand\", \"upper\", \"lower\", \"ground\", \"groundLower\", \"gain\", \"loss\", \"transparent\"];",
-    replace: "var LEVEL_WORDS = [\"pumpBand\", \"upper\", \"lower\", \"ground\", \"gain\", \"loss\", \"transparent\"];",
-    why: "ruby's ground not named on the page"
-  },
-  {
-    file: "data/laser.json",
-    find: "\"transparent\": { \"hy\": \"Թափանցիկ\", \"en\": \"Transparent\" }",
-    replace: "\"transparent\": { \"hy\": \"\", \"en\": \"Transparent\" }",
-    why: "the gauge's zero line without its Armenian word"
-  },
-  {
-    file: "data/laser.json",
-    find: "\"groundLower\": { \"hy\": \"Հիմնական (ստորին)\", \"en\": \"Ground (lower level)\" }",
-    replace: "\"groundLower\": { \"hy\": \"Հիմնական (ստորին)\", \"en\": \"\" }",
-    why: "ruby's ground without its English name"
-  }
-,
-
-  // ---------- stage 7d review ----------
-  {
-    file: "js/laser/page.js",
-    find: "if (state.config.pump === \"discharge\") return state.config.current / controls.pump.max;",
-    replace: "if (state.config.pump === \"discharge\") return glowNow();",
-    why: "the gas tube drawn by its gain: dark at the top of the current"
   },
   {
     file: "js/laser/page.js",
@@ -3886,24 +3647,6 @@ const MUTATIONS = [
     find: "var medium = kind === \"discharge\" ? L.tube : L.rod;",
     replace: "var medium = L.rod;",
     why: "the rays' arrowheads inside the gas tube's glow"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "if (picture.n_t > loss) barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
-    replace: "barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
-    why: "the threshold mark above its bar when n_t ≤ 1"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "    if (lossWordY - L.fontSize < G.top) lossWordY = lossY + L.fontSize + 2;\n",
-    replace: "",
-    why: "the loss word above the gauge's top"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "return Math.max(0, y * p) / derived.thresholdRate;",
-    replace: "return Math.max(0, y * p);",
-    why: "the laser arrow not over the threshold pump rate"
   },
   {
     file: "js/laser/engine/qswitch.js",
@@ -4423,30 +4166,6 @@ const MUTATIONS = [
     why: "the transmission keeps the whole top row and runs into the switch's name"
   },
   {
-    file: "js/laser/ui/draw-levels.js",
-    find: "    var lossY = gaugeY(loss);",
-    replace: "    var lossY = gaugeY(1);",
-    why: "the loss line stays at the open cavity's while the switch is closed"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "      barMark(g, c, L.bar, loss / top);",
-    replace: "      barMark(g, c, L.bar, 1 / top);",
-    why: "the four-level threshold mark at the open cavity's threshold behind a closed switch"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "      if (picture.n_t > loss) barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
-    replace: "      if (picture.n_t > 1) barMark(g, c, L.bar, (1 + loss / picture.n_t) / 2);",
-    why: "a three-level threshold mark above its bar when the loss is out of reach"
-  },
-  {
-    file: "js/laser/ui/draw-levels.js",
-    find: "    return typeof picture.loss === \"number\" ? picture.loss : 1;",
-    replace: "    return 1;",
-    why: "the level picture ignores the loss it is given"
-  },
-  {
     file: "js/laser/page.js",
     find: "        if (run.peak.t > from && run.peak.t < state.sim.t) state.history.push(run.peak.t, run.peak.power);",
     replace: "",
@@ -4493,12 +4212,6 @@ const MUTATIONS = [
     find: "  var LIVE_READOUTS = [\"x\", \"lossNow\", \"giant\", \"peak\", \"powerNow\", \"time\"];",
     replace: "  var LIVE_READOUTS = [\"x\", \"peak\", \"powerNow\", \"time\"];",
     why: "the loss now and §4.3's pulse written only when a control moves"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "        loss: shutter === null ? 1 : shutter.loss,",
-    replace: "        loss: 1,",
-    why: "the level gauge's loss line stays at the open cavity's"
   },
   {
     file: "js/laser/page.js",

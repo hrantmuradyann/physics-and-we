@@ -11,8 +11,9 @@
    that can have one (stage 8b). A slider and a number box each set the
    pump (its power, its flash's energy or its current), the output coupler,
    the filter's transmission and the slow motion.
-   Four pictures: the bench, the chart of the output power, the cartoon of
-   atoms and photons, and the energy levels (stages 6 and 6b).
+   Three pictures: the bench, the chart of the output power and the cartoon
+   of atoms and photons (stages 6 and 6b; the energy levels with their gain
+   gauge were a fourth until the owner had them removed, after stage 10a).
 
    WHY IT TAKES ITSELF DOWN FIRST
    The router (js/router.js) fires "section:ready" for this page more often
@@ -156,8 +157,7 @@
   var PULSING_HIDES = ["P_out", "T_best", "period"];
   // The readouts that change while the simulation runs ("x" for a flash).
   var LIVE_READOUTS = ["x", "lossNow", "giant", "peak", "powerNow", "time"];
-  var CANVASES = ["bench", "power", "photons", "levels"];
-  var LEVEL_WORDS = ["pumpBand", "upper", "lower", "ground", "groundLower", "gain", "loss", "transparent"];
+  var CANVASES = ["bench", "power", "photons"];
   var POWER_WORDS = ["title", "steady"];
 
   var teardown = null;          // takes the current build down, or null
@@ -331,7 +331,6 @@
       labels.pump = word(data, "bench.pumps." + state.config.pump) || anyPump;
     }
     nameThePump();
-    var levelWords = wordsAt(data, "levels.words", LEVEL_WORDS);
     var powerWords = wordsAt(data, "power.words", POWER_WORDS);
     var photonWords = wordsAt(data, "photons.words", UI.photons.WORDS);
     var never = word(data, "readouts.never") || "—";
@@ -421,14 +420,6 @@
         return y / (1 + y);
       }
       return (derived.N_t + state.sim.N) / (2 * derived.N_t);
-    }
-    // Stimulated emission now, over the pump rate at threshold (the
-    // engine's thresholdRate), so that a steady laser gives x − 1 for every
-    // scheme. In the equations it is y·p (§11.2).
-    function stimulatedNow() {
-      var y = inversionNow();
-      var p = Math.exp(state.sim.lnPhi + derived.sOnePhoton);
-      return Math.max(0, y * p) / derived.thresholdRate;
     }
     function remember() {
       state.history.push(state.sim.t, powerNow());
@@ -682,19 +673,6 @@
     });
     addCanvas("photons", UI.photons.SIZE, function (view) {
       UI.photons.draw(view, state.cartoon, photonWords);
-    });
-    addCanvas("levels", UI.levels.SIZE, function (view) {
-      var shutter = switchNow();                               // null without a Q-switch
-      UI.levels.draw(view, {
-        scheme: derived.scheme,
-        x: pumpLevel(),
-        smallSignal: pumpNow().smallSignal,
-        y: inversionNow(),
-        stim: stimulatedNow(),
-        n_t: derived.n_t,
-        loss: shutter === null ? 1 : shutter.loss,
-        words: levelWords
-      });
     });
 
     /* the choice of laser */

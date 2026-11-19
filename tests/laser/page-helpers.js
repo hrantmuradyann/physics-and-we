@@ -14,7 +14,7 @@ const { createBrowser, fakeCanvas, fakeContainer, fakeElement } = require("./fak
 
 const WORDS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "laser.json"), "utf8"));
 const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch"];
-const CANVASES = ["bench", "power", "photons", "levels"];
+const CANVASES = ["bench", "power", "photons"];
 const CONTROLS = ["pump", "coupler", "slowMotion", "absorberT0"];
 // The filter's slider (stage 8b), in a row page.js hides while the
 // Q-switch is off.
@@ -191,7 +191,6 @@ function built(lang, options) {
 //   seen.pumpCalls  how many times pumpNow() was called
 //   seen.switchCalls  how many times switchNow() was called
 //   seen.peaks     the peak of every advance() call ({ t, power })
-//   seen.levels    every picture given to the level diagram
 //   seen.bench     every { labels, light } given to the bench drawing
 //   seen.chart     the latest chart given to draw-plots, by its key: { P }
 //   seen.charts    how many charts were drawn
@@ -199,7 +198,7 @@ function built(lang, options) {
 //   seen.cartoons  every cartoon given to the photon drawing
 function watch(browser) {
   const seen = {
-    steps: [], sims: [], after: [], configs: [], thresholds: [], pumpCalls: 0, switchCalls: 0, peaks: [], levels: [],
+    steps: [], sims: [], after: [], configs: [], thresholds: [], pumpCalls: 0, switchCalls: 0, peaks: [],
     bench: [], chart: {}, charts: 0, drives: [], cartoons: []
   };
   const engineNow = browser.window.LaserEngine;
@@ -237,13 +236,6 @@ function watch(browser) {
     })
   });
   const UI = browser.window.LaserUI;
-  const levels = UI.levels.draw;
-  UI.levels = Object.assign({}, UI.levels, {
-    draw: function (view, picture) {
-      seen.levels.push(picture);
-      return levels(view, picture);
-    }
-  });
   const plots = UI.plots.draw;
   UI.plots = Object.assign({}, UI.plots, {
     draw: function (view, chart) {

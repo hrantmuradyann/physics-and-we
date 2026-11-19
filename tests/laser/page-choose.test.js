@@ -460,7 +460,7 @@ test("the highest output since Fire: the top of the runs' peaks since the flash,
 
 /* ---------- the pictures ---------- */
 
-test("the pump now drives the level picture, the cartoon and the pump's glow on the bench", () => {
+test("the pump now drives the cartoon and the pump's glow on the bench", () => {
   const page = built("en", { watch: true });
   const { browser, section, seen } = page;
   const B = engine(browser).bench;
@@ -470,7 +470,6 @@ test("the pump now drives the level picture, the cartoon and the pump's glow on 
   browser.runFrame(page.clock);
   runFrames(page, 3);
   // No flash yet: no pump.
-  assert.equal(last(seen.levels).x, 0);
   assert.equal(last(seen.drives).drive.pump, 0);
   assert.equal(last(seen.bench).light.pump, 0);
   section.fire.fire("click");
@@ -480,8 +479,6 @@ test("the pump now drives the level picture, the cartoon and the pump's glow on 
     runFrames(page, 1);
     const x = B.pumpNow({ sim: last(seen.after), config }).x;
     highest = Math.max(highest, x);
-    assert.equal(last(seen.levels).x, x, "frame " + frame);
-    assert.equal(last(seen.levels).smallSignal, x, "four levels: g₀/g_th = x, frame " + frame);
     assert.equal(last(seen.drives).drive.pump, Math.min(1, x / 4), "frame " + frame);
     assert.equal(last(seen.bench).light.pump, Math.min(1, x / 4), "frame " + frame);
   }
@@ -490,7 +487,7 @@ test("the pump now drives the level picture, the cartoon and the pump's glow on 
   assert.ok(B.pumpNow({ sim: last(seen.after), config }).x < highest, "and is past it");
 });
 
-test("three and two levels on their own pictures: the scheme, n_t, and the inversion and gain below zero", () => {
+test("three and two levels in the cartoon: the share of ions up, N₂/N_t; the two-level atom never half up", () => {
   const page = built("en", { watch: true });
   const { browser, section, seen } = page;
   const E = engine(browser);
@@ -500,62 +497,24 @@ test("three and two levels on their own pictures: the scheme, n_t, and the inver
   browser.runFrame(page.clock);
   runFrames(page, 2);
   const config = B.configFor({ medium: "ruby", pump: "flashlamp" });
-  const d = B.derive(config);
-  // Before Fire every ion is down, y = −n_t, and with no pump the
-  // small-signal gain is −n_t too: the gauge shows a medium that absorbs.
-  let picture = last(seen.levels);
-  assert.equal(picture.scheme, "three-level");
-  assert.equal(picture.n_t, d.n_t);
-  assertClose(picture.y, -d.n_t, 1e-12, "every ion down");
-  assertClose(picture.smallSignal, -d.n_t, 1e-12, "no pump: −n_t");
-  assert.equal(picture.stim, 0);
+  // Before Fire every ion is down: no excited atom in the cartoon.
   assert.equal(last(seen.drives).drive.excited, 0, "no excited atom in the cartoon");
-  // At the flash's peak: x and the small-signal gain from the engine; the
-  // cartoon's share is N₂/N_t.
+  // At the flash's peak the cartoon's share is N₂/N_t, and the pump's
+  // level is the engine's x.
   section.fire.fire("click");
   runFrames(page, 200);                                 // 0.33 ms: the flash at its peak
-  picture = last(seen.levels);
-  let sim = last(seen.after);
+  const sim = last(seen.after);
   const pump = B.pumpNow({ sim: sim, config: config });
-  assert.equal(picture.x, pump.x);
-  assert.equal(picture.smallSignal, pump.smallSignal);
-  assert.ok(pump.smallSignal > pump.x + 2, pump.smallSignal + " against " + pump.x);
   const N_t = E.media.get("ruby").N_t;
   assertClose(last(seen.drives).drive.excited, (N_t + sim.N) / (2 * N_t), 1e-12, "N₂/N_t");
-  assertClose(picture.y, sim.N / d.N_c, 1e-12);
-  // Ruby lases from about 0.47 ms on (1000 J). The laser arrow is y·p over
-  // the threshold pump rate, n_t + 1 for three levels, so a steady laser
-  // would draw x − 1 as four levels do (in a spike it is far more).
-  let lasing = 0;
-  for (let frame = 0; frame < 300 && lasing < 30; frame++) {
-    runFrames(page, 1);
-    picture = last(seen.levels);
-    sim = last(seen.after);
-    const y = sim.N / d.N_c;
-    const p = Math.exp(sim.lnPhi + d.sOnePhoton);
-    assertClose(picture.stim, Math.max(0, y * p) / (d.n_t + 1), 1e-12, "y·p/(n_t + 1), frame " + frame);
-    if (picture.stim > 0.05) lasing += 1;
-  }
-  assert.ok(lasing > 0, "ruby lased");
-  // The two-level atom: always more down than up, its gain below zero.
+  assert.equal(last(seen.drives).drive.pump, Math.min(1, pump.x / 4));
+  // The two-level atom: always more down than up; no threshold, so its
+  // pump is drawn by W_pτ.
   choose(section, "two-level", "laser");
   runFrames(page, 60);
   const two = B.derive(B.configFor({ medium: "two-level", pump: "laser" }));
-  picture = last(seen.levels);
-  assert.equal(picture.scheme, "two-level");
-  assert.equal(picture.n_t, two.n_t);
-  assert.ok(picture.y < 0 && picture.y >= -two.n_t, "y = " + picture.y);
-  assert.ok(picture.smallSignal < 0, "it absorbs");
-  assertClose(picture.smallSignal, -two.n_t / (1 + 2 * two.w), 1e-12, "−n_t/(1 + 2w)");
-  assert.equal(picture.stim, 0);
-  assert.equal(picture.x, two.w, "no threshold: its pump by W_pτ");
   assert.equal(last(seen.bench).light.pump, Math.min(1, two.w / 4));
   for (const entry of seen.drives.slice(-60)) assert.ok(entry.drive.excited < 0.5, "two levels: " + entry.drive.excited);
-  // Four levels: the scheme and no n_t.
-  choose(section, "nd-yag", "diode");
-  runFrames(page, 1);
-  assert.equal(last(seen.levels).scheme, "four-level");
-  assert.equal(last(seen.levels).n_t, null);
 });
 
 test("the bench is drawn with the chosen pump", () => {
@@ -634,26 +593,6 @@ test("the drawing names the chosen pump, in the visitor's language", () => {
   browser.setOnScreen(other.canvases.bench, true);
   runFrames(page, 1);
   assert.equal(last(seen.bench).labels.pump, WORDS.bench.parts.pump.hy);
-});
-
-test("the level picture gets every word it can draw, in the visitor's language", () => {
-  const page = built("en", { watch: true });
-  const { browser, section, seen } = page;
-  page.clock = 1000;
-  browser.runFrame(page.clock);
-  const names = Object.keys(WORDS.levels.words).filter((name) => name.charAt(0) !== "_");
-  // Ruby's ground is also its lower laser level, with a word of its own; the
-  // gauge's zero line has its word too.
-  assert.ok(names.includes("groundLower") && names.includes("transparent"));
-  choose(section, "ruby");
-  runFrames(page, 1);
-  for (const name of names) assert.equal(last(seen.levels).words[name], WORDS.levels.words[name].en, name);
-  browser.window.Site.lang = "hy";
-  const again = laserSection(600);
-  sectionReady(browser, "laser", again.container, WORDS);
-  browser.setOnScreen(again.canvases.levels, true);
-  runFrames(page, 1);
-  for (const name of names) assert.equal(last(seen.levels).words[name], WORDS.levels.words[name].hy, name + " in Armenian");
 });
 
 test("dragging the output mirror waits for the threshold flash until the slider is let go", () => {

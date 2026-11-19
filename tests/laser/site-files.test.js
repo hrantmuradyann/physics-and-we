@@ -246,7 +246,7 @@ test("sections/laser.html: no styles, scripts, <header> or <footer>; the silver 
 
 // The pictures js/laser/page.js draws, by their data-laser-canvas names
 // (tests/laser/page.test.js uses the same list).
-const PAGE_CANVASES = ["bench", "power", "photons", "levels"];
+const PAGE_CANVASES = ["bench", "power", "photons"];
 
 test("sections/laser.html: the four canvases, each a picture for screen readers, each described in the data", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");

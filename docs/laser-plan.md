@@ -104,13 +104,15 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 8b: Q-switching on the page (the owner's design: one Q-switch, the bleachable filter, as an On/Off switch right under the laser beside Fire; turning it on or off keeps the run and the chart (`bench.carryOver`); its slider, the loss now and §4.3's prediction, the highest output from the runs' peaks, the pulses' tops on the chart, the filter on the drawing; `derive` and `pumpNow` give the closed filter's threshold on a steady pump).
 - ✖ Stage 9 (several longitudinal modes and a spectrum panel): **dropped by the owner** on 2026-11-16, as it would make everything too complex. The simulator stays one-mode (`docs/laser-physics.md` §11.3). The number is not reused, so later stages keep theirs.
 - ✅ Stage 10a: mirror optics in the engine (`optics.js`: ray matrices, stability, the Gaussian mode, each mirror's F, a ray trace, and the mirrors' loss across every stability edge, §7.7; `bench.js`: each bench's real mirrors (§5.9), the mirrors' loss in every threshold, `derive`'s `resonator`); the page unchanged.
+- ✅ After 10a, at the owner's request (2026-11-19): the energy levels with their gain/loss gauge removed from the page (`draw-levels.js`, its canvas, words and tests; the theory's pointer to it now points to the power chart).
 - Next: stage 10b, the mirrors on the page (see "Where we stopped" just below).
 
 ### Where we stopped (2026-11-19), for the next session
 
 - **Last commit:** "Laser simulator stage 10a: mirror optics in the engine", on `feature/laser`. **Nothing is pushed**; push only when the owner says so. `docs/laser-guide.md` (the owner's learning material, written by another AI) is untracked on purpose: not part of a stage.
 - **Stage 10a is finished:** 700 tests pass, 854 of 854 deliberate mistakes are caught, and one `/code-review xhigh` (15 findings) is fixed except two declined with reasons (see stage 10a's scope card). The page is unchanged. The decisions taken without the owner (D15: losses only; the min interpolation; each bench's mirrors) are listed there for review.
-- **Next is stage 10b** (the mirrors on the page, above). Start by asking the owner the two 10b questions below; then the doc audit, the scope card, the recipe. Stage 8b's one unseen check still stands: on a 390 px screen, the Nd:YAG diode bench should show no empty line above the switch.
+- **The levels picture is gone** (the owner asked, 2026-11-19, with a screenshot of the whole panel: the levels and the gain gauge). Its own commit, after 10a.
+- **Next is stage 10b** (the mirrors on the page, above). The owner answered its questions on 2026-11-19: **one choice per mirror**, and **yes to the stability diagram**, placed "where it'll be comfortable to look at while the laser is working", so beside the bench and the chart, not under the stage where the levels were. Then the doc audit, the scope card, the recipe. Stage 8b's one unseen check still stands: on a 390 px screen, the Nd:YAG diode bench should show no empty line above the switch.
 - **The owner, at the start of 10b and 10c:**
   - 10b: one mirror choice per mirror, or one for both (recommended: per mirror);
   - 10b: a stability diagram, yes or no;
@@ -1390,9 +1392,9 @@ Three sub-stages, one commit each, each through the whole recipe (§3):
     - the "widths × k" note.
   - Readouts: stable or unstable (in words), the waist, the mirrors' loss. An unstable or clipped laser visibly dims or stops.
   - Words in both languages.
-- **Ask the owner at the start:**
-  - one choice per mirror (recommended, because the most common real laser has one flat and one concave mirror), or one choice for both;
-  - whether to add a small stability diagram, (g₁, g₂) with a moving dot (§7.1). It is visual, but it adds to the page.
+- **Asked the owner (answered 2026-11-19):**
+  - one choice per mirror (recommended, because the most common real laser has one flat and one concave mirror), or one choice for both: **one per mirror**;
+  - whether to add a small stability diagram, (g₁, g₂) with a moving dot (§7.1): **yes**, somewhere it is comfortable to watch while the laser runs (beside the bench and the chart).
 - **Tests:**
   - page and draw tests: the controls, every width, rays straight between reflections, F at R/2 along the drawing's axis scale, the off-canvas arrow, an unstable ray leaving;
   - the browser check of the look with the owner.

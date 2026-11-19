@@ -64,7 +64,6 @@ const UI_FILES = [
   "axis.js",
   "history.js",
   "draw-bench.js",
-  "draw-levels.js",
   "draw-plots.js",
   "draw-photons.js"
 ];

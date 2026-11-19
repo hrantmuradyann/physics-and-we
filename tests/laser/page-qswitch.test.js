@@ -520,20 +520,6 @@ test("the chart adds each run's peak that lies inside it, so a pulse between two
 
 /* ---------- the pictures ---------- */
 
-test("the level picture gets the loss now; without a switch it is 1", () => {
-  const page = built("en", { watch: true });
-  const { section, seen } = page;
-  runFrames(page, 2);
-  assert.equal(last(seen.levels).loss, 1);
-  choose(section, "nd-yag", "diode", "absorber");
-  runFrames(page, 2);
-  const config = configNow(page);
-  const picture = last(seen.levels);
-  assert.equal(picture.lossTop, undefined, "the closed switch's loss is not on the scale");
-  const sim = last(seen.after);
-  assertClose(picture.loss, B(page).switchNow({ sim, config }).loss, 1e-12, "the loss now");
-});
-
 test("the bench gets the filter now and its name, in the visitor's language", () => {
   for (const lang of ["en", "hy"]) {
     const page = built(lang, { watch: true });

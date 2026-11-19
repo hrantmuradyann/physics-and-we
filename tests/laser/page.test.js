@@ -44,9 +44,6 @@ test("the words page.js needs are in data/laser.json, in both languages", () => 
   for (const lang of ["hy", "en"]) {
     for (const name of CANVASES) assert.ok(WORDS[name].alt[lang].trim(), name + ".alt." + lang);
     for (const part of PARTS) assert.ok(WORDS.bench.parts[part][lang].trim(), part + "." + lang);
-    for (const name of ["pumpBand", "upper", "lower", "ground", "groundLower", "gain", "loss", "transparent"]) {
-      assert.ok(WORDS.levels.words[name][lang].trim(), "levels.words." + name + "." + lang);
-    }
     for (const name of ["title", "steady"]) assert.ok(WORDS.power.words[name][lang].trim(), "power.words." + name + "." + lang);
     for (const name of UI.photons.WORDS) assert.ok(WORDS.photons.words[name][lang].trim(), "photons.words." + name + "." + lang);
   }
@@ -82,13 +79,12 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     expected.push(WORDS.bench.parts.transmission[lang] + " 5.00" + NB + "%");
     assert.deepEqual(texts(section.recorder).sort(), expected.sort(), lang);
     // Each canvas has the height its drawing asks for.
-    const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE, levels: UI.levels.SIZE };
+    const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE };
     for (const name of CANVASES) {
       const size = sizes[name];
       const height = Math.max(size.minHeight, Math.min(600 / size.aspect, size.maxHeight));
       assert.equal(section.canvases[name].style.height, height + "px", name);
     }
-    assert.ok(texts(section.recorders.levels).includes(WORDS.levels.words.upper[lang]));
     assert.ok(texts(section.recorders.power).includes(WORDS.power.words.title[lang]));
     assert.ok(texts(section.recorders.power).includes(WORDS.power.words.steady[lang]));
     for (const name of UI.photons.WORDS) {
@@ -192,7 +188,7 @@ test("moving a slider changes the bench at once, even paused: below threshold th
   assert.equal(section.readouts.T_best.textContent, "—");
   // Paused, the pictures were drawn again with the new numbers.
   assert.equal(browser.pendingFrames(), 0);
-  assert.ok(section.recorders.levels.calls.length > 0);
+  assert.ok(section.recorders.photons.calls.length > 0);
   assert.ok(texts(section.recorder).includes(WORDS.bench.parts.transmission.en + " 60.0" + NB + "%"), "the bench shows the new mirror");
 });
 
@@ -348,9 +344,10 @@ test("the laser lases: after enough frames the live output matches the steady ou
   // 10 frames at 1 s = 100 µs: the inversion builds up, the light has not
   // come yet (the first spike is about 170 µs in), so no stimulated emission.
   runFrames(page, 10);
-  const early = last(seen.levels);
-  assert.ok(early.y > 0.1, "the inversion is building up: " + early.y);
-  assert.ok(early.stim < 1e-6, "no stimulated emission before the light: " + early.stim);
+  const start = engine(browser).bench.derive(engine(browser).bench.defaultConfig());
+  const y = last(seen.after).N / start.N_c;
+  assert.ok(y > 0.1, "the inversion is building up: " + y);
+  assert.ok(last(seen.bench).light.beam < 1e-6, "no light yet: " + last(seen.bench).light.beam);
 
   slide(section, "slowMotion", 0);                    // 1 s = 1 ms
   runFrames(page, 300);                               // 5 s on screen = 5 ms simulated
@@ -360,12 +357,8 @@ test("the laser lases: after enough frames the live output matches the steady ou
   assert.equal(section.note.hidden, true, "it kept up");
   // The beam follows the output: P_out = 2.3 × powerPerP (x − 1).
   assertClose(last(seen.bench).light.beam, d.x - 1, 0.01, "beam");
-  // The levels: the gain clamped at the loss (y = 1), the laser transition
-  // as strong as the pump above threshold (y·p = x − 1, §4.1).
-  const late = last(seen.levels);
-  assert.equal(late.x, d.x);
-  assertClose(late.y, 1, 0.01, "y");
-  assertClose(late.stim, d.x - 1, 0.01, "stimulated emission");
+  // The gain clamped at the loss: y = 1 (§4.1).
+  assertClose(last(seen.after).N / d.N_c, 1, 0.01, "y");
 });
 
 test("the chart: the output power with its steady line, up to now, from the history", () => {
@@ -641,7 +634,7 @@ test("the pointer over a paused chart draws that chart again, not the other pict
   for (const recorder of Object.values(section.recorders)) recorder.calls.length = 0;
   section.canvases.power.fire("pointermove", { offsetX: 200 });
   assert.ok(section.recorders.power.calls.length > 0, "the chart under the pointer");
-  for (const name of ["bench", "photons", "levels"]) {
+  for (const name of ["bench", "photons"]) {
     assert.equal(section.recorders[name].calls.length, 0, name + " is not drawn again");
   }
 });
@@ -660,7 +653,7 @@ test("the pointer over the chart: its crosshair follows; leaving takes it away; 
   section.canvases.power.fire("pointerleave");
   assert.equal(seen.chart.P.cursor, null);
   // The other pictures do not listen for the pointer.
-  for (const name of ["bench", "photons", "levels"]) {
+  for (const name of ["bench", "photons"]) {
     assert.equal(section.canvases[name].listenerCount("pointermove"), 0, name);
   }
   assert.equal(browser.pendingFrames(), 0, "still paused");
@@ -732,13 +725,13 @@ test("an error in a drawing pauses the page: the button says Play, and Play trie
   const page = built("en");
   const { browser, section } = page;
   const UI = browser.window.LaserUI;
-  const levels = UI.levels;
-  UI.levels = Object.assign({}, levels, { draw: function () { throw new Error("bad drawing"); } });
+  const photons = UI.photons;
+  UI.photons = Object.assign({}, photons, { draw: function () { throw new Error("bad drawing"); } });
   page.clock = 1000;
   assert.throws(() => browser.runFrame(page.clock), /bad drawing/);
   assert.equal(browser.pendingFrames(), 0, "paused");
   assert.equal(section.play.textContent, "Play");
-  UI.levels = levels;
+  UI.photons = photons;
   section.play.fire("click");
   assert.equal(section.play.textContent, "Pause");
   assert.equal(browser.pendingFrames(), 1, "running again");

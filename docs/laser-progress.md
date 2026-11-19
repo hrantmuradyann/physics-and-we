@@ -16,8 +16,8 @@ The page lives at the hidden address `?view=laser`. A banner on the Labs page li
 
 The work is split into numbered **stages**. Each stage adds one piece, and is not counted as finished until it passes four checks:
 
-1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 700 of them, and all of them pass.
-2. **Deliberate mistakes.** A tool makes 854 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes about 6 minutes (it took 25 before stage 7c made it faster; see below).
+1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 677 of them, and all of them pass.
+2. **Deliberate mistakes.** A tool makes 807 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes about 6 minutes (it took 25 before stage 7c made it faster; see below).
 3. **A code review.** A separate careful reading of the whole change, looking for bugs. What it finds is fixed before the stage is finished.
 4. **A check in the browser**, for stages that change the page: both themes, both languages, a phone-sized screen, no errors.
 
@@ -46,6 +46,7 @@ The simulator has two halves:
 | 8a | **Q-switching in the engine** (see below): the giant pulse, with three kinds of Q-switch. |
 | 8b | **The Q-switch on the page** (see below): an On/Off switch right under the laser, beside a Fire button that moved there too. |
 | 10a | **Mirror physics in the engine** (see below): flat, concave and convex mirrors, which pairs keep the light, the beam's width, the focal points, and the light the mirrors lose. Each laser now has its real mirrors. Not on the page yet. |
+| — | **The energy-levels picture removed**, as you asked (19 November): the levels and the gain gauge under the laser. The theory chapter about the giant pulse now tells the visitor to watch the power chart instead. |
 
 ### What you can see on the page today
 
@@ -194,7 +195,7 @@ Stage 10 was rewritten on 16 November from your requests (the mirrors, the focal
 
 | Stage | What it will add |
 |---|---|
-| 10b | **Mirrors on the page** (next): for each mirror, flat, concave or convex, and a slider for the radius of a curved one. The light's path drawn bounce by bounce: straight between the mirrors, changing direction at each one, so the beam narrows to a "waist" and widens again like an hourglass. The focal points marked **F**. With mirrors that do not keep the light, you see the rays walk out and the laser dim or stop (a weak laser like He-Ne stops; a very strong one like ruby can still flash, as real high-power lasers do). |
+| 10b | **Mirrors on the page** (next; you chose one choice per mirror, and a stability diagram where it is easy to watch while the laser runs): for each mirror, flat, concave or convex, and a slider for the radius of a curved one. The light's path drawn bounce by bounce: straight between the mirrors, changing direction at each one, so the beam narrows to a "waist" and widens again like an hourglass. The focal points marked **F**. With mirrors that do not keep the light, you see the rays walk out and the laser dim or stop (a weak laser like He-Ne stops; a very strong one like ruby can still flash, as real high-power lasers do). |
 | 10c | **A bench that looks real:** ruby as a red rod, Nd:YAG pale lilac, Ti:sapphire pink, dye as a coloured liquid in a glass cell, the gases in glass tubes glowing in their real colours with atoms moving inside; more realistic diodes, with the pump light visibly going into the crystal and being absorbed; the laser beam in its real colour (and the invisible infrared ones in a marked false colour). |
 | 11 | **Lenses outside the laser:** focusing the beam and tracing rays through glass. |
 | 12 | **The "learn" section:** chapters in both languages, each with a "try it on the bench" button that sets up the right example. |
