@@ -360,11 +360,11 @@ test("the readouts of a discharge, a flashlamp and the two-level atom", () => {
   const { browser, section } = page;
   const B = engine(browser).bench;
   const r = section.readouts;
-  // He-Ne: the threshold current, 361 µA.
+  // He-Ne: the threshold current, 365 µA (361 µA before stage 10a's mirrors).
   choose(section, "he-ne");
   const heNe = B.derive(B.configFor({ medium: "he-ne", pump: "discharge" }));
   assert.equal(r.currentThreshold.textContent, F(page).si(heNe.currentThreshold, "A"));
-  assert.equal(r.currentThreshold.textContent, "361" + NB + "µA");
+  assert.equal(r.currentThreshold.textContent, "365" + NB + "µA");
   assert.equal(r.x.textContent, F(page).number(heNe.x));
   assert.equal(r.P_out.textContent, F(page).si(heNe.P_out, "W"));
   // A mirror letting out 60 %: the tube never reaches threshold.

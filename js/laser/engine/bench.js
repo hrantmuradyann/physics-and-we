@@ -24,7 +24,9 @@
      LaserEngine.bench.defaultConfig()    a new config: the default bench
                                           (Nd:YAG with diodes)
      LaserEngine.bench.derive(config)     threshold, output power, best
-                                          coupler, … (SI units)
+                                          coupler, the mirrors (resonator),
+                                          … (SI units)
+     LaserEngine.bench.MIRROR_SHAPES      ["flat", "concave", "convex"]
      LaserEngine.bench.start(config)      the simulation at the moment the
                                           bench is switched on:
                                           { t, N, lnPhi, flash, opensAt, absorber }
@@ -59,6 +61,15 @@
      L          mirror spacing, m          refl1, refl2   mirror reflectivities
      alpha_i    internal loss, m⁻¹         beta   share of spontaneous
                                                   emission into the mode
+     mirror1, mirror2   each mirror's shape: "flat", "concave" or "convex"
+                (MIRROR_SHAPES); mirror 1 is the back mirror, 2 the output
+     Rc1, Rc2   their radii of curvature, m, positive; a flat mirror's is
+                kept but not used (the radius its slider shows when bent)
+     aperture   the radius of the rod or of the gas tube's bore, m
+   The mirrors' loss (optics.js, docs/laser-physics.md §7.7: the aperture
+   clipping the beam, the light an unstable pair lets walk out) joins the
+   internal loss; they do not change the gain, which stays spread over
+   `area` (docs/laser-plan.md, stage 10a, D15).
    and, by pump:
      diode, laser   pumpPower  ABSORBED pump power, W
                     pumpLam    pump wavelength, m
@@ -135,8 +146,14 @@
    far less than the time between the page's chart points, and the
    solver's steps are short there.
 
+   THE MIRRORS (optics.js, docs/laser-physics.md §5.9, §7.7). readConfig
+   works out the config's mirrors once (resonatorOf); their loss γ_m joins
+   the internal loss, spread over the rod (α_i + γ_m/l_g, alphaWithMirrors),
+   so every threshold, τ_c and the best coupler include it. They do not
+   change the gain (stage 10a, D15).
+
    Tests: tests/laser/bench.test.js, tests/laser/bench-pumps.test.js,
-   tests/laser/bench-qswitch.test.js
+   tests/laser/bench-qswitch.test.js, tests/laser/bench-mirrors.test.js
    ========================================================================== */
 (function (root) {
   "use strict";
@@ -155,7 +172,10 @@
   var mA = E.constants.mA;
   var c = E.constants.c;
 
-  var COMMON_NAMES = ["medium", "pump", "l_g", "area", "L", "refl1", "refl2", "alpha_i", "beta", "qSwitch"];
+  var COMMON_NAMES = ["medium", "pump", "l_g", "area", "L", "refl1", "refl2", "alpha_i", "beta", "qSwitch",
+    "mirror1", "Rc1", "mirror2", "Rc2", "aperture"];
+  // The mirror shapes a config can have (optics.js, docs/laser-physics.md §7).
+  var MIRROR_SHAPES = Object.freeze(["flat", "concave", "convex"]);
   var PUMP_NAMES = {
     diode: ["pumpPower", "pumpLam", "eta"],
     laser: ["pumpPower", "pumpLam", "eta"],
@@ -182,6 +202,11 @@
   // (τ_c = L_e/(cγ)); it is refused here, with this file's name in the
   // message, before rates.js would refuse it with its own.
   var MIN_LOSS = 1e-9;
+
+  // The smallest radius of curvature a mirror may have: 1 mm, far below
+  // any real laser mirror's (and below the page's slider). A radius of
+  // 10⁻¹⁶⁰ m made 1/R and the magnification overflow inside optics.js.
+  var MIN_RADIUS = 1e-3;
 
   // The flash's t_p for every lamp: 0.73 ms at half its peak, the owner's
   // "about 1 ms" (docs/laser-plan.md, stage 7b).
@@ -234,11 +259,13 @@
     { medium: "ruby", pump: "flashlamp", max: 3000,
       qSwitches: ["cell", "prism", "absorber"], qDelay: 1 * ms, absorber: "cryptocyanine", absorberT0: 0.5,
       config: { l_g: 10 * cm, area: Math.PI * (5 * mm) * (5 * mm), L: 50 * cm, refl1: 1, refl2: 0.5, alpha_i: 0,
+        mirror1: "flat", Rc1: 1, mirror2: "flat", Rc2: 1, aperture: 5 * mm,
         flashEnergy: 1000, flashShare: FLASH_SHARE, flashTime: FLASH_TIME, pumpLam: 550 * nm, eta: 0.7 } },
     // Threshold about 29 J.
     { medium: "nd-glass", pump: "flashlamp", max: 300,
       qSwitches: ["cell", "prism", "absorber"], qDelay: 0.6 * ms, absorber: "cr-yag", absorberT0: 0.8,
       config: { l_g: 10 * cm, area: Math.PI * (5 * mm) * (5 * mm), L: 50 * cm, refl1: 1, refl2: 0.8, alpha_i: 0.2,
+        mirror1: "flat", Rc1: 1, mirror2: "flat", Rc2: 1, aperture: 5 * mm,
         flashEnergy: 100, flashShare: FLASH_SHARE, flashTime: FLASH_TIME, pumpLam: 808 * nm, eta: 0.9 } },
     // Stage 4's small Nd:YAG laser (stage 6): rod 5 cm, mode area 1 mm²,
     // a 5 % output coupler, scattering 0.2 m⁻¹ (L_i = 2 %: with none there
@@ -246,41 +273,50 @@
     { medium: "nd-yag", pump: "diode", max: 20,
       qSwitches: ["absorber"], absorber: "cr-yag", absorberT0: 0.95,
       config: { l_g: 5 * cm, area: 1 * mm2, L: 30 * cm, refl1: 1, refl2: 0.95, alpha_i: 0.2,
+        mirror1: "flat", Rc1: 1, mirror2: "concave", Rc2: 1, aperture: 1.5 * mm,
         pumpPower: 5, pumpLam: 808 * nm, eta: 0.9 } },
     // Rod 7.5 cm, 6 mm across. Threshold about 1.3 J.
     { medium: "nd-yag", pump: "flashlamp", max: 50,
       qSwitches: ["cell", "prism", "absorber"], qDelay: 0.55 * ms, absorber: "cr-yag", absorberT0: 0.5,
       config: { l_g: 7.5 * cm, area: Math.PI * (3 * mm) * (3 * mm), L: 30 * cm, refl1: 1, refl2: 0.8, alpha_i: 0.2,
+        mirror1: "concave", Rc1: 5, mirror2: "flat", Rc2: 1, aperture: 3 * mm,
         flashEnergy: 10, flashShare: FLASH_SHARE, flashTime: FLASH_TIME, pumpLam: 808 * nm, eta: 0.9 } },
     // The tube fills the cavity. 15.5 %/m (0.144 m⁻¹) at 5 mA; 0.43 mW there.
     { medium: "he-ne", pump: "discharge", law: "optimum",
       config: { l_g: 30 * cm, area: 0.2 * mm2, L: 30 * cm, refl1: 0.999, refl2: 0.99, alpha_i: 0.01,
+        mirror1: "flat", Rc1: 1, mirror2: "concave", Rc2: 45 * cm, aperture: 0.75 * mm,
         current: 5 * mA, currentPeak: 5 * mA, gainPeak: 0.144 } },
     // 10 dB/m (2.3 m⁻¹) at the rated 40 A (0.45 W there); the slider
     // starts at 30 A. Tube and cavity 1 m.
     { medium: "ar-ion", pump: "discharge", law: "square",
       config: { l_g: 100 * cm, area: 1.8 * mm2, L: 100 * cm, refl1: 1, refl2: 0.95, alpha_i: 0.01,
+        mirror1: "concave", Rc1: 5, mirror2: "flat", Rc2: 1, aperture: 1.5 * mm,
         current: 30, currentPeak: 40, gainPeak: 2.3 } },
     // 1.1 %/cm (1.1 m⁻¹) at 20 mA; about 8 W.
     { medium: "co2", pump: "discharge", law: "optimum",
       config: { l_g: 80 * cm, area: 50 * mm2, L: 80 * cm, refl1: 1, refl2: 0.8, alpha_i: 0.005,
+        mirror1: "concave", Rc1: 20, mirror2: "flat", Rc2: 1, aperture: 6 * mm,
         current: 20 * mA, currentPeak: 20 * mA, gainPeak: 1.1 } },
     // A 0.2 mm dye jet, a 15 µm spot (700 µm²), pumped at 532 nm.
     // Threshold 42 mW.
     { medium: "dye-r6g", pump: "laser", max: 10,
       config: { l_g: 0.2 * mm, area: 700 * um * um, L: 50 * cm, refl1: 1, refl2: 0.97, alpha_i: 5,
+        mirror1: "concave", Rc1: 30 * cm, mirror2: "concave", Rc2: 30 * cm, aperture: 5 * mm,
         pumpPower: 2, pumpLam: 532 * nm, eta: 1 } },
     // A 5 mm crystal, a 30 µm spot (2800 µm²), pumped at 532 nm.
     // Threshold 0.15 W.
     { medium: "ti-sapphire", pump: "laser", max: 10,
       config: { l_g: 5 * mm, area: 2800 * um * um, L: 150 * cm, refl1: 1, refl2: 0.97, alpha_i: 0.5,
+        mirror1: "concave", Rc1: 1, mirror2: "concave", Rc2: 1, aperture: 5 * mm,
         pumpPower: 5, pumpLam: 532 * nm, eta: 1 } },
     // Ruby's numbers in a small sample, pumped by light at its own line.
     { medium: "two-level", pump: "laser", max: 1000,
       config: { l_g: 1 * cm, area: 1 * mm2, L: 10 * cm, refl1: 1, refl2: 0.9, alpha_i: 0,
+        mirror1: "flat", Rc1: 1, mirror2: "concave", Rc2: 50 * cm, aperture: 0.56 * mm,
         pumpPower: 100, pumpLam: TWO_LEVEL_LINE, eta: 1 } },
     { medium: "two-level", pump: "flashlamp", max: 10,
       config: { l_g: 1 * cm, area: 1 * mm2, L: 10 * cm, refl1: 1, refl2: 0.9, alpha_i: 0,
+        mirror1: "flat", Rc1: 1, mirror2: "concave", Rc2: 50 * cm, aperture: 0.56 * mm,
         flashEnergy: 2, flashShare: FLASH_SHARE, flashTime: FLASH_TIME, pumpLam: TWO_LEVEL_LINE, eta: 1 } }
   ];
 
@@ -424,8 +460,9 @@
 
   /* ---------- the config ---------- */
 
-  // Checks a config and returns { medium, setup }. Every check is made
-  // here, so an error always names the function the page called.
+  // Checks a config and returns { medium, setup, resonator } (the mirrors:
+  // optics.resonator). Every check is made here, so an error always names
+  // the function the page called.
   function readConfig(where, config) {
     if (config === null || typeof config !== "object" || Array.isArray(config)) {
       check.params(where, config, COMMON_NAMES);       // says it needs one object
@@ -446,13 +483,25 @@
     var refl1 = check.reflectivity(where, "refl1", config.refl1);
     var refl2 = check.reflectivity(where, "refl2", config.refl2);
     var alpha_i = check.atLeast(where, "alpha_i", config.alpha_i, 0);
-    var loss = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2));
+    check.between(where, "beta", config.beta, 0, 1);
+    readMirror(where, config, "mirror1", "Rc1");
+    readMirror(where, config, "mirror2", "Rc2");
+    check.positive(where, "aperture", config.aperture);
+    // The mirrors (§7.7), worked out once here; compute uses them. Every
+    // input is checked above, so optics.js cannot refuse them, and with
+    // radii of 1 mm or more its numbers stay finite (an unstable pair's
+    // γ_m = ln M).
+    var resonator = resonatorOf(config, medium);
+    // γ with the mirrors' loss, as compute will have it.
+    var loss = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2)) + resonator.gamma;
+    if (!isFinite(loss)) {
+      check.fail(where, "the mirrors lose too much light to compute (γ = " + loss + " per pass).");
+    }
     if (!(loss >= MIN_LOSS)) {
       check.fail(where, "the cavity loses almost no light (γ = " + loss + " per pass, below " +
         MIN_LOSS + "), so its photons would live for seconds. Lower a mirror's reflectivity " +
         "or add internal loss.");
     }
-    check.between(where, "beta", config.beta, 0, 1);
 
     if (setup.pump === "discharge") {
       check.atLeast(where, "current", config.current, 0);
@@ -464,7 +513,7 @@
           medium.id + (setup.law === "optimum" ? ": past that the discharge gives no gain." :
           ": the tube's rated current."));
       }
-      return { medium: medium, setup: setup };
+      return { medium: medium, setup: setup, resonator: resonator };
     }
 
     if (setup.pump === "flashlamp") {
@@ -487,7 +536,35 @@
     }
     var eta = check.between(where, "eta", config.eta, 0, 1);
     if (eta === 0) check.fail(where, "eta must be above 0: with none of the pump reaching the upper level nothing happens.");
-    return { medium: medium, setup: setup };
+    return { medium: medium, setup: setup, resonator: resonator };
+  }
+
+  // Checks one mirror: its shape and its radius of curvature (m). A flat
+  // mirror keeps a radius too, unused: the one the page's slider shows
+  // when the visitor bends it again.
+  function readMirror(where, config, shapeName, radiusName) {
+    if (MIRROR_SHAPES.indexOf(config[shapeName]) === -1) {
+      check.fail(where, shapeName + " must be one of " + MIRROR_SHAPES.join(", ") + ", got " +
+        check.describe(config[shapeName]) + ".");
+    }
+    check.atLeast(where, radiusName, config[radiusName], MIN_RADIUS);
+  }
+
+  // A mirror's curvature 1/R for optics.js: positive for a concave mirror,
+  // negative for a convex one, 0 for a flat one (D9).
+  function curvatureOf(shape, radius) {
+    if (shape === "concave") return 1 / radius;
+    if (shape === "convex") return -1 / radius;
+    return 0;
+  }
+
+  // The mirrors of a checked config (optics.js, docs/laser-physics.md §7.7).
+  function resonatorOf(config, medium) {
+    return E.optics.resonator({
+      L: config.L, l_g: config.l_g, n: medium.n,
+      c1: curvatureOf(config.mirror1, config.Rc1), c2: curvatureOf(config.mirror2, config.Rc2),
+      lam: medium.lam, aperture: config.aperture
+    });
   }
 
   // Checks a Q-switch's name against the ones its setup can have.
@@ -548,11 +625,14 @@
     d.P_out = x > 1 ? d.powerPerP * (x - 1) : 0;
     d.ySteady = E.rates.fourLevel.steadyState({ x: x, beta: config.beta }).y;
 
-    // The best output coupler (§3.6), with L_i = 2α_i·l, the round-trip
-    // form of the internal loss in γ ≈ (T + L_i)/2. optimumCoupler refuses
+    // The best output coupler (§3.6), with L_i = 2α·l, the round-trip form
+    // of every loss but the coupler's in γ ≈ (T + L_i)/2: α is α_i with
+    // the mirrors' loss (alphaWithMirrors). The mirrors always lose a
+    // little, so T_opt is null only when they lose exactly nothing and
+    // α_i = 0; with α_i = 0 alone it is tiny (1×10⁻⁵ on the diode bench). optimumCoupler refuses
     // a gain so high that it would ask for T ≥ 1; the bench then has no
     // low-gain answer to show.
-    var L_i = 2 * config.alpha_i * config.l_g;
+    var L_i = 2 * d.alphaWithMirrors * config.l_g;
     var T_opt = null;
     if (L_i > 0 && L_i < 1) {
       var roundTripGain = 2 * g0 * config.l_g;
@@ -609,12 +689,20 @@
   }
 
   // The still numbers of a checked config (see derive below).
-  function compute(where, config, medium, setup) {
+  function compute(where, config, read) {
+    var medium = read.medium;
+    var setup = read.setup;
     var fourLevel = medium.scheme === "four-level";
     var L_e = E.cavity.effectiveLength({ L: config.L, l_g: config.l_g, nGroup: medium.nGroup });
+    // The light the mirrors lose (§7.7) joins the internal loss, spread over
+    // the rod: γ = (α_i + γ_m/l_g)·l + ½·ln(1/(R₁R₂)) = the old γ + γ_m. So
+    // every threshold, the photon lifetime and the best coupler (whose L_i
+    // is every round-trip loss but the coupler's) include it.
+    var resonator = read.resonator;
+    var alphaWithMirrors = config.alpha_i + resonator.gamma / config.l_g;
     var inputs = {
       sigma: medium.sigma, tau: medium.tau, nu: medium.nu, l_g: config.l_g, area: config.area,
-      L_e: L_e, refl1: config.refl1, refl2: config.refl2, alpha_i: config.alpha_i
+      L_e: L_e, refl1: config.refl1, refl2: config.refl2, alpha_i: alphaWithMirrors
     };
     var scales;
     if (fourLevel) {
@@ -625,7 +713,7 @@
     }
     var thresholdRate = fourLevel ? 1 : scales.n_t + 1;
     var gth = E.cavity.thresholdGain({
-      refl1: config.refl1, refl2: config.refl2, alpha_i: config.alpha_i, l_g: config.l_g
+      refl1: config.refl1, refl2: config.refl2, alpha_i: alphaWithMirrors, l_g: config.l_g
     });
 
     var d = {
@@ -636,6 +724,10 @@
       tau: medium.tau,
       I_sat: medium.I_sat,
       L_e: L_e,
+      // The mirrors (optics.resonator): stability, the mode, F, their loss.
+      resonator: resonator,
+      // α_i with the mirrors' loss spread over the rod, m⁻¹.
+      alphaWithMirrors: alphaWithMirrors,
       gamma: scales.gamma,
       gth: gth,
       N_c: scales.N_c,
@@ -736,14 +828,16 @@
   }
 
   // derive(config) -> the still numbers of the bench, in SI:
-  //   for every bench: medium, scheme, pump, lam, tau, I_sat, L_e, gamma
+  //   for every bench: medium, scheme, pump, lam, tau, I_sat, L_e,
+  //   resonator (optics.resonator of the config's mirrors: stable, g1, g2,
+  //   the mode, focus1, focus2, the mirrors' loss), alphaWithMirrors, gamma
   //   (single pass), gth, N_c, tau_c, eps, powerPerP, powerPerPhoton,
   //   thresholdRate, powerAtTwiceThreshold, sOnePhoton, beta; R_c for four
   //   levels; N_t, n_t for three and two,
   //   and wThreshold for three (null if n_t ≤ 1).
   //   a steady pump (light, discharge): x, ySteady (the steady y), P_out
-  //   (W); for four levels also g0, T_opt and T_best (null with no internal
-  //   loss), period and t_damp (null at or below threshold); light also
+  //   (W); for four levels also g0, T_opt and T_best (null with no loss
+  //   but the coupler's: α_i = 0 and mirrors that lose nothing), period and t_damp (null at or below threshold); light also
   //   R_p, pumpThreshold (W) and slope, a discharge currentThreshold (A,
   //   null if the tube never reaches threshold). The two-level atom, which
   //   has no threshold: x null, w = W_p·τ, ySteady < 0, P_out = 0.
@@ -761,7 +855,7 @@
   function derive(config) {
     var where = at("derive");
     var read = readConfig(where, config);
-    return compute(where, config, read.medium, read.setup);
+    return compute(where, config, read);
   }
 
   /* ---------- the simulation ---------- */
@@ -944,7 +1038,7 @@
     refuseStrangeSim(where, sim, read, config);
     var seconds = check.atLeast(where, "seconds", params.seconds, 0);
     var maxSteps = check.integerAtLeast(where, "maxSteps", params.maxSteps, 1);
-    var d = compute(where, config, read.medium, read.setup);
+    var d = compute(where, config, read);
     if (seconds === 0) {
       return {
         sim: copySim(sim),
@@ -1076,7 +1170,7 @@
     var config = params.config;
     var read = readConfig(where, config);
     refuseStrangeSim(where, sim, read, config);
-    var d = compute(where, config, read.medium, read.setup);
+    var d = compute(where, config, read);
     // The pump as advance runs it: x for four levels, w for three and two.
     var level;
     if (d.pump === "flashlamp") {
@@ -1121,7 +1215,7 @@
     var config = params.config;
     var read = readConfig(where, config);
     refuseStrangeSim(where, sim, read, config);
-    return 1 + extraLossNow(config, sim, compute(where, config, read.medium, read.setup).gamma);
+    return 1 + extraLossNow(config, sim, compute(where, config, read).gamma);
   }
 
   // switchNow({ sim, config }) -> { loss, open }, or null without a
@@ -1138,7 +1232,7 @@
     var read = readConfig(where, config);
     refuseStrangeSim(where, sim, read, config);
     if (config.qSwitch === "none") return null;
-    var d = compute(where, config, read.medium, read.setup);
+    var d = compute(where, config, read);
     var loss = 1 + extraLossNow(config, sim, d.gamma);
     // A filter that lets all the light through (T₀ = 1), or a shutter
     // whose leak is 1, holds nothing back: always open.
@@ -1193,7 +1287,7 @@
     var config = params.config;
     var read = readConfig(where, config);
     refuseStrangeSim(where, sim, read, config);
-    var d = compute(where, config, read.medium, read.setup);
+    var d = compute(where, config, read);
     var x = sim.N / d.N_c;
     if (d.scheme === "two-level" || !(x >= PULSE_FROM)) return null;
     return E.qswitch.giantPulse({
@@ -1265,7 +1359,7 @@
     if (read.setup.pump !== "flashlamp") {
       check.fail(where, "needs a config with pump: \"flashlamp\", got " + check.describe(config.pump) + ".");
     }
-    var d = compute(where, config, read.medium, read.setup);
+    var d = compute(where, config, read);
     var target = startingLoss(config, d.gamma);
     if (d.scheme === "two-level") return null;
     if (d.scheme === "three-level" && target >= d.n_t) return null;
@@ -1310,6 +1404,7 @@
     lossNow: lossNow,
     switchNow: switchNow,
     carryOver: carryOver,
-    giantPulse: giantPulse
+    giantPulse: giantPulse,
+    MIRROR_SHAPES: MIRROR_SHAPES
   });
 })(this);

@@ -49,6 +49,7 @@ const ENGINE_FILES = [
   "rates.js",
   "pumps.js",
   "qswitch.js",
+  "optics.js",
   "bench.js"
 ];
 
@@ -134,7 +135,32 @@ function assertClose(actual, expected, relTol, message, absTol) {
   );
 }
 
+// A mirror's curvature 1/R as optics.js takes it: positive for a concave
+// mirror, negative for a convex one, 0 for a flat one (D9). Written here,
+// not taken from bench.js, so the tests check bench.js against it.
+function mirrorCurvature(shape, radius) {
+  if (shape === "concave") return 1 / radius;
+  if (shape === "convex") return -1 / radius;
+  if (shape === "flat") return 0;
+  throw new Error("mirrorCurvature: unknown shape " + shape);
+}
+
+// α_i with a bench config's mirrors' loss spread over the rod
+// (docs/laser-physics.md §7.7): α_i + γ_m/l_g, from optics.resonator of
+// the config's mirrors.
+function alphaWithMirrors(engine, config) {
+  const medium = engine.media.get(config.medium);
+  const mirrors = engine.optics.resonator({
+    L: config.L, l_g: config.l_g, n: medium.n,
+    c1: mirrorCurvature(config.mirror1, config.Rc1), c2: mirrorCurvature(config.mirror2, config.Rc2),
+    lam: medium.lam, aperture: config.aperture
+  });
+  return config.alpha_i + mirrors.gamma / config.l_g;
+}
+
 module.exports = {
+  mirrorCurvature,
+  alphaWithMirrors,
   REAL_ROOT,
   ROOT,
   ENGINE_DIR,

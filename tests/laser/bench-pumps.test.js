@@ -17,7 +17,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { loadEngine, deepFreeze, assertClose, plain } = require("./helpers.js");
+const { loadEngine, deepFreeze, assertClose, plain, alphaWithMirrors } = require("./helpers.js");
 
 const E = loadEngine();
 const B = E.bench;
@@ -72,7 +72,8 @@ const PAIRS = [
   ["two-level", "flashlamp"]
 ];
 
-const COMMON = ["medium", "pump", "l_g", "area", "L", "refl1", "refl2", "alpha_i", "beta", "qSwitch"];
+const COMMON = ["medium", "pump", "l_g", "area", "L", "refl1", "refl2", "alpha_i", "beta", "qSwitch",
+  "mirror1", "Rc1", "mirror2", "Rc2", "aperture"];
 const BY_KIND = {
   diode: ["pumpPower", "pumpLam", "eta"],
   laser: ["pumpPower", "pumpLam", "eta"],
@@ -176,10 +177,14 @@ test("controls: the field the pump slider sets and both sliders' ranges, with th
 /* ---------- the numbers of each setup (audit) ---------- */
 
 test("the setups' numbers (audit, 5 digits; the scope card's prototype gave the first 3)", () => {
+  // Since stage 10a with each bench's mirrors (docs/laser-physics.md §5.9,
+  // §7.7), whose loss joins γ: He-Ne's adds 7.7×10⁻⁵ per pass (stage 7b:
+  // τ_c 117.38 ns, x 5.0672), Ar⁺'s 9.0×10⁻⁶, CO₂'s 4.9×10⁻³ (x 7.6143,
+  // 8.2319 W); the dye's and Ti:sapphire's nothing.
   const expected = {
-    "he-ne discharge": { tau_c: 117.38e-9, gth: 0.028418, x: 5.0672, P_out: 0.42773e-3, currentThreshold: 0.36139e-3 },
-    "ar-ion discharge": { tau_c: 93.575e-9, gth: 0.035647, x: 36.294, P_out: 0.25162, currentThreshold: 4.9797 },
-    "co2 discharge": { tau_c: 23.090e-9, gth: 0.14446, x: 7.6143, P_out: 8.2319, currentThreshold: 0.93073e-3 },
+    "he-ne discharge": { tau_c: 116.32e-9, gth: 0.028675, x: 5.0217, P_out: 0.42294e-3, currentThreshold: 0.36500e-3 },
+    "ar-ion discharge": { tau_c: 93.552e-9, gth: 0.035656, x: 36.285, P_out: 0.25156, currentThreshold: 4.9804 },
+    "co2 discharge": { tau_c: 22.159e-9, gth: 0.15053, x: 7.3073, P_out: 7.8498, currentThreshold: 0.97245e-3 },
     "dye-r6g laser": { pumpThreshold: 0.042420, x: 47.148, P_out: 1.6288, eps: 20.556 },
     "ti-sapphire laser": { pumpThreshold: 0.14853, x: 33.664, P_out: 2.7713 }
   };
@@ -192,26 +197,31 @@ test("the setups' numbers (audit, 5 digits; the scope card's prototype gave the 
   }
   // Ar⁺ at its rated current, 40 A (the default is 30 A): x = 64.5, 0.453 W.
   const ar = B.derive(configFor("ar-ion", "discharge", { current: 40 }));
-  assertClose(ar.x, 64.522, 1e-4, "Ar⁺ x");
-  assertClose(ar.P_out, 0.45288, 1e-4, "Ar⁺ P_out");
+  assertClose(ar.x, 64.506, 1e-4, "Ar⁺ x");
+  assertClose(ar.P_out, 0.45276, 1e-4, "Ar⁺ P_out");
 });
 
-test("§3.1's ruby on the bench: n_t = 11.54, ε = 1.848×10⁻⁶, threshold about 639 J of lamp energy", () => {
+test("§3.1's ruby on the bench: n_t = 11.53, ε = 1.846×10⁻⁶, threshold about 639 J of lamp energy", () => {
   const c = configFor("ruby", "flashlamp");
   const d = B.derive(c);
   assert.equal(d.scheme, "three-level");
-  assertClose(d.n_t, 11.54, 0.005 / 11.54, "n_t");
-  assertClose(d.eps, 1.848e-6, 0.0005 / 1.848, "ε");
+  // Stage 7b, with ideal mirrors: n_t = 11.54, ε = 1.848×10⁻⁶. Since stage
+  // 10a its two flat mirrors lose 4.1×10⁻⁴ per pass (Vainshtein, §7.7),
+  // 0.1 % of γ: n_t 11.528, ε 1.8458×10⁻⁶.
+  assertClose(d.n_t, 11.528, 0.0005 / 11.53, "n_t");
+  assertClose(d.eps, 1.8458e-6, 1e-4, "ε");
   assertClose(d.wThreshold, 1.190, 0.0005 / 1.19, "w_th");
   assertClose(d.N_t, 1.6e25, 1e-12, "N_t, m⁻³");
-  // The prototype gave 639 J, 1.29 J and 29.0 J; these are 5 digits of the engine's.
-  assertClose(B.flashThreshold(c), 638.68, 1e-4, "E_th, J");
+  // The prototype gave 639 J, 1.29 J and 29.0 J; these are 5 digits of the
+  // engine's (stage 7b, ideal mirrors: 638.68 J, 1.2932 J, 28.969 J).
+  assertClose(B.flashThreshold(c), 638.78, 1e-4, "E_th, J");
   assertClose(B.flashThreshold(configFor("nd-yag", "flashlamp")), 1.2932, 1e-4, "Nd:YAG E_th, J");
-  assertClose(B.flashThreshold(configFor("nd-glass", "flashlamp")), 28.969, 1e-4, "Nd:glass E_th, J");
-  // The pump at the flash's peak, in units of threshold, at the default energies.
-  assertClose(d.xPeak, 5.7229, 1e-4, "ruby at 1000 J");
+  assertClose(B.flashThreshold(configFor("nd-glass", "flashlamp")), 29.142, 1e-4, "Nd:glass E_th, J");
+  // The pump at the flash's peak, in units of threshold, at the default
+  // energies (stage 7b: 5.7229, 9.6939, 4.6917).
+  assertClose(d.xPeak, 5.7219, 1e-4, "ruby at 1000 J");
   assertClose(B.derive(configFor("nd-yag", "flashlamp")).xPeak, 9.6939, 1e-4, "Nd:YAG at 10 J");
-  assertClose(B.derive(configFor("nd-glass", "flashlamp")).xPeak, 4.6917, 1e-4, "Nd:glass at 100 J");
+  assertClose(B.derive(configFor("nd-glass", "flashlamp")).xPeak, 4.6639, 1e-4, "Nd:glass at 100 J");
 });
 
 /* ---------- derive, by pump kind ---------- */
@@ -236,7 +246,9 @@ test("derive with a discharge: x = g₀(I)·l/γ, the threshold current, and no 
   }
   // He-Ne has internal loss, so a best coupler, from its own g₀.
   const he = B.derive(configFor("he-ne", "discharge"));
-  assertClose(he.T_opt, E.cavity.optimumCoupler({ g0: he.g0, l_g: 0.3, L_i: 2 * 0.01 * 0.3 }), 1e-12, "He-Ne T_opt");
+  // Its L_i is every round-trip loss but the coupler's: the tube's and the mirrors'.
+  assertClose(he.alphaWithMirrors, 0.01 + he.resonator.gamma / 0.3, 1e-12, "He-Ne α with its mirrors");
+  assertClose(he.T_opt, E.cavity.optimumCoupler({ g0: he.g0, l_g: 0.3, L_i: 2 * he.alphaWithMirrors * 0.3 }), 1e-12, "He-Ne T_opt");
   // Past the zero-gain current nothing lases, and the tube gives no threshold if it never reaches g_th.
   const end = B.derive(configFor("he-ne", "discharge", { current: 0.015 }));
   assert.ok(end.x >= 0 && end.x < 1e-12, "no gain at 3·I_peak: x = " + end.x);
@@ -391,7 +403,7 @@ test("a flash keeps the energy and t_p it was fired with: moving the sliders aft
 // unpumped medium. Returns y at the given times (in s after the flash).
 function photonFreeInversion(c, times) {
   const m = E.media.get(c.medium);
-  const gamma = E.cavity.singlePassLoss({ refl1: c.refl1, refl2: c.refl2, alpha_i: c.alpha_i, l_g: c.l_g });
+  const gamma = E.cavity.singlePassLoss({ refl1: c.refl1, refl2: c.refl2, alpha_i: alphaWithMirrors(E, c), l_g: c.l_g });
   const N_c = gamma / (m.sigma * c.l_g);
   const hnuP = C.h * C.c / c.pumpLam;
   const V_a = c.area * c.l_g;
@@ -674,9 +686,9 @@ test("pumpNow with a flashlamp: nothing before Fire; at the flash's peak, derive
   const peak = pumpNow(simAt(ruby, 0.3e-3, { at: 0, flashEnergy: 1000, flashTime: 0.3e-3 }), ruby);
   assertClose(peak.w, w, 1e-12, "ruby's w at the peak, by hand");
   assertClose(peak.x, w / wTh, 1e-12, "ruby's pump at the peak, by hand");
-  assertClose(peak.x, 5.7229, 1e-4, "about 5.72 times threshold (the audit's xPeak)");
+  assertClose(peak.x, 5.7219, 1e-4, "about 5.72 times threshold (the audit's xPeak)");
   assertClose(peak.smallSignal, d.n_t * (w - 1) / (w + 1), 1e-12, "ruby's small-signal gain at the peak");
-  assertClose(peak.smallSignal, 8.5855, 1e-4, "about 8.59 times the loss");
+  assertClose(peak.smallSignal, 8.5753, 1e-4, "about 8.58 times the loss (stage 7b, ideal mirrors: 8.5855)");
   // The two-level atom: w itself, and no gain whatever the flash.
   const atom = configFor("two-level", "flashlamp");
   const a = B.derive(atom);

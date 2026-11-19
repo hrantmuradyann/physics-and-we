@@ -16,7 +16,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { loadEngine, deepFreeze, assertClose, plain } = require("./helpers.js");
+const { loadEngine, deepFreeze, assertClose, plain, alphaWithMirrors } = require("./helpers.js");
 
 const E = loadEngine();
 const B = E.bench;
@@ -111,7 +111,7 @@ function pulsesOf(peaks, share) {
 // times (in s after the flash).
 function photonFreeInversion(c, times) {
   const m = E.media.get(c.medium);
-  const gamma = E.cavity.singlePassLoss({ refl1: c.refl1, refl2: c.refl2, alpha_i: c.alpha_i, l_g: c.l_g });
+  const gamma = E.cavity.singlePassLoss({ refl1: c.refl1, refl2: c.refl2, alpha_i: alphaWithMirrors(E, c), l_g: c.l_g });
   const N_c = gamma / (m.sigma * c.l_g);
   const hnuP = E.constants.h * E.constants.c / c.pumpLam;
   const V_a = c.area * c.l_g;
@@ -230,8 +230,9 @@ test("derive: lossClosed is 1 + the closed switch's loss over γ; none without a
     const d = B.derive(cfg);
     assertClose(d.lossClosed, 1 + -Math.log(cfg.absorberT0) / d.gamma, 1e-12, medium + " filter");
   }
-  // §3.1's ruby: γ = 0.3466, so the closed cell's loss is 14.3 times it.
-  assertClose(B.derive(bench("ruby", "flashlamp", "cell")).lossClosed, 14.288, 1e-4);
+  // §3.1's ruby: γ = 0.3466 (0.3470 with its flat mirrors' 4.1×10⁻⁴, §7.7),
+  // so the closed cell's loss is 14.3 times it (14.288 with ideal mirrors).
+  assertClose(B.derive(bench("ruby", "flashlamp", "cell")).lossClosed, 14.272, 1e-4);
 });
 
 test("the Q-switch's fields are checked, and every error names the function that was called", () => {
@@ -295,7 +296,7 @@ test("flashThreshold: the open cavity's with a cell or a prism; behind a filter,
   // checks the open one).
   const ruby = bench("ruby", "flashlamp", "absorber");
   const energy = B.flashThreshold(ruby);
-  assertClose(energy, 833.97, 1e-4, "ruby behind its dye, J");
+  assertClose(energy, 834.10, 1e-4, "ruby behind its dye, J (833.97 with ideal mirrors)");
   const times = [];
   for (let i = 1; i <= 600; i++) times.push(i * ruby.flashTime / 100);
   const peak = Math.max(...photonFreeInversion(Object.assign({}, ruby, { flashEnergy: energy }), times));
@@ -812,15 +813,20 @@ test("an hour-long call on the fastest prism (10⁵ rev/s, 3.6×10⁸ windows) s
 });
 
 test("the filter on ruby: held back, then one giant pulse that bleaches it; recovered after", () => {
-  // Measured: the pulse at 631 µs, 210 MW; the filter falls to 13 %.
+  // Measured: the pulse at 631 µs, 210 MW; the filter falls to 2 %.
   const cfg = bench("ruby", "flashlamp", "absorber");
   const run = follow(fired(cfg), cfg, 1.5e-3, 1e-6, 3700);
   const pulses = pulsesOf(run.peaks, 0.01);
   assert.equal(pulses.length, 1, pulses.map((p) => p.t * 1e6 + " µs").join(", "));
   assert.ok(pulses[0].t > 400e-6 && pulses[0].t < 900e-6, "at " + pulses[0].t * 1e6 + " µs");
   assert.ok(pulses[0].power > 50e6, pulses[0].power / 1e6 + " MW");
-  assert.ok(run.lowestFilter < 0.5, "bleached to " + run.lowestFilter);
   assert.ok(run.sim.absorber > 0.999, "recovered: " + run.sim.absorber);
+  // The dye recovers in 22 ps, so it is bleached only while the ~20 ns
+  // pulse lasts: follow those microseconds in 2 ns pieces (a 1 µs piece
+  // ends wherever it ends; at stage 8a's, by chance, in the pulse's tail).
+  const before = reach(fired(cfg), cfg, pulses[0].t - 2e-6, 3700).sim;
+  const close = follow(before, cfg, 4e-6, 2e-9, 3700);
+  assert.ok(close.lowestFilter < 0.5, "bleached to " + close.lowestFilter);
   // Without the filter ruby's first light comes earlier, as spikes.
   const open = bench("ruby", "flashlamp", "none");
   const openRun = follow(fired(open), open, 0.6e-3, 10e-6, 3000);
@@ -857,11 +863,13 @@ test("a page frame (8 calls, slow motion 10⁴, 60 Hz) stays within its steps ar
   // Only ruby's dye filter goes past the page's 1500 steps (its molecules
   // recover in 22 ps: its pulse costs about 3000 steps), for 1 or 2
   // frames, so the page falls that far behind there and the note does
-  // not show.
+  // not show. (Stage 10a: the flat mirrors of ruby and Nd:glass lose a
+  // little light, §7.7. Ruby's worst frame of 5 starts measured 3290, stage
+  // 8a's 2567; Nd:glass's filter pulse moved from 355.8 to 356.7 µs.)
   const piece = (1 / 60) / 1e4 / 8;
-  const PULSE_AT = { ruby: 631e-6, "nd-glass": 355.8e-6, "nd-yag": 352.8e-6, "nd-yag diode": 322.7e-6 };
+  const PULSE_AT = { ruby: 631e-6, "nd-glass": 356.7e-6, "nd-yag": 352.8e-6, "nd-yag diode": 322.7e-6 };
   const WORST = {
-    "ruby cell": 427, "ruby prism": 650, "ruby absorber": 2567,
+    "ruby cell": 427, "ruby prism": 650, "ruby absorber": 3290,
     "nd-glass cell": 418, "nd-glass prism": 461, "nd-glass absorber": 564,
     "nd-yag cell": 592, "nd-yag prism": 689, "nd-yag absorber": 718,
     "nd-yag diode absorber": 406
@@ -880,7 +888,8 @@ test("a page frame (8 calls, slow motion 10⁴, 60 Hz) stays within its steps ar
       for (let f = 0; f < count; f++) {
         let steps = 0;
         for (let i = 0; i < 8; i++) {
-          const run = advance(sim, cfg, piece, 3000);
+          // Ruby's dye pulse can fall in one call: measured up to 3067 steps.
+          const run = advance(sim, cfg, piece, 4600);
           assert.equal(run.reachedEnd, true, name);
           sim = run.sim;
           steps += run.steps;

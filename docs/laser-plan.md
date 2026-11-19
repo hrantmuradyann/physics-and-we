@@ -103,15 +103,14 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 8a: Q-switching in the engine (`qswitch.js`: η_E and §4.3's giant pulse, the Pockels cell's and the rotating prism's loss, the bleachable filter as one more rate equation; `bench.js`: `qSwitchesFor`, `withQSwitch`, the shutter's opening time and the filter's state in the simulation, `lossNow`, `giantPulse`, advance's `peak` and its pieces at the shutter's moments; `ode.js`: `peakOf`); the page unchanged.
 - ✅ Stage 8b: Q-switching on the page (the owner's design: one Q-switch, the bleachable filter, as an On/Off switch right under the laser beside Fire; turning it on or off keeps the run and the chart (`bench.carryOver`); its slider, the loss now and §4.3's prediction, the highest output from the runs' peaks, the pulses' tops on the chart, the filter on the drawing; `derive` and `pumpNow` give the closed filter's threshold on a steady pump).
 - ✖ Stage 9 (several longitudinal modes and a spectrum panel): **dropped by the owner** on 2026-11-16, as it would make everything too complex. The simulator stays one-mode (`docs/laser-physics.md` §11.3). The number is not reused, so later stages keep theirs.
-- Next: stage 10a, mirror optics in the engine (stage 10 was rewritten on 2026-11-16 from the owner's requests: see "Where we stopped" just below).
+- ✅ Stage 10a: mirror optics in the engine (`optics.js`: ray matrices, stability, the Gaussian mode, each mirror's F, a ray trace, and the mirrors' loss across every stability edge, §7.7; `bench.js`: each bench's real mirrors (§5.9), the mirrors' loss in every threshold, `derive`'s `resonator`); the page unchanged.
+- Next: stage 10b, the mirrors on the page (see "Where we stopped" just below).
 
-### Where we stopped (2026-11-16), for the next session
+### Where we stopped (2026-11-19), for the next session
 
-- **Last commit:** `92f8a18` "Laser simulator stage 8b: Q-switching on the page", on `feature/laser`. **Nothing is pushed**; push only when the owner says so. The working tree was clean after it, except this plan's own commit.
-- **Stage 8b is finished:** 672 tests pass, 807 of 807 deliberate mistakes are caught, and three `/code-review` runs (13, 12, 11 findings) are fixed except two small parts declined with reasons (see stage 8b). One thing was not seen in a browser: the third review's phone-layout fix. On a 390 px screen, the Nd:YAG diode bench (switch, no Fire) should show no empty line above the switch. Check it first.
-- **Next is stage 10a** (above). Start with:
-  1. the doc audit and research for D11, D12, D13 and D15 (web search; write the theory with sources into `docs/laser-physics.md`; ask the owner only if the sources disagree or a physics choice is open);
-  2. then 10a's scope card, then the recipe.
+- **Last commit:** "Laser simulator stage 10a: mirror optics in the engine", on `feature/laser`. **Nothing is pushed**; push only when the owner says so. `docs/laser-guide.md` (the owner's learning material, written by another AI) is untracked on purpose: not part of a stage.
+- **Stage 10a is finished:** 700 tests pass, 854 of 854 deliberate mistakes are caught, and one `/code-review xhigh` (15 findings) is fixed except two declined with reasons (see stage 10a's scope card). The page is unchanged. The decisions taken without the owner (D15: losses only; the min interpolation; each bench's mirrors) are listed there for review.
+- **Next is stage 10b** (the mirrors on the page, above). Start by asking the owner the two 10b questions below; then the doc audit, the scope card, the recipe. Stage 8b's one unseen check still stands: on a 390 px screen, the Nd:YAG diode bench should show no empty line above the switch.
 - **The owner, at the start of 10b and 10c:**
   - 10b: one mirror choice per mirror, or one for both (recommended: per mirror);
   - 10b: a stability diagram, yes or no;
@@ -228,7 +227,7 @@ Problems to handle in the named stage:
 
 | # | Problem | Fix | Stage |
 |---|---|---|---|
-| D1 | **Confocal resonator (g₁ = g₂ = 0) is 0/0 in every closed form of §7.2** (w₀², w₁², z₁), and its round-trip matrix is −I, so the ABCD method of §7.3 is also undetermined. It is the main test case | Use the symmetric formula w₀² = (λL/π)·√((1+g)/(4(1−g))), which is regular at g = 0. Test confocal against √(λL/2π), and test continuity at g = ±0.01 | 10 |
+| D1 | **Confocal resonator (g₁ = g₂ = 0) is 0/0 in every closed form of §7.2** (w₀², w₁², z₁), and its round-trip matrix is −I, so the ABCD method of §7.3 is also undetermined. It is the main test case | Use the symmetric formula w₀² = (λL/π)·√((1+g)/(4(1−g))), which is regular at g = 0. Test confocal against √(λL/2π), and test continuity at g = ±0.01 | 10a ✅ (`optics.js`: the symmetric form when g₁ = g₂; `optics.test.js`) |
 | D2 | §4.1 says for three levels "N → ΔN in the second equation". The spontaneous seed β·V_a·ΔN/τ then goes **negative** while ΔN < 0 (ruby before half inversion), giving a negative photon number and a NaN log | The seed uses N₂ = (N_t + ΔN)/2. Fix the doc sentence | 7 |
 | D3 | §4.2 says He-Ne "shows no oscillations at all". At x = 2 it is weakly underdamped (ω_R = 1.23×10⁷ s⁻¹ > x/2τ = 1.0×10⁷ s⁻¹) and dies out within about one oscillation | Done in stage 4: the doc now gives the exact damped frequency (0.72/τ) and the factor e^8.8 lost per period; `rates.test.js` checks ω·t_damp < 1 for He-Ne | 4 |
 | D4 | Ruby N_t is 1.6×10¹⁹ cm⁻³ in §3.1 but "~10¹⁹" in §5.2 and §12 | Use 1.6×10¹⁹ (the standard value for 0.05 wt % Cr₂O₃, and the one §3.1's 9 % needs); fix §5.2 | 7 (doc fix in 2) |
@@ -236,13 +235,13 @@ Problems to handle in the named stage:
 | D6 | §5.1 media numbers and the Sellmeier/KDP coefficients were "not checked against printed sources" | Web-verify the values each stage needs before it uses them; record sources in the doc | 7, 11, 13 |
 | D7 | The §12 ruby "1–2 J, 10⁻⁸ s" depends on parameters the doc doesn't state | Write the assumptions into the preset; test order of magnitude only; **never tune parameters just to pass** — report if it can't be reached | 8 |
 | D8 | Several formulas silently need the three-level factor 2 (Rigrod, E_out, F_sat) | Always take `I_sat` from `media.get()`; the factor 2 appears in a test for every such formula | 2, 8 |
-| D9 | Sign conventions: mirror radius positive = concave (§7.1), lens surface radius positive = centre to the right (§8.1), mirror as a lens f = R/2 | Write one convention in the `optics.js` header; test a plane mirror (R = ∞), a concave mirror and a convex mirror | 10–11 |
-| D11 | **Loss near and on the stability edges is not in the doc.** §7.2 gives w → ∞ at g₁g₂ = 0 or 1 (flat-flat, hemispherical, concentric), and §7.6 has only the numerical Fox–Li. A rod's flat-flat cavity really lases with a small diffraction loss (N_F ~ 100) | Research (Siegman, *Lasers*, ch. 19–22; Li 1965 and Vainshtein for the plane-parallel loss against N_F) and write a closed form, or a fast 1D Fox–Li run when a mirror slider is let go, into a new §7.7. Test: the loss is continuous across each edge, and a flat-flat rod lases | 10a |
-| D12 | **Unstable mirrors' loss is not in the doc** (§7.1 only says "rays walk off") | The geometric magnification M = \|m\| + √(m² − 1) and the round-trip loss 1 − 1/M² for round mirrors (Siegman, Proc. IEEE 53, 277 (1965); *Lasers* ch. 22): research, check and write into §7.7 | 10a |
-| D13 | **Each laser's real mirrors are not in the doc** (He-Ne §5.5: only "spherical multilayer mirrors") | Research the usual radii and which mirror is flat for each bench, and record them with sources in §5 | 10a |
-| D14 | **What each medium and pump looks like is not in the doc** (colours, rods, tubes, cells, diode modules) | Research with sources into a new §5.9 | 10c |
-| D15 | The engine's gain is plane-wave over `area`: the mode's size does not change the gain | Decide in 10a's scope card: mirrors change only the losses (simple, the default), or also the gain (Fan–Byer's mode size for the diode bench, §6.3). Write the choice down either way | 10a |
-| D10 | A Gaussian beam in a medium: §7.3 replaces a slab by l/n, while §8.4 puts n into z_R. Mixing the two is off by a factor of n | Use the reduced (l/n) convention everywhere; test slab ≡ free space l/n | 10 |
+| D9 | Sign conventions: mirror radius positive = concave (§7.1), lens surface radius positive = centre to the right (§8.1), mirror as a lens f = R/2 | Write one convention in the `optics.js` header; test a plane mirror (R = ∞), a concave mirror and a convex mirror | 10a ✅ for mirrors (the header of `optics.js`); lenses in 11 |
+| D11 | **Loss near and on the stability edges is not in the doc.** §7.2 gives w → ∞ at g₁g₂ = 0 or 1 (flat-flat, hemispherical, concentric), and §7.6 has only the numerical Fox–Li. A rod's flat-flat cavity really lases with a small diffraction loss (N_F ~ 100) | Research (Siegman, *Lasers*, ch. 19–22; Li 1965 and Vainshtein for the plane-parallel loss against N_F) and write a closed form, or a fast 1D Fox–Li run when a mirror slider is let go, into a new §7.7. Test: the loss is continuous across each edge, and a flat-flat rod lases | 10a ✅ (§7.7: Vainshtein and the min interpolation; no Fox–Li run) |
+| D12 | **Unstable mirrors' loss is not in the doc** (§7.1 only says "rays walk off") | The geometric magnification M = \|m\| + √(m² − 1) and the round-trip loss 1 − 1/M² for round mirrors (Siegman, Proc. IEEE 53, 277 (1965); *Lasers* ch. 22): research, check and write into §7.7 | 10a ✅ (§7.7) |
+| D13 | **Each laser's real mirrors are not in the doc** (He-Ne §5.5: only "spherical multilayer mirrors") | Research the usual radii and which mirror is flat for each bench, and record them with sources in §5 | 10a ✅ (§5.9) |
+| D14 | **What each medium and pump looks like is not in the doc** (colours, rods, tubes, cells, diode modules) | Research with sources into a new §5.10 | 10c |
+| D15 | The engine's gain is plane-wave over `area`: the mode's size does not change the gain | Decide in 10a's scope card: mirrors change only the losses (simple, the default), or also the gain (Fan–Byer's mode size for the diode bench, §6.3). Write the choice down either way | 10a ✅ (losses only) |
+| D10 | A Gaussian beam in a medium: §7.3 replaces a slab by l/n, while §8.4 puts n into z_R. Mixing the two is off by a factor of n | Use the reduced (l/n) convention everywhere; test slab ≡ free space l/n | 10a ✅ (`slab`, `reducedLength`; `optics.test.js`) |
 
 **Site trap found while reading `js/router.js`.** After the first page loads, the router renders **every** page in the background, which fires `section:ready` for `laser` while it's hidden. (A second trap was found in stage 5's browser check: the router could fire the first `section:ready` before the scripts after it had run. It now waits for `DOMContentLoaded`.) It also re-renders every loaded page on each language switch. So `page.js` must:
 - tear down the previous build (a generation counter like `js/labs.js`'s is only needed if the build waits for something; in stage 5 it does not);
@@ -1325,6 +1324,60 @@ Three sub-stages, one commit each, each through the whole recipe (§3):
   - a slightly unstable He-Ne stops, while ruby with a strong flash still pulses.
 - **Breaks:** f = R instead of R/2; slab l instead of l/n; drop the √ in w²; 1/M instead of 1/M²; a convex mirror's sign flipped.
 
+##### Stage 10a scope card ✅ (2026-11-19)
+
+**Research first (D11, D12, D13, D15), written into `docs/laser-physics.md`** before any code: §7.7 "Loss near and beyond the stability edges" and §5.9 "The mirrors of each bench", with sources (Kogelnik & Li 1966, read from the paper's scan, eq. (86) and Fig. 22; Siegman 1965; the benches' mirrors from HRL, Physics World, repairfaq, the University of Arizona and Coherent; the rest marked "not checked"). §0 gained `c1`, `c2`, `reducedLength`, `aperture`, `fresnel`, `magnification`. §7.2 now points to §7.7 and D1's regular form. D14's "What each medium looks like" becomes §5.10 in stage 10c (§5.9 is the mirrors now).
+
+**`js/laser/engine/optics.js`** (new engine file, after `qswitch.js`, before `bench.js`; needs only `check.js`):
+
+| Function | In | Out | Doc |
+|---|---|---|---|
+| `freeSpace(d)` | m | `{ A, B, C, D }` | §7.3 |
+| `slab({ l, n })` | m, — | free space l/n | §7.3, D10 |
+| `mirror(c)` | 1/m, signed | `[[1, 0], [−2c, 1]]` (f = R/2) | §7.3, D9 |
+| `multiply([first, …])` | matrices in the order light meets them | matrix | §7.3 |
+| `reducedLength({ L, l_g, n })` | m, m, — | L* = L − l_g + l_g/n | D10 |
+| `roundTrip({ L, l_g, n, c1, c2 })` | | from mirror 1 to 2 and back | §7.3 |
+| `resonator({ L, l_g, n, c1, c2, lam, aperture })` | | `{ reducedLength, g1, g2, m, stable, w0, waistAt, zR, w1, w2, focus1, focus2, fresnel, magnification, loss1, loss2, loss, gamma }` | §7.1, §7.2, §7.7 |
+| `beamRadius({ L, l_g, n, c1, c2, lam, z })` | z in m from mirror 1 | w (m), or null without a mode | §7.2 |
+| `traceRay({ L, l_g, n, c1, c2, aperture, y, theta, roundTrips })` | m, rad, ≤ 10 000 | `{ hits: [{ mirror, y, theta }], escaped: null or { mirror, roundTrip } }` | §7.1, §7.3 |
+| `plateLoss(fresnel)` | N | Vainshtein's share lost per pass | §7.7 |
+
+**Decisions** (made without the owner, who asked to go on; to review):
+- **D15: the mirrors change only the losses**, not the gain, which stays spread over `area` (the default the plan proposed: simple, and every earlier number of the gain stays). So ruby's ~13 J against the book's 1–2 J is not touched here.
+- **The config** gains `mirror1`, `mirror2` (`"flat"`, `"concave"`, `"convex"`, `bench.MIRROR_SHAPES`), `Rc1`, `Rc2` (positive radii, m) and `aperture` (the rod's or bore's radius, m). A flat mirror keeps its radius, unused, so that the page's slider (10b) shows it again when the visitor bends the mirror. optics.js takes signed curvatures c = 1/R (flat c = 0), never R = ∞, which `check.js` refuses.
+- **The rod sits in the middle of the cavity**, as the drawing has it, and counts l/n for the beam (D10); `waistAt` and `beamRadius` take and give real distances.
+- **The aperture is taken at both mirrors.** Exact for a tube that fills the cavity; for a shorter rod it loses a little more than the real one.
+- **The loss model (§7.7):** each mirror loses min(e^(−2πN√|Y_i|), δ_flat(N)), the round trip keeps (1 − δ₁)(1 − δ₂)/M², γ_m = −½ ln of it. The min is the simulator's own interpolation (not a textbook formula), chosen because Kogelnik & Li's Fig. 22 shows the near-edge curves under the flat mirrors' and joining it; it makes the loss continuous across every edge (tested at 10⁻⁶ and 10⁻¹²). Only TEM₀₀; the mirrors aligned.
+- **The mirrors' loss joins α_i**, spread over the rod: `derive` passes α_i + γ_m/l_g to `rates.*.scales` and `thresholdGain`, so γ = the old γ + γ_m and every threshold, τ_c and the best coupler (whose L_i is every loss but the coupler's) include it. `derive` gives `resonator` (the whole answer of `optics.resonator`) and `alphaWithMirrors`.
+- **Each bench's mirrors (D13, §5.9):** ruby and Nd:glass two flat mirrors (Maiman's flat silvered ends); Nd:YAG with a flashlamp a 5 m back mirror and a flat output mirror; Nd:YAG with diodes a flat back mirror (it passes 808 nm) and a 1 m output mirror; He-Ne flat and 45 cm in its 30 cm tube (near-hemispherical), bore 1.5 mm; Ar⁺ a 5 m back mirror; CO₂ a 20 m back mirror (catalogue 15–30 m), flat ZnSe output; dye and Ti:sapphire two concave mirrors standing in for their folded cavities; the two-level atom flat and 50 cm. Apertures: ruby, Nd:glass 5 mm, Nd:YAG 3 mm (flash) and 1.5 mm (diode), He-Ne 0.75 mm, Ar⁺ 1.5 mm, CO₂ 6 mm, dye and Ti:sapphire 5 mm, two-level 0.56 mm.
+
+**Worked numbers** (recomputed in Node, all in the tests): confocal L = 1 m, 632.8 nm: w₀ = 0.317 mm, θ = 2.18′ (D1); Vainshtein with κ₀₀² (§7.7) 0.800 dB at N = 1, 0.128 at 4, 0.0355 at 10, 0.0098 at 24.5, 2.88×10⁻⁴ at 100 (Fig. 22: 0.1 dB at N ≈ 4.3, 0.03 at 10, 0.01 at 24, within 20 %; Fig. 24's phase shift 0.26° at N = 100 through eq. (87)); the clipping at Fig. 22's 0.01 dB points 0.022, 0.0057, 0.0041, 0.0117 dB (g = 0, 0.5, 0.9, 0.99); the benches' losses per pass of §5.9 (ruby 4.09×10⁻⁴, Nd:glass 7.86×10⁻⁴, He-Ne 7.72×10⁻⁵, Ar⁺ 8.97×10⁻⁶, CO₂ 4.86×10⁻³); He-Ne with R₂ = 29 cm: M = 1.4467, no current lases; ruby with a convex 5 m output mirror: M = 1.8143, γ_m = 0.5957, threshold 803.06 J against 638.78 J.
+
+**What moved in the earlier tests** (the mirrors' loss is real physics now, so their audited numbers were recomputed, the old ones kept in comments): ruby n_t 11.54 → 11.528, ε 1.848 → 1.8458×10⁻⁶, threshold flash 638.68 → 638.78 J, xPeak 5.7229 → 5.7217, small-signal gain 8.5855 → 8.5753, the closed cell's 14.288 → 14.272, ruby behind its dye 833.97 → 834.10 J; Nd:glass 28.969 → 29.142 J, xPeak 4.6917 → 4.6639, its filter pulse 355.8 → 356.7 µs and 2.825 → 2.816×10⁷ W; He-Ne's threshold current 361 → 365 µA, x 5.0672 → 5.0217; CO₂ x 7.6143 → 7.3073, 8.23 → 7.85 W; Ar⁺ in the fifth digit; the Nd:YAG diode bench and the dye and Ti:sapphire lasers unchanged to the tests' digits. Tests that compare `derive` with the formulas now pass α_i + γ_m. Two tests were fragile and were made sound: ruby's dye filter was sampled every 1 µs, and only by chance in its pulse's tail (13 %); it is now followed in 2 ns pieces across the 20 ns pulse (2 %); the per-call bound around that pulse went from 3000 to 4600 steps (one call can take the whole pulse: 3067 measured), and its worst frame is 3290 (stage 8a 2567).
+
+**Recipe note:** optics.js was written before its tests this time (the prototype of the loss model needed the code to check continuity and the setups' numbers); the tests were then written from the scope card and the doc, and the mutation check is what stands behind them.
+
+**Tests:** `tests/laser/optics.test.js` (18: the matrices, D10, (A + D)/2 = 2g₁g₂ − 1, §7.1's table, D1, w(z) against §7.3's q, D9, the ray trace, Vainshtein against eq. (86) and Fig. 22, the clipping, the equivalence, 1/M², continuity at every edge, the input checks), `tests/laser/bench-mirrors.test.js` (7: §5.9's mirrors, `derive`'s resonator, γ + γ_m, the unstable He-Ne, the flat and the convex ruby, the config checks, a Q-switch keeping the mirrors). 697 tests in all.
+
+**Breaks:** 47 (`mutations.js`, "stage 10a" and "stage 10a, the review's fixes"), the plan's five among them; 854 of 854 caught. The first mutation check caught 849 of 851: an old entry whose line had changed (the best coupler's L_i, now with the mirrors), and a ray that never leaves below the axis (a test added: the same ray mirrored below the axis leaves on the same pass).
+
+**Review** (`/code-review xhigh`, 15 findings):
+1. **Vainshtein misread** (the big one): eq. (86) needs κ₀₀², and its α is the energy lost per transit (eq. (81)), not a field decay; the code gave 0.83 of the loss. Fixed, with eq. (87) and Fig. 24's phase shift as a new check (§7.7 tells the story). Only the flat-flat benches moved (ruby, Nd:glass; numbers above); the two mutations that had the right form as the "mistake" now have the old reading as the mistake.
+2. The lossless-cavity guard (`MIN_LOSS`) ignored the mirrors and refused a cavity whose mirrors lose a lot: it now adds γ_m, and refuses an infinite γ.
+3. Tiny radii overflowed inside optics.js and the error named `optics.resonator`: radii now at least 1 mm (`MIN_RADIUS`), checked in `derive`.
+4. "No internal loss → no best coupler" is no longer true (the mirrors always lose a little): comments and `CLAUDE.md` say so; the engine still gives the tiny T_opt (the page's T_best row shows what the engine gives).
+5. The flat-ray walk test counted on a rounding: the aperture is now 0.74 mm, clear of every pass.
+6. traceRay's last hit keeps the angle it came in at: now in the contract.
+7. A convex mirror's virtual waist outside the cavity: now in the contract, with a test.
+8. Declined: moving the mirrors' loss out of α_i into its own term of γ. `rates.*.scales` and `thresholdGain` take α and the mirrors; a γ_m input to each would mean changing four tested functions for no different number. γ is computed in one place (`compute`), and the guard now uses the same sum.
+9. Declined: caching the resonator across calls. It is worked out once per engine call (now in `readConfig`, where the guard needs it), a few µs next to a frame's milliseconds of solving.
+10.–11. The test helpers (`alphaWithMirrors`, `mirrorCurvature`) moved into `helpers.js`, written with plain `if`s, with their own tests; the nested ternaries are gone.
+12. The recipe note (code before tests) stays: it is true.
+13. `docs/laser-guide.md` is the owner's learning material from another AI, not this stage's: left out of the commit.
+14. bench.js's header lists `bench-mirrors.test.js` and the mirrors.
+15. The shadowed `plain` in a test renamed `airOnly`.
+
 #### Stage 10b — The mirrors on the page
 - **Build:**
   - For each mirror, a choice of flat, concave or convex (three buttons with a little picture of each), and a radius slider (log) shown only for a curved mirror. Its range comes from the scope card, and it must reach confocal (R = L) and concentric (R = L/2).
@@ -1345,7 +1398,7 @@ Three sub-stages, one commit each, each through the whole recipe (§3):
   - the browser check of the look with the owner.
 
 #### Stage 10c — A bench that looks real
-- **Research first (D14),** written into `docs/laser-physics.md` as a new §5.9 "What each medium looks like", with sources:
+- **Research first (D14),** written into `docs/laser-physics.md` as a new §5.10 "What each medium looks like" (§5.9 is the mirrors, since stage 10a), with sources:
   - ruby: a pink-red rod; Cr³⁺ absorbs the green and violet of §5.2's pump bands and passes red;
   - Nd:YAG: pale lilac; Nd:glass: pale purple; Ti:sapphire: pink;
   - dye (rhodamine 6G): a red-orange liquid in a glass cell or a jet;

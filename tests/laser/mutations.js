@@ -1399,8 +1399,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "var L_i = 2 * config.alpha_i * config.l_g;",
-    replace: "var L_i = config.alpha_i * config.l_g;",
+    find: "var L_i = 2 * d.alphaWithMirrors * config.l_g;",
+    replace: "var L_i = d.alphaWithMirrors * config.l_g;",
     why: "the internal loss as one pass instead of a round trip"
   },
   {
@@ -3155,8 +3155,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "    refuseStrangeSim(where, sim, read, config);\n    var d = compute(where, config, read.medium, read.setup);\n    // The pump as advance runs it",
-    replace: "    var d = compute(where, config, read.medium, read.setup);\n    // The pump as advance runs it",
+    find: "    refuseStrangeSim(where, sim, read, config);\n    var d = compute(where, config, read);\n    // The pump as advance runs it",
+    replace: "    var d = compute(where, config, read);\n    // The pump as advance runs it",
     why: "pumpNow ignoring a flash on a bench without a lamp"
   },
   {
@@ -4249,8 +4249,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "return 1 + extraLossNow(config, sim, compute(where, config, read.medium, read.setup).gamma);",
-    replace: "return extraLossNow(config, sim, compute(where, config, read.medium, read.setup).gamma);",
+    find: "return 1 + extraLossNow(config, sim, compute(where, config, read).gamma);",
+    replace: "return extraLossNow(config, sim, compute(where, config, read).gamma);",
     why: "lossNow without the open cavity's own loss"
   },
   {
@@ -4934,6 +4934,290 @@ const MUTATIONS = [
     find: "drawFlashlamp(g, colors, L, pump, view.still ? 0 : view.t);",
     replace: "drawFlashlamp(g, colors, L, pump, view.t);",
     why: "the lamp's streaks flicker for a visitor who asked for less motion"
+  },
+  // stage 10a: the mirrors (optics.js and the bench)
+  {
+    file: "js/laser/engine/optics.js",
+    find: "return matrix(1, 0, 0 - 2 * c, 1);",
+    replace: "return matrix(1, 0, 0 - c, 1);",
+    why: "a mirror as a lens of f = R, not R/2"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    return matrix(1, l / n, 0, 1);",
+    replace: "    return matrix(1, l, 0, 1);",
+    why: "a slab as free space l, not l/n (D10)"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    return L - l_g + l_g / n;",
+    replace: "    return L - l_g + l_g * n;",
+    why: "the rod counted l·n, not l/n"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var w0 = Math.sqrt(lam * zR / Math.PI);",
+    replace: "    var w0 = lam * zR / Math.PI;",
+    why: "the √ dropped from w₀"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      walkOff = Math.log(magnification);",
+    replace: "      walkOff = 0.5 * Math.log(magnification);",
+    why: "an unstable pair keeping 1/M, not 1/M²"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (shape === \"convex\") return -1 / radius;",
+    replace: "    if (shape === \"convex\") return 1 / radius;",
+    why: "a convex mirror bent like a concave one"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      focus1: c1 === 0 ? null : 1 / (2 * c1),",
+    replace: "      focus1: c1 === 0 ? null : 1 / c1,",
+    why: "F at R, not R/2"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      focus2: c2 === 0 ? null : 1 / (2 * c2),",
+    replace: "      focus2: c2 === 0 ? null : -1 / (2 * c2),",
+    why: "a convex mirror's F in front of it"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var alpha = 8 * KAPPA_00 * KAPPA_00 * VAINSHTEIN_DELTA * u / (bottom * bottom);",
+    replace: "    var alpha = 8 * KAPPA_00 * VAINSHTEIN_DELTA * u / (bottom * bottom);",
+    why: "Vainshtein's κ not squared (the first reading of the scan)"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    return -Math.expm1(-alpha);",
+    replace: "    return -Math.expm1(-2 * alpha);",
+    why: "Vainshtein's α taken as the field's decay, not the energy lost (eq. (81))"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var M = Math.sqrt(8 * Math.PI * N);",
+    replace: "    var M = Math.sqrt(4 * Math.PI * N);",
+    why: "Vainshtein's M = √(4πN)"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    return Math.min(clip, flat);",
+    replace: "    return Math.max(clip, flat);",
+    why: "a mirror losing the more of the two"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var clip = Math.exp(-2 * Math.PI * fresnel * Math.sqrt(Math.abs(fit)));",
+    replace: "    var clip = Math.exp(-2 * Math.PI * fresnel * Math.abs(fit));",
+    why: "the clipping without the √ of w²"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    if (gi === 0 && gj === 0) return 1;",
+    replace: "    if (gi === 0 && gj === 0) return 0;",
+    why: "the confocal point taken as an edge"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    return gi * (1 - gi * gj) / gj;",
+    replace: "    return gj * (1 - gi * gj) / gi;",
+    why: "each mirror given the other's spot"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    if (!confocal && !(product > 0 && product < 1)) return null;",
+    replace: "    if (!confocal && !(product >= 0 && product <= 1)) return null;",
+    why: "a Gaussian mode on the stability edges"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      zR2 = Lr * Lr * (1 + g1) / (4 * (1 - g1));",
+    replace: "      zR2 = Lr * Lr * (1 - g1) / (4 * (1 + g1));",
+    why: "the symmetric z_R upside down"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      z1 = Lr * g2 * (1 - g1) / sum;",
+    replace: "      z1 = Lr * g1 * (1 - g2) / sum;",
+    why: "the waist measured from the wrong mirror"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      w1: w0 * Math.sqrt(1 + (z1 / zR) * (z1 / zR)),",
+    replace: "      w1: w0 * Math.sqrt(1 + (z2 / zR) * (z2 / zR)),",
+    why: "mirror 1 given mirror 2's spot"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    if (zr <= rodStart + l_g / n) return rodStart + (zr - rodStart) * n;",
+    replace: "    if (zr <= rodStart + l_g / n) return rodStart + (zr - rodStart) / n;",
+    why: "the waist inside the rod put at the wrong place"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    if (z <= rodEnd) return rodStart + (z - rodStart) / n;",
+    replace: "    if (z <= rodEnd) return rodStart + (z - rodStart) * n;",
+    why: "the beam inside the rod growing n times too fast"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "        theta = theta - 2 * curvatures[k] * y;",
+    replace: "        theta = theta + 2 * curvatures[k] * y;",
+    why: "a ray bent away from the axis by a concave mirror"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var curvatures = [c2, c1];",
+    replace: "    var curvatures = [c1, c2];",
+    why: "a ray meeting the mirrors the wrong way round"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "        if (Math.abs(y) > aperture) {",
+    replace: "        if (y > aperture) {",
+    why: "a ray never leaving below the axis"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      magnification = Math.abs(m) + Math.sqrt(m * m - 1);",
+    replace: "      magnification = Math.abs(m);",
+    why: "M = |m|"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    if (Math.abs(m) > 1) {",
+    replace: "    if (m > 1) {",
+    why: "an unstable pair with m < −1 not walking out"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "  var MAX_ROUND_TRIPS = 10000;",
+    replace: "  var MAX_ROUND_TRIPS = 100000;",
+    why: "no bound on the ray trace"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var gamma = -0.5 * (Math.log1p(-loss1) + Math.log1p(-loss2)) + walkOff;",
+    replace: "    var gamma = -(Math.log1p(-loss1) + Math.log1p(-loss2)) + walkOff;",
+    why: "the edges counted as a single pass, not a round trip"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      loss: -Math.expm1(-2 * gamma),",
+    replace: "      loss: -Math.expm1(-gamma),",
+    why: "the round-trip loss from one pass"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "  var KAPPA_00 = 2.404825557695773;",
+    replace: "  var KAPPA_00 = 3.831705970207512;",
+    why: "the first zero of J₁, not J₀"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var fresnel = aperture * aperture / (lam * Lr);",
+    replace: "    var fresnel = aperture * aperture / (lam * params.L);",
+    why: "the Fresnel number over L, not L*"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var n = check.atLeast(where, \"n\", params.n, 1);\n    return matrix",
+    replace: "    var n = check.atLeast(where, \"n\", params.n, 0);\n    return matrix",
+    why: "a slab of index below 1"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    var alphaWithMirrors = config.alpha_i + resonator.gamma / config.l_g;",
+    replace: "    var alphaWithMirrors = config.alpha_i;",
+    why: "the mirrors losing nothing"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      L: config.L, l_g: config.l_g, n: medium.n,",
+    replace: "      L: config.L, l_g: config.l_g, n: 1,",
+    why: "the rod counted as air"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      lam: medium.lam, aperture: config.aperture",
+    replace: "      lam: 1e-6, aperture: config.aperture",
+    why: "every medium's mirrors at 1 µm"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (shape === \"concave\") return 1 / radius;",
+    replace: "    if (shape === \"concave\") return 2 / radius;",
+    why: "a concave mirror of half its radius"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    readMirror(where, config, \"mirror1\", \"Rc1\");\n",
+    replace: "",
+    why: "mirror 1 unchecked"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    check.positive(where, \"aperture\", config.aperture);\n",
+    replace: "",
+    why: "the aperture unchecked"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    var L_i = 2 * d.alphaWithMirrors * config.l_g;",
+    replace: "    var L_i = 2 * config.alpha_i * config.l_g;",
+    why: "the best coupler without the mirrors' loss"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      refl1: config.refl1, refl2: config.refl2, alpha_i: alphaWithMirrors, l_g: config.l_g",
+    replace: "      refl1: config.refl1, refl2: config.refl2, alpha_i: config.alpha_i, l_g: config.l_g",
+    why: "g_th without the mirrors' loss"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "mirror1: \"flat\", Rc1: 1, mirror2: \"concave\", Rc2: 45 * cm, aperture: 0.75 * mm,",
+    replace: "mirror1: \"flat\", Rc1: 1, mirror2: \"concave\", Rc2: 25 * cm, aperture: 0.75 * mm,",
+    why: "He-Ne's output mirror too strong: unstable"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "mirror1: \"concave\", Rc1: 20, mirror2: \"flat\", Rc2: 1, aperture: 6 * mm,",
+    replace: "mirror1: \"concave\", Rc1: 2, mirror2: \"flat\", Rc2: 1, aperture: 6 * mm,",
+    why: "CO₂'s back mirror of 2 m, not 20"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "  var MIRROR_SHAPES = Object.freeze([\"flat\", \"concave\", \"convex\"]);",
+    replace: "  var MIRROR_SHAPES = [\"flat\", \"concave\", \"convex\"];",
+    why: "the mirror shapes not frozen"
+  },
+  {
+    file: "index.html",
+    find: "  <script src=\"js/laser/engine/optics.js\"></script>\n",
+    replace: "",
+    why: "the page without optics.js"
+  },
+  // stage 10a, the review's fixes
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    check.atLeast(where, radiusName, config[radiusName], MIN_RADIUS);",
+    replace: "    check.positive(where, radiusName, config[radiusName]);",
+    why: "a radius of 10⁻¹⁶⁰ m let through to overflow in optics.js"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    var loss = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2)) + resonator.gamma;",
+    replace: "    var loss = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2));",
+    why: "the lossless-cavity guard blind to the mirrors' loss"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (!isFinite(loss)) {\n      check.fail(where, \"the mirrors lose too much light",
+    replace: "    if (false) {\n      check.fail(where, \"the mirrors lose too much light",
+    why: "an infinite mirror loss passed on"
   },
 ];
 

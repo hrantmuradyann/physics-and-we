@@ -42,7 +42,8 @@ test("the default bench: a small Nd:YAG laser pumped by 5 W of 808 nm diode ligh
   const c = B.defaultConfig();
   assert.deepEqual(plain(c), {
     medium: "nd-yag", pump: "diode", l_g: 0.05, area: 1e-6, L: 0.3, refl1: 1, refl2: 0.95,
-    alpha_i: 0.2, pumpPower: 5, pumpLam: 808e-9, eta: 0.9, beta: 1e-8, qSwitch: "none"
+    alpha_i: 0.2, mirror1: "flat", Rc1: 1, mirror2: "concave", Rc2: 1, aperture: 1.5e-3,
+    pumpPower: 5, pumpLam: 808e-9, eta: 0.9, beta: 1e-8, qSwitch: "none"
   });
   c.pumpPower = 7;
   assert.equal(B.defaultConfig().pumpPower, 5, "each call gives a new object");
@@ -72,10 +73,17 @@ test("derive agrees with cavity.js and rates.js (one loss at a time and all toge
     const d = B.derive(c);
     const L_e = E.cavity.effectiveLength({ L: c.L, l_g: c.l_g, nGroup: YAG.nGroup });
     assertClose(d.L_e, L_e, 1e-12, "L_e");
-    assertClose(d.gth, E.cavity.thresholdGain({ refl1: c.refl1, refl2: c.refl2, alpha_i: c.alpha_i, l_g: c.l_g }), 1e-12, "gth");
+    // The mirrors' loss (optics.js, §7.7) joins α_i, spread over the rod.
+    const mirrors = E.optics.resonator({
+      L: c.L, l_g: c.l_g, n: YAG.n, c1: 0, c2: 1 / c.Rc2, lam: YAG.lam, aperture: c.aperture
+    });
+    const alpha = c.alpha_i + mirrors.gamma / c.l_g;
+    assertClose(d.alphaWithMirrors, alpha, 1e-12, "alphaWithMirrors");
+    assertClose(d.resonator.gamma, mirrors.gamma, 1e-12, "the resonator's loss");
+    assertClose(d.gth, E.cavity.thresholdGain({ refl1: c.refl1, refl2: c.refl2, alpha_i: alpha, l_g: c.l_g }), 1e-12, "gth");
     const scales = E.rates.fourLevel.scales({
       sigma: YAG.sigma, tau: YAG.tau, nu: YAG.nu, l_g: c.l_g, area: c.area,
-      L_e: L_e, refl1: c.refl1, refl2: c.refl2, alpha_i: c.alpha_i
+      L_e: L_e, refl1: c.refl1, refl2: c.refl2, alpha_i: alpha
     });
     for (const name of ["gamma", "N_c", "R_c", "tau_c", "eps", "powerPerP", "sOnePhoton"]) {
       assertClose(d[name], scales[name], 1e-12, name + " " + JSON.stringify(changes));
@@ -105,8 +113,11 @@ test("§6.3 Fan–Byer: a 200 µm pump spot matched to the mode, 5 % loss, η = 
   const w = 200e-6;
   const d = derive({ area: Math.PI * w * w, refl1: 1, refl2: Math.exp(-0.05), alpha_i: 0 });
   const hnuP = E.units.photonEnergy(808e-9);
-  // P_th = π·hν_p·(w_L² + w_p²)·(T + L_i)/(4στη) with w_L = w_p = w.
-  const fanByer = Math.PI * hnuP * (2 * w * w) * 0.05 / (4 * YAG.sigma * YAG.tau * 0.9);
+  // P_th = π·hν_p·(w_L² + w_p²)·(T + L_i)/(4στη) with w_L = w_p = w; the
+  // only other loss is the mirrors', L_i = 2γ_m (5×10⁻¹⁰ here, §7.7).
+  const L_i = 2 * d.resonator.gamma;
+  assert.ok(L_i > 0 && L_i < 1e-9, "the mirrors lose almost nothing: " + L_i);
+  const fanByer = Math.PI * hnuP * (2 * w * w) * (0.05 + L_i) / (4 * YAG.sigma * YAG.tau * 0.9);
   assertClose(d.pumpThreshold, fanByer, 1e-12, "the formula");
   assert.ok(d.pumpThreshold >= 0.125 && d.pumpThreshold <= 0.135, "the doc's 0.13 W: " + d.pumpThreshold);
 });
@@ -142,7 +153,7 @@ test("the best coupler: T_opt of §3.6, and where this model's P_out(T) really p
   const expectedPeak = { 2: 0.023156, 5: 0.047502, 20: 0.110711 };
   for (const pumpPower of [2, 5, 20]) {
     const d = derive({ pumpPower: pumpPower });
-    const L_i = 2 * 0.2 * 0.05;
+    const L_i = 2 * d.alphaWithMirrors * 0.05;               // 2 % and the mirrors' 5×10⁻¹⁰
     assertClose(d.T_opt, E.cavity.optimumCoupler({ g0: d.g0, l_g: 0.05, L_i: L_i }), 1e-12, "T_opt");
     assertClose(d.T_best, 1 - Math.exp(-d.T_opt), 1e-12, "T_best");
     // Scan the coupler in steps of 2×10⁻⁶ around the peak.
@@ -158,8 +169,15 @@ test("the best coupler: T_opt of §3.6, and where this model's P_out(T) really p
     assertClose(bestT, d.T_best, 0, "peak at " + pumpPower + " W", 2e-6);
     assertClose(d.T_best, expectedPeak[pumpPower], 0, "audit value", 1e-6);
   }
-  assert.equal(derive({ alpha_i: 0 }).T_opt, null, "no internal loss: no best coupler (§3.6)");
-  assert.equal(derive({ alpha_i: 0 }).T_best, null);
+  // No internal loss, and an aperture so wide (2 cm) that the mirrors lose
+  // exactly nothing (e^(−3800) is 0): no best coupler (§3.6).
+  const lossless = { alpha_i: 0, aperture: 0.02 };
+  assert.equal(derive(lossless).resonator.gamma, 0, "the mirrors lose nothing");
+  assert.equal(derive(lossless).T_opt, null, "no internal loss: no best coupler (§3.6)");
+  assert.equal(derive(lossless).T_best, null);
+  // The default aperture's mirrors lose 2.4×10⁻¹⁰ per pass: a best coupler
+  // of 1.5×10⁻⁵, a loss so small it might as well be none.
+  assert.ok(derive({ alpha_i: 0 }).T_opt > 0 && derive({ alpha_i: 0 }).T_opt < 1e-4);
 });
 
 test("every corner of the sliders gives finite numbers (or null), never an error", () => {
@@ -168,8 +186,13 @@ test("every corner of the sliders gives finite numbers (or null), never an error
     for (const T of [R.coupler.min, R.coupler.max]) {
       const d = derive({ pumpPower: pumpPower, refl2: 1 - T });
       for (const [name, value] of Object.entries(d)) {
+        if (name === "resonator") continue;
         if (typeof value === "number") assert.ok(Number.isFinite(value), name + " at " + pumpPower + " W, T " + T);
         else assert.ok(value === null || typeof value === "string", name);
+      }
+      for (const [name, value] of Object.entries(d.resonator)) {
+        if (typeof value === "number") assert.ok(Number.isFinite(value), "resonator." + name);
+        else assert.ok(value === null || typeof value === "boolean", "resonator." + name);
       }
     }
   }
@@ -308,7 +331,9 @@ test("pump off for 750τ, then on again: the photons settle at the seed of y = 1
   // falls past 10⁻³⁰⁰ of threshold; the seed counts it as y + 10⁻¹²
   // (rates.js, Y_FLOOR), so ln φ settles near ln(β·10⁻¹²) − sOnePhoton
   // instead of following the atoms down.
-  const long = { L: 3, refl2: 0.999, alpha_i: 0, pumpPower: 4 };
+  // Its output mirror: R = 10 m, so the 3 m pair stays stable, and a wide
+  // aperture, so the mirrors lose nothing (§7.7).
+  const long = { L: 3, refl2: 0.999, alpha_i: 0, pumpPower: 4, Rc2: 10, aperture: 5e-3 };
   const on = config(long);
   const off = config(Object.assign({}, long, { pumpPower: 0 }));
   const d = B.derive(on);

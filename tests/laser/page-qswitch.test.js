@@ -597,9 +597,10 @@ test("every bench with the filter through a whole flash (or 600 µs of its diode
   // page's highest output is the engine's. The bounds are 1.5× the worst
   // frame, at most the frame's 1500. Ruby's dye filter (22 ps recovery)
   // runs out of steps in 2 frames of its pulse: too few for the note,
-  // which needs a quarter of a second's frames.
+  // which needs a quarter of a second's frames. (Stage 10a: Nd:glass's
+  // flat mirrors lose 7.9×10⁻⁴ per pass, §7.7; its pulse was 2.825×10⁷ W.)
   const cases = [
-    ["ruby", "flashlamp", 1500, 2.097e8], ["nd-glass", "flashlamp", 955, 2.825e7],
+    ["ruby", "flashlamp", 1500, 2.097e8], ["nd-glass", "flashlamp", 955, 2.816e7],
     ["nd-yag", "flashlamp", 871, 7.275e6], ["nd-yag", "diode", 562, 2.573e3]
   ];
   const page = built("en", { watch: true, show: ["bench"] });

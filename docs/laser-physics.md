@@ -75,6 +75,11 @@ English-language textbooks (Svelto, Siegman, Koechner) reuse the letters g and R
 | ω_R, t_damp | relaxation-oscillation angular frequency, damping time | rad/s, s | `omegaR`, `t_damp` |
 | R₁, R₂ (Section 7) | mirror radii of curvature | m | `Rc1`, `Rc2` |
 | g₁, g₂ (Section 7) | resonator g-parameters, 1 − L/R | — | `g1`, `g2` |
+| c₁, c₂ (Section 7) | mirror curvatures 1/R, positive for a concave mirror, 0 for a flat one (R = ∞ cannot be passed to the code) | m⁻¹ | `c1`, `c2` |
+| L* = L − l + l/n (Section 7) | reduced cavity length: the rod counts l/n for the beam (7.3) | m | `reducedLength` |
+| a (Sections 7.4, 7.7) | radius of the aperture that limits the beam (the rod, or the tube's bore) | m | `aperture` |
+| N = a²/(λL) | Fresnel number | — | `fresnel` |
+| M (Section 7.7) | round-trip magnification of an unstable resonator. Not the mass M of Section 1 | — | `magnification` |
 | τ_c | cavity photon lifetime | s | `tau_c` |
 | Q, Δν_c | quality factor and linewidth of the empty (cold) cavity | —, Hz | `Q`, `dnu_c` |
 | Δν_FSR | free spectral range, the spacing of the longitudinal modes | Hz | `fsr` |
@@ -525,6 +530,25 @@ Typical: L = 300 µm, I_th = 10–30 mA, slope efficiency ~0.5–1 W/A. The wave
 - **Ti:sapphire:** the broadest band, so mode locking gives pulses of a few femtoseconds (Section 4.5). It relies on Kerr-lens mode locking — the same self-focusing as in §125 (Section 10).
 - Another route to tunable output described in the book is the optical parametric oscillator (§126, Section 10).
 
+### 5.9 The mirrors of each bench
+
+The simulator's benches (`SETUPS` in `js/laser/engine/bench.js`) use these mirrors. Mirror 1 is the back mirror (the high reflector), mirror 2 the output mirror; R is a radius of curvature (Section 7, concave unless marked), a the radius of the aperture that limits the beam (the rod, or the tube's bore). The losses are from Section 7.7.
+
+| Bench | Mirror 1 | Mirror 2 | a | N = a²/(λL*) | g₁, g₂ | Loss per pass | Source |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Ruby, flashlamp | flat | flat | 5 mm (rod 1 cm across) | 79 | 1, 1 (edge) | 4.1×10⁻⁴ (Vainshtein) | The first laser (Maiman, May 1960): a 1 × 2 cm ruby rod with flat, parallel, silvered ends ([HRL](https://hrl.com/about/laser), [Physics World](https://physicsworld.com/a/and-then-there-was-light/)) |
+| Nd:glass, flashlamp | flat | flat | 5 mm | 51 | 1, 1 (edge) | 7.9×10⁻⁴ | Flat mirrors, as for ruby: the usual pulsed-rod laser (Koechner, not checked against the printed book) |
+| Nd:YAG, flashlamp | concave, R = 5 m | flat | 3 mm (a ¼-inch rod) | 32 | 0.947, 1 | 2×10⁻²⁰ | A long-radius back mirror and a flat output mirror (Koechner; not checked) |
+| Nd:YAG, diodes | flat | concave, R = 1 m | 1.5 mm | 7.6 | 1, 0.72 | 2.4×10⁻¹⁰ | End pumping through a flat back mirror (it passes 808 nm), a concave output mirror (Koechner §6; not checked) |
+| He-Ne, discharge | flat | concave, R = 45 cm | 0.75 mm (bore 1.5 mm) | 3.0 | 1, 0.33 | 7.7×10⁻⁵ | Most tubes: a flat high reflector and a concave output mirror a little longer than the tube, the near-hemispherical cavity, the easiest to align ([repairfaq](https://repairfaq.org/sam/laserhcl.htm), [Arizona OPTI 511L](https://wp.optics.arizona.edu/opti511l/wp-content/uploads/sites/36/2018/09/HeNe_Fall2018_Part_2_511L.pdf)); bores 0.5–1.5 mm |
+| Ar⁺, discharge | concave, R = 5 m | flat | 1.5 mm | 4.4 | 0.80, 1 | 9.0×10⁻⁶ | A plano-concave high reflector of R = 5 m is a usual part (a reseller's listing; not verified) |
+| CO₂, discharge | concave, R = 20 m | flat | 6 mm | 4.2 | 0.96, 1 | 4.9×10⁻³ (4 % of its γ) | Long-radius rear mirrors of 15–30 m and flat ZnSe output couplers are catalogue parts ([Coherent](https://www.coherent.com/optics/general-optics/lenses-mirrors/rear-mirrors-for-co2-laser-systems)) |
+| Dye, laser | concave, R = 30 cm | concave, R = 30 cm | 5 mm | 83 | −0.67, −0.67 | ~0 | A real dye laser folds its cavity over three or four mirrors to focus into the jet; the bench's two mirrors stand in for them |
+| Ti:sapphire, laser | concave, R = 1 m | concave, R = 1 m | 5 mm | 21 | −0.50, −0.50 | ~0 | The same: a folded cavity in a real one |
+| Two-level atom | flat | concave, R = 50 cm | 0.56 mm | 4.7 | 1, 0.81 | 4.6×10⁻⁶ | Symbolic |
+
+The mirrors change only the losses, not the gain: the gain is still spread evenly over `area` (decided in build stage 10a, D15 of `docs/laser-plan.md`). So the beam's width on the page does not change the pump threshold, except through the light the mirrors lose.
+
 ## 6. Pumping
 
 The pump sets one number in the equations of Section 4 — the rate W_p (or R_p, or current I) — but this is where most of the laser's overall efficiency is lost. Total efficiency is the product of a chain:
@@ -614,7 +638,7 @@ A stable resonator forms a Gaussian beam whose wavefronts match the mirror surfa
 w_0^2 = \frac{\lambda L}{\pi}\sqrt{\frac{g_1g_2(1-g_1g_2)}{(g_1+g_2-2g_1g_2)^2}}, \qquad w_{1}^2 = \frac{\lambda L}{\pi}\sqrt{\frac{g_2}{g_1(1-g_1g_2)}}, \qquad w_{2}^2 = \frac{\lambda L}{\pi}\sqrt{\frac{g_1}{g_2(1-g_1g_2)}}, \qquad z_1 = \frac{L\,g_2(1-g_1)}{g_1+g_2-2g_1g_2}
 ```
 
-For the confocal resonator the formulas simplify: w₀ = √(λL/2π), w = √(λL/π) on the mirrors, divergence θ = λ/(πw₀). He-Ne example, L = 1 m: w₀ ≈ 0.32 mm, θ ≈ 0.6 mrad ≈ 2′ — the 1–2′ of §122. At the boundary points (g₁g₂ = 0 or 1) the formulas give 0 or ∞ — the code needs a guard, and the interface a warning "resonator at the stability boundary".
+For the confocal resonator the formulas simplify: w₀ = √(λL/2π), w = √(λL/π) on the mirrors, divergence θ = λ/(πw₀). He-Ne example, L = 1 m: w₀ ≈ 0.32 mm, θ ≈ 0.6 mrad ≈ 2′ — the 1–2′ of §122. At the boundary points (g₁g₂ = 0 or 1) the formulas give 0 or ∞ — the code needs a guard, and the interface a warning "resonator at the stability boundary". The loss there, and beyond the boundary, is in 7.7; at the confocal point g₁ = g₂ = 0 every closed form is 0/0, and the code uses the symmetric form w₀² = (λL/π)·√((1 + g)/(4(1 − g))), regular at g = 0 (D1 of `docs/laser-plan.md`).
 
 ### 7.3 General method: ABCD matrices
 
@@ -665,6 +689,47 @@ E(x,y,z+L) = \mathcal F^{-1}\Big\{\mathcal F\{E(x,y,z)\}\cdot e^{\,iL\sqrt{k^2 -
 ```
 
 After tens to hundreds of passes the profile converges to the lowest-loss mode, and the power ratio between successive passes gives the diffraction loss. In a browser this is feasible on a 128×128 grid or for a 1D cross-section. It is the most honest illustration of the book's statement that the resonator "collimates" the light: a clean mode grows out of noise.
+
+### 7.7 Loss near and beyond the stability edges
+
+The Gaussian formulas of 7.2 give a spot that grows without bound at the edges of the stable region (g₁g₂ = 1, and g₁g₂ = 0 with one g not 0), and nothing at all outside it. Real lasers work at and past the edges: the first ruby laser had two flat mirrors (g₁ = g₂ = 1), and high-power lasers use unstable mirrors on purpose. The simulator needs one loss that runs smoothly across all of them. It is built from three published results and one interpolation of its own.
+
+**Two flat mirrors (Vainshtein).** For two round flat mirrors of radius a a distance d apart, Fresnel number N = a²/(λd), the lowest mode (TEM₀₀) loses a share α of its energy per pass (Kogelnik & Li 1966, eq. (86), after Vainshtein 1963; their eq. (81) defines α = 1 − |γ|², "the fractional energy lost per transit")
+
+```latex
+\alpha = 8\kappa_{00}^{2}\,\frac{\delta(M+\delta)}{\big[(M+\delta)^2+\delta^2\big]^2}, \qquad M = \sqrt{8\pi N}, \quad \delta = 0.824, \quad \kappa_{00} = 2.405 \text{ (the first zero of } J_0)
+```
+
+**κ₀₀ is squared.** In the scan of the paper eq. (86) reads like κ₀₀ to the first power, and stage 10a first used it so, with α taken as the field's decay (power kept e^(−2α)). Both readings are wrong, and together they gave 2/κ₀₀ = 0.83 of the loss (the review of stage 10a found it). Only κ₀₀² agrees with the paper's own eq. (87), β = (M/4δ)α, and the phase shift of its Fig. 24 (about 0.26° per transit at N = 100, TEM₀₀; with κ₀₀² β = 0.25°), and with Fig. 22 at N = 24 (0.0101 dB against the figure's 0.01; the first reading gave 0.0084). Made for large N, the formula passes 1 at small N (α → 2κ₀₀²/δ² = 17 as N → 0), so the simulator takes the share lost as δ_flat = 1 − e^(−α): α itself to first order (2.9×10⁻⁴ either way at N = 100; 2.91 % against 2.95 % at N = 4), and never more than all of the light.
+
+Recomputed in Node: 0.80 dB per pass at N = 1, 0.128 dB at N = 4, 0.0355 dB at N = 10, 0.0098 dB at N = 24.5, 0.00125 dB (2.9×10⁻⁴) at N = 100. Read off Kogelnik & Li's Fig. 22 (the numerical Fox–Li losses, |g| = 1): 0.1 dB at N ≈ 4.3, 0.03 dB at N = 10, 0.01 dB at N ≈ 24; the formula, made for large N, is within about 20 % of the figure from N ≈ 4 up (0.116, 0.0355 and 0.0101 dB there), and above it at small N (0.80 dB at N = 1 against the figure's ~0.56). The loss falls steadily with N, and tends to all of the light as N → 0.
+
+**Inside the stable region.** The Gaussian spot w_i on mirror i is clipped by the aperture: a share e^(−2a²/w_i²) is lost there per round trip (7.4). With 7.2's spots this is e^(−2πN·√Y_i), N = a²/(λL*), Y₁ = g₁(1 − g₁g₂)/g₂ and Y₂ = g₂(1 − g₁g₂)/g₁ (at the confocal point g₁ = g₂ = 0, where both are 0/0, the symmetric limit Y = 1). Checked against Kogelnik & Li's Fig. 22 (identical mirrors, the N where the TEM₀₀ loss falls to 0.01 dB): the clipping formula gives 0.022, 0.006, 0.004 and 0.012 dB at the N where the figure gives 0.01 dB for g = 0, 0.5, 0.9 and 0.99. Within a factor of about 2, which on these steep curves is a shift of N by less than 15 %.
+
+**The interpolation (the simulator's own, not a textbook formula).** Near an edge the Gaussian spot grows without bound, but the real mode stays about as wide as the aperture: in Fig. 22 the curve for g = 0.99 lies below the flat mirrors' curve and joins it at small N. So each mirror loses the smaller of the two, min(e^(−2πN√Y_i), δ_flat(N)), with δ_flat = 1 − e^(−α) from Vainshtein. At an edge where mirror i's spot grows without bound (Y_i → 0) it loses exactly the flat mirrors' share; where the other mirror's spot shrinks to a point (Y_i → ∞) it loses nothing.
+
+**Equivalence.** The diffraction loss of a pair is unchanged when both g change sign (Kogelnik & Li 1966, §4.4: "the diffraction loss and the intensity pattern of the mode remain invariant if both g₁ and g₂ are reversed in sign"); the plane-parallel and the concentric pair are an example. Every formula here depends on g₁g₂ and on the ratios Y_i, which do not change under (g₁, g₂) → (−g₁, −g₂), so the concentric pair loses what the flat pair loses.
+
+**Outside the stable region (Siegman).** A ray walks out, and the beam is magnified M times per round trip, with M the larger eigenvalue of the round-trip matrix in size:
+
+```latex
+M = |m| + \sqrt{m^2-1}, \qquad m = \frac{A+D}{2} = 2g_1g_2-1, \qquad \text{round-trip loss of round mirrors} = 1 - \frac{1}{M^2}
+```
+
+(Siegman, *Proc. IEEE* 53, 277 (1965); the area grows M² times, so 1/M² of the light stays: [RP Photonics, unstable resonators](https://rp-photonics.com/unstable_resonators.html); for strip mirrors it would be 1 − 1/M.) Near an edge M → 1 and this loss vanishes, while the real loss tends to the diffraction loss at the edge. So outside the stable region the simulator also keeps each mirror's min(e^(−2πN√|Y_i|), δ_flat): Y_i changes sign across the edge but |Y_i| runs on smoothly.
+
+**Altogether,** the share of the light kept per round trip and the single-pass loss that joins the cavity's γ (Section 3.2) are
+
+```latex
+K = \frac{(1-\delta_1)(1-\delta_2)}{M^2}, \qquad \delta_i = \min\!\big(e^{-2\pi N\sqrt{|Y_i|}},\ \delta_{\text{flat}}(N)\big), \qquad \gamma_m = -\tfrac12\ln K
+```
+
+with M = 1 inside the stable region. γ_m is continuous across every edge: on g₁g₂ = 1 both sides give (1 − δ_flat)², on g₁g₂ = 0 both give 1 − δ_flat. Next to an edge on the unstable side M − 1 grows as √(|m| − 1), so the loss rises steeply there (at N = 5: 4.2 % per round trip at the edge, 5.9 % at g = 1.00001, 20 % at g = 1.001). Worked numbers, each recomputed in Node:
+- confocal, L = 1 m, λ = 632.8 nm: w₀ = 0.317 mm, θ = λ/(πw₀) = 2.18′ (as in 7.2);
+- ruby, two flat mirrors, a = 5 mm, L* = 0.457 m (the rod counts l/n): N = 79, loss 4.1×10⁻⁴ per pass, 0.1 % of ruby's γ = 0.347: the flat rod lases;
+- He-Ne with a concave output mirror of R = 25 cm in its 30 cm tube (g₂ = −0.2: unstable): M = 2.38, the round trip keeps 1/M² = 18 %, γ_m = 0.87 against the tube's γ = 0.0085: it stops at once, while ruby with a convex output mirror of R = 5 m (M = 1.81, γ_m = 0.60, more than its own γ = 0.35) still lases: its threshold flash rises only from 639 J to 803 J, because most of a three-level threshold is the half of the ions that must be lifted first (3.1).
+
+**What the simulator leaves out.** Only the lowest mode (TEM₀₀) is modelled; the aperture is taken at both mirrors (for a rod shorter than the cavity this loses a little more than the real rod); the mirrors are taken to be aligned (7.5); and the mirrors change the loss only, not the gain (5.9).
 
 ## 8. Lenses and beam optics
 
@@ -1105,4 +1170,7 @@ The code uses SI throughout; Sivukhin's formulas are written in Gaussian units a
 - [Pressley, Wittke, CaF₂:Dy²⁺ lasers, IEEE J. Quantum Electron. 3, 116 (1967)](https://manuscript.isc.ac/Inventory/49/1124735.htm) — lifetime and linewidth of CaF₂:Dy²⁺.
 - [HeNe laser lab report, Stanford](https://web.stanford.edu/~edwin98/HeNe.pdf) — measured He-Ne gain of 15.5%/m.
 - [RP Photonics, YAG lasers](https://www.rp-photonics.com/yag_lasers.html) and [Precision Micro-Optics, Nd:YAG](https://pmoptics.com/neodymium_doped_yag.html) — Nd:YAG (1 at.%) at 1064 nm: σ = 2.8×10⁻¹⁹ cm², τ ≈ 230 µs, n = 1.82 (1.8169), as in table 5.1 (checked for build stage 6, the first stage that shows Nd:YAG). One vendor sheet gives 7×10⁻²¹ cm², far from every other source; not used.
+- [H. Kogelnik, T. Li, Laser beams and resonators, Appl. Opt. 5, 1550 (1966)](https://dielslab.unm.edu/sites/default/files/Kogelnik66_2.pdf) — Vainshtein's plane-parallel loss, eq. (86), the Fox–Li losses of Fig. 22, and the equivalence of (g₁, g₂) and (−g₁, −g₂), §4.4 (Section 7.7).
+- A. E. Siegman, Unstable optical resonators for laser applications, Proc. IEEE 53, 277 (1965), and [RP Photonics, unstable resonators](https://rp-photonics.com/unstable_resonators.html) — the round-trip loss 1 − 1/M² of round mirrors (Section 7.7).
+- The mirrors of each bench (Section 5.9): [HRL, the first laser](https://hrl.com/about/laser) and [Physics World](https://physicsworld.com/a/and-then-there-was-light/) (Maiman's flat silvered ends); [repairfaq, He-Ne tubes](https://repairfaq.org/sam/laserhcl.htm) and [University of Arizona OPTI 511L](https://wp.optics.arizona.edu/opti511l/wp-content/uploads/sites/36/2018/09/HeNe_Fall2018_Part_2_511L.pdf) (He-Ne's near-hemispherical cavity); [Coherent, CO₂ rear mirrors](https://www.coherent.com/optics/general-optics/lenses-mirrors/rear-mirrors-for-co2-laser-systems) (15–30 m). The others are typical values not yet checked against printed sources.
 - Other medium parameters, the Rigrod, Self, Marburger and Fan–Byer formulas, and the Sellmeier coefficients (Schott N-BK7, Malitson for fused silica, Zernike for KDP) are standard values from textbooks and handbooks (Svelto *Principles of Lasers*, Koechner *Solid-State Laser Engineering*, Siegman *Lasers*, Boyd *Nonlinear Optics*). They have not yet been checked against the printed sources and should be before the site is published.

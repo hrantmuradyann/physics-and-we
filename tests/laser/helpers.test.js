@@ -6,7 +6,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { assertClose, plain, deepFreeze } = require("./helpers.js");
+const { assertClose, plain, deepFreeze, mirrorCurvature, alphaWithMirrors, loadEngine } = require("./helpers.js");
 
 test("assertClose: within and outside the relative tolerance", () => {
   assertClose(101, 100, 0.01);
@@ -76,4 +76,21 @@ test("LASER_TEST_ROOT without the mutation checker's marker stops the tests", ()
     { env: env, encoding: "utf8" });
   assert.notEqual(run.status, 0);
   assert.match(run.stderr, /LASER_TEST_ROOT is set.*only for tests\/laser\/mutation-check\.js/);
+});
+
+test("mirrorCurvature: concave 1/R, convex −1/R, flat 0; anything else refused", () => {
+  assert.equal(mirrorCurvature("concave", 2), 0.5);
+  assert.equal(mirrorCurvature("convex", 4), -0.25);
+  assert.equal(mirrorCurvature("flat", 3), 0);
+  assert.throws(() => mirrorCurvature("round", 1), /unknown shape round/);
+});
+
+test("alphaWithMirrors: α_i plus the mirrors' γ_m over the rod; just α_i when the mirrors lose nothing", () => {
+  const E = loadEngine();
+  const ruby = E.bench.configFor({ medium: "ruby", pump: "flashlamp" });
+  // Two flat mirrors, a = 5 mm: Vainshtein's 4.09×10⁻⁴ per pass, over a 10 cm rod.
+  assertClose(alphaWithMirrors(E, ruby), ruby.alpha_i + 4.09e-4 / 0.1, 0.005, "ruby");
+  // A 2 cm aperture on the diode bench: e^(−3800) = 0, nothing lost.
+  const wide = Object.assign(E.bench.configFor({ medium: "nd-yag", pump: "diode" }), { aperture: 0.02 });
+  assert.equal(alphaWithMirrors(E, wide), wide.alpha_i);
 });
