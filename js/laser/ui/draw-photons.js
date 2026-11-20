@@ -317,11 +317,15 @@
     }
   }
 
-  // A photon: a short wave with an arrowhead, flying along (dx, dy).
-  function photonMark(g, x, y, dx, dy, length) {
+  // A photon: a short wave with an arrowhead, flying along (dx, dy). A
+  // stray photon's wave is dashed (its arrowhead solid), so it cannot be
+  // taken for a laser photon on a theme where the two colours are close.
+  var STRAY_DASH = [3, 2.5];
+  function photonMark(g, x, y, dx, dy, length, stray) {
     g.save();
     g.translate(x, y);
     g.rotate(Math.atan2(dy, dx));
+    g.setLineDash(stray ? STRAY_DASH : []);
     g.beginPath();
     for (var k = 0; k <= 12; k++) {
       var along = -length / 2 + k / 12 * length;
@@ -330,6 +334,7 @@
       else g.lineTo(along, across);
     }
     g.stroke();
+    g.setLineDash([]);
     g.beginPath();
     g.moveTo(length / 2 + 0.28 * length, 0);
     g.lineTo(length / 2, -0.18 * length);
@@ -406,7 +411,7 @@
       g.strokeStyle = tone;
       g.fillStyle = tone;
       g.lineWidth = 1.6 + 1.2 * photon.fresh;        // a new photon stands out for a moment
-      photonMark(g, B.left + photon.x * width, B.top + photon.y * height, photon.dx, photon.dy, photonLength);
+      photonMark(g, B.left + photon.x * width, B.top + photon.y * height, photon.dx, photon.dy, photonLength, photon.row < 0);
     });
     g.restore();
 
@@ -424,7 +429,7 @@
         g.strokeStyle = tone;
         g.fillStyle = tone;
         g.lineWidth = 1.6;
-        photonMark(g, markX - 0.3 * L.fontSize, spot.y + markY, 1, 0, 1.2 * L.fontSize);
+        photonMark(g, markX - 0.3 * L.fontSize, spot.y + markY, 1, 0, 1.2 * L.fontSize, name === "stray");
       }
       g.fillStyle = c.muted;
       g.fillText(word(name), spot.x + L.legendMark, spot.y, L.legendWidth);

@@ -257,6 +257,25 @@ This stage put the choice of laser on the page (above). Two other things came wi
   - on a 320 px phone the dropdowns stuck out of their panel;
   - the drawing called the pump "pump diodes" for every laser.
 
+### Stage 12: the study page
+
+As you asked, the menu has a new item, **Study materials** («Ուսումնական նյութեր»), right after Interactive Labs. It is a page of posters, like the Labs page; for now it has one, **The laser**, a book. The book has:
+
+- at the top, a short introduction and an **Open the laser simulator** button;
+- the **contents**, one link per chapter, as in a real book; each chapter ends with a "Contents ↑" link back, and wherever the text says "see chapter 12" that is a link too;
+- then the 13 easy chapters from your guide, in Armenian and English: light that makes more light, the pump and the inversion, two mirrors and the threshold, how a laser starts, the flashlamp, laser diodes, gas discharge, the history from Einstein to 1960, ruby, Nd:YAG, helium–neon, pulses, and safety;
+- at the end of each chapter a **Dig deeper** button opens the full version right under it, with the derivations and worked examples. The pairs: chapters 1–4 open their own full chapters; the flashlamp, diodes and gas discharge open theirs; the pulses chapter opens the full chapter on the giant pulse, the filter and mode locking; helium–neon opens its full chapter together with all the other materials (Nd:glass, CaF₂:Dy, argon, CO₂, the diode, dye, Ti:sapphire, the two-level atom). The history chapter has no button, since it is history already;
+- the formulas are typeset as in a textbook (by KaTeX, a free maths-typesetting library you allowed me to download; it is stored with the site and is only downloaded by visitors who open this page);
+- at the bottom, the list of sources with links.
+
+What I left out of your guide, because it was meant for us and not for visitors: the references to our own developer files, the "[calc]"/"[CHECK]" marks, the "PICTURE" and "TRY IT" lines, and the last chapter ("Problems found in laser-physics.md"). Of the few facts the guide itself doubted, I left out the size of Maiman's first ruby rod, and kept three that are widely known (Gould coining the word "laser", Basov and Prokhorov's three-level idea of 1955, the spelling "Marcos"); I did not look them up again. The guide itself stays on your computer and is not saved in the project.
+
+On the simulator page, the "Dig deeper into the physics of the laser" button now opens this page, and the old short theory at its bottom became one line with a link here.
+
+Also in this stage, as you asked: in the cartoon of atoms and photons, a **stray photon is now drawn with a dashed wave**, so it can no longer be taken for a laser photon (the legend shows the same).
+
+**Please check:** the Armenian translation (all of it is mine), and whether you like the "Dig deeper" boxes. The pictures your guide describes ("PICTURE") are not drawn yet; tell me if you want any of them.
+
 ## What is left
 
 Stage 9 (several laser frequencies at once, with a spectrum panel) was dropped at your request: it would have made everything too complex. The laser stays one frequency.
@@ -269,7 +288,7 @@ Stage 10 was rewritten on 16 November from your requests (the mirrors, the focal
 |---|---|
 | 10c | **A bench that looks real** (next): ruby as a red rod, Nd:YAG pale lilac, Ti:sapphire pink, dye as a coloured liquid in a glass cell, the gases in glass tubes glowing in their real colours with atoms moving inside; more realistic diodes, with the pump light visibly going into the crystal and being absorbed; the laser beam in its real colour (and the invisible infrared ones in a marked false colour). |
 | 11 | ~~Lenses outside the laser~~: **dropped** at your request (20 November). The lens physics was built and then removed; the page stays as it is. |
-| 12 | **The "learn" section:** chapters in both languages, each with a "try it on the bench" button that sets up the right example. |
+| 12 | ~~The "learn" section~~: **done** as your study page (20 November, below). |
 | 13 | **Extras,** one at a time: polarisation and Brewster windows; doubling the frequency (green light from infrared); heat in the rod acting as a lens; mode-locking (very short pulses); self-focusing; the semiconductor diode laser; and the pump in more detail (lamp reflectors, discharge). |
 | 14 | A final pass over all the documentation. |
 

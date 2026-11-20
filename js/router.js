@@ -160,6 +160,12 @@
 
     markCurrentLink(route);
     applyTitle(route);
+
+    // For a page that waits until it is on screen before doing something
+    // costly (the study page downloads its maths typesetting only then).
+    // "section:ready" is no help there: it also fires for the pages built
+    // hidden in the background.
+    global.dispatchEvent(new CustomEvent("view:shown", { detail: { route: route } }));
   }
 
   function markCurrentLink(route) {

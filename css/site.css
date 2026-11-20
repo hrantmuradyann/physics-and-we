@@ -1435,3 +1435,92 @@ body.site footer {
     animation: none !important;
   }
 }
+
+/* ============================================================================
+   THE LASER BOOK (?view=laser-study) — contents, chapters, each with a
+   "Dig deeper" box (<details>), formulas typeset by KaTeX
+   ========================================================================== */
+.study__go {
+  margin-top: 1.6rem;
+}
+
+.study-toc {
+  margin-bottom: clamp(3rem, 6vw, 4.5rem);
+  scroll-margin-top: 5rem;             /* the menu bar stays at the top */
+}
+
+.study-toc__list {
+  list-style: none;
+  margin-top: 1.2rem;
+  display: grid;
+  gap: 0.55rem;
+  font-size: 1.05rem;
+}
+
+.study-chapter {
+  scroll-margin-top: 5rem;
+}
+
+.study-chapter + .study-chapter,
+.study__sources {
+  margin-top: clamp(3rem, 6vw, 4.5rem);
+  padding-top: clamp(2.2rem, 4vw, 3rem);
+  border-top: 1px solid var(--line);
+}
+
+.study-chapter .prose {
+  margin-top: 1.2rem;
+}
+
+.study-chapter__top {
+  margin-top: 1.4rem;
+  font-size: 0.95rem;
+}
+
+.study-deeper {
+  margin-top: 1.8rem;
+}
+
+.study-deeper > summary {
+  list-style: none;                    /* the button is the marker */
+}
+
+.study-deeper > summary::-webkit-details-marker {
+  display: none;
+}
+
+.study-deeper > summary::after {
+  content: "▾";
+  transition: transform 0.25s ease;
+}
+
+.study-deeper[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.study-deeper__body {
+  margin-top: 1.4rem;
+  padding: 1.4rem 1.6rem;
+  border-left: 3px solid var(--accent-soft);
+  background: var(--card-bg);
+  border-radius: 0 14px 14px 0;
+}
+
+.study-deeper__title {
+  color: var(--heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* Formulas (KaTeX), anywhere in the book: a long one scrolls sideways on a
+   phone instead of widening the page. They take the heading colour, so
+   both themes work. */
+.study-book .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.3rem 0;
+}
+
+.study-book .katex {
+  color: var(--heading);
+}

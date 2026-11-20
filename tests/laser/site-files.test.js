@@ -41,7 +41,11 @@ function wordPairs(value, where, found) {
       list.push({ where: where, value: value, keys: keys });
       return list;
     }
-    for (const key of keys) wordPairs(value[key], where ? where + "." + key : key, list);
+    for (const key of keys) {
+      // A "route" is the name of a page to link to (data-route), not a word.
+      if (key === "route" && typeof value[key] === "string") continue;
+      wordPairs(value[key], where ? where + "." + key : key, list);
+    }
   } else if (Array.isArray(value)) {
     value.forEach((item, index) => wordPairs(item, where + "." + index, list));
   } else if (typeof value === "string") {
@@ -333,7 +337,7 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
     assert.ok(inside.includes('data-laser-readout="' + PAGE_READOUTS[i] + '"'), PAGE_READOUTS[i] + " is in its own row");
     assert.ok(inside.includes('data-text="readouts.' + PAGE_READOUTS[i] + '"'), PAGE_READOUTS[i] + " is named in its row");
   });
-  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["fire", "learn", "play", "qSwitch", "reset"]);
+  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["fire", "play", "qSwitch", "reset"]);
   // Fire starts hidden: the default bench has no flashlamp. It holds a
   // lightning bolt, hidden from screen readers, and its word, and starts
   // not asking to be pressed (data-ready, which page.js sets).
@@ -440,8 +444,8 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
     assert.ok(part.indexOf('data-laser-slider="Rc' + (i + 1) + '"') !== -1, name + "'s radius slider after its shapes");
   });
   assert.deepEqual(attributeValues(html, "data-laser-note"), ["behind"]);
-  // The theory the "learn" button scrolls to is on the page, once.
-  assert.equal((html.match(/\sdata-laser-learn[\s>]/g) || []).length, 1);
+  // The theory has a page of its own (study.test.js); nothing scrolls to it here.
+  assert.equal((html.match(/\sdata-laser-learn[\s>]/g) || []).length, 0);
   const page = read("js/laser/page.js");
   for (const name of PAGE_CONTROLS.concat(PAGE_READOUTS, PAGE_CHOICES, ["fire", "qSwitch", "qSwitchState"])) {
     assert.ok(page.includes('"' + name + '"'), "page.js uses " + name);

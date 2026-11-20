@@ -1176,14 +1176,6 @@
           loop.redraw();
         });
       }
-      // "Dig deeper": down to the theory at the bottom of the page.
-      var learnButton = find('[data-laser-action="learn"]');
-      var theory = find("[data-laser-learn]");
-      if (learnButton && theory) {
-        listen(learnButton, "click", function () {
-          theory.scrollIntoView({ behavior: prefersLessMotion() ? "auto" : "smooth", block: "start" });
-        });
-      }
     }
 
     /* the pointer over the chart: its crosshair follows */

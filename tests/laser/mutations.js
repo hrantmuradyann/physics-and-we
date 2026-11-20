@@ -2221,12 +2221,6 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "theory.scrollIntoView({ behavior: prefersLessMotion() ? \"auto\" : \"smooth\", block: \"start\" });",
-    replace: "theory.scrollIntoView({ behavior: \"smooth\", block: \"start\" });",
-    why: "a smooth scroll for a visitor who asked for less motion"
-  },
-  {
-    file: "js/laser/page.js",
     find: "return y / (1 + y);",
     replace: "return y;",
     why: "the cartoon's excited share is the raw inversion: every atom excited at threshold"
@@ -2302,12 +2296,6 @@ const MUTATIONS = [
     find: " aria-labelledby=\"laser-pump-name\" data-laser-input=\"pump\"",
     replace: " data-laser-input=\"pump\"",
     why: "a number box with no name for screen readers"
-  },
-  {
-    file: "sections/laser.html",
-    find: "<section class=\"band laser-learn\" data-laser-learn>",
-    replace: "<section class=\"band laser-learn\">",
-    why: "the theory button with nowhere to scroll to"
   },
   {
     file: "sections/laser.html",
@@ -5793,6 +5781,252 @@ const MUTATIONS = [
     find: "    return UI.format.si(lam, \"m\");",
     replace: "    return UI.format.si(lam, \"m\", 4);",
     why: "the atom's wavelength written otherwise than the bench's (1.064 µm under 1.06 µm)"
+  },
+
+  // ---------- the cartoon's stray photons dashed (2026-11-20) ----------
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "    g.setLineDash(stray ? STRAY_DASH : []);",
+    replace: "    g.setLineDash([]);",
+    why: "stray photons drawn solid, like laser photons"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "    g.stroke();\n    g.setLineDash([]);\n    g.beginPath();",
+    replace: "    g.stroke();\n    g.beginPath();",
+    why: "a stray's arrowhead (and what follows) left dashed"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "1.2 * L.fontSize, name === \"stray\");",
+    replace: "1.2 * L.fontSize, false);",
+    why: "the legend's stray photon solid"
+  },
+  {
+    file: "js/laser/ui/draw-photons.js",
+    find: "photonLength, photon.row < 0);",
+    replace: "photonLength, false);",
+    why: "the cartoon's stray photons solid"
+  },
+
+  // ---------- stage 12: the study page ----------
+  {
+    file: "js/laser-study.js",
+    find: "event.detail.route !== ROUTE) return;\n    loadKatex();",
+    replace: "false) return;\n    loadKatex();",
+    why: "KaTeX downloaded whichever page is shown"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    typeset(latest);                   // does nothing until KaTeX is here\n",
+    replace: "",
+    why: "a language switch's new build left untypeset"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "displayMode: part.display",
+    replace: "displayMode: false",
+    why: "display formulas typeset inline"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "throwOnError: false",
+    replace: "throwOnError: true",
+    why: "one bad formula breaks the page"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    if (last < text.length) out.push({ text: text.slice(last) });\n",
+    replace: "",
+    why: "the words after the last formula lost"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "      loading = false;                 // the next visit to the page tries again\n",
+    replace: "",
+    why: "a failed download never tried again"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    if (loading) return;\n",
+    replace: "",
+    why: "KaTeX downloaded again while on its way"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "      typeset(latest);                 // the newest build, not the one shown first",
+    replace: "      typeset(null);",
+    why: "nothing typeset when KaTeX arrives"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    dropEmptyDeeper(latest);\n",
+    replace: "",
+    why: "an empty dig-deeper button left on the history chapter"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "      else if (child.nodeType === 1) typesetElement(child);\n",
+    replace: "",
+    why: "formulas inside bold words left untypeset"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "if (match[1] !== undefined) out.push({ tex: match[1], display: true });",
+    replace: "if (match[1] !== undefined) out.push({ tex: match[1], display: false });",
+    why: "$$ read as an inline formula"
+  },
+  {
+    file: "js/router.js",
+    find: "    global.dispatchEvent(new CustomEvent(\"view:shown\", { detail: { route: route } }));\n",
+    replace: "",
+    why: "the router never says which page is shown"
+  },
+  {
+    file: "data/site.json",
+    find: "\"route\": \"study\",",
+    replace: "\"route\": \"study\", \"hidden\": true,",
+    why: "Study materials missing from the menu"
+  },
+  {
+    file: "sections/laser.html",
+    find: "<a class=\"btn btn--primary\" data-route=\"learn.route\" data-text=\"learn.button\"></a>",
+    replace: "<button class=\"btn btn--primary\" type=\"button\" data-text=\"learn.button\"></button>",
+    why: "the simulator's dig-deeper button leads nowhere"
+  },
+  {
+    file: "index.html",
+    find: "  <script src=\"js/laser-study.js\"></script>\n",
+    replace: "",
+    why: "the study page's script not loaded"
+  },
+  {
+    file: "sections/laser-study.html",
+    find: "<details class=\"study-deeper\" data-study-deeper>",
+    replace: "<details class=\"study-deeper\">",
+    why: "the dig-deeper box not marked for laser-study.js"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"route\": \"laser-study\",",
+    replace: "\"route\": \"laser\",",
+    why: "the simulator's link leads back to itself"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "so one photon carries 2.86\u00d710\u207b\u00b9\u2079 J.",
+    replace: "so one photon carries 2.86\u00d710\u207b\u00b9\u2079 J. Its energy is $E = h\\\\nu$.",
+    why: "a formula in English only"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "(its frequency):\\n\\n$$E = h\\\\nu = \\\\frac{hc}{\\\\lambda}$$",
+    replace: "(its frequency):\\n\\n$$E = h\\\\nu = \\\\frac{hc}{\\\\lambda$$",
+    why: "a formula KaTeX cannot read"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "**Spikes** happen on their own",
+    replace: "*Spikes* happen on their own",
+    why: "a lone star that would show on the page"
+  },
+
+  // ---------- stage 12: the book's contents and links ----------
+  {
+    file: "js/laser-study.js",
+    find: "      if (links[i]) links[i].setAttribute(\"href\", \"#\" + id);\n",
+    replace: "",
+    why: "the contents' links lead nowhere"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "link.setAttribute(\"href\", \"#contents\");",
+    replace: "link.setAttribute(\"href\", \"#chapter-1\");",
+    why: "the way back leads to chapter 1, not the contents"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    event.preventDefault();\n",
+    replace: "",
+    why: "a chapter link changes the address and the router jumps to the top"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "if (!link || !inBook(link)) return;",
+    replace: "if (!link) return;",
+    why: "links outside the book hijacked"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    numberChapters(latest, event.detail.data);\n",
+    replace: "",
+    why: "the chapters never numbered"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "      targets[\"#\" + id] = chapter;\n",
+    replace: "",
+    why: "a chapter link that does not scroll"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    targets = {};\n",
+    replace: "",
+    why: "links into an old build after a language switch"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "[chapter 1](#chapter-emission)",
+    replace: "[chapter 1](#chapter-nowhere)",
+    why: "a link to a chapter that does not exist"
+  },
+  {
+    file: "data/site.json",
+    find: "\"route\": \"laser-study\",\n      \"hidden\": true,",
+    replace: "\"route\": \"laser-study\",",
+    why: "the laser book in the menu as well as its poster"
+  },
+  {
+    file: "sections/laser-study.html",
+    find: "<article class=\"study-chapter\" data-study-chapter>",
+    replace: "<article class=\"study-chapter\">",
+    why: "the chapters not marked for numbering"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "return !!(global.matchMedia && global.matchMedia(\"(prefers-reduced-motion: reduce)\").matches);",
+    replace: "return false;",
+    why: "a smooth scroll in the book for a visitor who asked for less motion"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;\n",
+    replace: "",
+    why: "Cmd-click on a chapter link cannot open a new tab"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "if (!container || !global.katex || !styled || typesetBuild === build) return;",
+    replace: "if (!container || !global.katex || typesetBuild === build) return;",
+    why: "formulas typeset before KaTeX's stylesheet (shown twice)"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "        styling = false;               // the next visit to the page tries again\n",
+    replace: "",
+    why: "a failed stylesheet never asked for again"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "var name = list[i] && list[i].id ? list[i].id : String(i + 1);",
+    replace: "var name = String(i + 1);",
+    why: "chapters named by position: links break when chapters move"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "        styled = true;\n",
+    replace: "",
+    why: "the stylesheet's arrival ignored: nothing typeset"
   },
 ];
 

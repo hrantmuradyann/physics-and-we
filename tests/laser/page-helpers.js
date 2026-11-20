@@ -139,15 +139,11 @@ function laserSection(boxWidth) {
   section.play = fakeElement("button");
   section.reset = fakeElement("button");
   section.fire = fakeElement("button");
-  section.learn = fakeElement("button");
-  section.theory = fakeElement("section");
   section.note = fakeElement("p");
   section.note.hidden = true;
   by['[data-laser-action="play"]'] = section.play;
   by['[data-laser-action="reset"]'] = section.reset;
   by['[data-laser-action="fire"]'] = section.fire;
-  by['[data-laser-action="learn"]'] = section.learn;
-  by["[data-laser-learn]"] = section.theory;
   by['[data-laser-note="behind"]'] = section.note;
   section.by = by;
   section.container = fakeContainer(by);
@@ -411,7 +407,7 @@ function assertNoListeners(section, label) {
   for (const name of CHOICES) {
     assert.equal(section.choose[name].listenerCount("change"), 0, label + ": the " + name + " dropdown");
   }
-  for (const name of ["play", "reset", "fire", "learn", "toggle"]) {
+  for (const name of ["play", "reset", "fire", "toggle"]) {
     assert.equal(section[name].listenerCount("click"), 0, label + ": the " + name + " button");
   }
   for (const mirror of MIRRORS) {

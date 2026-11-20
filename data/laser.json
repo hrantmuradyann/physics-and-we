@@ -199,56 +199,14 @@
   },
 
   "learn": {
-    "_readme": "The theory at the bottom of the page. 'button' is the button above the bench that leads to it. 'chapters' is a list: add, remove or reorder chapters freely. In a chapter's 'text', an empty line (\\n\\n) starts a new paragraph and **two stars** make words bold.",
+    "_readme": "The way to the study page (route 'laser-study', its words in data/laser-study.json). 'button' is the button above the bench, 'title', 'lead' and 'link' the last section of this page.",
+    "route": "laser-study",
     "button": { "hy": "Խորանալ լազերի ֆիզիկայի մեջ", "en": "Dig deeper into the physics of the laser" },
     "title": { "hy": "Ինչպես է աշխատում լազերը", "en": "How a laser works" },
     "lead": {
-      "hy": "Կարճ ուղեցույց այն ամենի մասին, ինչ տեսնում եք վերևի նստարանին։ Լաբորատորիայի կառուցմանը զուգընթաց այն կդառնա լիարժեք գլուխների շարք։",
-      "en": "A short guide to what you see on the bench above. It will grow into full chapters as the lab is built."
+      "hy": "Լազերի ֆիզիկան՝ պարզից մինչև բանաձևեր, իր առանձին էջում է։",
+      "en": "The physics of the laser, from the simple picture to the formulas, has a page of its own."
     },
-    "chapters": [
-      {
-        "title": { "hy": "Լույս, որը լույս է ծնում", "en": "Light that makes more light" },
-        "text": {
-          "hy": "Այն ատոմը, որն ավելորդ էներգիա ունի, կոչվում է **գրգռված**։ Եթե նրան ոչինչ չի խանգարում, որոշ ժամանակ անց այն այդ էներգիան արձակում է ֆոտոնի տեսքով, որը թռչում է պատահական ուղղությամբ․ սա ինքնաբուխ ճառագայթումն է՝ ցանկացած լամպի լույսը։\n\nԲայց եթե մինչ այդ գրգռված ատոմի կողքով ֆոտոն է անցնում, ատոմն իր ֆոտոնն արձակում է անմիջապես, և նոր ֆոտոնը առաջինի ճշգրիտ պատճենն է՝ նույն գույնի, նույն ուղղությամբ, նույն փուլով։ Սա **հարկադրական ճառագայթումն** է։ Մեկ ֆոտոնը դառնում է երկուսը, երկուսը՝ չորսը։ Այն նյութը, որտեղ դա ավելի հաճախ է տեղի ունենում, քան կլանումը, ուժեղացնում է լույսը և կոչվում է ակտիվ միջավայր։",
-          "en": "An atom that holds extra energy is called **excited**. Left alone, it gives that energy up after a while as a photon flying off in a random direction: this is spontaneous emission, the light of every lamp.\n\nBut if a photon passes the excited atom first, the atom emits its photon at once, and the new photon is a perfect copy: the same colour, the same direction, in step with the first. This is **stimulated emission**. One photon becomes two, two become four. A material in which this happens more often than absorption amplifies light, and is called a gain medium."
-        }
-      },
-      {
-        "title": { "hy": "Մղումը և հայելիները", "en": "The pump and the mirrors" },
-        "text": {
-          "hy": "Ատոմները գրգռված չեն մնում, ուստի ինչ-որ բան պետք է անընդհատ նրանց նորից գրգռի․ դա **մղումն** է։ Նստարանին այն կարող եք ընտրել՝ լազերային դիոդների կամ մեկ այլ լազերի լույս, բռնկման լամպ կամ էլեկտրական հոսանք գազի միջով։\n\nՁողի միջով մեկ անցումը լույսը միայն մի փոքր է ուժեղացնում։ Երկու **հայելիները** լույսը նորից ու նորից վերադարձնում են ձողի մեջ, և ամեն անցման ժամանակ այն աճում է։ Հայելիներից մեկն անդրադարձնում է գրեթե ամբողջ լույսը։ Մյուսը՝ ելքային հայելին, մի փոքր մաս բաց է թողնում․ հենց այդ մասն է լազերի ճառագայթը։",
-          "en": "Atoms do not stay excited, so something must keep lifting them: the **pump**. On the bench you can choose it: the light of laser diodes or of another laser, a flashlamp, or an electric current through a gas.\n\nOne pass through the rod amplifies light only a little. Two **mirrors** send it back through the rod again and again, so it grows on every pass. One mirror reflects almost everything. The other, the output mirror, lets a small part through: that part is the laser beam."
-        }
-      },
-      {
-        "title": { "hy": "Շեմը․ ուժեղացումն ընդդեմ կորստի", "en": "Threshold: gain against loss" },
-        "text": {
-          "hy": "Ամեն շրջանցման ժամանակ լույսը ձողում ուժեղանում է, իսկ հայելիների վրա և ձողի ներսում՝ կորուստ ունենում։ Թույլ մղման դեպքում կորուստը հաղթում է, և ճառագայթ չի առաջանում։ Լազերը սկսում է աշխատել մղման այն հզորության դեպքում, երբ ուժեղացումը հավասարվում է կորստին․ դա **շեմն** է։\n\nՇեմից վեր զարմանալի բան է տեղի ունենում․ ուժեղացումն այլևս չի աճում։ Այն մնում է ճիշտ հավասար կորստին, իսկ մղման ամբողջ հավելյալ հզորությունը վերածվում է լույսի։ Ահա թե ինչու ելքային հզորությունը մղման հետ աճում է ուղիղ գծով։",
-          "en": "On every round trip the light gains in the rod and loses at the mirrors and inside the rod. With a weak pump the loss wins and no beam appears. The laser starts at the pump power where gain equals loss: the **threshold**.\n\nAbove threshold something remarkable happens: the gain does not grow any further. It stays exactly equal to the loss, and all the extra pump power turns into light. That is why the output power rises in a straight line with the pump."
-        }
-      },
-      {
-        "title": { "hy": "Ինչու է այն սկզբում թարթում", "en": "Why it flickers when it starts" },
-        "text": {
-          "hy": "Սեղմեք «Սկզբից» և հետևեք գրաֆիկին։ Մինչև լույսի հայտնվելը մղումը հասցնում է գրգռել ավելի շատ ատոմ, քան պետք է շեմի համար։ Հետո լույսը շատ արագ աճում է, սպառում ավելորդ գրգռված ատոմները և նորից ընկնում, իսկ մղումը նորից սկսում է նրանց գրգռել։ Արդյունքում ստացվում է սուր պայթյունների շարք, որոնցից յուրաքանչյուրը նախորդից փոքր է, մինչև լազերը հասնի կայուն հզորության։ Սրանք **ռելաքսացիոն տատանումներն** են։",
-          "en": "Press Reset and watch the chart. Before any light appears, the pump has lifted more atoms than the threshold needs. Then the light grows very quickly, uses up the extra atoms and falls back, and the pump starts lifting them again. The result is a row of sharp spikes, each smaller than the last, until the laser settles at a steady power. These are **relaxation oscillations**."
-        }
-      },
-      {
-        "title": { "hy": "Լավագույն ելքային հայելին", "en": "The best output mirror" },
-        "text": {
-          "hy": "Դանդաղ տեղաշարժեք ելքային հայելու սահիչը և հետևեք կայուն ելքային հզորությանը։ Այն հայելին, որը գրեթե ոչինչ բաց չի թողնում, լույսը պահում է ներսում, որտեղ այն կորչում է։ Այն հայելին, որը չափազանց շատ է բաց թողնում, բարձրացնում է շեմը, և լազերը մարում է։ Դրանց միջև կա լավագույն հայելի, և էջը ցույց է տալիս, թե որն է այն։",
-          "en": "Move the output mirror slider slowly and watch the steady output power. A mirror that lets almost nothing through keeps the light inside, where it is lost. A mirror that lets too much through raises the threshold, and the laser goes out. In between there is a best mirror, and the page shows where it is."
-        }
-      },
-      {
-        "title": { "hy": "Հսկա իմպուլս", "en": "A giant pulse" },
-        "text": {
-          "hy": "Բռնկման լամպը ատոմները գրգռում է մոտ մեկ միլիվայրկյան, բայց լազերը սկսում է աշխատել դրանից շատ առաջ և էներգիան արձակում է փոքր պոռթկումների շարքով։ **Բարորակության մոդուլյատորը** պահում է լույսը․ այն այնքան մեծ կորուստ է ավելացնում, որ լազերը չի կարող սկսել, մինչդեռ մղումը շարունակում է գրգռել ատոմները՝ շեմից շատ վեր։ Հետո մոդուլյատորը միանգամից բացվում է։ Ուժեղացումն այժմ շատ անգամ գերազանցում է կորստին, լույսը մի քանի ֆոտոնից հասնում է իր գագաթին տասնյակ նանովայրկյանների ընթացքում, և կուտակված էներգիան գրեթե ամբողջությամբ դուրս է գալիս մեկ **հսկա իմպուլսով**՝ մի քանի նանովայրկյան տևող մեգավատներով։\n\nԸնտրեք ռուբինը, գծագրի տակ միացրեք բարորակության մոդուլյատորը, բռնկեք լամպը և հետևեք հզորության գրաֆիկին․ քանի դեռ ֆիլտրը պահում է լույսը, ոչինչ դուրս չի գալիս, իսկ հետո պոռթկումների շարքի փոխարեն գալիս է մեկ բարձր ու նեղ իմպուլս։ Այստեղ մոդուլյատորը **հագեցող ֆիլտր** է՝ մուգ ֆիլտր, որը բացվում է ինքնիրեն, երբ աճող լույսը հագեցնում է այն, ուստի ոչինչ պետք չէ ժամանակին միացնել։ (Այլ մոդուլյատորներ բացվում են ազդանշանով․ **Պոկելսի բջիջը**՝ երբ նրա լարումն անջատվում է, **պտտվող պրիզման**՝ ամեն անգամ, երբ ուղիղ է կանգնում մյուս հայելու դիմաց։)",
-          "en": "A flashlamp lifts atoms for about a millisecond, but the laser starts long before that is over, and lets the energy out as a row of small spikes. A **Q-switch** holds the light back: it adds so much loss that the laser cannot start, while the pump keeps lifting atoms far above threshold. Then the switch opens at once. The gain is now many times the loss, the light grows from a few photons to its peak within tens of nanoseconds, and nearly all the stored energy leaves as one **giant pulse**: megawatts, for a few nanoseconds.\n\nChoose ruby, turn the Q-switch on under the drawing, fire the flash and watch the power chart: nothing comes out while the filter holds the light back, and then, instead of a row of spikes, one tall, narrow pulse. The Q-switch here is a **bleachable filter**: a dark filter that opens by itself, once the growing light has bleached it, so nothing has to be timed. (Other Q-switches open on a signal: a **Pockels cell** when its voltage is switched off, a **turning prism** each time it lines up with the other mirror.)"
-        }
-      }
-    ]
+    "link": { "hy": "Բացել ուսումնական նյութը", "en": "Open the study material" }
   }
 }

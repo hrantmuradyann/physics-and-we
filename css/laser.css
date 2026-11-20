@@ -39,7 +39,7 @@
      .laser-hint      the line under the slow-motion slider
      .laser-readouts  the numbers, in a panel of their own
      .laser-note      the note shown when the computer cannot keep up
-     .laser-learn     the theory at the bottom; .laser-chapter is one chapter
+     .laser-learn     the last section: a link to the study page
      .lab-feature     the big banner on the Labs page (sections/labs.html)
 
    The sliders, numbers and buttons themselves are the labs' own
@@ -770,45 +770,14 @@
 }
 
 /* ============================================================================
-   THE THEORY
-   Each chapter is a panel with a solid colour under it, so the silver
-   lines of the page do not run through the words.
+   THE LINK TO THE STUDY PAGE (the theory has a page of its own)
    ========================================================================== */
-/* Room above the heading when the "dig deeper" button scrolls here: the
-   site's menu bar stays at the top of the window. */
-.laser-learn {
-  scroll-margin-top: 4.5rem;
-}
-
 .laser-learn .section-title {
   margin-bottom: 1rem;
 }
 
-.laser-chapters {
-  display: grid;
-  gap: 1.3rem;
-  margin-top: 2.2rem;
-}
-
-.laser-chapter {
-  padding: clamp(1.3rem, 3vw, 1.9rem);
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background-color: var(--laser-bg);
-}
-
-/* The panel sets the width; the site's 62-character limit would leave
-   half of it empty. */
-.laser-chapter .prose {
-  max-width: none;
-}
-
-.laser-chapter__title {
-  margin: 0 0 0.7rem;
-  font-size: clamp(1.15rem, 2.2vw, 1.4rem);
-  font-weight: 800;
-  color: var(--heading);
-  line-height: 1.25;
+.laser-learn__go {
+  margin-top: 1.6rem;
 }
 
 /* ============================================================================

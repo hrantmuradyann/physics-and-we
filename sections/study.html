@@ -1,0 +1,26 @@
+<!--
+  STUDY MATERIALS PAGE (?view=study) — layout only. Words: data/study.json.
+  One poster per subject; the laser poster opens the laser book (?view=laser-study).
+-->
+<header class="page-head">
+  <div class="container">
+    <p class="eyebrow reveal" data-text="page.eyebrow"></p>
+    <h1 class="page-head__title reveal" data-text="page.title"></h1>
+    <p class="lead reveal" data-text="page.lead"></p>
+  </div>
+</header>
+
+<section class="band">
+  <div class="container">
+    <div data-list="featured.items">
+      <template>
+        <a class="card card--link lab-feature reveal" data-route="route">
+          <p class="eyebrow" data-text="eyebrow"></p>
+          <h3 class="lab-feature__title" data-text="title"></h3>
+          <p class="lab-feature__text" data-text="text"></p>
+          <span class="card__arrow"><span data-text="open"></span></span>
+        </a>
+      </template>
+    </div>
+  </div>
+</section>

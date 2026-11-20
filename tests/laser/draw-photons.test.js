@@ -503,3 +503,34 @@ test("draw: the title and the four legend words where the layout puts them; a mi
   PH.draw(some.view, BUSY, { title: "Only a title", stray: 5 });
   assert.deepEqual(some.recorder.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]), ["Only a title"]);
 });
+
+test("draw: a stray photon's wave is dashed, a laser photon's solid, both with a solid arrowhead; the legend shows the same", () => {
+  const m = model(seeded(1));
+  m.send(1, 1);
+  m.photons.push({ x: 0.5, y: 0.5, dx: 0, dy: 1, row: -1, fresh: 0 });      // a stray
+  const { recorder, view } = makeView(UI, PH.SIZE, 600);
+  PH.draw(view, m, WORDS);
+  // The dash pattern in force at each stroke and fill drawn after a
+  // photon's translate (the cartoon's two photons, then the legend's two).
+  const marks = [];
+  let dash = [];
+  let current = null;
+  for (const entry of recorder.log) {
+    if (entry.call === "setLineDash") dash = Array.from(entry.args[0]);      // from the sandbox
+    if (entry.call === "translate") {
+      current = { wave: null, head: null };
+      marks.push(current);
+    }
+    if (current && entry.call === "stroke" && current.wave === null) current.wave = dash.slice();
+    if (current && entry.call === "fill" && current.head === null) current.head = dash.slice();
+  }
+  assert.equal(marks.length, 4, "two photons and two legend marks");
+  const [laser, stray, legendLaser, legendStray] = marks;
+  assert.deepEqual(laser.wave, [], "a laser photon's wave is solid");
+  assert.ok(stray.wave.length > 0, "a stray photon's wave is dashed");
+  assert.deepEqual(legendLaser.wave, []);
+  assert.deepEqual(legendStray.wave, stray.wave, "the legend's stray is dashed alike");
+  for (const mark of marks) assert.deepEqual(mark.head, [], "arrowheads solid");
+  // Nothing after them is left dashed.
+  assert.deepEqual(dash, []);
+});

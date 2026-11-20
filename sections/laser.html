@@ -55,9 +55,9 @@
   <div class="container container--laser">
     <div class="laser-stage">
 
-      <!-- The way to the theory (the last section of this page). -->
+      <!-- The way to the study page (?view=laser-study): the theory. -->
       <div class="laser-stage__more reveal">
-        <button class="btn btn--primary" type="button" data-laser-action="learn" data-text="learn.button"></button>
+        <a class="btn btn--primary" data-route="learn.route" data-text="learn.button"></a>
       </div>
 
       <div class="laser-stage__bench laser-bench reveal">
@@ -327,21 +327,15 @@
 </section>
 
 <!-- ░░ THE THEORY ░░
-     The "dig deeper" button above scrolls here (data-laser-learn). The
-     chapters are the list learn.chapters in data/laser.json: add, remove
-     or reorder them there. -->
-<section class="band laser-learn" data-laser-learn>
+     It has a page of its own, the study page (?view=laser-study, words in
+     data/laser-study.json); this last section only points there. -->
+<section class="band laser-learn">
   <div class="container container--narrow">
     <h2 class="section-title reveal" data-text="learn.title"></h2>
     <p class="lead reveal" data-text="learn.lead"></p>
-    <div class="laser-chapters" data-list="learn.chapters">
-      <template>
-        <article class="laser-chapter reveal">
-          <h3 class="laser-chapter__title" data-text="title"></h3>
-          <div class="prose" data-rich="text"></div>
-        </article>
-      </template>
-    </div>
+    <p class="laser-learn__go reveal">
+      <a class="btn btn--ghost" data-route="learn.route" data-text="learn.link"></a>
+    </p>
   </div>
 </section>
 

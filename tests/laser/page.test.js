@@ -693,23 +693,6 @@ test("the pointer over the chart: its crosshair follows; leaving takes it away; 
   assert.equal(running.seen.chart.P.cursor, 150);
 });
 
-test("the 'dig deeper' button scrolls to the theory, smoothly unless the visitor asked for less motion", () => {
-  const page = built("en");
-  page.section.learn.fire("click");
-  // (The options come from the sandbox, so they are compared as text.)
-  assert.equal(JSON.stringify(page.section.theory.scrolledTo), JSON.stringify([{ behavior: "smooth", block: "start" }]));
-  const calm = built("en", { reducedMotion: true });
-  calm.section.learn.fire("click");
-  assert.equal(JSON.stringify(calm.section.theory.scrolledTo), JSON.stringify([{ behavior: "auto", block: "start" }]));
-  // A page without the theory (it failed to load): the button does nothing.
-  const { browser } = setup("en");
-  const section = laserSection(600);
-  delete section.by["[data-laser-learn]"];
-  sectionReady(browser, "laser", section.container, WORDS);
-  assert.equal(section.learn.listenerCount("click"), 0);
-  section.learn.fire("click");
-});
-
 test("the photon cartoon is stepped once a frame in screen time, with the simulation's numbers", () => {
   const page = built("en", { watch: true });
   const { browser, section, seen } = page;
@@ -818,7 +801,7 @@ test("a built page has one listener on each control, dropdown and button, so a t
     assert.equal(section.controls[name].listenerCount("input"), 1, name);
     assert.equal(section.inputs[name].listenerCount("change"), 1, name);
   }
-  for (const name of ["play", "reset", "fire", "learn"]) assert.equal(section[name].listenerCount("click"), 1, name);
+  for (const name of ["play", "reset", "fire"]) assert.equal(section[name].listenerCount("click"), 1, name);
   for (const mirror of ["mirror1", "mirror2"]) {
     for (const shape of ["flat", "concave", "convex"]) {
       assert.equal(section.shapes[mirror][shape].listenerCount("click"), 1, mirror + " " + shape);
