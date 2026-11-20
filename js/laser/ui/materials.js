@@ -23,6 +23,8 @@
      LaserUI.materials.INFRARED     the false colour of an invisible beam
                                     (infrared or ultraviolet): off the
                                     spectrum, so no visible beam has it
+     LaserUI.materials.PUMP_INFRARED  an invisible pump's false colour:
+                                    paler, so 808 nm and 1064 nm differ
      LaserUI.materials.visible(lam)   { r, g, b } (0–1) of light of
                                     wavelength lam (m), or null outside
                                     380–780 nm (Bruton's scheme, §11.5)
@@ -71,6 +73,9 @@
   // The false colour of an invisible beam: a hot pink, off the spectrum
   // (red and blue together, more red than blue), so no visible beam has it.
   var INFRARED = "#e8459b";
+  // An invisible pump (808 nm diodes, stage 10c2): off the spectrum too,
+  // but paler, so it is not taken for the laser's own invisible light.
+  var PUMP_INFRARED = "#f7a8d8";
   var MIN_CONTRAST = 3.3;
 
   var NM = 1e-9;
@@ -217,6 +222,7 @@
     HIGHLIGHT: HIGHLIGHT,
     SHADE: SHADE,
     INFRARED: INFRARED,
+    PUMP_INFRARED: PUMP_INFRARED,
     MIN_CONTRAST: MIN_CONTRAST,
     visible: visible,
     beam: beam,

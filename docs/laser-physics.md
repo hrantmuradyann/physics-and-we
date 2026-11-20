@@ -567,6 +567,8 @@ What the bench draws for each medium (build stage 10c). These are the colours a 
 
 The pump of the dye and Ti:sapphire lasers is a green 532 nm beam (a frequency-doubled Nd laser) or, in older dye lasers, an argon laser. The diodes of Nd:YAG emit at 808 nm, infrared: invisible to the eye, so a drawing of their light is a false colour, labelled as such (Section 11.5).
 
+**The pump's light on the bench (build stage 10c2).** The diodes are drawn end-pumped, as in §6.3: a fibre-coupled module, a lens behind the back mirror (which lets 808 nm through), and a cone of pump light narrowing into the rod. The cone fades as e^(−z/d), but d is drawn as 0.35 of the rod, an illustration: with α ≈ 7.5 cm⁻¹ the 5 cm rod of the diode bench would absorb the pump in its first 1.3 mm (2.7 % of it) (real end-pumped rods are a few mm long, or lightly doped), while the rate equations spread the gain evenly over the rod. A pump laser is drawn end-pumped too, as real Ti:sapphire lasers are (a periscope brings its beam to the lens on the axis), in its own colour, 532 nm green (a frequency-doubled Nd laser); 808 nm is drawn in the false colour and named with the laser's line under the bench.
+
 ## 6. Pumping
 
 The pump sets one number in the equations of Section 4 — the rate W_p (or R_p, or current I) — but this is where most of the laser's overall efficiency is lost. Total efficiency is the product of a chain:

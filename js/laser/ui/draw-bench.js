@@ -28,6 +28,10 @@
                                      shape one of SHAPES (none, or one it
                                      does not know: concave, the drawing's
                                      shape before stage 10b)
+     LaserUI.bench.PUMP_PHOTONS      at most this many pump photons drawn
+     LaserUI.bench.GAS_ATOMS         the atoms drifting in a gas tube
+     LaserUI.bench.PUMP_DEPTH        the pump light fades as e^(−z/d), d
+                                     this share of the drawn rod
      LaserUI.bench.raysOut(count, transmission)   how many of `count` rays
                                      leave through the output mirror
      LaserUI.bench.rayAlpha(beam)    how strongly the rays are drawn, 0–1;
@@ -50,6 +54,9 @@
                                look and colours from materials.js
                  lam           the laser's wavelength (m): the beam's
                                colour
+                 pumpLam       the pump's wavelength (m), for diodes and
+                               a pump laser: their light's colour
+                               (stage 10c2)
                  beam          the output power over the output at twice
                                threshold; 0 or none draws no rays
                  pump          the pump over its strongest setting, 0–1;
@@ -72,8 +79,10 @@
                                it, the parallel rays of stage 6b
 
    THE PUMPS (docs/laser-plan.md, stage 7d)
-     diode      a strip of diodes under the rod; its light goes up into
-                the rod
+     diode      end-pumped (stage 10c2): a module on the bench, a fibre to
+                a lens behind the back mirror, and a cone of pump light
+                through the back mirror into the rod (see THE PUMP'S
+                LIGHT)
      flashlamp  a tube under the rod with a metal cap (its electrode) at
                 each end. Lit (the owner asked for a flash that is easy
                 to see), its gas burns in the flash colour inside a soft
@@ -87,16 +96,24 @@
                 cavity. Its gas glows with the current; two electrodes
                 under it are wired to a power supply on the bench, and
                 an arrow on each wire shows the current
-     laser      a pump laser on the bench under the rod; its beam runs to
-                a small mirror at 45° under the rod's middle, which
-                turns it up into the rod
-   The pump light is the theme's colour, as the laser's own rays are (the
-   flash's is colors.flash, a bluish white on the dark theme, a warm
-   orange on the light one).
+     laser      end-pumped (stage 10c2), as real Ti:sapphire and dye
+                lasers are: a pump laser on the bench, its beam to a
+                periscope in the left margin, up to the axis and through
+                the lens behind the back mirror into the rod, as the
+                diodes' light
+   A diode's or a pump laser's light has its wavelength's colour (stage
+   10c2); the flash's is colors.flash, a bluish white on the dark theme, a
+   warm orange on the light one; without a medium, the theme's glow.
 
    THE Q-SWITCH (docs/laser-plan.md, stage 8b)
      absorber  a filter plate on a post in the gap between the back
-               mirror and the rod, shaded by its share still unbleached
+               mirror and the rod, shaded by its share still unbleached;
+               on an end-pumped bench (diodes, pump laser), in the gap between the rod and
+               the output mirror (as in real ones: out of the pump's way),
+               its name then under the bench at the right. It is drawn
+               over the laser's rays, and the light beyond it (towards
+               the mirror on its far side) is dimmed as much as the plate
+               is shaded: a dark filter holds the light back
                (1 − open)
    With a gas tube, which fills the cavity, no switch is drawn (no bench
    has one there). The filter's name goes on the top row, from the
@@ -111,6 +128,20 @@
    so the mirror's transmission can be counted. Their strength (alpha) is
    the square root of `beam`, so a weak laser still shows while the
    spontaneous emission below threshold (about 10⁻⁸) does not.
+
+   THE PUMP'S LIGHT (stage 10c2)
+   The diodes are end-pumped (docs/laser-physics.md §6.3): a module with
+   cooling fins on the bench, a fibre along the bench and up the left
+   margin to a lens on the axis behind the back mirror, and from the lens
+   a cone of pump light through the back mirror into the rod, narrowing to
+   a waist just inside it and fading as e^(−z/d) (d: PUMP_DEPTH of the
+   rod, an illustration). A pump laser (532 nm green) is end-pumped the
+   same way, its beam brought to the lens by a periscope. Pump photons (diodes, pump laser, flashlamp) travel
+   into the medium, as many as the pump is strong, each vanishing at its
+   own depth where a spark lights an atom; atoms drift in a gas tube, as
+   many lit as the current is strong. Both move in screen time view.t,
+   from fixed fractions (no random numbers), and stand still for
+   view.still.
 
    THE MEDIA AND THE BEAM'S COLOUR (stage 10c1; docs/laser-physics.md
    §5.10, §11.5)
@@ -177,6 +208,9 @@
   // The top row with the filter's name: the transmission's share
   // of it, and the least room the name is given before it moves left.
   var TRANSMISSION_SHARE = 0.6;
+  // How much darker a dark filter's plate is than a bleached one, and so
+  // how much it dims the light beyond it.
+  var FILTER_SHADE = 0.6;
   var NAME_ROOM = 100;
 
   // A pump under this share of full is drawn off: a flash's tail,
@@ -197,6 +231,28 @@
   var MAX_RAYS = 21;
   var RAY_GAP = 5;              // px between two rays, at least
   var PUMP_ARROWS = 7;
+  // Stage 10c2. The pump light fades inside the medium as e^(−z/d), with d
+  // this share of the drawn rod (an illustration: docs/laser-plan.md,
+  // 10c2's scope card).
+  var PUMP_DEPTH = 0.35;
+  // At most this many pump photons, as many shown as the pump is strong;
+  // each goes round PHOTON_RATE times a second of screen time, travelling
+  // for the first PHOTON_TRAVEL of its round and then lighting an atom.
+  var PUMP_PHOTONS = 12;
+  var PHOTON_RATE = 0.6;
+  var PHOTON_TRAVEL = 0.8;
+  // The atoms drifting in a gas tube.
+  var GAS_ATOMS = 18;
+  // Fixed fractions from 0 to 1, spread evenly (k times the golden ratio,
+  // and k times another irrational number, each without its whole part):
+  // where each photon is absorbed, where it starts, where each atom is. No
+  // random numbers, so the picture depends only on what it is given.
+  var SPREAD_A = [];
+  var SPREAD_B = [];
+  for (var spread = 0; spread < Math.max(PUMP_PHOTONS, GAS_ATOMS); spread++) {
+    SPREAD_A.push(((spread + 1) * 0.6180339887) % 1);
+    SPREAD_B.push(((spread + 1) * 0.7548776662) % 1);
+  }
 
   var NO_BREAK = "\u00a0";
 
@@ -250,16 +306,18 @@
     // The current goes up into the left electrode and down out of the right.
     var arrowY = (rodBottom + electrodeHeight + wireY) / 2;
 
-    // The pump laser stands on the bench under the rod's left half, clear
-    // of the feet of the rod's left post and of the small mirror's post; the
-    // small mirror under the rod's middle turns its beam up into the rod.
+    // The rod's two posts, near its ends.
     var rodPosts = [rodX + 0.02 * rodLength, rodX + 0.98 * rodLength];
-    var foldX = w / 2;
-    var pumpLaserLeft = rodPosts[0] + POST_FOOT / 2 + 3;
-    var pumpLaserRight = foldX - POST_FOOT / 2 - Math.max(6, 0.12 * rodLength);
-    var pumpLaserHeight = 0.1 * h;
-    var pumpLaserY = railY - pumpLaserHeight;
-    var beamY = pumpLaserY + pumpLaserHeight / 2;
+
+    // The end-pumped diodes (stage 10c2): a module on the bench under the
+    // rod's middle, its fibre along the bench to the left margin, up it,
+    // and into a small lens on the axis behind the back mirror.
+    var moduleWidth = 0.5 * lampLength;
+    var moduleHeight = 0.1 * h;
+    var marginLeft = pad / 2;
+    var marginRoom = side - marginLeft;
+    var fibreX = marginLeft + 0.3 * marginRoom;
+    var lensX = marginLeft + 0.72 * marginRoom;
 
     // The filter, in the gap between the back mirror's face and the rod,
     // around every ray, with room after it for the left arrowheads.
@@ -308,10 +366,28 @@
         { x: electrodes[0].x + electrodeWidth / 2, y: arrowY, dy: -1 },
         { x: electrodes[1].x + electrodeWidth / 2, y: arrowY, dy: 1 }
       ],
-      pumpLaser: { x: pumpLaserLeft, y: pumpLaserY, w: pumpLaserRight - pumpLaserLeft, h: pumpLaserHeight },
-      beamY: beamY,
-      fold: { x: foldX, y: beamY, size: Math.max(10, 0.06 * h) },
+      // The pump laser (stage 10c2: end-pumped, as real Ti:sapphire and
+      // dye lasers are): a box on the bench under the rod's middle, where
+      // the diodes' module stands; its beam leaves its left end, runs along
+      // the bench to a periscope of two mirrors at 45° in the left margin,
+      // up to the axis, and into the lens behind the back mirror.
+      pumpLaser: { x: w / 2 - moduleWidth / 2, y: railY - moduleHeight, w: moduleWidth, h: moduleHeight },
+      beamY: railY - moduleHeight / 2,
+      periscope: { x: fibreX, low: railY - moduleHeight / 2, high: axisY, half: Math.min(5, 0.25 * marginRoom) },
       filter: { x: filterX, y: axisY - filterHeight / 2, w: filterWidth, h: filterHeight },
+      // The filter on the end-pumped diodes (stage 10c2): the mirror image,
+      // between the rod and the output mirror.
+      filterBeyond: { x: w - filterX - filterWidth, y: axisY - filterHeight / 2, w: filterWidth, h: filterHeight },
+      diodeModule: { x: w / 2 - moduleWidth / 2, y: railY - moduleHeight, w: moduleWidth, h: moduleHeight },
+      fins: 5,
+      finHeight: 0.03 * h,
+      fibre: { x: fibreX, y: railY - moduleHeight / 2, corner: Math.min(8, 0.5 * (lensX - fibreX)) },
+      lens: { x: lensX, y: axisY, rx: Math.max(1.5, 0.06 * marginRoom), ry: 0.32 * rodHeight },
+      // The pump light's cone, as half-heights: at the lens, at its waist
+      // just inside the rod, and at the rod's far end.
+      cone: { start: 0.25 * rodHeight, waistX: rodX + 0.1 * rodLength, waist: 0.08 * rodHeight, end: 0.2 * rodHeight },
+      pumpDepth: PUMP_DEPTH * rodLength,
+      pumpDepthUp: PUMP_DEPTH * rodHeight,
       rays: rays,
       // With the cavity's numbers: the aperture (the rod's radius, or the
       // gas tube's bore) is drawn as the rod's half-height, or the bore's
@@ -322,7 +398,7 @@
       // gap before the rod (`focusRoom.rod`) or, on a discharge, before
       // the electrode (`focusRoom.discharge`).
       // A dye cell's pipes, under it near its ends (stage 10c), clear of
-      // the rod's posts and of the pump beam turned up at the middle.
+      // the rod's posts.
       cellPipes: [rodX + 0.15 * rodLength, rodX + 0.85 * rodLength],
       cellPipe: 0.05 * h,
       apertureHalf: rodHeight / 2,
@@ -346,6 +422,9 @@
         // which keeps most of it (sharedRow below).
         qSwitch: sharedRow.name,
         transmissionShared: sharedRow.transmission,
+        // The filter's name when it stands beyond the rod (stage 10c2):
+        // under the bench at the right, beside the pump's name.
+        qSwitchBelow: { x: w - pad, y: bottomRow, align: "right", maxWidth: Math.max(fontSize, w / 2 - lampLength / 2 - pad - fontSize) },
         // "Widths × 90": bottom left, beside the pump's name.
         widths: { x: pad, y: bottomRow, align: "left", maxWidth: Math.max(fontSize, lampX - pad - fontSize) },
         // "1.06 µm · infrared, invisible", for a beam the eye cannot see
@@ -552,14 +631,168 @@
     g.globalAlpha = 1;
   }
 
-  // Diodes: a strip under the rod.
-  function drawDiodes(g, colors, L, pump) {
-    g.fillStyle = colors.glow;
-    g.fillRect(L.lamp.x, L.lamp.y, L.lamp.w, L.lamp.h);
-    g.strokeStyle = colors.faint;
-    g.lineWidth = 1;
-    g.strokeRect(L.lamp.x, L.lamp.y, L.lamp.w, L.lamp.h);
-    if (pump > 0) lightUp(g, colors.glow, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);
+  // The end-pumped diodes (stage 10c2): the module with its cooling fins
+  // on the bench, the fibre to the left margin and up it, and the lens on
+  // the axis behind the back mirror. Their light: drawCone() and
+  // drawPhotons().
+  function drawDiodes(g, colors, L) {
+    var M = L.diodeModule;
+    var F = L.fibre;
+    var lens = L.lens;
+    var r = F.corner;
+    g.globalAlpha = 0.4;
+    g.fillStyle = colors.faint;
+    g.fillRect(M.x, M.y, M.w, M.h);
+    g.globalAlpha = 1;
+    g.strokeStyle = colors.muted;
+    g.lineWidth = 1.5;
+    g.strokeRect(M.x, M.y, M.w, M.h);
+    for (var k = 0; k < L.fins; k++) {
+      var x = M.x + (k + 0.5) / L.fins * M.w;
+      line(g, x, M.y, x, M.y - L.finHeight);
+    }
+    // The fibre, its corners cut at 45°.
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(M.x, F.y);
+    g.lineTo(F.x + r, F.y);
+    g.lineTo(F.x, F.y - r);
+    g.lineTo(F.x, lens.y + r);
+    g.lineTo(F.x + r, lens.y);
+    g.lineTo(lens.x - lens.rx, lens.y);
+    g.stroke();
+    drawLens(g, colors, L);
+  }
+
+  // The lens on the axis behind the back mirror that focuses the pump
+  // into the rod (the diodes' and the pump laser's).
+  function drawLens(g, colors, L) {
+    var lens = L.lens;
+    g.globalAlpha = 0.4;
+    g.fillStyle = colors.faint;
+    g.beginPath();
+    g.ellipse(lens.x, lens.y, lens.rx, lens.ry, 0, 0, 2 * Math.PI);
+    g.fill();
+    g.globalAlpha = 1;
+    g.strokeStyle = colors.heading;
+    g.lineWidth = 1.2;
+    g.stroke();
+  }
+
+  // The cone's half-height at x: from the lens to its waist, then wider
+  // again to the rod's far end.
+  function coneHalf(L, x) {
+    var C = L.cone;
+    var rodEnd = L.rod.x + L.rod.w;
+    if (x <= C.waistX) {
+      var share = (x - L.lens.x) / (C.waistX - L.lens.x);
+      return C.start + (C.waist - C.start) * clamp(share, 0, 1);
+    }
+    return C.waist + (C.end - C.waist) * clamp((x - C.waistX) / (rodEnd - C.waistX), 0, 1);
+  }
+
+  // The diodes' light: a cone from the lens through the back mirror into
+  // the rod, fading as it is absorbed, e^(−z/d), drawn in slices.
+  function drawCone(g, L, colour, pump) {
+    var strength = 0.15 + 0.35 * pump;
+    var rodStart = L.rod.x;
+    // Each slice's edges at whole pixels: at a fraction, the two slices
+    // either side of an edge each half cover it, which shows as a seam.
+    var stops = [Math.round(L.lens.x), Math.round(L.cone.waistX)];
+    var slices = 12;
+    for (var k = 1; k <= slices; k++) stops.push(Math.round(L.cone.waistX + k / slices * (L.rod.x + L.rod.w - L.cone.waistX)));
+    g.fillStyle = colour;
+    for (var i = 0; i + 1 < stops.length; i++) {
+      var x1 = stops[i];
+      var x2 = stops[i + 1];
+      var middle = (x1 + x2) / 2;
+      var depth = Math.max(0, middle - rodStart);
+      g.globalAlpha = strength * Math.exp(-depth / L.pumpDepth);
+      g.beginPath();
+      g.moveTo(x1, L.axis.y - coneHalf(L, x1));
+      g.lineTo(x2, L.axis.y - coneHalf(L, x2));
+      g.lineTo(x2, L.axis.y + coneHalf(L, x2));
+      g.lineTo(x1, L.axis.y + coneHalf(L, x1));
+      g.closePath();
+      g.fill();
+    }
+    g.globalAlpha = 1;
+  }
+
+  // Where pump photon k is at screen time t, by kind: { x, y, travelling,
+  // share }, share the part of its round past its travel (0 while it
+  // travels, up to 1 as its atom's spark fades).
+  // The photons shown are spread evenly over a round (k / count), so a
+  // steady pump looks steady, not bunched.
+  function photonAt(L, kind, k, count, t) {
+    var round = (t * PHOTON_RATE + k / count) % 1;
+    if (round < 0) round += 1;
+    var travel = Math.min(1, round / PHOTON_TRAVEL);
+    var spark = round < PHOTON_TRAVEL ? 0 : (round - PHOTON_TRAVEL) / (1 - PHOTON_TRAVEL);
+    // Its depth in the medium: exponential, e^(−z/d), at most nearly through.
+    var u = SPREAD_A[k];
+    var side = 2 * SPREAD_B[k] - 1;
+    var rodBottom = L.rod.y + L.rod.h;
+    var x;
+    var y;
+    if (kind === "diode" || kind === "laser") {
+      var depth = Math.min(-Math.log(1 - u) * L.pumpDepth, 0.97 * L.rod.w);
+      x = L.lens.x + travel * (L.rod.x + depth - L.lens.x);
+      y = L.axis.y + 0.8 * side * coneHalf(L, x);
+    } else {
+      // The flashlamp's light, from the tube up into the rod.
+      var up = Math.min(-Math.log(1 - u) * L.pumpDepthUp, 0.95 * L.rod.h);
+      var F = L.flashTube;
+      x = F.x + L.flashCap + SPREAD_B[k] * (F.w - 2 * L.flashCap);
+      y = F.y + travel * (rodBottom - up - F.y);
+    }
+    return { x: x, y: y, travelling: spark === 0, share: spark };
+  }
+
+  // The pump's photons on their way into the medium, as many as the pump
+  // is strong; each vanishes where it is absorbed, lighting an atom.
+  function drawPhotons(g, L, kind, colour, spark, casing, sparkRing, pump, t) {
+    var count = Math.ceil(PUMP_PHOTONS * pump);
+    for (var k = 0; k < count; k++) {
+      var p = photonAt(L, kind, k, count, t);
+      if (p.travelling) dot(g, p.x, p.y, 2.2, colour, 0.9, casing);
+      else dot(g, p.x, p.y, 3.2, spark, 0.9 * (1 - p.share), sparkRing);
+    }
+    g.globalAlpha = 1;
+  }
+
+  // A dot of radius r, over a ring 1.2 px wider in `casing` at 0.6 of its
+  // alpha.
+  function dot(g, x, y, r, fill, alpha, casing) {
+    g.globalAlpha = 0.6 * alpha;
+    g.fillStyle = casing;
+    g.beginPath();
+    g.arc(x, y, r + 1.2, 0, 2 * Math.PI);
+    g.fill();
+    g.globalAlpha = alpha;
+    g.fillStyle = fill;
+    g.beginPath();
+    g.arc(x, y, r, 0, 2 * Math.PI);
+    g.fill();
+  }
+
+  // The atoms in a gas tube, drifting along the bore and wobbling a
+  // little, in the theme's muted colour (a gas cannot be seen); as many
+  // of them lit, white sparks, as the current is strong.
+  function drawGasAtoms(g, L, colour, spark, casing, sparkRing, pump, t) {
+    var B = L.bore;
+    var lit = Math.round(GAS_ATOMS * pump);
+    for (var k = 0; k < GAS_ATOMS; k++) {
+      var direction = k % 2 === 0 ? 1 : -1;
+      var speed = 0.03 + 0.06 * SPREAD_B[k];         // bore lengths a second
+      var along = (SPREAD_A[k] + direction * speed * t) % 1;
+      if (along < 0) along += 1;
+      var x = B.x + 3 + along * (B.w - 6);
+      var y = B.y + B.h * (0.25 + 0.5 * SPREAD_B[(k + 7) % GAS_ATOMS]) + 0.1 * B.h * Math.sin(2 * t + k);
+      if (k < lit) dot(g, x, y, 2.6, spark, 0.95, sparkRing);
+      else dot(g, x, y, 1.8, colour, 0.7, casing);
+    }
+    g.globalAlpha = 1;
   }
 
   // A lit flashlamp, behind every part: the bench lit by the flash, and a
@@ -579,10 +812,11 @@
   }
 
   // Short streaks all round a lit flashlamp's tube, each flickering at its
-  // own phase in screen time t.
+  // own phase in screen time t (draw() hands it a number: 0 for a view
+  // without one, or for a visitor who asked for less motion).
   function flashStreaks(g, colors, L, pump, t) {
     var F = L.flashTube;
-    var time = typeof t === "number" && isFinite(t) ? t : 0;
+    var time = t;
     g.strokeStyle = colors.flash;
     g.lineWidth = 2;
     for (var k = 0; k < FLASH_STREAKS; k++) {
@@ -680,13 +914,15 @@
     }
   }
 
-  // A pump laser: a box on the bench; its beam runs to a small mirror at
-  // 45° under the rod's middle, which turns it up into the rod.
-  function drawPumpLaser(g, colors, L, pump) {
+  // A pump laser (stage 10c2), end-pumped as real Ti:sapphire and dye
+  // lasers are: a box on the bench, its beam along the bench to a
+  // periscope in the left margin (two mirrors at 45°: the lower turns it
+  // up, the upper along the axis), and into the lens behind the back
+  // mirror; from the lens, drawCone(). The beam only while the pump is on.
+  function drawPumpLaser(g, colors, L, pump, pumpColour) {
     var P = L.pumpLaser;
-    var fold = L.fold;
-    var half = fold.size / 2;
-    var rodBottom = L.rod.y + L.rod.h;
+    var S = L.periscope;
+    var lens = L.lens;
     g.globalAlpha = 0.4;
     g.fillStyle = colors.faint;
     g.fillRect(P.x, P.y, P.w, P.h);
@@ -694,34 +930,49 @@
     g.strokeStyle = colors.muted;
     g.lineWidth = 1.5;
     g.strokeRect(P.x, P.y, P.w, P.h);
+    // The periscope's post, from its upper mirror down to the bench.
+    g.fillStyle = colors.faint;
+    post(g, S.x, S.high + S.half, L.railY);
     if (pump > 0) {
       g.globalAlpha = 0.3 + 0.7 * pump;
-      g.strokeStyle = colors.glow;
-      g.fillStyle = colors.glow;
+      g.strokeStyle = pumpColour;
       g.lineWidth = 2.5;
-      line(g, P.x + P.w, L.beamY, fold.x, L.beamY);
-      line(g, fold.x, L.beamY, fold.x, rodBottom + 6);
-      arrowHead(g, fold.x, rodBottom + 2, 0, -1, 6);
+      line(g, P.x, S.low, S.x, S.low);
+      line(g, S.x, S.low, S.x, S.high);
+      line(g, S.x, S.high, lens.x - lens.rx, S.high);
       g.globalAlpha = 1;
     }
-    // The small mirror, "/": light coming from the left goes up.
-    g.fillStyle = colors.faint;
-    post(g, fold.x, fold.y + half, L.railY);
+    // The two mirrors: "\" turns light going left up; "/" turns it right.
     g.strokeStyle = colors.heading;
     g.lineWidth = 2.5;
-    line(g, fold.x - half, fold.y + half, fold.x + half, fold.y - half);
+    line(g, S.x - S.half, S.low - S.half, S.x + S.half, S.low + S.half);
+    line(g, S.x - S.half, S.high + S.half, S.x + S.half, S.high - S.half);
+    drawLens(g, colors, L);
   }
 
   // A bleachable filter: a plate, shaded by its share still unbleached.
-  function drawFilter(g, colors, L, open) {
-    var F = L.filter;
-    g.globalAlpha = 0.15 + 0.6 * (1 - open);
+  function drawFilter(g, colors, F, open) {
+    g.globalAlpha = 0.15 + FILTER_SHADE * (1 - open);
     g.fillStyle = colors.muted;
     g.fillRect(F.x, F.y, F.w, F.h);
     g.globalAlpha = 1;
     g.strokeStyle = colors.faint;
     g.lineWidth = 1;
     g.strokeRect(F.x, F.y, F.w, F.h);
+  }
+
+  // The light beyond a filter, towards the mirror on its far side: the
+  // background's colour over it, as strong as the plate's shade
+  // (0.6·(1 − open)), over the filter's height. Nothing once bleached.
+  function dimBeyond(g, colors, L, F, beyond, open) {
+    var strength = FILTER_SHADE * (1 - open);
+    if (!(strength > 0)) return;
+    var from = beyond ? F.x + F.w : L.backMirror.x + L.backMirror.w;
+    var to = beyond ? L.outputMirror.x : F.x;
+    g.globalAlpha = strength;
+    g.fillStyle = colors.bg;
+    g.fillRect(from, F.y, to - from, F.h);
+    g.globalAlpha = 1;
   }
 
   // The medium's look from materials.js (stage 10c), or null: the
@@ -739,6 +990,52 @@
   function rayColourOf(light, colors) {
     if (!lookOf(light) || !(light.lam > 0)) return colors.accent2;
     return UI.materials.readable(UI.materials.beam(light.lam).color, colors.bg);
+  }
+
+  // The pump's own wavelength: a diode's or a pump laser's light (a
+  // flashlamp's pumpLam is the band its rod absorbs, not its light), or
+  // null.
+  function ownPumpLam(light, kind) {
+    if ((kind === "diode" || kind === "laser") && light && light.pumpLam > 0) return light.pumpLam;
+    return null;
+  }
+
+  // The pump's light (stage 10c2): a diode's or a pump laser's colour from
+  // its wavelength, or materials' pump false colour when it cannot be seen
+  // (unlike the laser's, so 808 nm and 1064 nm stay apart); the flash's
+  // colour; made readable over a medium of its own. Without a medium, the
+  // theme's colours.
+  function pumpColourOf(light, colors, kind, look) {
+    if (!look) return kind === "flashlamp" ? colors.flash : colors.glow;
+    if (kind === "flashlamp") return UI.materials.readable(colors.flash, colors.bg);
+    var lam = ownPumpLam(light, kind);
+    if (lam === null) return colors.glow;
+    var pumpBeam = UI.materials.beam(lam);
+    var raw = pumpBeam.visible ? pumpBeam.color : UI.materials.PUMP_INFRARED;
+    return UI.materials.readable(raw, colors.bg);
+  }
+
+  // The words under the bench for the light the eye cannot see, the
+  // pump's (a diode's or a pump laser's) and the laser's: "808 nm,
+  // 1.06 µm · infrared, invisible"; "" when there is none.
+  function invisibleNote(labels, light, look, kind) {
+    if (!look) return "";
+    var seen = { infrared: [], ultraviolet: [] };
+    var lams = [];
+    // The pump's first: its photons are the more energetic (the engine
+    // refuses a pump wavelength at or past the laser's).
+    var pumpLam = ownPumpLam(light, kind);
+    if (pumpLam !== null) lams.push(pumpLam);
+    if (light.lam > 0) lams.push(light.lam);
+    lams.forEach(function (lam) {
+      var band = UI.materials.beam(lam).band;
+      if (band !== "visible") seen[band].push(UI.format.si(lam, "m"));
+    });
+    var parts = [];
+    ["ultraviolet", "infrared"].forEach(function (band) {
+      if (seen[band].length > 0 && labels[band]) parts.push(seen[band].join(", ") + " · " + labels[band]);
+    });
+    return parts.join("; ");
   }
 
   // A crystal rod (stage 10c): its material's colour, darker along its
@@ -1051,6 +1348,15 @@
     var rodBottom = L.rod.y + L.rod.h;
     var cavity = cavityOf(light);
     var shapes = { back: shapeOf(cavity, "back"), output: shapeOf(cavity, "output") };
+    var look = lookOf(light);
+    // Screen time, for the flash's streaks, the photons and the atoms:
+    // still (as at t = 0) for a visitor who asked for less motion.
+    var screenTime = view.still || typeof view.t !== "number" || !isFinite(view.t) ? 0 : view.t;
+    var pumpColour = pumpColourOf(light, colors, kind, look);
+    // The filter: in the gap before the rod, or, on the end-pumped diodes,
+    // beyond it, out of the pump's way (stage 10c2).
+    var filterBeyond = qSwitch !== null && (kind === "diode" || kind === "laser");
+    var filterRect = filterBeyond ? L.filterBeyond : L.filter;
 
     g.clearRect(0, 0, view.w, view.h);
     g.save();
@@ -1064,23 +1370,24 @@
     g.fillStyle = colors.faint;
     post(g, L.backMirror.x + L.backMirror.w / 2, L.backMirror.y + L.backMirror.h + 3, L.railY);
     post(g, L.outputMirror.x + L.outputMirror.w / 2, L.outputMirror.y + L.outputMirror.h + 3, L.railY);
-    if (qSwitch) post(g, L.filter.x + L.filter.w / 2, L.filter.y + L.filter.h, L.railY);
+    if (qSwitch) post(g, filterRect.x + filterRect.w / 2, filterRect.y + filterRect.h, L.railY);
     var mediumPosts = kind === "discharge" ? L.tubePosts : L.rodPosts;
     mediumPosts.forEach(function (x) {
       post(g, x, rodBottom, L.railY);
     });
 
     // The pump, then the medium over it.
-    if (kind === "flashlamp") drawFlashlamp(g, colors, L, pump, view.still ? 0 : view.t);
+    if (kind === "flashlamp") drawFlashlamp(g, colors, L, pump, screenTime);
     else if (kind === "discharge") drawDischarge(g, colors, L, pump);
-    else if (kind === "laser") drawPumpLaser(g, colors, L, pump);
-    else drawDiodes(g, colors, L, pump);
-    var look = lookOf(light);
+    else if (kind === "laser") drawPumpLaser(g, colors, L, pump, pumpColour);
+    else drawDiodes(g, colors, L);
     if (kind === "discharge") drawTube(g, colors, L, pump, look);
     else drawRod(g, colors, L, look);
+    // The diodes' cone (stage 10c2), under the laser's rays; the photons
+    // and the gas's atoms come after the rays, over them.
+    var endPumped = kind === "diode" || kind === "laser";
+    if (endPumped && pump > 0) drawCone(g, L, pumpColour, pump);
     if (kind === "flashlamp" && pump > 0) lightRod(g, colors, L, pump);
-    // The filter in the gap.
-    if (qSwitch) drawFilter(g, colors, L, openOf(qSwitch));
 
     // The light. With the cavity's numbers: the beam's shape, the traced
     // rays, and the light leaving. Without them: separate rays between the
@@ -1101,10 +1408,11 @@
       // The arrowheads go in the open gaps between the mirrors and the
       // medium: the rod, or a discharge's gas tube.
       var medium = kind === "discharge" ? L.tube : L.rod;
-      // On the left, between the filter (if any) and the medium.
-      var leftFrom = qSwitch ? L.filter.x + L.filter.w : faceX(L, "back", L.axis.y);
+      // Between the filter (if any, on its side) and the medium.
+      var leftFrom = qSwitch && !filterBeyond ? L.filter.x + L.filter.w : faceX(L, "back", L.axis.y);
+      var rightTo = filterBeyond ? L.filterBeyond.x : faceX(L, "output", L.axis.y);
       var leftGap = (leftFrom + medium.x) / 2;
-      var rightGap = (medium.x + medium.w + faceX(L, "output", L.axis.y)) / 2;
+      var rightGap = (medium.x + medium.w + rightTo) / 2;
       g.fillStyle = rayColour;
       L.rays.forEach(function (y, i) {
         casedLine(g, faceX(L, "back", y), y, faceX(L, "output", y), y, rayColour, casing, rayAlpha(beam), 1.4);
@@ -1120,6 +1428,28 @@
       g.globalAlpha = 1;
     }
 
+    // The filter (stage 8b), over the rays that cross it; a dark filter
+    // holds the light back, so beyond it the light is dimmed as much as
+    // the plate is shaded (the owner: the laser went through it "like
+    // nothing is there").
+    if (qSwitch) {
+      var open = openOf(qSwitch);
+      dimBeyond(g, colors, L, filterRect, filterBeyond, open);
+      drawFilter(g, colors, filterRect, open);
+    }
+
+    // The pump's photons, or the gas's atoms, over the rays, each on a
+    // ring so it shows over a beam or a glow of its own hue. A spark is
+    // white over a coloured medium, on a ring of the background's colour,
+    // or of the heading's where white would vanish on it (the cream theme).
+    var spark = look ? UI.materials.HIGHLIGHT : colors.heading;
+    var sparkRing = UI.materials.contrast(spark, colors.bg) >= 3 ? colors.bg : colors.heading;
+    if (kind === "discharge") {
+      drawGasAtoms(g, L, colors.muted, spark, colors.bg, sparkRing, pump, screenTime);
+    } else if (pump > 0) {
+      drawPhotons(g, L, kind, pumpColour, spark, colors.bg, sparkRing, pump, screenTime);
+    }
+
     // The mirrors, over the ends of the rays.
     mirror(g, colors, L, "back", true, shapes.back);
     mirror(g, colors, L, "output", false, shapes.output);
@@ -1131,14 +1461,16 @@
     g.fillStyle = colors.muted;
     g.font = "600 " + L.fontSize + "px " + view.font;
     g.textBaseline = "alphabetic";
-    // The filter's name on the top row, which the transmission then shares.
+    // The filter's name on the top row, which the transmission then
+    // shares; a filter beyond the rod has its name under the bench.
     var switchName = qSwitch && labels.qSwitch ? labels.qSwitch : "";
     PARTS.forEach(function (name) {
       if (OWN_PLACE_WORDS.indexOf(name) !== -1) return;
       var text = name === "transmission" ? transmissionText(labels.transmission, light) : labels[name];
       var spot = L.labels[name];
       if (name === "qSwitch") text = switchName;
-      if (name === "transmission" && switchName) spot = L.labels.transmissionShared;
+      if (name === "qSwitch" && filterBeyond) spot = L.labels.qSwitchBelow;
+      if (name === "transmission" && switchName && !filterBeyond) spot = L.labels.transmissionShared;
       if (!text) return;
       g.textAlign = spot.align;
       g.fillText(text, spot.x, spot.y, spot.maxWidth);
@@ -1151,11 +1483,11 @@
     }
     // An invisible beam says so, with its wavelength (§11.5: otherwise the
     // visitor thinks the laser does not work).
-    var band = look && light.lam > 0 ? UI.materials.beam(light.lam).band : "visible";
-    if (band !== "visible" && labels[band]) {
+    var note = invisibleNote(labels, light, look, kind);
+    if (note) {
       var where = L.labels.invisible;
       g.textAlign = where.align;
-      g.fillText(UI.format.si(light.lam, "m") + " · " + labels[band], where.x, where.y, where.maxWidth);
+      g.fillText(note, where.x, where.y, where.maxWidth);
     }
 
     g.restore();
@@ -1168,6 +1500,9 @@
     Q_KINDS: Q_KINDS,
     PUMP_OFF: PUMP_OFF,
     POST_FOOT: POST_FOOT,
+    PUMP_PHOTONS: PUMP_PHOTONS,
+    GAS_ATOMS: GAS_ATOMS,
+    PUMP_DEPTH: PUMP_DEPTH,
     SHAPES: SHAPES,
     layout: layout,
     faceX: faceX,

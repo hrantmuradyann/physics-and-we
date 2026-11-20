@@ -1,6 +1,6 @@
 # The laser simulator: what is done and what is left
 
-*Last updated: 20 November 2026, at the end of stage 10c1.*
+*Last updated: 20 November 2026, at the end of stage 10c2.*
 
 This page explains, in plain words, how far the laser simulator has got. The technical details are in `docs/laser-plan.md` (the build plan) and `docs/laser-physics.md` (the physics).
 
@@ -16,8 +16,8 @@ The page lives at the hidden address `?view=laser`. A banner on the Labs page li
 
 The work is split into numbered **stages**. Each stage adds one piece, and is not counted as finished until it passes four checks:
 
-1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 725 of them, and all of them pass.
-2. **Deliberate mistakes.** A tool makes 893 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes about 6 minutes (it took 25 before stage 7c made it faster; see below).
+1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 739 of them, and all of them pass.
+2. **Deliberate mistakes.** A tool makes 922 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes about 6 minutes (it took 25 before stage 7c made it faster; see below).
 3. **A code review.** A separate careful reading of the whole change, looking for bugs. What it finds is fixed before the stage is finished.
 4. **A check in the browser**, for stages that change the page: both themes, both languages, a phone-sized screen, no errors.
 
@@ -49,6 +49,7 @@ The simulator has two halves:
 | — | **The energy-levels picture removed**, as you asked (19 November): the levels and the gain gauge under the laser. The theory chapter about the giant pulse now tells the visitor to watch the power chart instead. |
 | 10b | **The mirrors on the page** (see below): each mirror flat, concave or convex, the light's path bounce by bounce, the focal points, and a stability diagram beside the chart. |
 | 10c1 | **Each laser in its real colours** (see below): the crystals, the dye and the glowing gases as they look, and the beam in the colour of its light. |
+| 10c2 | **The pump you can see working** (see below): the diodes end-pumped through a lens, the green pump laser, pump light travelling into the material, atoms drifting in the gas tubes. |
 
 ### What you can see on the page today
 
@@ -64,7 +65,32 @@ For each laser the page sets itself up to suit it:
 
 Ruby fired with a 1000 J flash lights up after a fraction of a millisecond and fires spikes reaching about 460 kW, as in stage 7b. The light and dark themes and both languages work, and the dropdowns fit on a 320 px phone.
 
-### Stage 10c1, just finished: each laser in its real colours
+### Stage 10c2, just finished: the pump you can see working
+
+**What you can see now:**
+- **the diodes are end-pumped**, as you chose: a diode module with cooling fins stands on the bench, a fibre runs from it to a small lens behind the back mirror, and a cone of pump light shines through the back mirror into the rod. It narrows to a point just inside the rod and fades along it as the crystal absorbs it;
+- **the pump laser** of the dye and titanium-sapphire lasers now shines **green** (532 nm), as real ones do, and, as you asked, it pumps **along the laser's axis**, as in a real titanium-sapphire laser: its beam runs along the bench to two small mirrors at the left edge (a periscope), which lift it to the axis and send it through a lens and the back mirror into the crystal or the dye;
+- **pump photons**: small dots travel from the pump into the material, and each vanishes where it is absorbed, with a little white spark where it lights an atom. The stronger the pump, the more photons. This works for the diodes, the pump laser and the flashlamp;
+- **the gas tubes have atoms** drifting in them, and the stronger the current, the more of them light up;
+- the note under the bench now names the pump's invisible light too: "808 nm, 1.06 µm · infrared, invisible";
+- visitors whose computer asks for less motion see the photons and atoms standing still.
+
+**What you asked for after your first look:** with the bleachable filter on, the pump's photons went through it and the laser light went through it "like nothing is there". Now:
+- on the diode-pumped Nd:YAG the filter stands between the crystal and the output mirror, where real end-pumped lasers have it, so the pump light never reaches it. Its name moved under the bench, on the right;
+- on every laser the filter is drawn over the light, and while it is dark the light beyond it is dimmed as much as the filter is dark. As the laser's own light bleaches it, the light beyond it comes back.
+
+**What the review caught** (and I fixed): the white sparks almost vanished on the light theme (they now have a dark ring there); the diodes' invisible light and the laser's invisible light were the same pink (the pump's is now a paler pink); at a weak pump the few photons travelled in a clump, which made a steady pump look like bursts; the unlit gas atoms were drawn in the glow's colour even with the current off (they are now plain grey dots).
+
+The review ran at "xhigh" effort, not the "medium" you set: my notes from earlier stages said xhigh. They now say medium.
+
+**Choices I made without asking you** (in the plan's 10c2 notes, easy to change):
+- **how deep the pump light goes is drawn, not calculated.** A real Nd:YAG crystal absorbs the diode light within about a millimetre, so on our 5 cm rod the cone would vanish at the very start. I drew it fading over the first third of the rod, so you can see it. The physics notes say so;
+- the back mirror lets the pump light through. Real ones are made to do this, but I didn't write a label on it, to keep the top of the picture uncluttered;
+- no water jacket on the CO₂ tube, and no ceramic tube inside the argon one.
+
+**Checks:** 739 automatic tests pass, and the deliberate-mistakes checker makes 922 mistakes and catches every one. In Chrome I looked at Nd:YAG with its diodes (and with the filter on, in both themes), titanium-sapphire with the green pump, argon on the dark theme and helium-neon on the light one. At first the pump photons disappeared into the pink beam of the same colour, and most of the atoms hid behind the rays. Now they are drawn on top, each with a thin outline.
+
+### Stage 10c1: each laser in its real colours
 
 Stage 10c ("a bench that looks real") is done in two parts. This is the first; the second (10c2) is the end-pumped diodes you chose, the green pump laser, and the pump light travelling into the material.
 

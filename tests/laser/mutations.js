@@ -1130,8 +1130,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      g.fillText(UI.format.si(light.lam, \"m\") + \" · \" + labels[band], where.x, where.y, where.maxWidth);\n    }\n\n    g.restore();\n  }",
-    replace: "      g.fillText(UI.format.si(light.lam, \"m\") + \" · \" + labels[band], where.x, where.y, where.maxWidth);\n    }\n\n  }",
+    find: "      g.fillText(note, where.x, where.y, where.maxWidth);\n    }\n\n    g.restore();\n  }",
+    replace: "      g.fillText(note, where.x, where.y, where.maxWidth);\n    }\n\n  }",
     why: "the context's settings left changed for the next drawing"
   },
   {
@@ -2011,8 +2011,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (pump > 0) lightUp(g, colors.glow, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);",
-    replace: "    lightUp(g, colors.glow, L, L.lamp.x, L.lamp.w, L.lamp.y, pump);",
+    find: "    if (endPumped && pump > 0) drawCone(g, L, pumpColour, pump);",
+    replace: "    if (endPumped) drawCone(g, L, pumpColour, pump);",
     why: "pump light drawn with the pump off"
   },
   {
@@ -3458,7 +3458,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    else if (kind === \"laser\") drawPumpLaser(g, colors, L, pump);\n",
+    find: "    else if (kind === \"laser\") drawPumpLaser(g, colors, L, pump, pumpColour);\n",
     replace: "",
     why: "the pump laser drawn as diodes"
   },
@@ -3560,44 +3560,44 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (pump > 0) {\n      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = colors.glow;\n      g.fillStyle = colors.glow;\n      g.lineWidth = 2.5;",
-    replace: "    if (true) {\n      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = colors.glow;\n      g.fillStyle = colors.glow;\n      g.lineWidth = 2.5;",
+    find: "    if (pump > 0) {\n      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = pumpColour;",
+    replace: "    if (true) {\n      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = pumpColour;",
     why: "the pump laser's beam with the pump off"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = colors.glow;\n      g.fillStyle = colors.glow;\n      g.lineWidth = 2.5;",
-    replace: "      g.globalAlpha = 1;\n      g.strokeStyle = colors.glow;\n      g.fillStyle = colors.glow;\n      g.lineWidth = 2.5;",
+    find: "      g.globalAlpha = 0.3 + 0.7 * pump;\n      g.strokeStyle = pumpColour;",
+    replace: "      g.globalAlpha = 1;\n      g.strokeStyle = pumpColour;",
     why: "the pump laser's beam as strong at any pump"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      line(g, fold.x, L.beamY, fold.x, rodBottom + 6);\n",
+    find: "      line(g, S.x, S.low, S.x, S.high);\n",
     replace: "",
     why: "the pump beam stopping at the small mirror"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    line(g, fold.x - half, fold.y + half, fold.x + half, fold.y - half);",
-    replace: "    line(g, fold.x - half, fold.y - half, fold.x + half, fold.y + half);",
+    find: "    line(g, S.x - S.half, S.low - S.half, S.x + S.half, S.low + S.half);",
+    replace: "    line(g, S.x - S.half, S.low + S.half, S.x + S.half, S.low - S.half);",
     why: "the small mirror turned to send the beam down"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    post(g, fold.x, fold.y + half, L.railY);\n",
+    find: "    post(g, S.x, S.high + S.half, L.railY);\n",
     replace: "",
     why: "the small mirror floating over the bench"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var pumpLaserLeft = rodPosts[0] + POST_FOOT / 2 + 3;",
-    replace: "var pumpLaserLeft = rodX;",
+    find: "      pumpLaser: { x: w / 2 - moduleWidth / 2, y: railY - moduleHeight, w: moduleWidth, h: moduleHeight },",
+    replace: "      pumpLaser: { x: rodX, y: railY - moduleHeight, w: moduleWidth, h: moduleHeight },",
     why: "the pump laser standing on the rod's post"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var beamY = pumpLaserY + pumpLaserHeight / 2;",
-    replace: "var beamY = pumpLaserY + pumpLaserHeight;",
+    find: "      beamY: railY - moduleHeight / 2,",
+    replace: "      beamY: railY,",
     why: "the pump beam leaving from the box's bottom edge"
   },
   {
@@ -3629,18 +3629,6 @@ const MUTATIONS = [
     find: "var pump = light && light.pump >= PUMP_OFF ? Math.min(1, light.pump) : 0;",
     replace: "var pump = light && light.pump > 0 ? Math.min(1, light.pump) : 0;",
     why: "the flashlamp lit for half an hour after its flash"
-  },
-  {
-    file: "js/laser/ui/draw-bench.js",
-    find: "var pumpLaserLeft = rodPosts[0] + POST_FOOT / 2 + 3;",
-    replace: "var pumpLaserLeft = rodX + 0.07 * rodLength;",
-    why: "the rod post's foot poking into the pump laser's box on a phone"
-  },
-  {
-    file: "js/laser/ui/draw-bench.js",
-    find: "var pumpLaserRight = foldX - POST_FOOT / 2 - Math.max(6, 0.12 * rodLength);",
-    replace: "var pumpLaserRight = foldX;",
-    why: "the pump laser's box running into the small mirror's post"
   },
   {
     file: "js/laser/ui/draw-bench.js",
@@ -4155,13 +4143,13 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    g.globalAlpha = 0.15 + 0.6 * (1 - open);",
-    replace: "    g.globalAlpha = 0.15 + 0.6 * open;",
+    find: "    g.globalAlpha = 0.15 + FILTER_SHADE * (1 - open);",
+    replace: "    g.globalAlpha = 0.15 + FILTER_SHADE * open;",
     why: "the filter darker as it bleaches"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      if (name === \"transmission\" && switchName) spot = L.labels.transmissionShared;\n",
+    find: "      if (name === \"transmission\" && switchName && !filterBeyond) spot = L.labels.transmissionShared;\n",
     replace: "",
     why: "the transmission keeps the whole top row and runs into the switch's name"
   },
@@ -4383,20 +4371,20 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (qSwitch) post(g, L.filter.x + L.filter.w / 2, L.filter.y + L.filter.h, L.railY);\n",
+    find: "    if (qSwitch) post(g, filterRect.x + filterRect.w / 2, filterRect.y + filterRect.h, L.railY);\n",
     replace: "",
     why: "the filter floating in the air"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    var leftFrom = qSwitch ? L.filter.x + L.filter.w : faceX(L, \"back\", L.axis.y);",
-    replace: "    var leftFrom = faceX(L, \"back\", L.axis.y);",
+    find: "      var leftFrom = qSwitch && !filterBeyond ? L.filter.x + L.filter.w : faceX(L, \"back\", L.axis.y);",
+    replace: "      var leftFrom = faceX(L, \"back\", L.axis.y);",
     why: "the left arrowheads on top of the filter"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    g.globalAlpha = 0.15 + 0.6 * (1 - open);",
-    replace: "    g.globalAlpha = 0.15 + 0.6 * open;",
+    find: "    g.globalAlpha = 0.15 + FILTER_SHADE * (1 - open);",
+    replace: "    g.globalAlpha = 0.15 + FILTER_SHADE * open;",
     why: "the filter drawn darker as it bleaches"
   },
   {
@@ -4547,12 +4535,6 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    var time = typeof t === \"number\" && isFinite(t) ? t : 0;",
-    replace: "    var time = t;",
-    why: "a view without a time drawing streaks at NaN"
-  },
-  {
-    file: "js/laser/ui/draw-bench.js",
     find: "      var x0 = F.x + F.w / 2 + dx * (F.w / 2 + 3);",
     replace: "      var x0 = F.x + F.w / 2 + dx * (F.w / 2);",
     why: "the streaks starting inside the tube"
@@ -4644,7 +4626,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "drawFlashlamp(g, colors, L, pump, view.still ? 0 : view.t);",
+    find: "drawFlashlamp(g, colors, L, pump, screenTime);",
     replace: "drawFlashlamp(g, colors, L, pump, view.t);",
     why: "the lamp's streaks flicker for a visitor who asked for less motion"
   },
@@ -5351,14 +5333,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    var band = look && light.lam > 0 ? UI.materials.beam(light.lam).band : \"visible\";",
-    replace: "    var band = look && light.lam > 0 ? \"infrared\" : \"visible\";",
+    find: "      if (band !== \"visible\") seen[band].push(UI.format.si(lam, \"m\"));",
+    replace: "      seen.infrared.push(UI.format.si(lam, \"m\"));",
     why: "every beam called invisible"
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      g.fillText(UI.format.si(light.lam, \"m\") + \" · \" + labels[band], where.x, where.y, where.maxWidth);",
-    replace: "      g.fillText(labels[band], where.x, where.y, where.maxWidth);",
+    find: "      if (seen[band].length > 0 && labels[band]) parts.push(seen[band].join(\", \") + \" · \" + labels[band]);",
+    replace: "      if (seen[band].length > 0 && labels[band]) parts.push(labels[band]);",
     why: "the invisible beam's wavelength not written"
   },
   {
@@ -5451,6 +5433,200 @@ const MUTATIONS = [
     find: "        lam: lam !== null && config.medium === state.config.medium ? lam : engine.media.get(config.medium).lam",
     replace: "        lam: lam !== null ? lam : engine.media.get(config.medium).lam",
     why: "the old medium's wavelength kept for a new medium"
+  },
+  // stage 10c2: the pump's light
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.globalAlpha = strength * Math.exp(-depth / L.pumpDepth);",
+    replace: "      g.globalAlpha = strength;",
+    why: "the diodes' light not absorbed along the rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var stops = [Math.round(L.lens.x), Math.round(L.cone.waistX)];",
+    replace: "    var stops = [Math.round(L.rod.x), Math.round(L.cone.waistX)];",
+    why: "the cone starting at the rod, not the lens"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var count = Math.ceil(PUMP_PHOTONS * pump);",
+    replace: "    var count = PUMP_PHOTONS;",
+    why: "every pump photon shown whatever the pump"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      var depth = Math.min(-Math.log(1 - u) * L.pumpDepth, 0.97 * L.rod.w);",
+    replace: "      var depth = Math.min(u * L.rod.w, 0.97 * L.rod.w);",
+    why: "photons absorbed evenly along the rod, not exponentially"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var screenTime = view.still || typeof view.t !== \"number\" || !isFinite(view.t) ? 0 : view.t;",
+    replace: "    var screenTime = typeof view.t !== \"number\" || !isFinite(view.t) ? 0 : view.t;",
+    why: "photons and atoms moving for a visitor who asked for less motion"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var lit = Math.round(GAS_ATOMS * pump);",
+    replace: "    var lit = Math.round(GAS_ATOMS * pump / 2);",
+    why: "half as many atoms lit as the current says"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      var along = (SPREAD_A[k] + direction * speed * t) % 1;",
+    replace: "      var along = SPREAD_A[k] % 1;",
+    why: "the gas's atoms standing still"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    return UI.materials.readable(raw, colors.bg);\n  }",
+    replace: "    return raw;\n  }",
+    why: "the pump's colour not made readable"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.strokeStyle = pumpColour;\n      g.lineWidth = 2.5;\n      line(g, P.x, S.low, S.x, S.low);",
+    replace: "      g.strokeStyle = colors.glow;\n      g.lineWidth = 2.5;\n      line(g, P.x, S.low, S.x, S.low);",
+    why: "the pump laser's beam in the theme's colour, not green"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (pumpLam !== null) lams.push(pumpLam);\n",
+    replace: "",
+    why: "the invisible pump left out of the note"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if ((kind === \"diode\" || kind === \"laser\") && light && light.pumpLam > 0) return light.pumpLam;",
+    replace: "    if (light && light.pumpLam > 0) return light.pumpLam;",
+    why: "a flashlamp's absorbed band named as its light"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.arc(x, y, r + 1.2, 0, 2 * Math.PI);",
+    replace: "    g.arc(x, y, r, 0, 2 * Math.PI);",
+    why: "photons and atoms without their ring"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      diodeModule: { x: w / 2 - moduleWidth / 2, y: railY - moduleHeight,",
+    replace: "      diodeModule: { x: w / 2 - moduleWidth / 2, y: railY - 1.5 * moduleHeight,",
+    why: "the diode module floating over the bench"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var lensX = marginLeft + 0.72 * marginRoom;",
+    replace: "    var lensX = marginLeft + 1.2 * marginRoom;",
+    why: "the lens in the back mirror"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var spark = look ? UI.materials.HIGHLIGHT : colors.heading;",
+    replace: "    var spark = colors.heading;",
+    why: "the atoms' sparks in the theme's colour over a coloured rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      x = L.lens.x + travel * (L.rod.x + depth - L.lens.x);",
+    replace: "      x = L.lens.x + travel * (L.rod.x + L.rod.w - L.lens.x);",
+    why: "every photon running to the rod's far end"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        pumpLam: state.config.pumpLam,",
+    replace: "        pumpLam: undefined,",
+    why: "the page not giving the pump's wavelength"
+  },
+  // stage 10c2: the filter beyond the rod, and the review
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var filterBeyond = qSwitch !== null && (kind === \"diode\" || kind === \"laser\");",
+    replace: "    var filterBeyond = qSwitch !== null && kind === \"diode\";",
+    why: "the end-pumped diodes' filter in the pump's way"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var strength = FILTER_SHADE * (1 - open);",
+    replace: "    var strength = 0;",
+    why: "a dark filter holding no light back"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      dimBeyond(g, colors, L, filterRect, filterBeyond, open);\n      drawFilter(g, colors, filterRect, open);",
+    replace: "      drawFilter(g, colors, filterRect, open);",
+    why: "the light beyond a dark filter not dimmed"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var to = beyond ? L.outputMirror.x : F.x;",
+    replace: "    var to = beyond ? L.outputMirror.x : L.rod.x;",
+    why: "the dimming reaching past the filter into the rod's gap"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      if (name === \"qSwitch\" && filterBeyond) spot = L.labels.qSwitchBelow;\n",
+    replace: "",
+    why: "the filter's name on the top row, far from a filter beyond the rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      var rightTo = filterBeyond ? L.filterBeyond.x : faceX(L, \"output\", L.axis.y);",
+    replace: "      var rightTo = faceX(L, \"output\", L.axis.y);",
+    why: "the right arrowheads on top of a filter beyond the rod"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var sparkRing = UI.materials.contrast(spark, colors.bg) >= 3 ? colors.bg : colors.heading;",
+    replace: "    var sparkRing = colors.bg;",
+    why: "white sparks on cream rings: lost on the light theme"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var raw = pumpBeam.visible ? pumpBeam.color : UI.materials.PUMP_INFRARED;",
+    replace: "    var raw = pumpBeam.color;",
+    why: "808 nm drawn in the laser's own false colour"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var round = (t * PHOTON_RATE + k / count) % 1;",
+    replace: "    var round = (t * PHOTON_RATE + k / PUMP_PHOTONS) % 1;",
+    why: "the photons bunched at a low pump"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      drawGasAtoms(g, L, colors.muted, spark, colors.bg, sparkRing, pump, screenTime);",
+    replace: "      drawGasAtoms(g, L, look ? look.body : colors.muted, spark, colors.bg, sparkRing, pump, screenTime);",
+    why: "the unlit gas glowing without a current"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    for (var k = 1; k <= slices; k++) stops.push(Math.round(L.cone.waistX + k / slices * (L.rod.x + L.rod.w - L.cone.waistX)));",
+    replace: "    for (var k = 1; k <= slices; k++) stops.push(L.cone.waistX + k / slices * (L.rod.x + L.rod.w - L.cone.waistX));",
+    why: "the cone's slices at fractions of a pixel: seams"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var screenTime = view.still || typeof view.t !== \"number\" || !isFinite(view.t) ? 0 : view.t;",
+    replace: "    var screenTime = view.still ? 0 : view.t;",
+    why: "a view without a time drawing the streaks, photons and atoms at NaN"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (kind === \"diode\" || kind === \"laser\") {\n      var depth",
+    replace: "    if (kind === \"diode\") {\n      var depth",
+    why: "a pump laser's photons coming up from below, not along the axis"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      line(g, S.x, S.high, lens.x - lens.rx, S.high);\n",
+    replace: "",
+    why: "the pump laser's beam never reaching the lens"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    line(g, S.x - S.half, S.high + S.half, S.x + S.half, S.high - S.half);",
+    replace: "    line(g, S.x - S.half, S.high - S.half, S.x + S.half, S.high + S.half);",
+    why: "the periscope's upper mirror turned to send the beam back"
   },
 ];
 

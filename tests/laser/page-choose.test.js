@@ -534,6 +534,8 @@ test("the bench is drawn with the chosen pump, medium and wavelength", () => {
       // Stage 10c1: the medium's look and the beam's colour.
       assert.equal(last(seen.bench).light.medium, id);
       assert.equal(last(seen.bench).light.lam, E.media.get(id).lam, id + ": its own wavelength");
+      // Stage 10c2: the pump's own wavelength (none for a discharge).
+      assert.equal(last(seen.bench).light.pumpLam, E.bench.configFor({ medium: id, pump: pump }).pumpLam, id + " with " + pump);
       kinds.add(pump);
     }
   }

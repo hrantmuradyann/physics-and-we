@@ -740,6 +740,7 @@
         pumpKind: state.config.pump,
         medium: state.config.medium,
         lam: lam,
+        pumpLam: state.config.pumpLam,
         qSwitch: switchLight(),
         cavity: cavity
       });
