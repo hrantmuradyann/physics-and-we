@@ -233,7 +233,7 @@ test("sections/laser.html: every word it asks for is in data/laser.json, in both
   }
 });
 
-test("sections/laser.html: no styles, scripts, <header> or <footer>; the silver lines around it", () => {
+test("sections/laser.html: no styles, scripts, <header> or <footer>; one plain background around it", () => {
   const raw = read("sections/laser.html");
   const html = raw.replace(/<!--[\s\S]*?-->/g, "");
   assert.doesNotMatch(html, /\sstyle\s*=/i, "a style= attribute (CSS goes in css/laser.css)");
@@ -241,12 +241,40 @@ test("sections/laser.html: no styles, scripts, <header> or <footer>; the silver 
   assert.doesNotMatch(html, /<script\b/i, "a <script> (it would never run in a fragment)");
   assert.doesNotMatch(html, /<header\b/i, "a <header> picks up the site's header bar");
   assert.doesNotMatch(html, /<footer\b/i, "a <footer> picks up the site's footer bar");
-  assert.match(html.trim(), /^<div class="line-art">[\s\S]*<\/div>$/, "wrapped in <div class=\"line-art\">");
+  assert.match(html.trim(), /^<div class="laser-lab">[\s\S]*<\/div>$/, "wrapped in <div class=\"laser-lab\">");
+});
+
+// The site's colours the light theme changes but nothing inside the laser
+// lab uses: the site header's bar, the home hero's vignette, and the small
+// labs' canvas colours (js/labs.js).
+const OUTSIDE_THE_LAB = ["--header-bg", "--vignette", "--canvas-line", "--canvas-grid", "--canvas-faint", "--canvas-glow"];
+
+test(".laser-lab sets every site colour the theme changes to the lab's own fixed one, so the lab looks the same in both themes", () => {
+  const block = (css, selector) => {
+    const start = css.search(new RegExp("^" + selector.replace(/\./g, "\\.") + "\\s*\\{", "m"));
+    assert.ok(start >= 0, selector);
+    return css.slice(start, css.indexOf("\n}", start));
+  };
+  const names = (text) => Array.from(text.matchAll(/^\s+(--[a-z0-9-]+)\s*:/gm), (m) => m[1]);
+  const themed = names(block(read("css/style.css"), ":root.theme-light"));
+  const lab = block(read("css/laser.css"), ".laser-lab");
+  const labNames = names(lab);
+  for (const name of themed) {
+    if (OUTSIDE_THE_LAB.includes(name)) continue;
+    assert.ok(labNames.includes(name), name + " is not set inside the lab: it would follow the site's theme");
+    const value = lab.match(new RegExp("^\\s+" + name + "\\s*:\\s*([^;]+);", "m"))[1].trim();
+    assert.match(value, /^(var\(--laser-[a-z0-9-]+\)|none|transparent)$/, name + ": a lab colour, got " + value);
+  }
+  for (const name of OUTSIDE_THE_LAB) {
+    for (const file of ["css/laser.css", "css/labs.css", "js/laser/ui/loop.js", "js/laser/page.js"]) {
+      assert.ok(!read(file).includes("var(" + name + ")") && !read(file).includes("\"" + name + "\""), name + " used in " + file);
+    }
+  }
 });
 
 // The pictures js/laser/page.js draws, by their data-laser-canvas names
 // (tests/laser/page.test.js uses the same list).
-const PAGE_CANVASES = ["bench", "power", "photons", "stability"];
+const PAGE_CANVASES = ["bench", "power", "photons", "atoms", "stability"];
 
 test("sections/laser.html: the canvases, each a picture for screen readers, each described in the data", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
@@ -281,7 +309,7 @@ test("the chart canvas, and only it, carries the class that lets a finger move t
 // What js/laser/page.js looks for (tests/laser/page.test.js uses the same
 // names). A name missing from the layout would leave a control dead
 // without any error.
-const PAGE_CONTROLS = ["pump", "coupler", "Rc1", "Rc2", "absorberT0", "slowMotion"];
+const PAGE_CONTROLS = ["Rc1", "Rc2", "pump", "coupler", "absorberT0", "slowMotion"];
 // The sliders in rows page.js hides: each curved mirror's radius (stage
 // 10b) and the filter's.
 const PAGE_Q_CONTROLS = ["Rc1", "Rc2", "absorberT0"];

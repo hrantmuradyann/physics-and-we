@@ -67,6 +67,7 @@ const UI_FILES = [
   "draw-bench.js",
   "draw-plots.js",
   "draw-photons.js",
+  "draw-atoms.js",
   "draw-stability.js"
 ];
 

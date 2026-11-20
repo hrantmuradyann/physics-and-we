@@ -206,8 +206,21 @@ test("the bench drawing gets the cavity: its mirrors, F, the mode and the rays, 
   drag(section, "pump", 400);
   drag(section, "coupler", 400);
   assert.equal(seen.paths.length, traced, "the pump and the coupler keep the cavity");
+  // How curved each face is drawn: null for the flat mirror; for a curved
+  // one its radius's place on the slider's log scale, 0 at the largest
+  // radius, 1 at the smallest.
+  const range = B(page).controls(config).Rc2;
+  const share = Math.log(range.max / config.Rc2) / Math.log(range.max / range.min);
+  assert.equal(cavity.curve.back, null, "the flat back mirror");
+  assertClose(cavity.curve.output, share, 1e-12, "the output mirror's radius on its slider");
   drag(section, "Rc2", 400);
   assert.equal(seen.paths.length, traced + 1, "a radius moved: traced once");
+  type(section, "Rc2", String(range.min));
+  runFrames(page, 1);
+  assertClose(last(seen.bench).light.cavity.curve.output, 1, 1e-9, "the smallest radius: the deepest face");
+  type(section, "Rc2", String(range.max));
+  runFrames(page, 1);
+  assertClose(last(seen.bench).light.cavity.curve.output, 0, 1e-9, "the largest: the flattest");
   // Without a mode (ruby's flat pair): rays from half the aperture's half.
   choose(section, "ruby", "flashlamp");
   const ruby = last(seen.paths);

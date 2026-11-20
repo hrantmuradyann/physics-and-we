@@ -58,21 +58,22 @@
   var MAX_PIXEL_RATIO = 2;      // sharper than this costs memory, not looks
 
   // The colours a drawing may use: name -> the CSS variable it comes from
-  // (css/style.css). A test checks both themes set every one of them.
+  // (css/style.css). The laser lab looks the same in both themes, so these
+  // are the --laser-* colours, set once in :root (a test checks it).
   var PALETTE = Object.freeze({
-    accent: "--accent",
-    accent2: "--accent-2",
-    soft: "--accent-soft",
-    heading: "--heading",
-    text: "--text",
-    muted: "--muted",
-    line: "--canvas-line",
-    grid: "--canvas-grid",
-    faint: "--canvas-faint",
-    glow: "--canvas-glow",
-    flash: "--canvas-flash",      // a lit flashlamp's light (draw-bench.js)
-    lamp: "--canvas-lamp",        // a flashlamp's glass edge and metal caps
-    bg: "--bg"                    // for text on a filled tag, and boxes over a plot
+    accent: "--laser-accent",
+    accent2: "--laser-accent-2",
+    soft: "--laser-accent-soft",
+    heading: "--laser-heading",
+    text: "--laser-text",
+    muted: "--laser-muted",
+    line: "--laser-canvas-line",
+    grid: "--laser-canvas-grid",
+    faint: "--laser-canvas-faint",
+    glow: "--laser-canvas-glow",
+    flash: "--laser-canvas-flash",  // a lit flashlamp's light (draw-bench.js)
+    lamp: "--laser-canvas-lamp",    // a flashlamp's glass edge and metal caps
+    bg: "--laser-bg"                // the lab's background: text on a filled tag, boxes over a plot
   });
   var FONT_VARIABLE = "--font-main";
 

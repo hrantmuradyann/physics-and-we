@@ -179,7 +179,7 @@
   var PULSING_HIDES = ["P_out", "T_best", "period"];
   // The readouts that change while the simulation runs ("x" for a flash).
   var LIVE_READOUTS = ["x", "lossNow", "giant", "peak", "powerNow", "time"];
-  var CANVASES = ["bench", "power", "photons", "stability"];
+  var CANVASES = ["bench", "power", "photons", "atoms", "stability"];
   var POWER_WORDS = ["title", "steady"];
 
   var teardown = null;          // takes the current build down, or null
@@ -194,6 +194,12 @@
   // of its own (js/laser/ui/draw-photons.js), not the physics.
   function newCartoon() {
     return root.LaserUI.photons.create({ cols: CARTOON.cols, rows: CARTOON.rows, random: Math.random });
+  }
+
+  // Inside one atom: the medium's energy levels with a row of atoms acting
+  // the simulation out (js/laser/ui/draw-atoms.js), an illustration too.
+  function newAtoms() {
+    return root.LaserUI.atoms.create({ random: Math.random });
   }
 
   function startSlowMotion(config) {
@@ -236,6 +242,7 @@
       sim: bench.start(config),
       history: root.LaserUI.history.create(HISTORY_SIZE),
       cartoon: newCartoon(),
+      atoms: newAtoms(),
       slowMotion: startSlowMotion(config),
       playing: !prefersLessMotion(),
       behind: false,
@@ -345,6 +352,15 @@
         lam: lam !== null && config.medium === state.config.medium ? lam : engine.media.get(config.medium).lam
       };
     }
+    // How curved a mirror is, for the drawing: 0 at the largest radius its
+    // slider allows, 1 at the smallest (on the slider's log scale); null for
+    // a flat mirror.
+    function curveOf(config, name) {
+      var range = bench.controls(config)[name];
+      if (!range) return null;
+      var share = Math.log(range.max / config[name]) / Math.log(range.max / range.min);
+      return Math.min(1, Math.max(0, share));
+    }
     // The mirrors for the bench drawing (draw-bench.js's light.cavity): the
     // cavity's length and aperture, each mirror's shape and focal point,
     // the mode's width along the cavity and a few traced rays.
@@ -357,6 +373,7 @@
         length: config.L,
         aperture: config.aperture,
         shapes: { back: config.mirror1, output: config.mirror2 },
+        curve: { back: curveOf(config, "Rc1"), output: curveOf(config, "Rc2") },
         focus: { back: r.focus1, output: r.focus2 },
         mode: path.mode,
         rays: path.rays.map(function (ray, i) {
@@ -391,6 +408,7 @@
     var powerWords = wordsAt(data, "power.words", POWER_WORDS);
     var stabilityWords = wordsAt(data, "stability.words", UI.stability.WORDS);
     var photonWords = wordsAt(data, "photons.words", UI.photons.WORDS);
+    var atomWords = wordsAt(data, "atoms.words", UI.atoms.WORDS);
     var never = word(data, "readouts.never") || "—";
 
     // Each picture's name for screen readers (role="img" is in the layout):
@@ -491,6 +509,7 @@
       state.sim = bench.start(state.config);
       state.history.clear();
       state.cartoon = newCartoon();       // no atoms or light left from the old run
+      state.atoms = newAtoms();
       state.peak = peakFrom(state.config, powerNow());
       remember();
     }
@@ -684,10 +703,18 @@
 
       // The cartoon acts the simulation out in screen time, its light as
       // bright as the beam.
-      state.cartoon.step(dt, {
+      var drive = {
         excited: excitedNow(),
         light: UI.bench.rayAlpha(beamNow()),
         pump: glowNow()
+      };
+      state.cartoon.step(dt, drive);
+      // The atom's levels act out the same numbers.
+      state.atoms.step(dt, {
+        medium: state.config.medium,
+        excited: drive.excited,
+        light: drive.light,
+        pump: drive.pump
       });
 
       sinceReadout += dt;
@@ -771,6 +798,18 @@
     });
     addCanvas("photons", UI.photons.SIZE, function (view) {
       UI.photons.draw(view, state.cartoon, photonWords);
+    });
+    addCanvas("atoms", UI.atoms.SIZE, function (view) {
+      state.atoms.use(state.config.medium);
+      UI.atoms.draw(view, state.atoms, atomWords, {
+        name: word(data, "media." + state.config.medium),
+        medium: state.config.medium,
+        lam: lam,
+        pumpLam: state.config.pumpLam,
+        pumpKind: state.config.pump,
+        light: UI.bench.rayAlpha(beamNow()),
+        pump: glowNow()
+      });
     });
 
     /* the choice of laser */

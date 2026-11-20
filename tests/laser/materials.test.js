@@ -16,10 +16,10 @@ const M = browser.window.LaserUI.materials;
 const engine = loadEngine();
 const NM = 1e-9;
 
-// The bench's box runs from --bg-2 at the top to --bg at the bottom.
+// The bench's box is one plain colour, --laser-bg (bg2 kept so the checks below stay as they are).
 const THEMES = themeVariables();
 const BACKGROUNDS = ["dark", "light"].map((theme) => ({
-  theme: theme, bg: THEMES[theme]["--bg"], bg2: THEMES[theme]["--bg-2"]
+  theme: theme, bg: THEMES[theme]["--laser-bg"], bg2: THEMES[theme]["--laser-bg"]
 }));
 
 function hex(color) {
@@ -100,7 +100,7 @@ test("readable(): every physical colour stands out on both themes' bench, the sa
     }
   }
   // A colour that already stands out is left as it is.
-  assert.equal(M.readable("#ff4e00", BACKGROUNDS[0].bg), "#ff4e00");
+  assert.equal(M.readable("#ff4e00", "#070b1a"), "#ff4e00");
   // Darkened on the light theme, lightened on the dark one.
   assert.ok(M.contrast(M.readable("#ffff00", "#ffffff"), "#000000") < M.contrast("#ffff00", "#000000"), "darker on light");
   // A background it cannot read: the colour as it was.

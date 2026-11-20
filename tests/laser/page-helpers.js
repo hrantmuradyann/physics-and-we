@@ -14,7 +14,7 @@ const { createBrowser, fakeCanvas, fakeContainer, fakeElement } = require("./fak
 
 const WORDS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "laser.json"), "utf8"));
 const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch", "widths", "focus", "infrared", "ultraviolet"];
-const CANVASES = ["bench", "power", "photons", "stability"];
+const CANVASES = ["bench", "power", "photons", "atoms", "stability"];
 const CONTROLS = ["pump", "coupler", "Rc1", "Rc2", "slowMotion", "absorberT0"];
 // The sliders in rows page.js hides: each curved mirror's radius (stage
 // 10b), shown only for a curved mirror.
@@ -210,13 +210,14 @@ function built(lang, options) {
 //   seen.chart     the latest chart given to draw-plots, by its key: { P }
 //   seen.charts    how many charts were drawn
 //   seen.drives    every { dt, drive } the photon cartoon was stepped with
+//   seen.atomDrives  every { dt, drive } the atom picture was stepped with
 //   seen.cartoons  every cartoon given to the photon drawing
 //   seen.paths     the params of every beamPath() call (the mirrors' rays)
 //   seen.pairs     every { words, pair } given to the stability diagram
 function watch(browser) {
   const seen = {
     steps: [], sims: [], after: [], configs: [], thresholds: [], pumpCalls: 0, switchCalls: 0, peaks: [],
-    bench: [], chart: {}, charts: 0, drives: [], cartoons: [], paths: [], pairs: []
+    bench: [], chart: {}, charts: 0, drives: [], atomDrives: [], cartoons: [], paths: [], pairs: []
   };
   const engineNow = browser.window.LaserEngine;
   const advance = engineNow.bench.advance;
@@ -294,6 +295,18 @@ function watch(browser) {
     draw: function (view, model, words) {
       seen.cartoons.push(model);
       return photons.draw(view, model, words);
+    }
+  });
+  const atoms = UI.atoms;
+  UI.atoms = Object.assign({}, atoms, {
+    create: function (options) {
+      const model = atoms.create(options);
+      const step = model.step;
+      model.step = function (dt, drive) {
+        seen.atomDrives.push({ dt: dt, drive: drive });
+        return step(dt, drive);
+      };
+      return model;
     }
   });
   return seen;

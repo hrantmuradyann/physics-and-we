@@ -110,13 +110,22 @@ for (const b of BENCHES) LIGHTS.push(ofBench(b), ofBench(b, { beam: 0, pump: 0 }
 function physical(theme) {
   const M = UI.materials;
   const bg = palette(theme).bg;
-  const raw = Object.values(M.MEDIA).map((m) => m.body).concat([M.GLASS, M.HIGHLIGHT, M.SHADE, M.INFRARED, M.PUMP_INFRARED,
+  const raw = Object.values(M.MEDIA).map((m) => m.body).concat([M.GLASS, M.MIRROR_GLASS, M.SILVER, M.HIGHLIGHT, M.SHADE, M.INFRARED, M.PUMP_INFRARED,
     palette(theme).flash]);
   for (const b of BENCHES) {
     raw.push(M.beam(b.lam).color);
     if (b.pumpLam) raw.push(M.beam(b.pumpLam).color);
   }
   return raw.concat(raw.map((c) => M.readable(c, bg)));
+}
+
+// The mirrors are drawn as real ones whatever the medium: their glass,
+// silver coating, glint and shade, the coating and the glass's edge made
+// readable on the theme.
+function mirrorColours(colors) {
+  const M = UI.materials;
+  return [M.MIRROR_GLASS, M.SILVER, M.HIGHLIGHT, M.SHADE,
+    M.readable(M.MIRROR_GLASS, colors.bg), M.readable(M.SILVER, colors.bg)];
 }
 
 // The cavity's numbers (stage 10b), as page.js passes them: a He-Ne-like
@@ -290,16 +299,21 @@ test("layout: an odd number of rays, 5 px apart or more, inside the rod, the mid
   assert.ok(spread / (L.rays.length + 1) < 5, "no room for two more rays");
 });
 
-test("faceX: a mirror's face is at its inner edge at the top and bottom, and curved away from the rod between", () => {
+test("faceX: a concave face (the default) is a cup open towards the laser: its rims stand out by sag, its middle on the glass's inner edge", () => {
   const L = bench.layout(900, heightFor(900));
   const back = L.backMirror;
   const output = L.outputMirror;
-  assert.equal(bench.faceX(L, "back", back.y), back.x + back.w);
-  assert.equal(bench.faceX(L, "back", back.y + back.h), back.x + back.w);
-  assertClose(bench.faceX(L, "back", L.axis.y), back.x + back.w - L.sag, 1e-12, "deepest on the axis");
-  assert.equal(bench.faceX(L, "output", output.y), output.x);
-  assertClose(bench.faceX(L, "output", L.axis.y), output.x + L.sag, 1e-12, "the output mirror, mirrored");
-  assert.ok(L.sag > 0 && L.sag < back.w, "the curve stays inside the glass");
+  assertClose(bench.faceX(L, "back", back.y), back.x + back.w + L.sag, 1e-12, "the top rim");
+  assertClose(bench.faceX(L, "back", back.y + back.h), back.x + back.w + L.sag, 1e-12, "the bottom rim");
+  assertClose(bench.faceX(L, "back", L.axis.y), back.x + back.w, 1e-12, "the middle, on the glass");
+  assertClose(bench.faceX(L, "output", output.y), output.x - L.sag, 1e-12, "the output mirror, mirrored");
+  assertClose(bench.faceX(L, "output", L.axis.y), output.x, 1e-12, "its middle on the glass");
+  assert.ok(L.sag > 0, "a curve to see");
+  // Never into the glass, at any height.
+  for (let y = back.y; y <= back.y + back.h; y += 1) {
+    assert.ok(bench.faceX(L, "back", y) >= back.x + back.w - 1e-9, "back at " + y);
+    assert.ok(bench.faceX(L, "output", y) <= output.x + 1e-9, "output at " + y);
+  }
   // The two faces mirror each other at every height.
   for (const y of L.rays) {
     assertClose(bench.faceX(L, "back", y) - back.x, output.x + output.w - bench.faceX(L, "output", y), 1e-9, "at " + y);
@@ -506,20 +520,22 @@ test("draw: each mirror is a piece of glass with a curved face, the back mirror'
   const { recorder, view } = drawAt(900);
   const L = bench.layout(view.w, view.h);
   // The glass (a filled, closed path) and the coating (a stroked curve)
-  // both follow the face: a curve from the inner edge at the top to the
-  // inner edge at the bottom, passing `sag` deep on the axis.
+  // both follow the face: a curve from its top rim to its bottom rim
+  // (faceX there), passing faceX on the axis.
   const curves = recorder.calls.filter((c) => c.name === "quadraticCurveTo");
   assert.equal(curves.length, 4, "glass and coating for two mirrors");
-  for (const [which, mirror, inner] of [["back", L.backMirror, L.backMirror.x + L.backMirror.w], ["output", L.outputMirror, L.outputMirror.x]]) {
-    const mine = curves.filter((c) => Math.abs(c.args[2] - inner) < 1e-9);
+  for (const [which, mirror] of [["back", L.backMirror], ["output", L.outputMirror]]) {
+    const rim = bench.faceX(L, which, mirror.y);
+    const mine = curves.filter((c) => Math.abs(c.args[2] - rim) < 1e-9);
     assert.equal(mine.length, 2, which);
     for (const curve of mine) {
       const [controlX, controlY, endX, endY] = curve.args;
       assert.equal(endY, mirror.y + mirror.h, which + ": ends at the bottom");
+      assertClose(endX, bench.faceX(L, which, mirror.y + mirror.h), 1e-9, which + ": at the bottom rim");
       assertClose(controlY, L.axis.y, 1e-12, which + ": bends on the axis");
-      // A quadratic curve passes half-way between its ends' line and its control point.
-      assertClose((inner + controlX) / 2, bench.faceX(L, which, L.axis.y), 1e-9, which + ": the curve is faceX");
-      assert.equal(endX, inner);
+      // A quadratic curve with both ends at one x passes half-way between
+      // that x and its control point.
+      assertClose((endX + controlX) / 2, bench.faceX(L, which, L.axis.y), 1e-9, which + ": the curve is faceX");
     }
   }
   // The coatings: the back mirror's is wider and more opaque.
@@ -542,6 +558,17 @@ test("draw: each mirror is a piece of glass with a curved face, the back mirror'
       }
       coatings.push({ alpha: a, width: lw });
     }
+  }
+  // The glass's edge and the coating are lines, so they are made readable
+  // on the lab's near-white (the raw colours are too pale for it; the raw
+  // glass colour is only the faint fill).
+  const M = UI.materials;
+  const strokes = recorder.sets.filter((s) => s.name === "strokeStyle").map((s) => s.value);
+  for (const raw of [M.MIRROR_GLASS, M.SILVER]) {
+    const shown = M.readable(raw, view.colors.bg);
+    assert.notEqual(shown, raw, raw + " needs darkening on the lab's background");
+    assert.ok(strokes.includes(shown), raw + ": drawn readable");
+    assert.ok(!strokes.includes(raw), raw + ": never as a raw line");
   }
   assert.equal(coatings.length, 2);
   assert.ok(coatings[0].width > coatings[1].width, "the back mirror's coating is thicker");
@@ -965,12 +992,15 @@ function painted(recorder) {
 }
 
 // The flash's light on a bench of width w: what is painted in the flash
-// colour, and the streaks among it (stroked lines).
+// colour (raw for the glows: the tint, the halo, the beams; made readable
+// for the streaks and the burning gas, which must show on the lab's
+// near-white), and the streaks among it (stroked lines).
 function flashLight(w, light, t, theme) {
   const { recorder } = drawAt(w, LABELS, theme || "dark", light, t);
-  const flash = palette(theme || "dark").flash;
+  const colors = palette(theme || "dark");
+  const flashes = [colors.flash, UI.materials.readable(colors.flash, colors.bg)];
   const all = painted(recorder);
-  const lit = all.filter((p) => p.color === flash);
+  const lit = all.filter((p) => flashes.includes(p.color));
   const streaks = lit.filter((p) => p.call === "stroke").map((p) => {
     const [from, to] = [p.path[0].args, p.path[1].args];
     return { x1: from[0], y1: from[1], x2: to[0], y2: to[1], alpha: p.alpha };
@@ -1111,7 +1141,7 @@ test("draw: only the lamp's gas blooms; the bloom is set back before anything el
       const blooming = flashLight(w, lit("flashlamp", pump), 0, theme).all.filter((p) => p.blur > 0);
       assert.equal(blooming.length, 1, theme + " " + pump);
       assert.equal(blooming[0].args.join(","), [F.x + L.flashCap, F.y, F.w - 2 * L.flashCap, F.h].join(","));
-      assert.equal(blooming[0].color, palette(theme).flash);
+      assert.equal(blooming[0].color, UI.materials.readable(palette(theme).flash, palette(theme).bg), "the gas readable on the bench");
       assertClose(blooming[0].blur, L.bloom * pump, 1e-12);
     }
   }
@@ -1345,31 +1375,71 @@ test("the aperture is drawn as the rod's half-height, or the bore's on a dischar
   }
 });
 
-test("the mirrors' faces follow their shapes: concave into the glass, convex out of it, flat straight", () => {
+test("the mirrors' faces follow their shapes, always standing out of the glass towards the laser: concave rims, a convex middle, flat straight", () => {
   const L = bench.layout(800, heightFor(800));
   const y = L.axis.y;
+  const top = L.backMirror.y;
   const backInner = L.backMirror.x + L.backMirror.w;
   const outInner = L.outputMirror.x;
-  assert.equal(bench.faceX(L, "back", y, "flat"), backInner);
-  assert.equal(bench.faceX(L, "output", y, "flat"), outInner);
-  assertClose(bench.faceX(L, "back", y, "concave"), backInner - L.sag, 1e-12, "concave back, sag into the glass");
-  assertClose(bench.faceX(L, "output", y, "concave"), outInner + L.sag, 1e-12, "concave output");
+  for (const at of [top, y]) {
+    assert.equal(bench.faceX(L, "back", at, "flat"), backInner);
+    assert.equal(bench.faceX(L, "output", at, "flat"), outInner);
+  }
+  assertClose(bench.faceX(L, "back", y, "concave"), backInner, 1e-12, "concave back: the middle on the glass");
+  assertClose(bench.faceX(L, "back", top, "concave"), backInner + L.sag, 1e-12, "concave back: the rims out by sag");
+  assertClose(bench.faceX(L, "output", y, "concave"), outInner, 1e-12, "concave output");
+  assertClose(bench.faceX(L, "output", top, "concave"), outInner - L.sag, 1e-12, "concave output's rims");
   assertClose(bench.faceX(L, "back", y, "convex"), backInner + L.sag, 1e-12, "convex back bulges into the cavity");
+  assertClose(bench.faceX(L, "back", top, "convex"), backInner, 1e-12, "convex back's ends on the glass");
   assertClose(bench.faceX(L, "output", y, "convex"), outInner - L.sag, 1e-12, "convex output");
   // Without a shape (no cavity numbers), as before stage 10b: concave.
   assert.equal(bench.faceX(L, "back", y), bench.faceX(L, "back", y, "concave"));
-  // At the top and bottom every face meets the mirror's edge.
-  for (const shape of bench.SHAPES) assert.equal(bench.faceX(L, "back", L.backMirror.y, shape), backInner, shape);
   assert.deepEqual(Array.from(bench.SHAPES), ["flat", "concave", "convex"]);
-  // The drawn faces: the curve's control point is 2·sag into the glass,
-  // out of it, or on the edge.
+  // The drawn faces: from rim to rim, with the control point that makes
+  // the curve pass faceX on the axis (2·middle − rim).
   const curves = (light) => drawAt(800, LABELS, "dark", light).recorder.calls.filter((c) => c.name === "quadraticCurveTo");
   const flatConcave = curves(withCavity(HENE));
-  assert.ok(flatConcave.some((c) => c.args[0] === backInner), "the flat back mirror's face is straight");
-  assert.ok(flatConcave.some((c) => Math.abs(c.args[0] - (outInner + 2 * L.sag)) < 1e-9), "the concave output mirror");
+  assert.ok(flatConcave.some((c) => c.args[0] === backInner && c.args[2] === backInner), "the flat back mirror's face is straight");
+  assert.ok(flatConcave.some((c) => Math.abs(c.args[0] - (outInner + L.sag)) < 1e-9 && Math.abs(c.args[2] - (outInner - L.sag)) < 1e-9),
+    "the concave output mirror: rims out, the middle on the glass");
   const unstable = curves(withCavity(UNSTABLE));
-  assert.ok(unstable.some((c) => Math.abs(c.args[0] - (outInner - 2 * L.sag)) < 1e-9), "the convex output mirror bulges");
-  assert.ok(unstable.some((c) => Math.abs(c.args[0] - (backInner - 2 * L.sag)) < 1e-9), "the concave back mirror");
+  assert.ok(unstable.some((c) => Math.abs(c.args[0] - (outInner - 2 * L.sag)) < 1e-9 && c.args[2] === outInner), "the convex output mirror bulges");
+  assert.ok(unstable.some((c) => Math.abs(c.args[0] - (backInner - L.sag)) < 1e-9 && Math.abs(c.args[2] - (backInner + L.sag)) < 1e-9),
+    "the concave back mirror");
+});
+
+test("a curved face is drawn deeper the smaller its radius: cavity.curve 0 (the largest radius) gives sagMin, 1 (the smallest) sagMax", () => {
+  for (const w of [280, 327, 800, 1400]) {
+    const L = bench.layout(w, heightFor(w));
+    assert.ok(L.sagMin > 0 && L.sagMin < L.sagMax, "w " + w + ": a range of depths");
+    // The deepest face stays clear of the rod and of the gas tube's ends.
+    assert.ok(L.backMirror.x + L.backMirror.w + L.sagMax < L.rod.x, "w " + w + ": clear of the rod");
+    assert.ok(L.outputMirror.x - L.sagMax > L.rod.x + L.rod.w, "w " + w + ": on both sides");
+  }
+  const L = bench.layout(800, heightFor(800));
+  const backInner = L.backMirror.x + L.backMirror.w;
+  const outInner = L.outputMirror.x;
+  const faces = (curve) => {
+    const cavity = Object.assign({}, UNSTABLE, { curve: curve });
+    return drawAt(800, LABELS, "dark", withCavity(cavity)).recorder.calls.filter((c) => c.name === "quadraticCurveTo");
+  };
+  // Concave back mirror: its rims at sag; convex output: its middle at sag.
+  const rimAt = (calls, sag) => calls.some((c) => Math.abs(c.args[2] - (backInner + sag)) < 1e-9);
+  const bulgeAt = (calls, sag) => calls.some((c) => Math.abs(c.args[0] - (outInner - 2 * sag)) < 1e-9);
+  const flattest = faces({ back: 0, output: 0 });
+  assert.ok(rimAt(flattest, L.sagMin) && bulgeAt(flattest, L.sagMin), "the largest radius: sagMin");
+  const deepest = faces({ back: 1, output: 1 });
+  assert.ok(rimAt(deepest, L.sagMax) && bulgeAt(deepest, L.sagMax), "the smallest radius: sagMax");
+  const half = faces({ back: 0.5, output: 0.25 });
+  assert.ok(rimAt(half, (L.sagMin + L.sagMax) / 2), "half-way");
+  assert.ok(bulgeAt(half, L.sagMin + 0.25 * (L.sagMax - L.sagMin)), "a quarter of the way");
+  // Out of range is held at the ends; null, missing or not a number gives sag.
+  const held = faces({ back: 7, output: -3 });
+  assert.ok(rimAt(held, L.sagMax) && bulgeAt(held, L.sagMin), "held in 0..1");
+  for (const curve of [{ back: null, output: NaN }, { back: "1" }, undefined]) {
+    const plain = faces(curve);
+    assert.ok(rimAt(plain, L.sag) && bulgeAt(plain, L.sag), JSON.stringify(curve) + ": sag");
+  }
 });
 
 test("the traced rays: straight from mirror face to mirror face, at the heights the engine traced, fainter each round trip", () => {
@@ -1512,9 +1582,10 @@ test("F₁, F₂: R/2 from each curved mirror on the drawing's axis scale; solid
     // Both lie to the right (the back mirror's F in front of it, the convex
     // mirror's behind it): right-aligned just inside the output mirror.
     for (const t of texts) {
-      assertClose(t.args[1], L.axis.x2 - 8, 1e-12, "inside the output mirror, clear of a convex face");
-      assert.ok(8 > L.sag, "the gap is more than the face's bulge");
-      assert.equal(t.args[3], room, kind + ": its room");
+      // 8 px beyond the deepest a face can stand out (sagMax), so even
+      // the smallest radius's face does not run into the words.
+      assertClose(t.args[1], L.axis.x2 - 8 - L.sagMax, 1e-12, "inside the output mirror, clear of its face");
+      assertClose(t.args[3], Math.max(10, room - L.sagMax), 1e-12, kind + ": its room, less the face");
     }
     assert.ok(room < L.rod.x - L.axis.x1, "never past the rod's start");
     // Arrowheads at the right edge: the real F₁'s filled, the virtual F₂'s
@@ -1688,11 +1759,12 @@ test("an invisible beam: the false colour, and its wavelength written with 'infr
   assert.ok(!bare.recorder.calls.some((c) => c.name === "fillText" && /µm/.test(c.args[0])));
 });
 
-test("the two-level atom, or a light without a medium, keeps the theme's colours", () => {
+test("the two-level atom, or a light without a medium, keeps the theme's colours (the mirrors and the flash's readable light excepted)", () => {
   for (const light of [ofBench({ medium: "two-level", pump: "flashlamp", lam: 694.3e-9 }), LASING]) {
     for (const theme of ["dark", "light"]) {
       const { recorder, view } = drawAt(800, LABELS, theme, light);
-      const allowed = Object.values(view.colors);
+      const allowed = Object.values(view.colors).concat(mirrorColours(view.colors),
+        [UI.materials.readable(view.colors.flash, view.colors.bg)]);
       for (const set of recorder.sets.filter((e) => /Style$/.test(e.name))) {
         assert.ok(allowed.includes(set.value), theme + ": " + set.value);
       }
@@ -1748,7 +1820,7 @@ test("a coloured ray runs over a thin casing in the background's colour, so it s
 test("a medium id that is a name on every object ('constructor') is no medium: the theme's colours", () => {
   for (const id of ["constructor", "toString", "__proto__"]) {
     const { recorder, view } = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "laser", lam: 1064e-9 }));
-    const allowed = Object.values(view.colors);
+    const allowed = Object.values(view.colors).concat(mirrorColours(view.colors));
     for (const set of recorder.sets.filter((e) => /Style$/.test(e.name))) assert.ok(allowed.includes(set.value), id + ": " + set.value);
     assert.ok(!recorder.calls.some((c) => c.name === "fillText" && /invisible/.test(c.args[0])), id);
   }
@@ -2142,5 +2214,51 @@ test("sparks and lit atoms are white over a coloured medium on both themes (on c
     const sparks = all.filter((d) => d.r === 3.2 || d.r === 2.6);
     assert.ok(sparks.length > 0, light.medium);
     for (const d of sparks) assert.equal(d.fill, UI.materials.HIGHLIGHT, light.medium);
+  }
+});
+
+test("a mirror's mount has a hole for the light: its plate never crosses the rays, the beam or the pump's cone, at any width", () => {
+  for (let w = 280; w <= 1400; w += 20) {
+    const L = bench.layout(w, heightFor(w));
+    const hole = bench.mountHole(L);
+    for (const m of [L.backMirror, L.outputMirror]) {
+      assert.ok(hole.top > m.y && hole.bottom < m.y + m.h, "w " + w + ": the hole inside the mirror");
+    }
+    for (const y of L.rays) assert.ok(y > hole.top && y < hole.bottom, "w " + w + ": a ray at " + y);
+    for (const half of [L.apertureHalf, L.boreHalf, L.cone.start]) {
+      assert.ok(L.axis.y - half > hole.top && L.axis.y + half < hole.bottom, "w " + w + ": the light's half-height " + half);
+    }
+  }
+  // The drawn plates (colors.muted, MOUNT_PLATE wide, at each mirror's
+  // outer edge) stop at the hole.
+  for (const kind of ["diode", "flashlamp", "discharge"]) {
+    const { recorder, view } = drawAt(800, LABELS, "dark", lit(kind, 1));
+    const L = bench.layout(800, view.h);
+    const hole = bench.mountHole(L);
+    const plates = recorder.calls.filter((c) => c.name === "fillRect" && c.args[2] === 3 &&
+      (c.args[0] === L.backMirror.x - 3 || c.args[0] === L.outputMirror.x + L.outputMirror.w));
+    assert.equal(plates.length, 4, kind + ": two pieces for each mirror");
+    for (const p of plates) {
+      const top = p.args[1];
+      const bottom = p.args[1] + p.args[3];
+      assert.ok(bottom <= hole.top + 1e-9 || top >= hole.bottom - 1e-9, kind + ": a plate across the hole, " + top + " to " + bottom);
+    }
+  }
+});
+
+test("a lit flash shows on the lab's near-white: its streaks and its burning gas are readable, the raw silver-white only a glow", () => {
+  const M = UI.materials;
+  for (const theme of ["dark", "light"]) {
+    const colors = palette(theme);
+    const shown = M.readable(colors.flash, colors.bg);
+    assert.ok(M.contrast(shown, colors.bg) >= 3, theme + ": it shows");
+    const { lit: light, streaks } = flashLight(900, lit("flashlamp", 1), 0, theme);
+    assert.ok(streaks.length > 0);
+    for (const p of light.filter((q) => q.call === "stroke")) assert.equal(p.color, shown, theme + ": a streak");
+    // The raw colour paints only fills at partial alpha (the tint, the halo, the beams).
+    for (const p of light.filter((q) => q.color === colors.flash)) {
+      assert.notEqual(p.call, "stroke", theme + ": no raw line");
+      assert.ok(p.alpha < 0.6, theme + ": a raw fill is a faint glow, alpha " + p.alpha);
+    }
   }
 });

@@ -17,6 +17,9 @@
                                     A medium not listed (the two-level
                                     atom) is drawn in the theme's colours
      LaserUI.materials.GLASS        the glass of a gas tube or a dye cell
+     LaserUI.materials.MIRROR_GLASS a mirror's glass seen edge-on: the pale
+                                    green of optical glass
+     LaserUI.materials.SILVER       a mirror's reflecting coating
      LaserUI.materials.HIGHLIGHT    the light a polished rod reflects, and
      LaserUI.materials.SHADE        its shade: both drawn over the rod
                                     (tested against each rod's colour)
@@ -65,6 +68,10 @@
     "co2": Object.freeze({ look: "gas", body: "#d77fe2" })            // pink-violet
   });
   var GLASS = "#a8c8d8";
+  // A mirror, as a real one looks from the side: a block of optical glass,
+  // pale green at its edge, and a metal-bright coating on its face.
+  var MIRROR_GLASS = "#b9dcd2";
+  var SILVER = "#8e98a3";
   // Drawn over a rod, not over the background: the light it reflects
   // along its top, and the shade along its bottom (black at a low alpha,
   // darker on both themes).
@@ -219,6 +226,8 @@
   UI.materials = Object.freeze({
     MEDIA: MEDIA,
     GLASS: GLASS,
+    MIRROR_GLASS: MIRROR_GLASS,
+    SILVER: SILVER,
     HIGHLIGHT: HIGHLIGHT,
     SHADE: SHADE,
     INFRARED: INFRARED,

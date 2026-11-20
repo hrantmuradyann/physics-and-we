@@ -102,8 +102,8 @@
                 the lens behind the back mirror into the rod, as the
                 diodes' light
    A diode's or a pump laser's light has its wavelength's colour (stage
-   10c2); the flash's is colors.flash, a bluish white on the dark theme, a
-   warm orange on the light one; without a medium, the theme's glow.
+   10c2); the flash's is colors.flash (a silver-white, the same in both
+   themes), made readable on the bench; without a medium, the theme's glow.
 
    THE Q-SWITCH (docs/laser-plan.md, stage 8b)
      absorber  a filter plate on a post in the gap between the back
@@ -193,9 +193,15 @@
   var ESCAPE_RUN = 0.06;
   // After the word F: which mirror's focus it is.
   var FOCUS_MARKS = ["₁", "₂"];
-  // An F's words start this far inside the mirror's face edge: clear of a
-  // convex face, which bulges into the cavity by L.sag.
+  // An F's words start this far inside the mirror's face edge, plus the
+  // deepest a face can stand out (L.sagMax).
   var FOCUS_GAP = 8;
+  // A mirror's mount (px): the metal plate behind the glass, and the
+  // half-width of its adjusting knobs.
+  var MOUNT_PLATE = 3;
+  var MOUNT_KNOB = 2.5;
+  // The light's clearance in the mount's hole, above and below it (px).
+  var MOUNT_HOLE = 2;
   // The traced rays are drawn only this share of a mirror's height above
   // and below the mirrors.
   var PATH_BAND = 0.25;
@@ -345,7 +351,9 @@
       railY: railY,
       backMirror: { x: side, y: mirrorTop, w: mirrorThickness, h: mirrorHeight },
       outputMirror: { x: innerRight, y: mirrorTop, w: mirrorThickness, h: mirrorHeight },
-      sag: 0.35 * mirrorThickness,                  // how deep the mirrors' faces curve
+      sag: 0.35 * mirrorThickness,                  // how deep a curved face is when its radius is not known
+      sagMin: 0.25 * mirrorThickness,               // ... the largest radius
+      sagMax: Math.min(2.8 * mirrorThickness, 0.08 * span),   // ... the smallest radius
       rod: { x: rodX, y: rodY, w: rodLength, h: rodHeight },
       rodPosts: rodPosts,
       lamp: { x: lampX, y: lampY, w: lampLength, h: lampHeight },
@@ -460,15 +468,35 @@
     return 1;
   }
 
-  // A mirror's face: at the mirror's inner edge at the top and bottom, and
-  // `sag` into the glass in the middle for a concave mirror (the default),
-  // `sag` out of it for a convex one, straight for a flat one. This is the
-  // curve quadraticCurveTo draws in mirror().
+  // How deep a mirror's face curves (px): from its radius when the
+  // drawing has it (L.depth, set in draw(): a small radius curves deeply,
+  // a large one hardly at all), else the layout's `sag`.
+  function sagOf(L, which) {
+    if (L.depth && typeof L.depth[which] === "number") return L.depth[which];
+    return L.sag;
+  }
+
+  // How far a mirror's face stands out of the glass towards the laser at
+  // height share u (0 at the top, 1 at the bottom). Convex: the middle
+  // bulges out by the sag. Concave: the top and bottom stand out by the
+  // sag and the middle stays on the glass, a cup open towards the laser.
+  // Flat: 0. The face never cuts into the glass, so a deep curve fits.
+  function faceOffset(L, which, u, shape) {
+    var bend = bendOf(shape);
+    var sag = sagOf(L, which);
+    var middle = 4 * u * (1 - u);
+    if (bend === 0) return 0;
+    if (bend < 0) return sag * middle;
+    return sag * (1 - middle);
+  }
+
+  // A mirror's face: its x at height y. This is the curve quadraticCurveTo
+  // draws in mirror().
   function faceX(L, which, y, shape) {
     var mirror = which === "back" ? L.backMirror : L.outputMirror;
     var u = clamp((y - mirror.y) / mirror.h, 0, 1);
-    var depth = 4 * L.sag * u * (1 - u) * bendOf(shape);
-    return which === "back" ? mirror.x + mirror.w - depth : mirror.x + depth;
+    var offset = faceOffset(L, which, u, shape);
+    return which === "back" ? mirror.x + mirror.w + offset : mirror.x - offset;
   }
 
   // The rays' strength: the square root of the light, so a weak laser
@@ -541,48 +569,99 @@
     g.fillRect(x - POST_FOOT / 2, railY - 4, POST_FOOT, 4);
   }
 
-  // A mirror: a piece of glass with a curved, coated face, held at the
-  // top and the bottom. `strong` is the mirror that reflects everything;
-  // the output mirror's coating is thinner and paler.
+  // The hole in a mirror's mount: from MOUNT_HOLE px above the highest
+  // light that passes a mirror (the rod's or the bore's half-height, which
+  // the rays stay inside, and the pump's cone) to as far below it.
+  function mountHole(L) {
+    var half = Math.max(L.apertureHalf, L.boreHalf, L.cone.start);
+    return { top: L.axis.y - half - MOUNT_HOLE, bottom: L.axis.y + half + MOUNT_HOLE };
+  }
+
+  // A mirror, drawn as a real one looks from the side: a block of pale
+  // green optical glass with a glint along it, a silver coating on its
+  // curved face, held in a metal mount with an adjusting knob at the top
+  // and the bottom. `strong` is the mirror that reflects everything; the
+  // output mirror's coating is thinner and see-through, as it lets light out.
   function mirror(g, colors, L, which, strong, shape) {
     var m = which === "back" ? L.backMirror : L.outputMirror;
     var outer = which === "back" ? m.x : m.x + m.w;
     var inner = which === "back" ? m.x + m.w : m.x;
-    var towardsGlass = which === "back" ? -1 : 1;
-    // The curve passes `sag` into the glass (concave), out of it (convex),
-    // or not at all (flat).
-    var controlX = inner + towardsGlass * 2 * L.sag * bendOf(shape);
+    var towardsLaser = which === "back" ? 1 : -1;
+    // The face's ends and its middle (faceOffset), and the control point
+    // that puts a quadratic curve through all three.
+    var endX = inner + towardsLaser * faceOffset(L, which, 0, shape);
+    var middleX = inner + towardsLaser * faceOffset(L, which, 0.5, shape);
+    var controlX = 2 * middleX - endX;
     var middleY = m.y + m.h / 2;
+
+    var M = UI.materials;
+    var glassEdge = M.readable(M.MIRROR_GLASS, colors.bg);
+    var silver = M.readable(M.SILVER, colors.bg);
+    var awayFromLaser = -towardsLaser;
+
+    // the mount behind the glass: a metal plate as tall as the mirror and
+    // its clamps, with an adjusting knob sticking out at the top and the
+    // bottom (as on a real mirror mount)
+    // It has a hole for the light, as a real mount does: the plate stops
+    // short of the beam, the rays and the pump light (mountHole), which
+    // pass through the mirror.
+    var plateX = which === "back" ? outer - MOUNT_PLATE : outer;
+    var hole = mountHole(L);
+    g.fillStyle = colors.muted;
+    g.fillRect(plateX, m.y - 4, MOUNT_PLATE, hole.top - (m.y - 4));
+    g.fillRect(plateX, hole.bottom, MOUNT_PLATE, m.y + m.h + 4 - hole.bottom);
+    // (rectangles, not circles: a circle on the bench is a photon or an atom)
+    var knobX = outer + awayFromLaser * (MOUNT_PLATE + MOUNT_KNOB);
+    [m.y + 0.12 * m.h, m.y + 0.88 * m.h].forEach(function (y) {
+      g.fillRect(Math.min(outer, knobX), y - 1, MOUNT_PLATE + MOUNT_KNOB, 2);
+      g.fillRect(knobX - MOUNT_KNOB, y - 1.6 * MOUNT_KNOB, 2 * MOUNT_KNOB, 3.2 * MOUNT_KNOB);
+    });
 
     // the glass
     g.beginPath();
     g.moveTo(outer, m.y);
-    g.lineTo(inner, m.y);
-    g.quadraticCurveTo(controlX, middleY, inner, m.y + m.h);
+    g.lineTo(endX, m.y);
+    g.quadraticCurveTo(controlX, middleY, endX, m.y + m.h);
     g.lineTo(outer, m.y + m.h);
     g.closePath();
-    g.globalAlpha = 0.22;
-    g.fillStyle = colors.accent;
+    g.globalAlpha = 0.55;
+    g.fillStyle = M.MIRROR_GLASS;
     g.fill();
     g.globalAlpha = 1;
-    g.strokeStyle = colors.faint;
+    g.strokeStyle = glassEdge;
     g.lineWidth = 1;
     g.stroke();
 
-    // the coating on the face
+    // the glass's darker back edge, and a glint of light along it
+    g.globalAlpha = 0.18;
+    g.fillStyle = M.SHADE;
+    g.fillRect(which === "back" ? outer : outer - 2, m.y, 2, m.h);
+    g.globalAlpha = 0.9;
+    g.strokeStyle = M.HIGHLIGHT;
+    g.lineWidth = 1.5;
+    var glintX = outer + towardsLaser * 0.4 * m.w;
+    line(g, glintX, m.y + 0.1 * m.h, glintX, m.y + 0.45 * m.h);
+    g.globalAlpha = 0.6;
+    line(g, glintX, m.y + 0.55 * m.h, glintX, m.y + 0.65 * m.h);
+    g.globalAlpha = 1;
+
+    // the silver coating on the face
     g.beginPath();
-    g.moveTo(inner, m.y);
-    g.quadraticCurveTo(controlX, middleY, inner, m.y + m.h);
-    g.strokeStyle = colors.heading;
-    g.lineWidth = strong ? 3.5 : 2;
-    g.globalAlpha = strong ? 0.95 : 0.5;
+    g.moveTo(endX, m.y);
+    g.quadraticCurveTo(controlX, middleY, endX, m.y + m.h);
+    g.strokeStyle = silver;
+    g.lineWidth = strong ? 4 : 2.5;
+    g.globalAlpha = strong ? 1 : 0.55;
     g.stroke();
     g.globalAlpha = 1;
 
     // the holder: a clamp at the top and at the bottom
+    // (as wide as the glass with a concave face's rims)
+    var clampLeft = Math.min(m.x, endX) - 2;
+    var clampWidth = Math.max(m.x + m.w, endX) + 2 - clampLeft;
     g.fillStyle = colors.muted;
-    g.fillRect(m.x - 2, m.y - 3, m.w + 4, 3);
-    g.fillRect(m.x - 2, m.y + m.h, m.w + 4, 3);
+    g.fillRect(clampLeft, m.y - 4, clampWidth, 4);
+    g.fillRect(clampLeft, m.y + m.h, clampWidth, 4);
   }
 
   // "Transmission 5.00 %": the word and the output mirror's transmission,
@@ -817,7 +896,9 @@
   function flashStreaks(g, colors, L, pump, t) {
     var F = L.flashTube;
     var time = t;
-    g.strokeStyle = colors.flash;
+    // Lines, so readable on the bench (the silver-white flash is too pale
+    // for the near-white lab as it is; the tint and the halo stay a glow).
+    g.strokeStyle = UI.materials.readable(colors.flash, colors.bg);
     g.lineWidth = 2;
     for (var k = 0; k < FLASH_STREAKS; k++) {
       var angle = 2 * Math.PI * (k + 0.5) / FLASH_STREAKS;
@@ -865,7 +946,7 @@
       // by restore() so no other part blooms.
       g.save();
       g.globalAlpha = 0.4 + 0.6 * pump;
-      g.fillStyle = colors.flash;
+      g.fillStyle = UI.materials.readable(colors.flash, colors.bg);
       g.shadowColor = colors.flash;
       g.shadowBlur = L.bloom * pump;
       g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);
@@ -1003,11 +1084,11 @@
   // The pump's light (stage 10c2): a diode's or a pump laser's colour from
   // its wavelength, or materials' pump false colour when it cannot be seen
   // (unlike the laser's, so 808 nm and 1064 nm stay apart); the flash's
-  // colour; made readable over a medium of its own. Without a medium, the
-  // theme's colours.
+  // colour, readable on the bench with or without a medium; the others
+  // made readable over a medium of their own, the theme's glow without one.
   function pumpColourOf(light, colors, kind, look) {
-    if (!look) return kind === "flashlamp" ? colors.flash : colors.glow;
     if (kind === "flashlamp") return UI.materials.readable(colors.flash, colors.bg);
+    if (!look) return colors.glow;
     var lam = ownPumpLam(light, kind);
     if (lam === null) return colors.glow;
     var pumpBeam = UI.materials.beam(lam);
@@ -1144,6 +1225,16 @@
     var cavity = light ? light.cavity : null;
     if (!cavity || !(cavity.length > 0) || !(cavity.aperture > 0)) return null;
     return cavity;
+  }
+
+  // How deep a mirror's face is drawn, from the cavity's `curve` (0 for
+  // the largest radius the slider allows, 1 for the smallest), or null
+  // when the cavity does not give it.
+  function depthOf(L, cavity, which) {
+    if (!cavity || !cavity.curve) return null;
+    var curve = cavity.curve[which];
+    if (typeof curve !== "number" || !isFinite(curve)) return null;
+    return L.sagMin + clamp(curve, 0, 1) * (L.sagMax - L.sagMin);
   }
 
   // A mirror's shape, if the cavity gives one this file knows.
@@ -1333,7 +1424,8 @@
         hollowArrowHead(g, tip, rowY - 0.35 * size, dx, 5);
       }
       g.textAlign = right ? "right" : "left";
-      g.fillText(text, right ? S.x2 - FOCUS_GAP : S.x1 + FOCUS_GAP, rowY, S.room);
+      var gap = FOCUS_GAP + L.sagMax;
+      g.fillText(text, right ? S.x2 - gap : S.x1 + gap, rowY, Math.max(10, S.room - L.sagMax));
     });
   }
 
@@ -1348,6 +1440,7 @@
     var rodBottom = L.rod.y + L.rod.h;
     var cavity = cavityOf(light);
     var shapes = { back: shapeOf(cavity, "back"), output: shapeOf(cavity, "output") };
+    L.depth = { back: depthOf(L, cavity, "back"), output: depthOf(L, cavity, "output") };
     var look = lookOf(light);
     // Screen time, for the flash's streaks, the photons and the atoms:
     // still (as at t = 0) for a visitor who asked for less motion.
@@ -1505,6 +1598,7 @@
     PUMP_DEPTH: PUMP_DEPTH,
     SHAPES: SHAPES,
     layout: layout,
+    mountHole: mountHole,
     faceX: faceX,
     raysOut: raysOut,
     rayAlpha: rayAlpha,

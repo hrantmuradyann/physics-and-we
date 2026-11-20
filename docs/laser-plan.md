@@ -108,7 +108,10 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 - ✅ Stage 10b: the mirrors on the page (each mirror flat, concave or convex, a curved one's radius slider; the hourglass, traced rays that fade and walk out, each mirror's F, "Widths × k"; the readouts of the pair; the stability diagram beside the chart; `bench.controls`' radii and `bench.beamPath`).
 - ✅ Stage 10c2: the pump you can see working (end-pumped diodes and pump laser, the filter beyond the rod, pump photons, gas atoms, light dimmed behind a dark filter).
 - ✅ Stage 10c1 (committed): each medium's look and the beam's colour (`materials.js`; the rods as crystals in their colours, the dye in a glass cell, each gas glowing in its colour, the beam in its wavelength's colour or a labelled false colour; §5.10).
-- Next: stage 11, after asking the owner (see "Where we stopped" just below).
+- ✅ After 10c2, at the owner's request (2026-11-20): one near-white lab in both themes (`--laser-*` colours, `.laser-lab`), the mirrors drawn as real ones (glass, silver coating, a mount with knobs; each face standing out towards the laser, as deep as its radius on the slider), each mirror's controls beside the drawing, and "inside one atom" (`draw-atoms.js`) under the cartoon.
+  - **Finished 2026-11-20** (the session before had stopped part-way, with 5 tests failing): the tests follow the new mirror faces (each standing out towards the laser; as deep as `cavity.curve`, the radius on its slider) and the controls' new order; new tests for the depth, the page's `curveOf`, the atom picture's drive from the page, its readable colours, the mirrors' readable lines and `.laser-lab` mapping every themed site colour (`OUTSIDE_THE_LAB` lists the six it need not); `--canvas-flash` and `--canvas-lamp`, unused since the lab has its own, removed. 13 stale entries of `mutations.js` fixed (3 more moved with the review's tidy-up) and 27 added; 949 of 949 caught (the last run found one stale entry the tidy-up moved, and a line in `mountHole` that never mattered, the rays always lying inside the rod's half-height: the line went, and its mistake now shrinks the hole below the rod's).
+  - **Review** (`/code-review medium`, 10 findings), fixed: the flash nearly invisible on the near-white (its silver-white 1.6:1): the streaks, the burning gas and the flash's pump photons now `readable`, the tint and halo stay a faint glow; the mirror mount's plate crossed the beam and the pump cone: it has a hole (`mountHole`); the atom picture wrote "1064 nm" under the bench's "1.06 µm": both `format.si`; an atom glowed on its heat drop to the ground: only up, or moving to or from there; the atom picture's screen-reader text described four levels only: now every scheme; the cartoon's and the atom's drive worked out twice a frame; CLAUDE.md's and draw-bench.js's per-theme flash colours. Declined: the atom picture's pump following the gain (`glowNow`), not the current (`benchPumpNow`): the cartoon does the same on purpose (`page-choose.test.js`: a discharge at the optimum law's top has no net pumping of the upper level, which is why its gain is 0); `docs/laser-guide.md` in CLAUDE.md's file map: it is the owner's untracked learning material, not part of the repo; `transparent` in css/laser.css: the colour-literal test allows `transparent` and `currentColor` on purpose (CLAUDE.md now says so). Not yet seen in a browser: the flash and the mount's hole.
+- Stage 11 (lenses outside the laser): the owner chose the full plan on the page (2026-11-20); split into 11a (engine) and 11b (page), see the stage below.
 
 ### Where we stopped (2026-11-20), for the next session
 
@@ -1480,6 +1483,50 @@ Three sub-stages, one commit each, each through the whole recipe (§3):
   - §12 field and pressure rows (1.94×10⁵ V/cm, 0.033 atm; 2.92×10⁸ V/cm, 7.4×10⁴ atm);
   - Self's formula: s = f → output waist at the back focal plane.
 - **Breaks:** λ in nm passed to Sellmeier; flipped normal; wrong sign in Self's formula.
+
+**The owner's choice (2026-11-20):** asked how much of the plan visitors should see, the owner chose **"the full plan on the page"**: a lens picker with several lenses and glasses, a telescope, exact rays drawn through each lens, and the field and pressure readouts. Split like stages 8 and 10: **11a** the engine (the page unchanged), **11b** the page.
+
+#### Stage 11a — Lenses in the engine (`js/laser/engine/lenses.js`, `bench.js`)
+
+##### Stage 11a scope card (2026-11-20)
+
+**Doc audit (D6), done first:** §8.2's Sellmeier table checked against sources (SCHOTT's N-BK7 data sheet; Malitson 1965 for fused silica, whose C are the squares of his resonance wavelengths: the table's rounded values replaced; ZnSe added from Connolly 1979 / Tatian 1984, read from the refractiveindex.info database) with each glass's valid range, all in §8.2. Recomputed in Node: n_d = 1.51680 (N-BK7), 1.45846 (silica); ZnSe 2.4028 at 10.6 µm, 2.5911 at 632.8 nm; §8.8's rows E_rms = 1.941×10⁵ V/cm and 0.0329 atm (100 MW on 1 cm²), and with f = 5 cm, r = √(1 cm²/π) = 5.64 mm, λ = 694.3 nm the Airy radius 3.753 µm, E_rms = 2.918×10⁸ V/cm, 7.44×10⁴ atm; §8.3's He-Ne (10 mW, 10⁴ Hz) T_eff = W/(2kδν) = 3.62×10¹⁶ K.
+
+**`js/laser/engine/lenses.js`** (new engine file, after `optics.js`, before `bench.js`; uses `check.js`, `constants.js` and `optics.multiply`/`optics.freeSpace`). Every length in m, λ in m (converted to µm only inside `glassIndex`), curvatures signed as §8.1 (c = 1/R, positive when the centre of curvature lies to the right, the side the light goes to; a flat surface is c = 0):
+
+| Function | In | Out | Doc |
+|---|---|---|---|
+| `GLASSES` | | frozen `{ "n-bk7", "fused-silica", "znse" }`, each `{ B: [3], C: [3] (µm²), from, to (m) }` | §8.2 |
+| `glassIndex({ glass, lam })` | id, m | n; throws outside the glass's range | §8.2 |
+| `surface({ n1, n2, c })` | —, —, 1/m | `[[1, 0], [(n1 − n2)c/n2, n1/n2]]` | §8.1 |
+| `thickLens({ n, c1, c2, d })` | in air | `{ matrix, power, f, backFocus, frontFocus }` (f, the foci null at zero power); backFocus from the back vertex, frontFocus before the front one | §8.1 |
+| `LENS_SHAPES` | | frozen: `biconvex`, `plano-convex`, `convex-plano` (flat side first), `meniscus`, `biconcave`, `plano-concave`, each `{ bend, converging }` (bend = Coddington's (c1 + c2)/(c1 − c2)) | §8.1 |
+| `lensFor({ shape, f, n, d })` | | `{ c1, c2 }` whose **thick** lens has exactly f (the thin-lens curvatures scaled by the root of the quadratic in the scale nearest 1); throws for f of the wrong sign for the shape | §8.1 |
+| `traceExact({ surfaces, z, y, angle, n })` | surfaces `[{ z, c, n, aperture }]` (vertex, curvature, index after it, semi-diameter); the ray's start, its angle (rad) and the index it starts in | `{ points: [{ z, y }], angle, n, tir, blocked }`: tir/blocked the surface's index or null | §8.2 |
+| `axisCrossing({ z, y, angle })` | | the z where the ray crosses the axis ahead, or null | §8.2 |
+| `beamQ({ w, curvature, lam, M2 })` | | q = `{ re, im }`, 1/q = curvature − iM²λ/(πw²) | §8.4 |
+| `propagate({ q, matrix })` | | (Aq + B)/(Cq + D), in air on both sides | §8.4 |
+| `beamOf({ q, lam, M2 })` | | `{ w, curvature, w0, toWaist, zR }` (toWaist: + ahead) | §8.4 |
+| `selfImage({ w0, s, f, lam, M2 })` | | `{ w0, s, zR, magnification }` (Self) | §8.4 |
+| `focusedSpot({ w, f, lam, M2 })` | | `{ w, depth }` (w_f, 2z_R) | §8.4 |
+| `airyRadius({ f, lam, r })` | | 0.61fλ/r | §8.4 |
+| `telescope({ f1, f2 })` | | `{ magnification: −f2/f1, length: f1 + f2, internalFocus }` | §8.5 |
+| `atTarget({ power, area, n })` | W, m², — | `{ I, E0, Erms, pressureAbsorbed, pressureMirror }` (W/m², V/m, Pa) | §8.8 |
+| `brightnessTemperature({ power, linewidth })` | W, Hz | W/(2kδν), K (a diffraction-limited beam) | §8.3 |
+| `BREAKDOWN` | | 10¹⁰ W/cm² = 10¹⁴ W/m² | §8.8 |
+
+**`bench.outputBeam(config)`**: the beam just outside the output mirror, `{ lam, mode, w, curvature, radius }`: with a Gaussian mode, w = the mode's radius on mirror 2 and the curvature its wavefront's, which is the mirror's own (c₂; the mode's phase front fits the mirror); without one (flat-flat on the edge, or unstable), `mode: false` and `radius` = the aperture, a uniform beam that a lens focuses to an Airy disk (§8.4, as in §8.8's Problem 1).
+
+**Decisions** (mine; the owner chose only the scope):
+- **ZnSe joins the glasses** so CO₂ can be focused: BK7 and silica do not pass 10.6 µm. A glass is refused outside its valid range (the page will grey it out for that laser), never extrapolated.
+- **M² = 1 everywhere on the bench**: the simulator's mode is TEM₀₀ (§7.7). The functions still take `M2` (≥ 1) for §8.4's formulas and tests.
+- **The output mirror's substrate is ignored** (as if its back face compensated, as real curved output couplers' do): the beam leaves with the mode's w and curvature.
+- **Meridional rays only** (in the drawing's plane), no Fresnel losses on the rays (they carry no intensity), no aspheres or cylindrical lenses (§8.6 belongs to the diode laser, stage 13f).
+- **The breakdown threshold** is one number, 10¹⁰ W/cm², the middle (on a log scale) of §8.8's 10⁹–10¹¹: an illustration, written as such in the doc.
+
+**Tests** (`tests/laser/lenses.test.js`, `tests/laser/bench-output.test.js`): the catalogue indices and every glass's range; λ in nm refused; blue focuses before red (exact rays); the exact trace equals the paraxial ABCD result for small heights, and differs (spherical aberration, marginal rays crossing closer) for large ones; a plano-convex lens turned the wrong way has more aberration; total internal reflection flagged; a ray outside the aperture blocked; the thick-lens f against the matrix and the thin limit; `lensFor` gives the asked f for every shape; Self's formula with s = f puts the waist at the back focal plane, and agrees with q through the thin-lens matrix; the focused spot and the Airy radius; the telescope's M and wθ kept; §8.8's four numbers; §8.3's T_eff; every input checked, frozen inputs.
+
+**Breaks:** λ in nm passed to Sellmeier; a flipped normal; a wrong sign in Self's formula; the thin-lens f for a thick lens; f = R for a surface; E from I without the 2; the mirror's pressure I/c; Airy 1.22 for 0.61 with a diameter.
 
 ### Stage 12 — Learn section
 - **Build:**

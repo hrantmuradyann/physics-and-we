@@ -1,6 +1,6 @@
 # The laser simulator: what is done and what is left
 
-*Last updated: 20 November 2026, at the end of stage 10c2.*
+*Last updated: 20 November 2026, after your requests of 20 November; stage 11 started.*
 
 This page explains, in plain words, how far the laser simulator has got. The technical details are in `docs/laser-plan.md` (the build plan) and `docs/laser-physics.md` (the physics).
 
@@ -50,6 +50,7 @@ The simulator has two halves:
 | 10b | **The mirrors on the page** (see below): each mirror flat, concave or convex, the light's path bounce by bounce, the focal points, and a stability diagram beside the chart. |
 | 10c1 | **Each laser in its real colours** (see below): the crystals, the dye and the glowing gases as they look, and the beam in the colour of its light. |
 | 10c2 | **The pump you can see working** (see below): the diodes end-pumped through a lens, the green pump laser, pump light travelling into the material, atoms drifting in the gas tubes. |
+| — | **Your requests of 20 November (saved):** one plain near-white background for the whole lab in both themes, with charcoal controls and a silver flashlamp; mirrors drawn as real ones (green-edged glass, a silver coating, a metal mount with adjusting knobs), each curved face drawn deeper the smaller its radius, and each mirror's shape buttons and radius slider moved next to it, beside the drawing; and **"inside one atom"**, a new picture under the cartoon: the chosen material's real energy levels (ruby three, neodymium four, helium-neon and CO₂ pumped through helium and nitrogen, dye and titanium-sapphire with broad bands, the two-level atom two), with a row of atoms acting out what the simulation does: the pump lifts them, they fall to the upper laser level as heat, and each step down sends out a laser photon in the beam's colour. Unlike the levels picture removed on 19 November, it has no gauge or numbers: it only shows what happens inside an atom. |
 
 ### What you can see on the page today
 

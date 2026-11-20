@@ -159,6 +159,31 @@
   },
 
 
+  "atoms": {
+    "_readme": "Inside one atom of the chosen gain medium: its energy levels, drawn by js/laser/ui/draw-atoms.js. 'title' is written top left; the medium's name and its scheme ('two', 'three', 'four') top right; the levels' roles on the right of each level; the note at the bottom says what the scheme teaches. Keep them short: a phone squeezes them.",
+    "alt": {
+      "hy": "Ընտրված ակտիվ միջավայրի մեկ ատոմի էներգիական մակարդակները և ատոմների մի շարք, որոնք ցույց են տալիս, թե ինչ է կատարվում լազերում․ մղումը ատոմները բարձրացնում է վերին մակարդակներ, իսկ վերին լազերային մակարդակից իջնող ատոմը լույս է արձակում։ Պատկերը փոխվում է միջավայրի հետ՝ երեք կամ չորս մակարդակ, օգնական գազ (հելիում, ազոտ) կամ ընդամենը երկու մակարդակ։",
+      "en": "The energy levels of one atom of the chosen gain medium, with a row of atoms acting out the laser: the pump lifts atoms to the higher levels, and an atom stepping down from the upper laser level gives out light. The picture changes with the medium: three or four levels, a helper gas (helium, nitrogen), or only two levels."
+    },
+    "words": {
+      "title": { "hy": "Մեկ ատոմի ներսում (մասշտաբը պահպանված չէ)", "en": "Inside one atom (not to scale)" },
+      "two": { "hy": "երկու մակարդակ", "en": "two levels" },
+      "three": { "hy": "երեք մակարդակ", "en": "three levels" },
+      "four": { "hy": "չորս մակարդակ", "en": "four levels" },
+      "ground": { "hy": "հիմնական մակարդակ", "en": "ground level" },
+      "lower": { "hy": "ստորին լազերային", "en": "lower laser level" },
+      "upper": { "hy": "վերին լազերային", "en": "upper laser level" },
+      "band": { "hy": "մղման գոտի", "en": "pump band" },
+      "pump": { "hy": "մղում", "en": "pump" },
+      "electrons": { "hy": "էլեկտրոններ", "en": "electrons" },
+      "heat": { "hy": "ջերմություն", "en": "heat" },
+      "transfer": { "hy": "բախում", "en": "collision" },
+      "noteTwo": { "hy": "Մղումը ատոմներն իջեցնում է այնքան, որքան բարձրացնում․ կեսից ավելին վեր չեն ելնում, լազեր չկա։", "en": "The pump knocks atoms down as often as it lifts them: never over half up, so no laser." },
+      "noteThree": { "hy": "Անցումն ավարտվում է հիմնական մակարդակում․ ատոմների կեսից ավելին պետք է վերևում լինի։", "en": "The laser step ends on the ground level: over half the atoms must be up first." },
+      "noteFour": { "hy": "Ստորին մակարդակը միանգամից դատարկվում է․ նույնիսկ թույլ մղումն է բավական։", "en": "The lower level empties at once, so even a weak pump is enough." }
+    }
+  },
+
   "stability": {
     "_readme": "The stability diagram of the two mirrors, beside the chart. 'title' is written above it, 'stable' inside the shaded region, 'g1' and 'g2' at the ends of the axes: keep them short.",
     "alt": {

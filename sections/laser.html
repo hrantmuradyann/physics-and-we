@@ -14,20 +14,22 @@
   THE BLOCKS OF THE STAGE (css/laser.css places them; on a narrow screen
   they stand one under another, in the order written here):
     more      the button that leads to the theory at the bottom of the page
-    bench     the drawing of the laser, and the row right under it:
+    bench     the drawing of the laser, each mirror's shape and radius
+              beside it, and the row right under it:
               Fire (on a laser with a flashlamp) and the Q-switch's
               On/Off (the bleachable filter, on a laser that can have it)
     controls  the choice of laser (two dropdowns), the sliders, each with
-              a box to type a number in, each mirror's shape (and a curved
-              one's radius), and the buttons
+              a box to type a number in, and the buttons
     side      the chart of the output power, the mirrors' stability
               diagram, and the numbers
-    photons   the cartoon of atoms and photons inside the medium
+    photons   the cartoon of atoms and photons inside the medium, and
+              under it the energy levels of one atom of that medium
   ══════════════════════════════════════════════════════════════════════════
 -->
 
-<!-- Silver lines behind the whole page — see .line-art in css/labs.css -->
-<div class="line-art">
+<!-- One plain neutral colour behind the whole page (no lines, no glow),
+     so the laser light's own colour shows — see .laser-lab in css/laser.css -->
+<div class="laser-lab">
 
 <!-- ░░ PAGE TITLE ░░
      A <div>, not a <header>: a <header> would pick up the site's header
@@ -59,7 +61,78 @@
       </div>
 
       <div class="laser-stage__bench laser-bench reveal">
-        <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
+        <!-- The drawing with a column at each end: on the left, beside the
+             back mirror, and on the right, beside the output mirror, that
+             mirror's shape (flat, concave or convex: the little pictures show
+             its face as the bench draws it, with the laser on the side it
+             faces) and, for a curved one, a vertical slider for its radius,
+             which js/laser/page.js shows only then (data-laser-slider). On a
+             narrow screen the two columns go under the drawing, side by side. -->
+        <div class="laser-bench__row">
+          <div class="laser-end laser-end--back">
+            <div class="laser-mirror" data-laser-mirror="mirror1">
+              <span class="lab-control__name" id="laser-mirror1-name" data-text="bench.parts.backMirror"></span>
+              <div class="laser-shapes" role="group" aria-labelledby="laser-mirror1-name">
+                <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="flat">
+                  <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v18"/></svg>
+                  <span data-text="controls.shapes.flat"></span>
+                </button>
+                <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="concave">
+                  <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3q-8 9 0 18"/></svg>
+                  <span data-text="controls.shapes.concave"></span>
+                </button>
+                <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="convex">
+                  <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3q8 9 0 18"/></svg>
+                  <span data-text="controls.shapes.convex"></span>
+                </button>
+              </div>
+            </div>
+            <div class="lab-control laser-end__radius" data-laser-slider="Rc1" hidden>
+              <div class="lab-control__label">
+                <span class="laser-end__r" aria-hidden="true">R</span>
+                <label class="lab-control__name laser-end__label" for="laser-Rc1" id="laser-Rc1-name" data-text="controls.Rc1"></label>
+                <span class="laser-field">
+                  <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-Rc1-name" data-laser-input="Rc1">
+                  <span class="laser-field__unit" data-laser-unit="Rc1"></span>
+                </span>
+              </div>
+              <input class="lab-control__input" id="laser-Rc1" type="range" min="0" max="1000" step="1" data-laser-control="Rc1">
+            </div>
+          </div>
+          <div class="laser-bench__view">
+            <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
+          </div>
+          <div class="laser-end laser-end--output">
+            <div class="laser-mirror" data-laser-mirror="mirror2">
+              <span class="lab-control__name" id="laser-mirror2-name" data-text="bench.parts.outputMirror"></span>
+              <div class="laser-shapes" role="group" aria-labelledby="laser-mirror2-name">
+                <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="flat">
+                  <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v18"/></svg>
+                  <span data-text="controls.shapes.flat"></span>
+                </button>
+                <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="concave">
+                  <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3q8 9 0 18"/></svg>
+                  <span data-text="controls.shapes.concave"></span>
+                </button>
+                <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="convex">
+                  <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3q-8 9 0 18"/></svg>
+                  <span data-text="controls.shapes.convex"></span>
+                </button>
+              </div>
+            </div>
+            <div class="lab-control laser-end__radius" data-laser-slider="Rc2" hidden>
+              <div class="lab-control__label">
+                <span class="laser-end__r" aria-hidden="true">R</span>
+                <label class="lab-control__name laser-end__label" for="laser-Rc2" id="laser-Rc2-name" data-text="controls.Rc2"></label>
+                <span class="laser-field">
+                  <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-Rc2-name" data-laser-input="Rc2">
+                  <span class="laser-field__unit" data-laser-unit="Rc2"></span>
+                </span>
+              </div>
+              <input class="lab-control__input" id="laser-Rc2" type="range" min="0" max="1000" step="1" data-laser-control="Rc2">
+            </div>
+          </div>
+        </div>
         <!-- Right under the laser: Fire (shown by js/laser/page.js only
              when the pump is a flashlamp), centred under the drawn lamp,
              and the Q-switch's name with its On/Off switch (only for a
@@ -120,66 +193,6 @@
               </span>
             </div>
             <input class="lab-control__input" id="laser-coupler" type="range" min="0" max="1000" step="1" data-laser-control="coupler">
-          </div>
-          <!-- The mirrors (stage 10b): each one flat, concave or convex (the
-               little pictures show its face as the bench draws it, with the
-               laser on the side it faces: the back mirror's on its right,
-               the output mirror's on its left; a concave face is a cup open
-               towards the laser); a curved one also has its radius slider, which
-               js/laser/page.js shows only then (data-laser-slider). -->
-          <div class="laser-mirror" data-laser-mirror="mirror1">
-            <span class="lab-control__name" id="laser-mirror1-name" data-text="bench.parts.backMirror"></span>
-            <div class="laser-shapes" role="group" aria-labelledby="laser-mirror1-name">
-              <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="flat">
-                <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v18"/></svg>
-                <span data-text="controls.shapes.flat"></span>
-              </button>
-              <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="concave">
-                <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3q-8 9 0 18"/></svg>
-                <span data-text="controls.shapes.concave"></span>
-              </button>
-              <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="convex">
-                <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3q8 9 0 18"/></svg>
-                <span data-text="controls.shapes.convex"></span>
-              </button>
-            </div>
-          </div>
-          <div class="lab-control" data-laser-slider="Rc1" hidden>
-            <div class="lab-control__label">
-              <label class="lab-control__name" for="laser-Rc1" id="laser-Rc1-name" data-text="controls.Rc1"></label>
-              <span class="laser-field">
-                <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-Rc1-name" data-laser-input="Rc1">
-                <span class="laser-field__unit" data-laser-unit="Rc1"></span>
-              </span>
-            </div>
-            <input class="lab-control__input" id="laser-Rc1" type="range" min="0" max="1000" step="1" data-laser-control="Rc1">
-          </div>
-          <div class="laser-mirror" data-laser-mirror="mirror2">
-            <span class="lab-control__name" id="laser-mirror2-name" data-text="bench.parts.outputMirror"></span>
-            <div class="laser-shapes" role="group" aria-labelledby="laser-mirror2-name">
-              <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="flat">
-                <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v18"/></svg>
-                <span data-text="controls.shapes.flat"></span>
-              </button>
-              <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="concave">
-                <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3q8 9 0 18"/></svg>
-                <span data-text="controls.shapes.concave"></span>
-              </button>
-              <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="convex">
-                <svg class="laser-shape__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3q-8 9 0 18"/></svg>
-                <span data-text="controls.shapes.convex"></span>
-              </button>
-            </div>
-          </div>
-          <div class="lab-control" data-laser-slider="Rc2" hidden>
-            <div class="lab-control__label">
-              <label class="lab-control__name" for="laser-Rc2" id="laser-Rc2-name" data-text="controls.Rc2"></label>
-              <span class="laser-field">
-                <input class="laser-field__input" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-labelledby="laser-Rc2-name" data-laser-input="Rc2">
-                <span class="laser-field__unit" data-laser-unit="Rc2"></span>
-              </span>
-            </div>
-            <input class="lab-control__input" id="laser-Rc2" type="range" min="0" max="1000" step="1" data-laser-control="Rc2">
           </div>
           <div class="lab-control" data-laser-slider="absorberT0" hidden>
             <div class="lab-control__label">
@@ -298,8 +311,15 @@
         </div>
       </div>
 
-      <div class="laser-stage__photons laser-bench reveal">
-        <canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas>
+      <!-- Inside the medium: the cartoon of atoms and photons, and under it
+           the energy levels of one of its atoms. -->
+      <div class="laser-stage__photons">
+        <div class="laser-bench reveal">
+          <canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas>
+        </div>
+        <div class="laser-bench reveal">
+          <canvas class="laser-bench__canvas" data-laser-canvas="atoms" role="img"></canvas>
+        </div>
       </div>
 
     </div>
@@ -325,4 +345,4 @@
   </div>
 </section>
 
-</div><!-- /.line-art -->
+</div><!-- /.laser-lab -->

@@ -206,12 +206,14 @@ test("a visitor who asked for less motion gets a paused loop that still draws on
   usual.loop.destroy();
 });
 
+// The lab's own colours are the same in both themes, so the test changes
+// the variable itself: what matters is that theme:changed reads them again.
 test("theme switch: the colours are read again; a paused loop draws once with them", () => {
   const s = setup();
   s.loop.pause();
   s.browser.setOnScreen(s.canvas, true);
   const before = draws(s.events).length;
-  s.browser.setCssVariables(themeVariables().light);
+  s.browser.setCssVariables(Object.assign({}, themeVariables().light, { "--laser-accent": "#c0603a" }));
   s.browser.window.dispatchEvent(new s.browser.window.CustomEvent("theme:changed", { detail: { theme: "light" } }));
   const drawn = draws(s.events);
   assert.equal(drawn.length, before + 1);
@@ -224,7 +226,7 @@ test("theme switch: the colours are read again; a paused loop draws once with th
   s.browser.window.dispatchEvent(new s.browser.window.CustomEvent("theme:changed", { detail: { theme: "dark" } }));
   assert.equal(draws(s.events).length, 0);
   s.browser.runFrame(100);
-  assert.equal(draws(s.events)[0].colors.accent, "#2f80ed");
+  assert.equal(draws(s.events)[0].colors.accent, "#3d434b");
   s.loop.destroy();
 });
 
@@ -433,7 +435,7 @@ test("create refuses what it cannot draw, naming itself", () => {
   create({ canvases: [good] }).destroy();
 });
 
-test("every PALETTE colour is set by both themes in css/style.css", () => {
+test("every PALETTE colour is a --laser-* colour, set once in :root: the lab looks the same in both themes", () => {
   const browser = createBrowser();
   browser.load("js/laser/ui/loop.js");
   const PALETTE = browser.window.LaserUI.loop.PALETTE;
@@ -441,9 +443,10 @@ test("every PALETTE colour is set by both themes in css/style.css", () => {
   assert.ok(Object.keys(PALETTE).length >= 6);
   for (const name of Object.keys(PALETTE)) {
     const variable = PALETTE[name];
+    assert.match(variable, /^--laser-/, name + ": " + variable + " changes with the theme");
     assert.ok(themes.dark[variable], name + ": " + variable + " is not in :root");
-    assert.ok(themes.lightOnly[variable], name + ": " + variable + " is not in :root.theme-light, " +
-      "so the light theme would draw it in the dark theme's colour");
+    assert.equal(themes.lightOnly[variable], undefined, name + ": " + variable +
+      " is set again in :root.theme-light, so the lab would change with the theme");
   }
 });
 

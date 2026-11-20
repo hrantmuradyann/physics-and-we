@@ -768,7 +768,10 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
           <div class="laser-side__stability laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="stability" role="img"></canvas></div>
           <div class="laser-side__numbers lab__panel"><div class="lab__readouts laser-readouts"> … one .lab-readout data-laser-row="…" per number … </div></div>
         </div>
-        <div class="laser-stage__photons laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas></div>
+        <div class="laser-stage__photons">
+          <div class="laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas></div>
+          <div class="laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="atoms" role="img"></canvas></div>
+        </div>
       </div>
     </div>
   </section>

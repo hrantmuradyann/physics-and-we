@@ -1080,9 +1080,9 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/loop.js",
-    find: "soft: \"--accent-soft\",",
-    replace: "soft: \"--color-secondary\",",
-    why: "a colour only the dark theme sets"
+    find: "soft: \"--laser-accent-soft\",",
+    replace: "soft: \"--accent-soft\",",
+    why: "a lab colour that changes with the site's theme (the lab looks the same in both)"
   },
 
   /* ---------- stage 5: js/laser/ui/draw-bench.js ---------- */
@@ -1975,9 +1975,39 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var depth = 4 * L.sag * u * (1 - u) * bendOf(shape);",
-    replace: "var depth = 0;",
+    find: "var offset = faceOffset(L, which, u, shape);",
+    replace: "var offset = 0;",
     why: "the rays end at the mirror's edge, not on its curved face"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "if (bend < 0) return sag * middle;\n    return sag * (1 - middle);",
+    replace: "if (bend < 0) return sag * (1 - middle);\n    return sag * middle;",
+    why: "concave and convex faces swapped: a concave mirror drawn bulging"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "return L.sagMin + clamp(curve, 0, 1) * (L.sagMax - L.sagMin);",
+    replace: "return L.sagMin + curve * (L.sagMax - L.sagMin);",
+    why: "a curvature outside 0..1 draws a face deeper than the room for it"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "return L.sagMin + clamp(curve, 0, 1) * (L.sagMax - L.sagMin);",
+    replace: "return L.sagMax - clamp(curve, 0, 1) * (L.sagMax - L.sagMin);",
+    why: "a large radius drawn deeply curved, a small one nearly flat"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var gap = FOCUS_GAP + L.sagMax;",
+    replace: "var gap = FOCUS_GAP;",
+    why: "the F's words run into a deeply curved face"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "var share = Math.log(range.max / config[name]) / Math.log(range.max / range.min);",
+    replace: "var share = Math.log(config[name] / range.min) / Math.log(range.max / range.min);",
+    why: "the drawing's curvature backwards: the smallest radius drawn flattest"
   },
   {
     file: "js/laser/ui/draw-bench.js",
@@ -2023,8 +2053,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "g.lineWidth = strong ? 3.5 : 2;",
-    replace: "g.lineWidth = 2;",
+    find: "g.lineWidth = strong ? 4 : 2.5;",
+    replace: "g.lineWidth = 2.5;",
     why: "both mirrors drawn with the same coating"
   },
   {
@@ -2203,14 +2233,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "state.cartoon.step(dt, {",
-    replace: "state.cartoon.step(dt / state.slowMotion, {",
+    find: "state.cartoon.step(dt, drive);",
+    replace: "state.cartoon.step(dt / state.slowMotion, drive);",
     why: "the cartoon run in simulated time: it stands still"
   },
   {
     file: "js/laser/page.js",
-    find: "light: UI.bench.rayAlpha(beamNow()),",
-    replace: "light: 1,",
+    find: "      var drive = {\n        excited: excitedNow(),\n        light: UI.bench.rayAlpha(beamNow()),",
+    replace: "      var drive = {\n        excited: excitedNow(),\n        light: 1,",
     why: "the cartoon full of laser light before the laser starts"
   },
   {
@@ -2305,8 +2335,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/loop.js",
-    find: "    bg: \"--bg\"",
-    replace: "    bg: \"--bg-dark\"",
+    find: "    bg: \"--laser-bg\"",
+    replace: "    bg: \"--laser-bg-dark\"",
     why: "a palette colour no theme sets"
   },
   /* ---------- stage 6b: from the review ---------- */
@@ -2360,8 +2390,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "light: UI.bench.rayAlpha(beamNow()),",
-    replace: "light: Math.min(1, beamNow()),",
+    find: "      var drive = {\n        excited: excitedNow(),\n        light: UI.bench.rayAlpha(beamNow()),",
+    replace: "      var drive = {\n        excited: excitedNow(),\n        light: Math.min(1, beamNow()),",
     why: "the cartoon's light not the bench's ray strength"
   },
   {
@@ -4577,9 +4607,9 @@ const MUTATIONS = [
   },
   {
     file: "css/style.css",
-    find: "  --canvas-flash: #f39a3d;                    /* a lit flashlamp: warm orange, bright on cream */\n",
-    replace: "",
-    why: "the light theme without the flash colour"
+    find: "  --laser-canvas-flash: #c4ccd6;",
+    replace: "  --laser-unused-flash: #c4ccd6;",
+    why: "the lab without the flash colour"
   },
   {
     file: "css/laser.css",
@@ -4601,9 +4631,9 @@ const MUTATIONS = [
   },
   {
     file: "css/style.css",
-    find: "  --canvas-lamp: #e5673b;                     /* a flashlamp's glass edge and caps: bright terracotta */\n",
-    replace: "",
-    why: "the light theme without the lamp's own colour"
+    find: "  --laser-canvas-lamp: #6f7883;",
+    replace: "  --laser-unused-lamp: #6f7883;",
+    why: "the lab without the lamp's own colour"
   },
   // stage 8b, the third review's fixes
   {
@@ -5061,8 +5091,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "  var CANVASES = [\"bench\", \"power\", \"photons\", \"stability\"];",
-    replace: "  var CANVASES = [\"bench\", \"power\", \"photons\"];",
+    find: "  var CANVASES = [\"bench\", \"power\", \"photons\", \"atoms\", \"stability\"];",
+    replace: "  var CANVASES = [\"bench\", \"power\", \"photons\", \"atoms\"];",
     why: "the stability diagram not drawn"
   },
   {
@@ -5218,8 +5248,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      g.fillText(text, right ? S.x2 - FOCUS_GAP : S.x1 + FOCUS_GAP, rowY, S.room);",
-    replace: "      g.fillText(text, right ? S.x2 - FOCUS_GAP : S.x1 + FOCUS_GAP, rowY, 0.4 * w);",
+    find: "g.fillText(text, right ? S.x2 - gap : S.x1 + gap, rowY, Math.max(10, S.room - L.sagMax));",
+    replace: "g.fillText(text, right ? S.x2 - gap : S.x1 + gap, rowY, 0.4 * w);",
     why: "an F's words running past the rod"
   },
   {
@@ -5236,8 +5266,8 @@ const MUTATIONS = [
   },
   {
     file: "sections/laser.html",
-    find: "<path d=\"M15 3q-8 9 0 18\"/></svg>\n                <span data-text=\"controls.shapes.concave\">",
-    replace: "<path d=\"M9 3q8 9 0 18\"/></svg>\n                <span data-text=\"controls.shapes.concave\">",
+    find: "<path d=\"M15 3q-8 9 0 18\"/></svg>\n                  <span data-text=\"controls.shapes.concave\">",
+    replace: "<path d=\"M9 3q8 9 0 18\"/></svg>\n                  <span data-text=\"controls.shapes.concave\">",
     why: "the back mirror's concave picture bulging towards the laser"
   },
   // stage 10c1: the media's looks and the beams' colours
@@ -5363,8 +5393,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        medium: state.config.medium,\n        lam: lam,",
-    replace: "        medium: state.config.medium,\n        lam: null,",
+    find: "        pumpKind: state.config.pump,\n        medium: state.config.medium,\n        lam: lam,",
+    replace: "        pumpKind: state.config.pump,\n        medium: state.config.medium,\n        lam: null,",
     why: "the page not giving the beam's wavelength"
   },
   {
@@ -5533,8 +5563,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "        pumpLam: state.config.pumpLam,",
-    replace: "        pumpLam: undefined,",
+    find: "        pumpLam: state.config.pumpLam,\n        qSwitch: switchLight(),",
+    replace: "        pumpLam: undefined,\n        qSwitch: switchLight(),",
     why: "the page not giving the pump's wavelength"
   },
   // stage 10c2: the filter beyond the rod, and the review
@@ -5627,6 +5657,142 @@ const MUTATIONS = [
     find: "    line(g, S.x - S.half, S.high + S.half, S.x + S.half, S.high - S.half);",
     replace: "    line(g, S.x - S.half, S.high - S.half, S.x + S.half, S.high + S.half);",
     why: "the periscope's upper mirror turned to send the beam back"
+  },
+
+  // ---------- after stage 10c2: the owner's requests of 2026-11-20 (the
+  // near-white lab, mirrors drawn as real ones, inside one atom) ----------
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "    if (scheme.partner) return [{ from: \"ground\", to: \"upper\", kind: \"transfer\" }];",
+    replace: "    if (scheme.partner && false) return [{ from: \"ground\", to: \"upper\", kind: \"transfer\" }];",
+    why: "He-Ne and CO₂ pumped straight by the electrons, not through their partner gas"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "    if (scheme.kind === \"four\") {",
+    replace: "    if (scheme.kind === \"never\") {",
+    why: "four-level atoms stepping straight down to the ground, past the lower laser level"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "var down = two ? pump : light;",
+    replace: "var down = light;",
+    why: "the two-level atom knocked down by laser light it does not have, not by the pump's"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "var downKind = down > 0.02 ? (two ? \"push\" : \"laser\") : \"stray\";",
+    replace: "var downKind = down > 0.02 ? \"laser\" : \"stray\";",
+    why: "the two-level atom sending laser photons"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "var target = Math.round(excited * ATOMS);",
+    replace: "var target = Math.round((1 - excited) * ATOMS);",
+    why: "the atoms up when the simulation's are down"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "var laser = M.readable(M.beam(picture.lam).color, colors.bg);",
+    replace: "var laser = M.beam(picture.lam).color;",
+    why: "the laser step in a raw colour that can vanish on the background"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "pump = M.readable(M.beam(picture.pumpLam).color, colors.bg);",
+    replace: "pump = M.readable(M.beam(picture.lam).color, colors.bg);",
+    why: "the pump drawn in the laser's colour, not its own light's"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "      kind: \"three\",",
+    replace: "      kind: \"four\",",
+    why: "ruby drawn with four levels"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "      partner: { name: \"He\", term: \"2¹S\" }",
+    replace: "      partner: null",
+    why: "He-Ne without its helium"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        light: drive.light,",
+    replace: "        light: 0,",
+    why: "the atom never sees the laser light"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        name: word(data, \"media.\" + state.config.medium),\n        medium: state.config.medium,\n        lam: lam,",
+    replace: "        name: word(data, \"media.\" + state.config.medium),\n        medium: state.config.medium,\n        lam: null,",
+    why: "the atom's laser step without its wavelength"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var CANVASES = [\"bench\", \"power\", \"photons\", \"atoms\", \"stability\"];",
+    replace: "  var CANVASES = [\"bench\", \"power\", \"photons\", \"stability\"];",
+    why: "the atom picture never drawn"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var glassEdge = M.readable(M.MIRROR_GLASS, colors.bg);",
+    replace: "var glassEdge = M.MIRROR_GLASS;",
+    why: "the mirror glass's edge in a pale colour lost on the near-white lab"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var silver = M.readable(M.SILVER, colors.bg);",
+    replace: "var silver = M.SILVER;",
+    why: "the silver coating lost on the near-white lab"
+  },
+  {
+    file: "css/laser.css",
+    find: "  --heading: var(--laser-heading);",
+    replace: "",
+    why: "the lab's headings in the site theme's colour (white on the near-white lab, in the dark theme)"
+  },
+  // the review's fixes
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "g.fillRect(plateX, m.y - 4, MOUNT_PLATE, hole.top - (m.y - 4));",
+    replace: "g.fillRect(plateX, m.y - 4, MOUNT_PLATE, m.h + 8);",
+    why: "a mirror's mount plate across the beam that passes the mirror"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "var half = Math.max(L.apertureHalf, L.boreHalf, L.cone.start);",
+    replace: "var half = Math.max(L.boreHalf, L.cone.start);",
+    why: "the mount's hole smaller than the rod: the plate across the outer rays"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.strokeStyle = UI.materials.readable(colors.flash, colors.bg);",
+    replace: "    g.strokeStyle = colors.flash;",
+    why: "the flash's streaks in a silver-white lost on the near-white lab"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.fillStyle = UI.materials.readable(colors.flash, colors.bg);\n      g.shadowColor",
+    replace: "      g.fillStyle = colors.flash;\n      g.shadowColor",
+    why: "the burning gas in a silver-white lost on the near-white lab"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (kind === \"flashlamp\") return UI.materials.readable(colors.flash, colors.bg);",
+    replace: "    if (kind === \"flashlamp\") return colors.flash;",
+    why: "the flash's pump photons lost on the near-white lab"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "var excited = high(atom.level) || (leg ? high(leg.to) : false);",
+    replace: "var excited = leg ? true : high(atom.level);",
+    why: "an atom glowing as it drops to the ground as heat"
+  },
+  {
+    file: "js/laser/ui/draw-atoms.js",
+    find: "    return UI.format.si(lam, \"m\");",
+    replace: "    return UI.format.si(lam, \"m\", 4);",
+    why: "the atom's wavelength written otherwise than the bench's (1.064 µm under 1.06 µm)"
   },
 ];
 

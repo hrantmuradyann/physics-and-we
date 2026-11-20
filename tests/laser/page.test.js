@@ -89,7 +89,7 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     expected.push("808" + NB + "nm, 1.06" + NB + "µm · " + WORDS.bench.parts.infrared[lang]);
     assert.deepEqual(texts(section.recorder).sort(), expected.sort(), lang);
     // Each canvas has the height its drawing asks for.
-    const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE, stability: UI.stability.SIZE };
+    const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE, atoms: UI.atoms.SIZE, stability: UI.stability.SIZE };
     for (const name of CANVASES) {
       const size = sizes[name];
       const height = Math.max(size.minHeight, Math.min(600 / size.aspect, size.maxHeight));
@@ -100,6 +100,16 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     for (const name of UI.photons.WORDS) {
       assert.ok(texts(section.recorders.photons).includes(WORDS.photons.words[name][lang]), "photons: " + name);
     }
+    // Inside one atom: Nd:YAG's four levels, named, with its 1064 nm step
+    // and its diodes' 808 nm.
+    const atomTexts = texts(section.recorders.atoms);
+    assert.ok(atomTexts.includes(WORDS.atoms.words.title[lang]), "atoms: the title");
+    assert.ok(atomTexts.includes(WORDS.media["nd-yag"][lang] + " · " + WORDS.atoms.words.four[lang]), "atoms: Nd:YAG, four levels");
+    for (const name of ["ground", "lower", "upper", "band", "heat", "noteFour"]) {
+      assert.ok(atomTexts.includes(WORDS.atoms.words[name][lang]), "atoms: " + name);
+    }
+    assert.ok(atomTexts.includes("1.06" + NB + "µm"), "atoms: the laser step's wavelength, written as the bench writes it");
+    assert.ok(atomTexts.includes(WORDS.atoms.words.pump[lang] + " 808" + NB + "nm"), "atoms: the pump's");
   }
 });
 
@@ -488,7 +498,7 @@ test("Reset also starts the photon cartoon afresh: no excited atoms or light lef
   assert.equal(last(seen.cartoons), fresh);
 });
 
-test("the cartoon's light is the bench's ray strength, from the same function", () => {
+test("the cartoon's and the atom picture's light is the bench's ray strength, from the same function", () => {
   const page = built("en", { watch: true });
   const { browser, section, seen } = page;
   const UI = browser.window.LaserUI;
@@ -499,7 +509,12 @@ test("the cartoon's light is the bench's ray strength, from the same function", 
     runFrames(page, 1);
     const light = last(seen.bench).light;
     assert.equal(last(seen.drives).drive.light, UI.bench.rayAlpha(light.beam), "frame " + i);
+    const atom = last(seen.atomDrives).drive;
+    assert.equal(atom.light, UI.bench.rayAlpha(light.beam), "the atom, frame " + i);
+    assert.equal(atom.medium, "nd-yag", "the atom's medium: the default bench's");
+    assert.equal(atom.excited, last(seen.drives).drive.excited, "the atom's share up is the cartoon's");
   }
+  assert.ok(last(seen.atomDrives).drive.light > 0.5, "the laser runs: the atom sees light");
   // The bench is handed the words alone: it writes the transmission's
   // number itself.
   assert.equal(last(seen.bench).labels.transmission, WORDS.bench.parts.transmission.en);
