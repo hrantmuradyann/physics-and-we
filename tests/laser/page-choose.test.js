@@ -16,32 +16,39 @@ const assert = require("node:assert/strict");
 const { assertClose, plain, loadEngine } = require("./helpers.js");
 const {
   WORDS, READOUTS, NB, setup, laserSection, sectionReady, built, last, sum, runFrames, slide, drag, type, engine,
-  assertNoListeners, choose, chooseAfresh, optionsOf, shownRows
+  assertNoListeners, choose, chooseAfresh, optionsOf, groupsOf, shownRows
 } = require("./page-helpers.js");
 
-// Every bench, in the dropdowns' order, with the slow motion it starts at
-// (the scope card's table: one second on screen shows the part of the run
-// worth watching).
+// Every bench the page offers, in the engine's order, with the slow motion
+// it starts at (the scope card's table: one second on screen shows the part
+// of the run worth watching). The engine's two-level atom is not offered
+// (stage 12c).
 const BENCHES = [
   ["ruby", "flashlamp", 1e4],
   ["nd-glass", "flashlamp", 1e4],
+  ["nd-glass", "diode", 1e4],
   ["nd-yag", "diode", 1e4],
   ["nd-yag", "flashlamp", 1e4],
   ["he-ne", "discharge", 1e6],
   ["ar-ion", "discharge", 1e7],
   ["co2", "discharge", 1e4],
   ["dye-r6g", "laser", 1e7],
-  ["ti-sapphire", "laser", 1e6],
-  ["two-level", "laser", 1e3],
-  ["two-level", "flashlamp", 1e4]
+  ["dye-r6g", "flashlamp", 1e6],
+  ["ti-sapphire", "laser", 1e6]
+];
+// The medium dropdown's groups (the owner's choice, stage 12c): what the
+// medium is, then the year it first lased.
+const GROUPS = [
+  ["solid", ["ruby", "nd-glass", "caf2-dy", "nd-yag", "ti-sapphire"]],
+  ["gas", ["he-ne", "ar-ion", "co2"]],
+  ["liquid", ["dye-r6g"]],
+  ["semiconductor", ["diode"]]
 ];
 
 // The numbers each kind of bench shows, in the layout's order.
 const STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"];
 const DISCHARGE_ROWS = ["currentThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"];
 const FLASH_ROWS = ["flashThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "peak", "powerNow", "time"];
-const TWO_LEVEL_LIGHT_ROWS = ["pumpThreshold", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "time"];
-const TWO_LEVEL_FLASH_ROWS = ["flashThreshold", "gth", "tau_c", "stability", "waist", "mirrorLoss", "peak", "powerNow", "time"];
 const PUMP_KINDS = ["diode", "laser", "flashlamp", "discharge"];
 
 function F(page) {
@@ -61,6 +68,7 @@ test("the words of the dropdowns, the pump sliders, Fire and the new readouts ar
       assert.ok(WORDS.controls.pump[kind][lang].trim(), "controls.pump." + kind + "." + lang);
     }
     for (const name of ["medium", "pump", "later"]) assert.ok(WORDS.choose[name][lang].trim(), "choose." + name + "." + lang);
+    for (const [group] of GROUPS) assert.ok(WORDS.choose.groups[group][lang].trim(), "choose.groups." + group + "." + lang);
     for (const name of READOUTS.concat(["never"])) assert.ok(WORDS.readouts[name][lang].trim(), "readouts." + name + "." + lang);
     assert.ok(WORDS.buttons.fire[lang].trim(), "buttons.fire." + lang);
   }
@@ -70,14 +78,16 @@ test("the words of the dropdowns, the pump sliders, Fire and the new readouts ar
 
 /* ---------- the dropdowns ---------- */
 
-test("the medium dropdown: every medium in the engine's order, named in the visitor's language; those not built yet are 'coming later'", () => {
+test("the medium dropdown: the media in their groups, named in the visitor's language; those not built yet are 'coming later'; no two-level atom", () => {
   for (const lang of ["hy", "en"]) {
     const page = built(lang, { reducedMotion: true });
     const B = engine(page.browser).bench;
     const ids = Array.from(engine(page.browser).media.list());
-    assert.deepEqual(ids, ["ruby", "nd-glass", "nd-yag", "caf2-dy", "he-ne", "ar-ion", "co2", "diode", "dye-r6g",
-      "ti-sapphire", "two-level"]);
-    const expected = ids.map((id) => {
+    // Every medium of the engine is in a group, except the two-level atom.
+    assert.deepEqual(GROUPS.flatMap(([, media]) => media).sort(), ids.filter((id) => id !== "two-level").sort());
+    assert.deepEqual(groupsOf(page.section.choose.medium),
+      GROUPS.map(([group, media]) => ({ label: WORDS.choose.groups[group][lang], values: media })), lang);
+    const expected = GROUPS.flatMap(([, media]) => media).map((id) => {
       const later = B.pumpsFor(id).length === 0;
       return {
         value: id,
@@ -102,12 +112,16 @@ test("the pump dropdown: the chosen medium's pumps, named; it follows the medium
   assert.equal(section.choose.pump.value, "flashlamp");
   choose(section, "he-ne");
   assert.deepEqual(optionsOf(section.choose.pump), names(["discharge"]));
-  choose(section, "two-level");
+  choose(section, "dye-r6g");
   assert.deepEqual(optionsOf(section.choose.pump), names(["laser", "flashlamp"]));
   assert.equal(section.choose.pump.value, "laser");
+  choose(section, "nd-glass");
+  assert.deepEqual(optionsOf(section.choose.pump), names(["flashlamp", "diode"]));
   // The options are made again, not added to the old ones.
   choose(section, "nd-yag");
   assert.equal(section.choose.pump.children.length, 2);
+  assert.equal(groupsOf(section.choose.medium).length, GROUPS.length, "the medium's groups made again too");
+  assert.equal(optionsOf(section.choose.medium).length, GROUPS.flatMap(([, media]) => media).length);
 });
 
 test("choosing a medium gives its setup: a new config, a fresh simulation, an empty chart, a new cartoon; Play/Pause is kept", () => {
@@ -140,19 +154,42 @@ test("choosing a medium gives its setup: a new config, a fresh simulation, an em
   assert.equal(section.readouts.time.textContent, "0" + NB + "s");
 });
 
+test("'Learn more' beside the medium and the pump opens the book at their sections, and follows the choice", () => {
+  const page = built("en", { reducedMotion: true });
+  const { section } = page;
+  const more = (name) => section.more[name];
+  const at = (name) => [more(name).getAttribute("href"), more(name).getAttribute("data-id"), more(name).hidden];
+  assert.deepEqual(at("medium"), ["?view=laser-study&id=section-neodymium", "section-neodymium", false]);
+  assert.deepEqual(at("pump"), ["?view=laser-study&id=section-diodes", "section-diodes", false]);
+  choose(section, "ruby");
+  assert.deepEqual(at("medium"), ["?view=laser-study&id=section-ruby", "section-ruby", false]);
+  assert.deepEqual(at("pump"), ["?view=laser-study&id=section-flashlamp", "section-flashlamp", false]);
+  choose(section, "co2");
+  assert.equal(at("medium")[1], "section-argon-co2");
+  assert.equal(at("pump")[1], "section-discharge");
+  choose(section, "dye-r6g", "laser");
+  assert.equal(at("pump")[1], "section-laser-pump");
+  // A bench with no section named in the data: the link is hidden.
+  const { browser } = setup("en");
+  const bare = laserSection(600);
+  sectionReady(browser, "laser", bare.container, Object.assign({}, WORDS, { more: { media: {}, pumps: { diode: "not a section" } } }));
+  assert.equal(bare.more.medium.hidden, true, "no section for the medium");
+  assert.equal(bare.more.pump.hidden, true, "a value that is not a section id");
+});
+
 test("choosing a medium keeps the pump if the new medium has it, else takes its first", () => {
   const page = built("en", { reducedMotion: true, watch: true });
   const { section, seen } = page;
-  choose(section, "nd-yag", "flashlamp");
-  choose(section, "two-level");
-  assert.equal(section.choose.pump.value, "flashlamp", "the two-level atom has a flashlamp too");
-  assert.equal(last(seen.configs).pump, "flashlamp");
+  choose(section, "nd-yag", "diode");
+  choose(section, "nd-glass");
+  assert.equal(section.choose.pump.value, "diode", "Nd:glass has diodes too");
+  assert.equal(last(seen.configs).pump, "diode");
   choose(section, "dye-r6g");
-  assert.equal(section.choose.pump.value, "laser");
-  choose(section, "two-level");
-  assert.equal(section.choose.pump.value, "laser");
-  assert.equal(last(seen.configs).medium, "two-level");
-  assert.equal(last(seen.configs).pump, "laser");
+  assert.equal(section.choose.pump.value, "laser", "no diodes for the dye: its first pump");
+  choose(section, "nd-glass");
+  assert.equal(section.choose.pump.value, "flashlamp");
+  assert.equal(last(seen.configs).medium, "nd-glass");
+  assert.equal(last(seen.configs).pump, "flashlamp");
 });
 
 test("choosing a pump gives that setup of the medium", () => {
@@ -167,13 +204,13 @@ test("choosing a pump gives that setup of the medium", () => {
   assert.deepEqual(plain(last(seen.configs)), plain(engine(browser).bench.defaultConfig()));
 });
 
-test("a medium the bench cannot run yet, or no medium at all, is refused: the dropdown goes back, the bench stays", () => {
+test("a medium the bench cannot run yet, one the page does not offer, or none at all, is refused: the dropdown goes back, the bench stays", () => {
   // Some browsers let the keyboard reach a disabled option.
   const page = built("en", { reducedMotion: true, watch: true });
   const { section, seen } = page;
   choose(section, "co2");
   const derives = seen.configs.length;
-  for (const value of ["caf2-dy", "diode", "unobtainium", ""]) {
+  for (const value of ["caf2-dy", "diode", "two-level", "unobtainium", ""]) {
     choose(section, value);
     assert.equal(section.choose.medium.value, "co2", JSON.stringify(value));
     assert.equal(seen.configs.length, derives, JSON.stringify(value) + " changes nothing");
@@ -191,6 +228,7 @@ test("each bench starts at its own slow motion", () => {
   const { section } = page;
   const listed = [];
   for (const medium of engine(page.browser).media.list()) {
+    if (medium === "two-level") continue;               // not offered (stage 12c)
     for (const pump of engine(page.browser).bench.pumpsFor(medium)) listed.push(medium + " " + pump);
   }
   assert.deepEqual(BENCHES.map(([medium, pump]) => medium + " " + pump), listed, "every bench is in the table");
@@ -344,10 +382,9 @@ test("each kind of bench shows its own numbers, and hides the others", () => {
   const page = built("en", { reducedMotion: true });
   const { section } = page;
   const expected = {
-    "nd-yag diode": STEADY_ROWS, "dye-r6g laser": STEADY_ROWS, "ti-sapphire laser": STEADY_ROWS,
+    "nd-yag diode": STEADY_ROWS, "nd-glass diode": STEADY_ROWS, "dye-r6g laser": STEADY_ROWS, "ti-sapphire laser": STEADY_ROWS,
     "he-ne discharge": DISCHARGE_ROWS, "ar-ion discharge": DISCHARGE_ROWS, "co2 discharge": DISCHARGE_ROWS,
-    "ruby flashlamp": FLASH_ROWS, "nd-glass flashlamp": FLASH_ROWS, "nd-yag flashlamp": FLASH_ROWS,
-    "two-level laser": TWO_LEVEL_LIGHT_ROWS, "two-level flashlamp": TWO_LEVEL_FLASH_ROWS
+    "ruby flashlamp": FLASH_ROWS, "nd-glass flashlamp": FLASH_ROWS, "nd-yag flashlamp": FLASH_ROWS, "dye-r6g flashlamp": FLASH_ROWS
   };
   for (const [medium, pump] of BENCHES) {
     choose(section, medium, pump);
@@ -355,7 +392,7 @@ test("each kind of bench shows its own numbers, and hides the others", () => {
   }
 });
 
-test("the readouts of a discharge, a flashlamp and the two-level atom", () => {
+test("the readouts of a discharge and a flashlamp", () => {
   const page = built("en", { reducedMotion: true });
   const { browser, section } = page;
   const B = engine(browser).bench;
@@ -375,12 +412,9 @@ test("the readouts of a discharge, a flashlamp and the two-level atom", () => {
   assert.equal(r.flashThreshold.textContent, "639" + NB + "J");
   assert.equal(r.x.textContent, "0");
   assert.equal(r.peak.textContent, "—");
-  // The two-level atom never reaches threshold, whatever it is pumped with.
-  choose(section, "two-level", "laser");
-  assert.equal(r.pumpThreshold.textContent, WORDS.readouts.never.en);
-  assert.equal(r.P_out.textContent, "0" + NB + "W");
-  choose(section, "two-level", "flashlamp");
-  assert.equal(r.flashThreshold.textContent, WORDS.readouts.never.en);
+  // The flashlamp dye laser (stage 12c): its threshold flash, 6.61 J.
+  choose(section, "dye-r6g", "flashlamp");
+  assert.equal(r.flashThreshold.textContent, "6.61" + NB + "J");
 });
 
 test("the threshold flash is found once per bench and per output mirror: not per frame, pump slider, Fire or language switch", () => {
@@ -487,7 +521,7 @@ test("the pump now drives the cartoon and the pump's glow on the bench", () => {
   assert.ok(B.pumpNow({ sim: last(seen.after), config }).x < highest, "and is past it");
 });
 
-test("three and two levels in the cartoon: the share of ions up, N₂/N_t; the two-level atom never half up", () => {
+test("three levels in the cartoon: the share of ions up, N₂/N_t", () => {
   const page = built("en", { watch: true });
   const { browser, section, seen } = page;
   const E = engine(browser);
@@ -508,13 +542,6 @@ test("three and two levels in the cartoon: the share of ions up, N₂/N_t; the t
   const N_t = E.media.get("ruby").N_t;
   assertClose(last(seen.drives).drive.excited, (N_t + sim.N) / (2 * N_t), 1e-12, "N₂/N_t");
   assert.equal(last(seen.drives).drive.pump, Math.min(1, pump.x / 4));
-  // The two-level atom: always more down than up; no threshold, so its
-  // pump is drawn by W_pτ.
-  choose(section, "two-level", "laser");
-  runFrames(page, 60);
-  const two = B.derive(B.configFor({ medium: "two-level", pump: "laser" }));
-  assert.equal(last(seen.bench).light.pump, Math.min(1, two.w / 4));
-  for (const entry of seen.drives.slice(-60)) assert.ok(entry.drive.excited < 0.5, "two levels: " + entry.drive.excited);
 });
 
 test("the bench is drawn with the chosen pump, medium and wavelength", () => {
@@ -526,8 +553,8 @@ test("the bench is drawn with the chosen pump, medium and wavelength", () => {
   assert.equal(last(seen.bench).light.medium, "nd-yag");
   const kinds = new Set();
   const E = engine(browser);
-  for (const id of E.media.list()) {
-    for (const pump of E.bench.pumpsFor(id)) {
+  for (const [id, pump] of BENCHES) {
+    {
       choose(section, id, pump);
       runFrames(page, 1);
       assert.equal(last(seen.bench).light.pumpKind, pump, id + " with " + pump);
@@ -630,15 +657,15 @@ test("dragging the output mirror waits for the threshold flash until the slider 
 });
 
 test("a choice or an output mirror whose threshold search fails leaves the bench as it was", () => {
-  // A stand-in search that fails for Nd:glass, and for a ruby mirror
-  // letting out more than 55 %.
+  // A stand-in search that fails for Nd:YAG with a flashlamp, and for a
+  // ruby mirror letting out more than 55 %.
   function failing(browser) {
     const engineNow = browser.window.LaserEngine;
     const real = engineNow.bench.flashThreshold;
     browser.window.LaserEngine = Object.assign({}, engineNow, {
       bench: Object.assign({}, engineNow.bench, {
         flashThreshold: function (config) {
-          if (config.medium === "nd-glass" || config.refl2 < 0.45) throw new Error("the search failed");
+          if (config.medium === "nd-yag" || config.refl2 < 0.45) throw new Error("the search failed");
           return real(config);
         }
       })
@@ -648,7 +675,7 @@ test("a choice or an output mirror whose threshold search fails leaves the bench
   const { browser, section, seen } = page;
   const rows = shownRows(section);
   const threshold = section.readouts.pumpThreshold.textContent;
-  assert.throws(() => choose(section, "nd-glass"), /the search failed/);
+  assert.throws(() => choose(section, "nd-yag", "flashlamp"), /the search failed/);
   // Still the diode-pumped Nd:YAG: the next slider move changes its config.
   slide(section, "pump", 300);
   assert.equal(last(seen.configs).medium, "nd-yag");
@@ -702,9 +729,8 @@ test("the power chart of each bench: its unit of light as the floor, a steady li
     const d = B.derive(B.configFor({ medium, pump }));
     const chart = seen.chart.P;
     assert.equal(chart.floor, d.powerAtTwiceThreshold, medium);
-    // A line at the steady output, if there is one above 0: none for a
-    // flash, nor for the two-level atom (P_out = 0).
-    if (pump === "flashlamp" || medium === "two-level") {
+    // A line at the steady output, if there is one above 0: none for a flash.
+    if (pump === "flashlamp") {
       assert.deepEqual(Array.from(chart.lines), [], medium + " " + pump + ": no steady output");
     } else {
       assert.equal(chart.lines.length, 1, medium);
@@ -773,14 +799,17 @@ test("every bench keeps up at its starting slow motion, at the ends of its slide
   // screen time, and as long again after the pump went off: the most steps
   // a 60 Hz frame took, which is in its first frames except where the cost
   // is flat (He-Ne 64, Ti:sapphire 48). The costliest: the two-level atom
-  // (739, its first frame), ruby's flash (647), the dye laser's first
-  // frame with the pump off (414). The bounds are 1.5× that, inside the
+  // (739, its first frame; no longer offered, stage 12c), ruby's flash
+  // (647), the dye laser's first frame with the pump off (414); stage 12c's
+  // Nd:glass with diodes 449, the flashlamp dye laser 199. The bounds are
+  // 1.5× that, inside the
   // frame's 1500, so nothing falls behind; a frame over its bound fails at
   // once.
   const bounds = {
     "ruby flashlamp": 980, "nd-glass flashlamp": 660, "nd-yag flashlamp": 750, "nd-yag diode": 510,
-    "co2 discharge": 420, "two-level laser": 1110, "two-level flashlamp": 1090, "he-ne discharge": 100,
-    "ti-sapphire laser": 75, "ar-ion discharge": 500, "dye-r6g laser": 625
+    "co2 discharge": 420, "he-ne discharge": 100,
+    "ti-sapphire laser": 75, "ar-ion discharge": 500, "dye-r6g laser": 625,
+    "nd-glass diode": 675, "dye-r6g flashlamp": 300
   };
   const page = built("en", { watch: true, show: ["bench"] });
   const { browser, section } = page;

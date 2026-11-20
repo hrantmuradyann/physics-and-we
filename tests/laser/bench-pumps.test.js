@@ -61,12 +61,14 @@ function follow(sim, cfg, seconds, count, bound) {
 const PAIRS = [
   ["ruby", "flashlamp"],
   ["nd-glass", "flashlamp"],
+  ["nd-glass", "diode"],
   ["nd-yag", "diode"],
   ["nd-yag", "flashlamp"],
   ["he-ne", "discharge"],
   ["ar-ion", "discharge"],
   ["co2", "discharge"],
   ["dye-r6g", "laser"],
+  ["dye-r6g", "flashlamp"],
   ["ti-sapphire", "laser"],
   ["two-level", "laser"],
   ["two-level", "flashlamp"]
@@ -85,9 +87,9 @@ const BY_KIND = {
 
 test("pumpsFor: the pumps the bench runs each medium with, in the dropdown's order", () => {
   const expected = {
-    "ruby": ["flashlamp"], "nd-glass": ["flashlamp"], "nd-yag": ["diode", "flashlamp"],
+    "ruby": ["flashlamp"], "nd-glass": ["flashlamp", "diode"], "nd-yag": ["diode", "flashlamp"],
     "caf2-dy": [], "he-ne": ["discharge"], "ar-ion": ["discharge"], "co2": ["discharge"],
-    "diode": [], "dye-r6g": ["laser"], "ti-sapphire": ["laser"], "two-level": ["laser", "flashlamp"]
+    "diode": [], "dye-r6g": ["laser", "flashlamp"], "ti-sapphire": ["laser"], "two-level": ["laser", "flashlamp"]
   };
   assert.deepEqual(plain(E.media.list()).sort(), Object.keys(expected).sort(), "every medium is listed");
   for (const id of E.media.list()) {
@@ -121,12 +123,14 @@ test("controls: the field the pump slider sets and both sliders' ranges, with th
   const expected = {
     "ruby flashlamp": ["flashEnergy", 3000],
     "nd-glass flashlamp": ["flashEnergy", 300],
+    "nd-glass diode": ["pumpPower", 5],
     "nd-yag diode": ["pumpPower", 20],
     "nd-yag flashlamp": ["flashEnergy", 50],
     "he-ne discharge": ["current", 0.015],
     "ar-ion discharge": ["current", 40],
     "co2 discharge": ["current", 0.06],
     "dye-r6g laser": ["pumpPower", 10],
+    "dye-r6g flashlamp": ["flashEnergy", 100],
     "ti-sapphire laser": ["pumpPower", 10],
     "two-level laser": ["pumpPower", 1000],
     "two-level flashlamp": ["flashEnergy", 10]
@@ -226,6 +230,29 @@ test("§3.1's ruby on the bench: n_t = 11.53, ε = 1.846×10⁻⁶, threshold ab
   assertClose(d.xPeak, 5.7219, 1e-4, "ruby at 1000 J");
   assertClose(B.derive(configFor("nd-yag", "flashlamp")).xPeak, 9.6939, 1e-4, "Nd:YAG at 10 J");
   assertClose(B.derive(configFor("nd-glass", "flashlamp")).xPeak, 4.6639, 1e-4, "Nd:glass at 100 J");
+});
+
+test("stage 12c's two common pairs: Nd:glass with 802 nm diodes, dye with a coaxial flashlamp", () => {
+  // Nd:glass end-pumped by diodes (docs/laser-plan.md, stage 12c): a 5 mm
+  // disc, a 0.1 mm² spot, 2 % coupler. By hand: γ = ½ln(1/0.98) + 0.2·0.005
+  // = 0.0111, N_c = γ/(σl) = 7.4×10²³ m⁻³, R_c·V = N_c·A·l/τ = 1.23×10¹⁸
+  // photons/s at 802 nm = 0.306 W at the upper level, /η = 0.34 W.
+  const glass = configFor("nd-glass", "diode");
+  assert.equal(glass.pumpLam, 802e-9, "Nd:glass's absorption peak");
+  const g = B.derive(glass);
+  assertClose(g.pumpThreshold, 0.33946, 1e-4, "threshold, W");
+  assertClose(g.P_out, 0.40927, 1e-4, "output at 1 W, W");
+  assertClose(g.slope, 0.61960, 1e-4, "slope");
+  assert.ok(g.period > 0 && g.t_damp > 0, "it spikes before it settles, like Nd:YAG");
+  // Dye in a coaxial flashlamp: a µs flash (the dye's 5 ns upper level
+  // empties at once; its triplet loss is not modelled), 1 % of the lamp's
+  // light reaching the upper level. Threshold 6.6 J of lamp energy.
+  const dye = configFor("dye-r6g", "flashlamp");
+  assertClose(dye.flashTime, 1e-6, 1e-12, "a µs flash");
+  assertClose(B.flashThreshold(dye), 6.6094, 1e-4, "dye E_th, J");
+  assertClose(B.derive(dye).xPeak, 3.0261, 1e-4, "dye at 20 J");
+  assert.deepEqual(plain(B.qSwitchesFor({ medium: "dye-r6g", pump: "flashlamp" })), ["none"], "no Q-switch: its pulse is already short");
+  assert.deepEqual(plain(B.qSwitchesFor({ medium: "nd-glass", pump: "diode" })), ["none"]);
 });
 
 /* ---------- derive, by pump kind ---------- */
@@ -570,11 +597,11 @@ test("a solver answer a hair below all-ions-down is passed on as −N_t, so the 
 });
 
 test("every setup runs 1 ms of its default (flash fired at the start) within a bound of steps", () => {
-  // Measured per pair (stage 7b); the bounds are 1.5× that.
+  // Measured per pair (stage 7b; the two of stage 12c: 11250 and 4378); the bounds are 1.5× that.
   const bounds = {
-    "ruby flashlamp": 22500, "nd-glass flashlamp": 24500, "nd-yag diode": 16200, "nd-yag flashlamp": 19000,
+    "ruby flashlamp": 22500, "nd-glass flashlamp": 24500, "nd-glass diode": 16900, "nd-yag diode": 16200, "nd-yag flashlamp": 19000,
     "he-ne discharge": 520, "ar-ion discharge": 1080, "co2 discharge": 14200,
-    "dye-r6g laser": 1340, "ti-sapphire laser": 740, "two-level laser": 1550, "two-level flashlamp": 2500
+    "dye-r6g laser": 1340, "dye-r6g flashlamp": 6600, "ti-sapphire laser": 740, "two-level laser": 1550, "two-level flashlamp": 2500
   };
   for (const [medium, pump] of PAIRS) {
     const c = configFor(medium, pump);

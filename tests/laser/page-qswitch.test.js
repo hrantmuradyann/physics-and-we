@@ -70,7 +70,7 @@ test("the Q-switch's words are in data/laser.json, in both languages; the cell's
 
 /* ---------- under the drawing: Fire and the On/Off switch ---------- */
 
-test("under the drawing: Fire on a flashlamp bench, the filter's On/Off on a bench that can have it; no row with neither", () => {
+test("under the drawing: the pump's dropdown always, Fire on a flashlamp bench, the filter's On/Off on a bench that can have it", () => {
   const page = built("en", { watch: true });
   const { section } = page;
   // The default bench, Nd:YAG with diodes: the switch, no Fire.
@@ -93,14 +93,15 @@ test("under the drawing: Fire on a flashlamp bench, the filter's On/Off on a ben
   assert.deepEqual([section.under.hidden, section.fire.hidden, section.switchRow.hidden], [false, false, false], "ruby");
   section.toggle.fire("click");
   assert.equal(configNow(page).qSwitch, "absorber", "ruby's filter");
-  // The two-level atom with a flashlamp: Fire, and no switch.
-  choose(section, "two-level", "flashlamp");
-  assert.deepEqual([section.under.hidden, section.fire.hidden, section.switchRow.hidden], [false, false, true], "two levels");
+  // The flashlamp dye laser: Fire, and no switch.
+  choose(section, "dye-r6g", "flashlamp");
+  assert.deepEqual([section.under.hidden, section.fire.hidden, section.switchRow.hidden], [false, false, true], "the dye's lamp");
   assert.equal(configNow(page).qSwitch, "none");
-  // Neither: no row at all, and a stray click on the hidden switch changes nothing.
-  for (const [medium, pump] of [["he-ne", "discharge"], ["dye-r6g", "laser"], ["two-level", "laser"]]) {
+  // Neither: the row stays for the pump's dropdown (stage 12c), and a
+  // stray click on the hidden switch changes nothing.
+  for (const [medium, pump] of [["he-ne", "discharge"], ["dye-r6g", "laser"], ["nd-glass", "diode"]]) {
     choose(section, medium, pump);
-    assert.equal(section.under.hidden, true, medium + " " + pump + ": no row");
+    assert.equal(section.under.hidden, false, medium + " " + pump + ": the row, for the pump's dropdown");
     assert.equal(section.switchRow.hidden, true, medium + ": no switch");
     section.toggle.fire("click");
     assert.equal(configNow(page).qSwitch, "none", medium + ": a click");

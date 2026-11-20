@@ -136,6 +136,13 @@ function laserSection(boxWidth) {
     section.choose[name] = fakeElement("select");
     by['[data-laser-choose="' + name + '"]'] = section.choose[name];
   }
+  // The "Learn more" beside each dropdown (stage 12c), which page.js points
+  // at the chosen medium's and pump's sections of the book.
+  section.more = {};
+  for (const name of CHOICES) {
+    section.more[name] = fakeElement("a");
+    by['[data-laser-more="' + name + '"]'] = section.more[name];
+  }
   section.play = fakeElement("button");
   section.reset = fakeElement("button");
   section.fire = fakeElement("button");
@@ -456,9 +463,23 @@ function chooseAfresh(section, medium, pump, qSwitch) {
   choose(section, medium, pump, qSwitch);
 }
 
-// A dropdown's options: [{ value, text, disabled }].
+// A dropdown's options: [{ value, text, disabled }], those inside its
+// <optgroup>s (the medium's, stage 12c) in order too.
 function optionsOf(select) {
-  return select.children.map((option) => ({ value: option.value, text: option.textContent, disabled: option.disabled }));
+  const options = [];
+  for (const child of select.children) {
+    if (child.tagName === "OPTGROUP") options.push(...child.children);
+    else options.push(child);
+  }
+  return options.map((option) => ({ value: option.value, text: option.textContent, disabled: option.disabled }));
+}
+
+// A dropdown's groups: [{ label, values }]; options outside a group are not counted.
+function groupsOf(select) {
+  return select.children.filter((child) => child.tagName === "OPTGROUP").map((group) => ({
+    label: group.getAttribute("label"),
+    values: group.children.map((option) => option.value)
+  }));
 }
 
 // The readouts a section shows now (their rows not hidden), in order.
@@ -469,5 +490,5 @@ function shownRows(section) {
 module.exports = {
   WORDS, PARTS, CANVASES, CONTROLS, Q_CONTROLS, MIRROR_CONTROLS, MIRRORS, SHAPES, READOUTS, CHOICES, UI_WORDS, NB, FRAME,
   setup, laserSection, benchOnlySection, sectionReady, texts, switchTheme, built, watch, last, dearer, sum,
-  runFrames, slide, drag, type, engine, assertNoListeners, choose, chooseAfresh, optionsOf, shownRows, switchOn
+  runFrames, slide, drag, type, engine, assertNoListeners, choose, chooseAfresh, optionsOf, groupsOf, shownRows, switchOn
 };

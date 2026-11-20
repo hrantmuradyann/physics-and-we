@@ -42,8 +42,11 @@ function wordPairs(value, where, found) {
       return list;
     }
     for (const key of keys) {
-      // A "route" is the name of a page to link to (data-route), not a word.
+      // A "route" is the name of a page to link to (data-route), not a word;
+      // "more" holds the laser book's sections the lab's "Learn more" links
+      // open (stage 12c), checked by the test of those links.
       if (key === "route" && typeof value[key] === "string") continue;
+      if (key === "more" && !where) continue;
       wordPairs(value[key], where ? where + "." + key : key, list);
     }
   } else if (Array.isArray(value)) {
@@ -346,22 +349,28 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
   assert.match(fire[0], /^<button\b[^>]*\sdata-ready="false"/);
   assert.match(fire[1], /<svg\b[^>]*\saria-hidden="true"/, "the bolt, hidden from screen readers");
   assert.match(fire[1], /<span\b[^>]*\sdata-text="buttons\.fire"/, "its word, inside it beside the bolt");
-  // Right under the drawing (stage 8b, the owner's wish): one row, hidden
-  // until page.js shows it, with Fire and then the Q-switch's group (its
-  // name and its On/Off switch), in the bench's box after its canvas.
+  // Right under the drawing (stage 8b, the owner's wish): one row, always
+  // shown since it holds the pump's dropdown (stage 12c), with the pump's
+  // dropdown, Fire and then the Q-switch's group (its name and its On/Off
+  // switch), in the bench's box after its canvas.
   assert.equal((html.match(/\sdata-laser-under[\s>]/g) || []).length, 1, "one row under the drawing");
   assert.equal((html.match(/\sdata-laser-switch[\s>]/g) || []).length, 1, "one Q-switch group");
   const benchCanvas = html.indexOf('data-laser-canvas="bench"');
   const under = html.slice(html.indexOf("data-laser-under"));
   assert.ok(html.indexOf("data-laser-under") > benchCanvas, "after the bench's canvas");
   assert.ok(html.indexOf("data-laser-under") < html.indexOf('data-laser-canvas="power"'), "before the next picture");
-  assert.match(html, /<div\b[^>]*\sdata-laser-under[^>]*\shidden[\s>]/);
+  assert.doesNotMatch(html, /<div\b[^>]*\sdata-laser-under[^>]*\shidden[\s>]/);
   assert.match(html, /<div\b[^>]*\sdata-laser-switch[^>]*\shidden[\s>]/);
+  const pumpAt = under.indexOf('data-laser-choose="pump"');
   const fireAt = under.indexOf('data-laser-action="fire"');
   const switchAt = under.indexOf("data-laser-switch");
   const toggleAt = under.indexOf('data-laser-action="qSwitch"');
   const controlsAt = under.indexOf("laser-stage__controls");
-  assert.ok(fireAt !== -1 && fireAt < switchAt && switchAt < toggleAt && toggleAt < controlsAt, "Fire, then the switch, in the row");
+  assert.ok(pumpAt !== -1 && pumpAt < fireAt && fireAt < switchAt && switchAt < toggleAt && toggleAt < controlsAt,
+    "the pump's dropdown, Fire, then the switch, in the row");
+  // The medium's dropdown above the drawing, in the bench's box (stage 12c).
+  const bench = html.slice(html.indexOf("laser-stage__bench"), benchCanvas);
+  assert.ok(bench.includes('data-laser-choose="medium"'), "the medium's dropdown above the drawing");
   // The switch: a button with role="switch", off to start with, named by
   // the Q-switch's name, with the word On/Off (written by page.js) in it.
   const toggle = html.match(/<button\b[^>]*\sdata-laser-action="qSwitch"[^>]*>/)[0];
@@ -622,4 +631,40 @@ test("sections/labs.html: every word the page and its lists ask for is in data/l
       checkWords(attributeValues(template.html, "data-text"), item, template.list + "." + index + ".");
     });
   }
+});
+
+/* ---------- the lab's "Learn more" links (stage 12c) ---------- */
+
+test("sections/laser.html: every 'Learn more' opens the laser book at a section that exists", () => {
+  const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
+  const more = readJSON("data/laser.json").more;
+  const book = readJSON("data/laser-study.json");
+  const sections = new Set();
+  for (const chapter of book.chapters) for (const section of chapter.sections) sections.add("section-" + section.id);
+  const named = [];
+  // The links of one part of the page: their section comes from the data.
+  const fixed = html.match(/<a\b[^>]*\sdata-route-id="more\.[^"]+"[^>]*>/g) || [];
+  assert.ok(fixed.length >= 8, "a link beside each part (" + fixed.length + ")");
+  for (const link of fixed) {
+    assert.match(link, /\sdata-goto="laser-study"/, link);
+    const key = link.match(/data-route-id="more\.([^"]+)"/)[1];
+    assert.equal(typeof more[key], "string", "more." + key + " in data/laser.json");
+    named.push(["more." + key, more[key]]);
+  }
+  // The two that follow the choice of medium and pump (page.js points them).
+  assert.deepEqual(attributeValues(html, "data-laser-more"), ["medium", "pump"]);
+  for (const name of ["medium", "pump"]) {
+    assert.match(html.match(new RegExp('<a\\b[^>]*\\sdata-laser-more="' + name + '"[^>]*>'))[0], /\sdata-goto="laser-study"/);
+  }
+  for (const [kind, ids] of [["media", ["ruby", "nd-glass", "nd-yag", "he-ne", "ar-ion", "co2", "dye-r6g", "ti-sapphire"]],
+                             ["pumps", ["flashlamp", "diode", "discharge", "laser"]]]) {
+    for (const id of ids) {
+      assert.equal(typeof more[kind][id], "string", "more." + kind + "." + id + ": every bench's " + kind + " has its section");
+      named.push(["more." + kind + "." + id, more[kind][id]]);
+    }
+  }
+  for (const [where, id] of named) assert.ok(sections.has(id), where + ": " + id + " is a section of the book");
+  // Each link says "Learn more" (the shared word of data/site.json).
+  const links = html.match(/<a\b[^>]*\sdata-goto="laser-study"[^>]*>[\s\S]*?<\/a>/g);
+  for (const link of links) assert.match(link, /data-ui="learnMore"/, link);
 });

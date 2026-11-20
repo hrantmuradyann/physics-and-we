@@ -109,8 +109,8 @@
       n: 1.5,
       ng: null,
       N_t: null,
-      pumps: ["flashlamp"],
-      cw: false, pulsed: true
+      pumps: ["flashlamp", "diode"],
+      cw: true, pulsed: true
     },
     {
       id: "nd-yag",
@@ -233,7 +233,7 @@
       n: 1.36,
       ng: null,
       N_t: null,
-      pumps: ["laser"],
+      pumps: ["laser", "flashlamp"],
       cw: true, pulsed: true
     },
     {

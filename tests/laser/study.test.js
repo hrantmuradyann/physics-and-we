@@ -274,7 +274,18 @@ test("the page's layout: the simulator button, chapters of sections, a dig-deepe
 test("the router says which page is shown", () => {
   const router = read("js/router.js");
   const activate = router.slice(router.indexOf("function activate("), router.indexOf("function markCurrentLink("));
-  assert.match(activate, /dispatchEvent\(new CustomEvent\("view:shown", \{ detail: \{ route: route \} \}\)\)/);
+  assert.match(activate, /^function activate\(route, id\)/);
+  assert.match(activate, /dispatchEvent\(new CustomEvent\("view:shown", \{ detail: \{ route: route, id: id \|\| null \} \}\)\)/);
+  // The page is scrolled to the top before it is said to be shown, so a page
+  // that scrolls to its item then (the book) keeps that place.
+  const showAt = router.indexOf("var show = function");
+  const show = router.slice(showAt, router.indexOf("};", showAt));
+  assert.ok(show.indexOf("global.scrollTo(0, 0);") !== -1 && show.indexOf("global.scrollTo(0, 0);") < show.indexOf("activate(route, id);"),
+    "to the top, then shown");
+  // The book's id is only a place to scroll to: a new id does not build it
+  // again (that would typeset every formula again on each Learn more).
+  assert.match(router, /var PLACE_ONLY = \{ "laser-study": true \};/);
+  assert.match(router, /if \(!PLACE_ONLY\[route\] && loaded\[route\]\.renderedId !== id\) render\(route, id\);/);
 });
 
 test("the simulator's dig-deeper button and its last section lead to the study page", () => {
@@ -676,6 +687,85 @@ test("laser-study.js: chapters and sections are numbered in order and named by t
   assert.equal(built[1].section.scrolledTo.length, 1, "a section's link in the contents scrolls to it");
   dom.document.click(book.toSection);
   assert.equal(built[1].section.scrolledTo.length, 2, "and so does one in the text");
+});
+
+test("laser-study.js: opened at one section (the lab's Learn more), it goes there, and again once the formulas are set", () => {
+  const dom = makeDom();
+  const window = loadStudy(dom);
+  const book = buildBook(dom);
+  const built = book.chapters.flatMap((c) => c.sections);
+  fire(window, "section:ready", { route: "laser-study", container: book.container, data: BOOK_DATA });
+  fire(window, "view:shown", { route: "laser-study", id: "section-b1" });
+  assert.equal(built[2].section.scrolledTo.length, 1, "there at once");
+  assert.equal(built[2].section.scrolledTo[0].behavior, "auto", "no smooth scroll on arrival");
+  const [link, script] = dom.head.childNodes;
+  window.katex = fakeKatex([]);
+  script.onload();
+  link.onload();
+  assert.equal(built[2].section.scrolledTo.length, 2, "again once the taller text is set");
+  // A language switch: the new build is typeset at once and does not jump.
+  const again = buildBook(dom);
+  const builtAgain = again.chapters.flatMap((c) => c.sections);
+  fire(window, "section:ready", { route: "laser-study", container: again.container, data: BOOK_DATA });
+  assert.ok(builtAgain.every((x) => x.section.scrolledTo.length === 0), "only once: a later build does not jump there");
+  // Shown again without an id, or with one that names nothing: no scroll.
+  fire(window, "view:shown", { route: "laser-study" });
+  fire(window, "view:shown", { route: "laser-study", id: "section-nowhere" });
+  assert.ok(builtAgain.every((x) => x.section.scrolledTo.length === 0));
+  // Already typeset when it is shown at a section: one scroll, no later one.
+  fire(window, "view:shown", { route: "laser-study", id: "section-a1" });
+  assert.equal(builtAgain[0].section.scrolledTo.length, 1);
+  const third = buildBook(dom);
+  fire(window, "section:ready", { route: "laser-study", container: third.container, data: BOOK_DATA });
+  assert.equal(builtAgain[0].section.scrolledTo.length, 1);
+  assert.ok(third.chapters.flatMap((c) => c.sections).every((x) => x.section.scrolledTo.length === 0),
+    "the next build (a language switch) does not jump to it");
+});
+
+test("laser-study.js: once more when KaTeX's fonts arrive, never after the visitor scrolled or left", () => {
+  // A document whose fonts arrive when the test says so.
+  function setUp() {
+    const dom = makeDom();
+    let fontsArrive = null;
+    dom.document.fonts = { ready: { then(fn) { fontsArrive = fn; } } };
+    const window = loadStudy(dom);
+    const book = buildBook(dom);
+    const target = book.chapters.flatMap((c) => c.sections)[2].section;
+    fire(window, "section:ready", { route: "laser-study", container: book.container, data: BOOK_DATA });
+    fire(window, "view:shown", { route: "laser-study", id: "section-b1" });
+    const typeset = () => {
+      const [link, script] = dom.head.childNodes;
+      window.katex = fakeKatex([]);
+      script.onload();
+      link.onload();
+    };
+    return { window, target, typeset, fonts: () => fontsArrive && fontsArrive() };
+  }
+
+  // Left alone: there, again when the formulas are set, and once more with the fonts.
+  let page = setUp();
+  page.typeset();
+  assert.equal(page.target.scrolledTo.length, 2);
+  page.fonts();
+  assert.equal(page.target.scrolledTo.length, 3, "once more when the fonts have arrived");
+  page.fonts();
+  assert.equal(page.target.scrolledTo.length, 3, "then forgotten");
+
+  // The visitor scrolls on their own before KaTeX arrives: no late jump.
+  for (const type of ["wheel", "touchstart", "keydown"]) {
+    page = setUp();
+    fire(page.window, type, undefined);
+    page.typeset();
+    page.fonts();
+    assert.equal(page.target.scrolledTo.length, 1, type + " ends the wait");
+  }
+
+  // The visitor goes back to the lab before KaTeX arrives: no jump on the hidden book.
+  page = setUp();
+  fire(page.window, "view:shown", { route: "laser", id: null });
+  page.typeset();
+  page.fonts();
+  assert.equal(page.target.scrolledTo.length, 1, "leaving the book ends the wait");
 });
 
 test("laser-study.js: a picture shows its image, or until there is one what it should show, or nothing", () => {

@@ -3165,12 +3165,6 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "var TWO_LEVEL_HIDES = [\"x\", \"T_best\", \"period\"];",
-    replace: "var TWO_LEVEL_HIDES = [];",
-    why: "the two-level atom showing a pump over a threshold it does not have"
-  },
-  {
-    file: "js/laser/page.js",
     find: "flashlamp: [\"flashThreshold\", \"x\", \"gth\", \"tau_c\"].concat(MIRROR_ROWS, [\"peak\", \"powerNow\", \"time\"])",
     replace: "flashlamp: [\"flashThreshold\", \"pumpThreshold\", \"x\", \"gth\", \"tau_c\"].concat(MIRROR_ROWS, [\"peak\", \"powerNow\", \"time\"])",
     why: "a flash showing a steady pump's threshold, which it does not have"
@@ -3231,9 +3225,15 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      while (select.firstChild) select.removeChild(select.firstChild);\n",
-    replace: "",
+    find: "    function fill(select, options) {\n      while (select.firstChild) select.removeChild(select.firstChild);\n",
+    replace: "    function fill(select, options) {\n",
     why: "the options added to the old ones"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "    function fillGroups(select, groups) {\n      while (select.firstChild) select.removeChild(select.firstChild);\n",
+    replace: "    function fillGroups(select, groups) {\n",
+    why: "the medium's groups added to the old ones"
   },
   {
     file: "js/laser/page.js",
@@ -3434,12 +3434,6 @@ const MUTATIONS = [
     find: "        if (kept.sim !== state.sim || kept.derived !== derived) {",
     replace: "        if (kept.sim !== state.sim) {",
     why: "the pump kept after a slider move"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "      return pump.x !== null ? pump.x : pump.w;",
-    replace: "      return pump.x;",
-    why: "the two-level atom's pump arrow and glow from the x it does not have"
   },
   {
     file: "js/laser/page.js",
@@ -4332,12 +4326,6 @@ const MUTATIONS = [
     find: "      if (switchGroup) switchGroup.hidden = !filter;",
     replace: "      if (switchGroup) switchGroup.hidden = false;",
     why: "the switch shown on a bench that cannot have a filter"
-  },
-  {
-    file: "js/laser/page.js",
-    find: "      if (under) under.hidden = !flash && !filter;",
-    replace: "      if (under) under.hidden = false;",
-    why: "an empty row under the drawing"
   },
   {
     file: "js/laser/page.js",
@@ -5812,8 +5800,8 @@ const MUTATIONS = [
   // ---------- stage 12: the study page ----------
   {
     file: "js/laser-study.js",
-    find: "event.detail.route !== ROUTE) return;\n    loadKatex();",
-    replace: "false) return;\n    loadKatex();",
+    find: "    if (event.detail.route !== ROUTE) {\n      wanted = null;\n      return;\n    }\n",
+    replace: "",
     why: "KaTeX downloaded whichever page is shown"
   },
   {
@@ -5878,7 +5866,7 @@ const MUTATIONS = [
   },
   {
     file: "js/router.js",
-    find: "    global.dispatchEvent(new CustomEvent(\"view:shown\", { detail: { route: route } }));\n",
+    find: "    global.dispatchEvent(new CustomEvent(\"view:shown\", { detail: { route: route, id: id || null } }));\n",
     replace: "",
     why: "the router never says which page is shown"
   },
@@ -6112,6 +6100,146 @@ const MUTATIONS = [
     find: "\"image\": \"\",\n            \"alt\": {\n              \"hy\": \"Լույսը գնում-գալիս է",
     replace: "\"image\": \"images/study/Mirrors.png\",\n            \"alt\": {\n              \"hy\": \"Լույսը գնում-գալիս է",
     why: "a picture's file that does not exist"
+  },
+
+  // ---------- stage 12c: every common pump, the choices beside their parts, Learn more ----------
+  {
+    file: "js/laser/engine/bench.js",
+    find: "pumpPower: 1, pumpLam: 802 * nm, eta: 0.9 } },",
+    replace: "pumpPower: 1, pumpLam: 808 * nm, eta: 0.9 } },",
+    why: "Nd:glass's diodes not at its own absorption peak"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "flashEnergy: 20, flashShare: 0.01, flashTime: 1 * us,",
+    replace: "flashEnergy: 20, flashShare: 0.01, flashTime: FLASH_TIME,",
+    why: "the dye's flash as long as a rod's (300 µs, longer than its trap allows)"
+  },
+  {
+    file: "js/laser/engine/media.js",
+    find: "pumps: [\"laser\", \"flashlamp\"],",
+    replace: "pumps: [\"laser\"],",
+    why: "the media table does not list the dye's flashlamp"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "    \"dye-r6g flashlamp\": 1e6,                         // its flash lasts a few µs\n",
+    replace: "",
+    why: "the flashlamp dye laser starts at the default slow motion"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "    { name: \"gas\", media: [\"he-ne\", \"ar-ion\", \"co2\"] },",
+    replace: "    { name: \"gas\", media: [\"he-ne\", \"co2\", \"ar-ion\"] },",
+    why: "the gases not in the order they first lased"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "    { name: \"semiconductor\", media: [\"diode\"] }\n",
+    replace: "    { name: \"semiconductor\", media: [\"diode\"] },\n    { name: \"model\", media: [\"two-level\"] }\n",
+    why: "the two-level atom offered again"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          var pumps = offered(medium) && engine.media.list().indexOf(medium) !== -1 ? bench.pumpsFor(medium) : [];",
+    replace: "          var pumps = engine.media.list().indexOf(medium) !== -1 ? bench.pumpsFor(medium) : [];",
+    why: "a medium the page does not offer can still be chosen"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        group.setAttribute(\"label\", item.group);\n",
+    replace: "",
+    why: "the dropdown's groups without their names"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      pointMore(\"pump\", (more.pumps || {})[state.config.pump]);",
+    replace: "      pointMore(\"pump\", (more.pumps || {})[state.config.medium]);",
+    why: "the pump's Learn more looks up the medium"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      link.hidden = !known;\n",
+    replace: "",
+    why: "a Learn more with no section stays on the page"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      link.setAttribute(\"data-id\", id);\n",
+    replace: "",
+    why: "the router opens the book at its top, not the section"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"atoms\": \"section-levels\"",
+    replace: "\"atoms\": \"section-nowhere\"",
+    why: "a Learn more to a section the book does not have"
+  },
+  {
+    file: "sections/laser.html",
+    find: "<a class=\"link laser-more\" data-goto=\"laser-study\" data-route-id=\"more.chart\">",
+    replace: "<a class=\"link laser-more\" data-route-id=\"more.chart\">",
+    why: "a Learn more the router does not catch"
+  },
+  {
+    file: "sections/laser.html",
+    find: "        <div class=\"laser-under\" data-laser-under>",
+    replace: "        <div class=\"laser-under\" data-laser-under hidden>",
+    why: "the row with the pump's dropdown hidden on a bench without Fire or a filter"
+  },
+  {
+    file: "js/router.js",
+    find: "detail: { route: route, id: id || null }",
+    replace: "detail: { route: route }",
+    why: "the book is not told which section was asked for"
+  },
+  {
+    file: "js/router.js",
+    find: "      global.scrollTo(0, 0);\n      activate(route, id);",
+    replace: "      activate(route, id);\n      global.scrollTo(0, 0);",
+    why: "the book's scroll to its section undone by the router"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    wanted = event.detail.id || null;\n    goToWanted();\n",
+    replace: "    wanted = event.detail.id || null;\n",
+    why: "an already typeset book not scrolled to the section asked for"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    goToWanted();\n    var fonts = global.document.fonts;",
+    replace: "    var fonts = global.document.fonts;",
+    why: "the section moved down by the formulas, not followed"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    if (typesetBuild === build) wanted = null;   // already set: nothing will move it\n",
+    replace: "",
+    why: "a later language switch jumps back to the section"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "target.scrollIntoView({ behavior: \"auto\", block: \"start\" });",
+    replace: "target.scrollIntoView({ behavior: \"smooth\", block: \"start\" });",
+    why: "a smooth scroll on arriving at a section"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "      fonts.ready.then(function () {\n        goToWanted();\n",
+    replace: "      fonts.ready.then(function () {\n",
+    why: "the section moved down by KaTeX's fonts, not followed"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    global.addEventListener(type, forgetWanted, { passive: true });\n",
+    replace: "",
+    why: "a late scroll pulls the visitor back after they scrolled on their own"
+  },
+  {
+    file: "js/router.js",
+    find: "if (!PLACE_ONLY[route] && loaded[route].renderedId !== id)",
+    replace: "if (loaded[route].renderedId !== id)",
+    why: "every Learn more builds the whole book again"
   },
 ];
 

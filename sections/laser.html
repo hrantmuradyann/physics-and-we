@@ -61,6 +61,18 @@
       </div>
 
       <div class="laser-stage__bench laser-bench reveal">
+        <!-- Above the drawing, centred over the drawn medium (the picture is
+             symmetric): the gain medium's dropdown, filled in by
+             js/laser/page.js (the names are media.* in data/laser.json, in
+             the groups of choose.groups), and a link to that medium's
+             section of the laser book (data-laser-more, set by page.js). -->
+        <div class="laser-over">
+          <div class="laser-choose__item laser-choose__item--bench">
+            <label class="lab-control__name" for="laser-medium" data-text="choose.medium"></label>
+            <select class="laser-choose__select" id="laser-medium" data-laser-choose="medium"></select>
+            <a class="link laser-more" data-goto="laser-study" data-laser-more="medium" hidden><span data-ui="learnMore"></span></a>
+          </div>
+        </div>
         <!-- The drawing with a column at each end: on the left, beside the
              back mirror, and on the right, beside the output mirror, that
              mirror's shape (flat, concave or convex: the little pictures show
@@ -86,6 +98,7 @@
                   <span data-text="controls.shapes.convex"></span>
                 </button>
               </div>
+              <a class="link laser-more" data-goto="laser-study" data-route-id="more.mirrors"><span data-ui="learnMore"></span></a>
             </div>
             <div class="lab-control laser-end__radius" data-laser-slider="Rc1" hidden>
               <div class="lab-control__label">
@@ -119,6 +132,7 @@
                   <span data-text="controls.shapes.convex"></span>
                 </button>
               </div>
+              <a class="link laser-more" data-goto="laser-study" data-route-id="more.mirrors"><span data-ui="learnMore"></span></a>
             </div>
             <div class="lab-control laser-end__radius" data-laser-slider="Rc2" hidden>
               <div class="lab-control__label">
@@ -133,46 +147,43 @@
             </div>
           </div>
         </div>
-        <!-- Right under the laser: Fire (shown by js/laser/page.js only
-             when the pump is a flashlamp), centred under the drawn lamp,
-             and the Q-switch's name with its On/Off switch (only for a
-             laser that can have one), on the left under the drawn filter.
-             The row is hidden when it has neither. Fire asks to be pressed
-             while the lamp is dark (data-ready, set by page.js). Turning
-             the switch on or off keeps the run and the chart going. -->
-        <div class="laser-under" data-laser-under hidden>
-          <button class="btn btn--primary laser-fire" type="button" data-laser-action="fire" data-ready="false" hidden>
-            <svg class="laser-fire__bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.5 2 4.5 13.5h6.2L9.5 22l10-12.5h-6.3z"/></svg>
-            <span data-text="buttons.fire"></span>
-          </button>
+        <!-- Right under the laser, in the middle, under the drawn pump: the
+             pump's dropdown (filled in by js/laser/page.js with the pumps the
+             medium can use) with a link to that pump's section of the book,
+             and under it Fire (shown only when the pump is a flashlamp). On
+             the left, under the drawn filter, the Q-switch's name with its
+             On/Off switch (only for a laser that can have one). Fire asks to
+             be pressed while the lamp is dark (data-ready, set by page.js).
+             Turning the switch on or off keeps the run and the chart going. -->
+        <div class="laser-under" data-laser-under>
+          <div class="laser-under__middle">
+            <div class="laser-choose__item laser-choose__item--bench">
+              <label class="lab-control__name" for="laser-pump-kind" data-text="choose.pump"></label>
+              <select class="laser-choose__select" id="laser-pump-kind" data-laser-choose="pump"></select>
+              <a class="link laser-more" data-goto="laser-study" data-laser-more="pump" hidden><span data-ui="learnMore"></span></a>
+            </div>
+            <button class="btn btn--primary laser-fire" type="button" data-laser-action="fire" data-ready="false" hidden>
+              <svg class="laser-fire__bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.5 2 4.5 13.5h6.2L9.5 22l10-12.5h-6.3z"/></svg>
+              <span data-text="buttons.fire"></span>
+            </button>
+          </div>
           <div class="laser-switch" data-laser-switch hidden>
             <span class="laser-switch__name" id="laser-switch-name" data-text="choose.qSwitch"></span>
             <button class="laser-switch__toggle" type="button" role="switch" aria-checked="false" aria-labelledby="laser-switch-name" data-laser-action="qSwitch">
               <span class="laser-switch__track" aria-hidden="true"><span class="laser-switch__knob"></span></span>
               <span class="laser-switch__word" data-laser-name="qSwitchState"></span>
             </button>
+            <a class="link laser-more" data-goto="laser-study" data-route-id="more.qSwitch"><span data-ui="learnMore"></span></a>
           </div>
         </div>
       </div>
 
-      <!-- The controls. The dropdowns choose the laser; js/laser/page.js
-           fills in their options (the names are media.* and pumps.* in
-           data/laser.json). A slider and its number box show the same
+      <!-- The controls. A slider and its number box show the same
            value; the pump slider's name, the units, the Play/Pause word
            and the line under the slow-motion slider are written by
            js/laser/page.js, which also shows the filter's slider only
            while the Q-switch is on (data-laser-slider). -->
       <div class="laser-stage__controls lab__panel reveal">
-        <div class="laser-choose">
-          <div class="laser-choose__item">
-            <label class="lab-control__name" for="laser-medium" data-text="choose.medium"></label>
-            <select class="laser-choose__select" id="laser-medium" data-laser-choose="medium"></select>
-          </div>
-          <div class="laser-choose__item">
-            <label class="lab-control__name" for="laser-pump-kind" data-text="choose.pump"></label>
-            <select class="laser-choose__select" id="laser-pump-kind" data-laser-choose="pump"></select>
-          </div>
-        </div>
         <div class="lab__controls">
           <div class="lab-control">
             <div class="lab-control__label">
@@ -193,6 +204,7 @@
               </span>
             </div>
             <input class="lab-control__input" id="laser-coupler" type="range" min="0" max="1000" step="1" data-laser-control="coupler">
+            <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.coupler"><span data-ui="learnMore"></span></a></p>
           </div>
           <div class="lab-control" data-laser-slider="absorberT0" hidden>
             <div class="lab-control__label">
@@ -229,9 +241,11 @@
       <div class="laser-stage__side">
         <div class="laser-side__chart laser-bench reveal">
           <canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="power" role="img"></canvas>
+          <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.chart"><span data-ui="learnMore"></span></a></p>
         </div>
         <div class="laser-side__stability laser-bench reveal">
           <canvas class="laser-bench__canvas" data-laser-canvas="stability" role="img"></canvas>
+          <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.stability"><span data-ui="learnMore"></span></a></p>
         </div>
         <div class="laser-side__numbers lab__panel reveal">
           <!-- One row per number. Each pump shows some of them; js/laser/page.js
@@ -316,9 +330,11 @@
       <div class="laser-stage__photons">
         <div class="laser-bench reveal">
           <canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas>
+          <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.photons"><span data-ui="learnMore"></span></a></p>
         </div>
         <div class="laser-bench reveal">
           <canvas class="laser-bench__canvas" data-laser-canvas="atoms" role="img"></canvas>
+          <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.atoms"><span data-ui="learnMore"></span></a></p>
         </div>
       </div>
 

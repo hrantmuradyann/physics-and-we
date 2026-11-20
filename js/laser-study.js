@@ -28,6 +28,9 @@
       those, or a link in the text ([the ruby laser](#section-ruby) in the
       JSON), is clicked. It scrolls itself because the router answers a
       change of the address's # by showing the page again from the top.
+      Opened with an id (?view=laser-study&id=section-ruby, the lab's
+      "Learn more" links), it goes to that section, and again once the
+      formulas, which make the text taller, are typeset.
 
    Adds one global, LaserStudy, with pieces() for the tests.
    ========================================================================= */
@@ -45,6 +48,7 @@
   var styled = false;         // the KaTeX stylesheet has arrived
   var build = 0;              // counts the builds of the page
   var typesetBuild = -1;      // the build whose formulas are typeset
+  var wanted = null;          // the section the address asked for, until the formulas are set
 
   /* ---------- Finding the formulas ---------- */
 
@@ -105,6 +109,19 @@
     if (!container || !global.katex || !styled || typesetBuild === build) return;
     Array.prototype.forEach.call(container.querySelectorAll("[data-rich]"), typesetElement);
     typesetBuild = build;
+    // The formulas make the text taller and move the sections down: back to
+    // the one asked for, and once more when KaTeX's fonts have arrived
+    // (they change the formulas' heights again). Then it is forgotten.
+    goToWanted();
+    var fonts = global.document.fonts;
+    if (wanted && fonts && fonts.ready) {
+      fonts.ready.then(function () {
+        goToWanted();
+        wanted = null;
+      });
+    } else {
+      wanted = null;
+    }
   }
 
   /* ---------- Loading KaTeX, once ---------- */
@@ -266,6 +283,13 @@
     target.scrollIntoView({ behavior: lessMotion() ? "auto" : "smooth", block: "start" });
   }
 
+  // Opened at one section (?view=laser-study&id=section-ruby, from a
+  // "Learn more" in the lab): there at once, without a smooth scroll.
+  function goToWanted() {
+    var target = wanted ? targets["#" + wanted] : null;
+    if (target) target.scrollIntoView({ behavior: "auto", block: "start" });
+  }
+
   /* ---------- Hooks ---------- */
 
   global.addEventListener("section:ready", function (event) {
@@ -278,8 +302,24 @@
     typeset(latest);                   // does nothing until KaTeX is here
   });
 
+  // The visitor scrolling on their own, or leaving the book, ends the wait:
+  // a late scroll would pull them back from where they went.
+  function forgetWanted() {
+    wanted = null;
+  }
+  ["wheel", "touchstart", "keydown"].forEach(function (type) {
+    global.addEventListener(type, forgetWanted, { passive: true });
+  });
+
   global.addEventListener("view:shown", function (event) {
-    if (!event.detail || event.detail.route !== ROUTE) return;
+    if (!event.detail) return;
+    if (event.detail.route !== ROUTE) {
+      wanted = null;
+      return;
+    }
+    wanted = event.detail.id || null;
+    goToWanted();
+    if (typesetBuild === build) wanted = null;   // already set: nothing will move it
     loadKatex();
   });
 

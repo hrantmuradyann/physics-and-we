@@ -296,6 +296,16 @@ The numbers are written by the page, so if you move a chapter or a section in th
 
 **Please check:** the new Armenian text (again all mine), and the picture descriptions: change any of them to what you want to draw.
 
+### Stage 12c: every common pump, the choices beside their parts, and "Learn more"
+
+As you asked:
+
+- **More pumps.** Each gain medium now has every pump that is common in practice, with its own numbers worked out and checked by hand: **Nd:glass with diodes** (802 nm, where neodymium in glass absorbs best; it starts lasing at 0.34 W and gives 0.41 W at 1 W) and **the dye with a flashlamp** (the lamp wraps around the tube the dye flows through, as in yellow 585 nm medical lasers; a flash of about a microsecond, threshold 6.6 J). As you chose, pairs known only from research papers are left out: ruby keeps only its flashlamp, Ti:sapphire only its green pump laser, and the gases only their electric discharge (a lamp or diode cannot reach their upper levels). The book now explains each of these (the ruby section, neodymium glass, the dye laser, and "What a pump does").
+- **The two-level atom is gone from the simulator**, as you asked. It is still in the book.
+- **The medium's dropdown is grouped**: Crystals and glass, Gases, Liquid, Semiconductor, and inside each group in the order they were invented.
+- **The dropdowns sit beside their parts**: the gain medium's right above the drawing, over the drawn medium; the pump's right under it, over the drawn pump, with Fire under it. Nothing covers the laser. (On a phone the mirror buttons come between the drawing and the pump's dropdown.)
+- **"Learn more" links** beside the medium, the pump, each mirror, the output mirror's slider, the Q-switch, the power chart, the stability diagram, the cartoon and "inside one atom". Each opens the book right at its section (ruby → 3.5 Ruby, the flashlamp → 4.2, inside one atom → 3.4 Two, three and four levels, and so on), and the medium's and pump's links follow your choice. Which section each opens is written in `data/laser.json` under `more`, so it is easy to change.
+
 ## What is left
 
 Stage 9 (several laser frequencies at once, with a spectrum panel) was dropped at your request: it would have made everything too complex. The laser stays one frequency.

@@ -102,15 +102,15 @@
   var START_SLOW_MOTION = {
     "ruby flashlamp": 1e4,                            // 1 s = 100 µs
     "nd-glass flashlamp": 1e4,
+    "nd-glass diode": 1e4,
     "nd-yag diode": 1e4,
     "nd-yag flashlamp": 1e4,
     "he-ne discharge": 1e6,                           // 1 s = 1 µs
     "ar-ion discharge": 1e7,                          // 1 s = 100 ns
     "co2 discharge": 1e4,
     "dye-r6g laser": 1e7,
-    "ti-sapphire laser": 1e6,
-    "two-level laser": 1e3,                           // 1 s = 1 ms
-    "two-level flashlamp": 1e4
+    "dye-r6g flashlamp": 1e6,                         // its flash lasts a few µs
+    "ti-sapphire laser": 1e6
   };
   // A bench missing above (page-choose.test.js checks that none is) starts here.
   var DEFAULT_SLOW_MOTION = 1e4;
@@ -151,6 +151,19 @@
   // the lengths, the aperture and the medium (its index n and λ).
   var CAVITY_FIELDS = ["medium", "L", "l_g", "aperture", "mirror1", "mirror2", "Rc1", "Rc2"];
   var CHOICES = ["medium", "pump"];
+  // The media the dropdown lists, in its groups (the owner's choice,
+  // stage 12c): by what the medium is, then the year it first lased. The
+  // engine's two-level atom is in none, so the page does not offer it.
+  // The groups' names are choose.groups.* in data/laser.json.
+  var MEDIA_GROUPS = [
+    { name: "solid", media: ["ruby", "nd-glass", "caf2-dy", "nd-yag", "ti-sapphire"] },
+    { name: "gas", media: ["he-ne", "ar-ion", "co2"] },
+    { name: "liquid", media: ["dye-r6g"] },
+    { name: "semiconductor", media: ["diode"] }
+  ];
+  function offered(medium) {
+    return MEDIA_GROUPS.some(function (group) { return group.media.indexOf(medium) !== -1; });
+  }
   // The one Q-switch the page offers: the engine's bleachable filter.
   var FILTER = "absorber";
   // Every number the page can show, and the ones each pump shows (the
@@ -169,9 +182,6 @@
     discharge: ["currentThreshold", "x", "gth", "tau_c"].concat(MIRROR_ROWS, ["P_out", "powerNow", "T_best", "period", "time"]),
     flashlamp: ["flashThreshold", "x", "gth", "tau_c"].concat(MIRROR_ROWS, ["peak", "powerNow", "time"])
   };
-  // The two-level atom has no threshold to measure the pump against, no
-  // best mirror and no oscillation.
-  var TWO_LEVEL_HIDES = ["x", "T_best", "period"];
   // The filter adds the loss now and §4.3's pulse. A bench with no steady output (derive gives P_out null: a
   // flash, or a steady pump behind a filter, which pulses) has no best
   // mirror or oscillation, and shows the highest output instead.
@@ -468,11 +478,9 @@
       if (state.config.qSwitch === "none") return null;
       return switchKept();
     }
-    // The pump's strength for the pictures: x, in units of threshold; the
-    // two-level atom, which has no threshold, by its W_pτ instead.
+    // The pump's strength for the pictures: x, in units of threshold.
     function pumpLevel() {
-      var pump = pumpNow();
-      return pump.x !== null ? pump.x : pump.w;
+      return pumpNow().x;
     }
     // How strongly the pump glows on the bench and in the cartoon, 0 to 1.
     function glowNow() {
@@ -525,7 +533,6 @@
     // The readouts this bench shows.
     function rowsShown() {
       var rows = ROWS[state.config.pump];
-      if (derived.scheme === "two-level") rows = without(rows, TWO_LEVEL_HIDES);
       if (derived.P_out === null) {
         rows = without(rows, PULSING_HIDES);
         if (rows.indexOf("peak") === -1) rows = rows.concat(["peak"]);
@@ -567,7 +574,7 @@
       }
       if (name === "x") {
         // Over the pump that starts the laser (behind a filter, its closed
-        // loss's); its row is hidden for the two-level atom.
+        // loss's).
         var over = pumpNow().overThreshold;
         return over === null ? never : F.number(over);
       }
@@ -779,8 +786,8 @@
     addCanvas("power", UI.plots.SIZE, function (view) {
       var shownTime = WINDOW / state.slowMotion;          // simulated s on the chart
       // A line at the steady output, if there is one above 0: not for a
-      // flash, a laser below threshold, the two-level atom, or a steady
-      // pump behind a filter, which pulses (P_out null).
+      // flash, a laser below threshold, or a steady pump behind a filter,
+      // which pulses (P_out null).
       var lines = [];
       if (derived.P_out !== null && derived.P_out > 0) lines.push({ value: derived.P_out, word: powerWords.steady, tone: "soft" });
       UI.plots.draw(view, {
@@ -819,30 +826,64 @@
       selects[name] = find('[data-laser-choose="' + name + '"]');
     });
 
-    // Makes a dropdown's options again: [{ value, text, disabled }]. The
-    // names are set as text, never as markup.
-    function fill(select, options) {
-      while (select.firstChild) select.removeChild(select.firstChild);
+    // Makes a dropdown's options again: [{ value, text, disabled }], or
+    // groups of them, [{ group, options }], each an <optgroup>. The names
+    // are set as text, never as markup.
+    function addOptions(parent, options) {
       options.forEach(function (item) {
         var option = root.document.createElement("option");
         option.value = item.value;
         option.textContent = item.text;
         option.disabled = item.disabled;
-        select.appendChild(option);
+        parent.appendChild(option);
       });
+    }
+    function fill(select, options) {
+      while (select.firstChild) select.removeChild(select.firstChild);
+      addOptions(select, options);
+    }
+    function fillGroups(select, groups) {
+      while (select.firstChild) select.removeChild(select.firstChild);
+      groups.forEach(function (item) {
+        var group = root.document.createElement("optgroup");
+        group.setAttribute("label", item.group);
+        addOptions(group, item.options);
+        select.appendChild(group);
+      });
+    }
+    // A "Learn more" link that follows the choice: the book's section for
+    // the chosen medium or pump (more.media.*, more.pumps.* in
+    // data/laser.json), hidden when there is none.
+    function pointMore(name, id) {
+      var link = find('[data-laser-more="' + name + '"]');
+      if (!link) return;
+      var known = typeof id === "string" && /^section-[a-z0-9-]+$/.test(id);
+      link.hidden = !known;
+      if (!known) return;
+      link.setAttribute("href", "?view=laser-study&id=" + id);
+      link.setAttribute("data-id", id);
     }
     // The dropdowns, for the bench chosen. A missing name falls back to
     // the engine's id, so no option is ever blank.
     function showChoices() {
       if (selects.medium) {
         var later = word(data, "choose.later");
-        fill(selects.medium, engine.media.list().map(function (id) {
-          var notYet = bench.pumpsFor(id).length === 0;
-          var name = word(data, "media." + id) || id;
-          return { value: id, text: notYet && later ? name + " (" + later + ")" : name, disabled: notYet };
+        var known = engine.media.list();
+        fillGroups(selects.medium, MEDIA_GROUPS.map(function (group) {
+          return {
+            group: word(data, "choose.groups." + group.name) || group.name,
+            options: group.media.filter(function (id) { return known.indexOf(id) !== -1; }).map(function (id) {
+              var notYet = bench.pumpsFor(id).length === 0;
+              var name = word(data, "media." + id) || id;
+              return { value: id, text: notYet && later ? name + " (" + later + ")" : name, disabled: notYet };
+            })
+          };
         }));
         selects.medium.value = state.config.medium;
       }
+      var more = (data && data.more) || {};
+      pointMore("medium", (more.media || {})[state.config.medium]);
+      pointMore("pump", (more.pumps || {})[state.config.pump]);
       if (selects.pump) {
         fill(selects.pump, bench.pumpsFor(state.config.medium).map(function (kind) {
           return { value: kind, text: word(data, "pumps." + kind) || kind, disabled: false };
@@ -859,8 +900,6 @@
       if (fireButton) fireButton.hidden = !flash;
       var switchGroup = find("[data-laser-switch]");
       if (switchGroup) switchGroup.hidden = !filter;
-      var under = find("[data-laser-under]");
-      if (under) under.hidden = !flash && !filter;
       if (toggle) toggle.setAttribute("aria-checked", on ? "true" : "false");
       setText('[data-laser-name="qSwitchState"]', word(data, on ? "choose.on" : "choose.off"));
     }
@@ -923,9 +962,9 @@
       if (selects.medium) {
         listen(selects.medium, "change", function () {
           var medium = selects.medium.value;
-          var pumps = engine.media.list().indexOf(medium) === -1 ? [] : bench.pumpsFor(medium);
+          var pumps = offered(medium) && engine.media.list().indexOf(medium) !== -1 ? bench.pumpsFor(medium) : [];
           if (pumps.length === 0) {
-            // Not a medium the bench runs (a disabled option some browsers
+            // Not a medium the bench runs or the page offers (a disabled option some browsers
             // let the keyboard reach): the dropdown goes back.
             selects.medium.value = state.config.medium;
             return;

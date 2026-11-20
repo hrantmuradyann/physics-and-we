@@ -41,7 +41,13 @@
   },
 
   "choose": {
-    "_readme": "The dropdowns above the sliders: the gain medium and the pumps that medium can use. 'later' is added in brackets after a medium the lab cannot simulate yet. Under the drawing, for a laser that can have one: the Q-switch's name ('qSwitch') and its On/Off switch ('on', 'off': the word beside the switch).",
+    "_readme": "The dropdowns beside the drawing: the gain medium (above it, in the groups of 'groups') and the pumps that medium can use (under it). 'later' is added in brackets after a medium the lab cannot simulate yet. Under the drawing, for a laser that can have one: the Q-switch's name ('qSwitch') and its On/Off switch ('on', 'off': the word beside the switch).",
+    "groups": {
+      "solid": { "hy": "Բյուրեղներ և ապակի", "en": "Crystals and glass" },
+      "gas": { "hy": "Գազեր", "en": "Gases" },
+      "liquid": { "hy": "Հեղուկ", "en": "Liquid" },
+      "semiconductor": { "hy": "Կիսահաղորդիչ", "en": "Semiconductor" }
+    },
     "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
     "pump": { "hy": "Մղում", "en": "Pump" },
     "qSwitch": { "hy": "Բարորակության մոդուլյատոր (հագեցող ֆիլտր)", "en": "Q-switch (bleachable filter)" },
@@ -196,6 +202,33 @@
       "g1": { "hy": "g₁ հետին", "en": "g₁ back" },
       "g2": { "hy": "g₂ ելքային", "en": "g₂ output" }
     }
+  },
+
+  "more": {
+    "_readme": "The 'Learn more' links of the lab: each opens the laser book (data/laser-study.json) at one section, written 'section-' then that section's id. 'media' and 'pumps' follow the chosen medium and pump; the others belong to one part of the page. A medium or pump missing here has no link.",
+    "media": {
+      "ruby": "section-ruby",
+      "nd-glass": "section-neodymium",
+      "nd-yag": "section-neodymium",
+      "he-ne": "section-he-ne",
+      "ar-ion": "section-argon-co2",
+      "co2": "section-argon-co2",
+      "dye-r6g": "section-tunable",
+      "ti-sapphire": "section-tunable"
+    },
+    "pumps": {
+      "flashlamp": "section-flashlamp",
+      "diode": "section-diodes",
+      "discharge": "section-discharge",
+      "laser": "section-laser-pump"
+    },
+    "mirrors": "section-curved",
+    "coupler": "section-best-mirror",
+    "qSwitch": "section-giant-pulse",
+    "chart": "section-spikes",
+    "stability": "section-curved",
+    "photons": "section-meetings",
+    "atoms": "section-levels"
   },
 
   "learn": {

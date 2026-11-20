@@ -48,6 +48,7 @@ test("each mirror's shape is lit, and a curved mirror shows its radius slider, f
   const { section } = page;
   const E = engine(page.browser);
   for (const id of E.media.list()) {
+    if (id === "two-level") continue;                   // not offered (stage 12c)
     for (const pump of E.bench.pumpsFor(id)) {
       choose(section, id, pump);
       const config = E.bench.configFor({ medium: id, pump: pump });

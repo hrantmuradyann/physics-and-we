@@ -284,6 +284,13 @@
       config: { l_g: 10 * cm, area: Math.PI * (5 * mm) * (5 * mm), L: 50 * cm, refl1: 1, refl2: 0.8, alpha_i: 0.2,
         mirror1: "flat", Rc1: 1, mirror2: "flat", Rc2: 1, aperture: 5 * mm,
         flashEnergy: 100, flashShare: FLASH_SHARE, flashTime: FLASH_TIME, pumpLam: 808 * nm, eta: 0.9 } },
+    // Stage 12c: Nd:glass end-pumped by diodes at its 802 nm absorption
+    // peak, as in diode-pumped phosphate-glass lasers: a 5 mm disc, a
+    // 0.1 mm² spot, a 2 % coupler on a 20 cm mirror. Threshold 0.34 W.
+    { medium: "nd-glass", pump: "diode", max: 5,
+      config: { l_g: 5 * mm, area: 0.1 * mm2, L: 10 * cm, refl1: 1, refl2: 0.98, alpha_i: 0.2,
+        mirror1: "flat", Rc1: 1, mirror2: "concave", Rc2: 20 * cm, aperture: 1 * mm,
+        pumpPower: 1, pumpLam: 802 * nm, eta: 0.9 } },
     // Stage 4's small Nd:YAG laser (stage 6): rod 5 cm, mode area 1 mm²,
     // a 5 % output coupler, scattering 0.2 m⁻¹ (L_i = 2 %: with none there
     // is no best coupler, §3.6), 808 nm diodes with η = 0.9 (§6.3).
@@ -320,6 +327,15 @@
       config: { l_g: 0.2 * mm, area: 700 * um * um, L: 50 * cm, refl1: 1, refl2: 0.97, alpha_i: 5,
         mirror1: "concave", Rc1: 30 * cm, mirror2: "concave", Rc2: 30 * cm, aperture: 5 * mm,
         pumpPower: 2, pumpLam: 532 * nm, eta: 1 } },
+    // Stage 12c: the coaxial flashlamp dye laser (the dye flows through a
+    // tube inside the lamp; 585 nm medical lasers are built so): a 10 cm
+    // cell 6 mm across, a 1 µs flash, 1 % of the lamp's light reaching the
+    // upper level (not verified; the dye's triplet loss is not modelled).
+    // Threshold 6.6 J.
+    { medium: "dye-r6g", pump: "flashlamp", max: 100,
+      config: { l_g: 10 * cm, area: Math.PI * (3 * mm) * (3 * mm), L: 40 * cm, refl1: 1, refl2: 0.7, alpha_i: 0.5,
+        mirror1: "flat", Rc1: 1, mirror2: "flat", Rc2: 1, aperture: 3 * mm,
+        flashEnergy: 20, flashShare: 0.01, flashTime: 1 * us, pumpLam: 530 * nm, eta: 1 } },
     // A 5 mm crystal, a 30 µm spot (2800 µm²), pumped at 532 nm.
     // Threshold 0.15 W.
     { medium: "ti-sapphire", pump: "laser", max: 10,

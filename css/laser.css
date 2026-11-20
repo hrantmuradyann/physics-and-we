@@ -19,10 +19,15 @@
      .laser-end       a column at one end of the drawing (--back on the
                       left, --output on the right): that mirror's shapes
                       and its upright radius slider (__radius)
-     .laser-choose    the two dropdowns that choose the laser; __item is
-                      one with its name, __select the dropdown itself
-     .laser-under     the row right under the drawing: Fire and the
-                      Q-switch
+     .laser-choose    a dropdown that chooses the laser: __item is one
+                      with its name (--bench beside the drawing), __select
+                      the dropdown itself
+     .laser-over      the row right above the drawing: the medium's
+                      dropdown, centred over the drawn medium
+     .laser-under     the row right under the drawing: the pump's dropdown
+                      and Fire in its __middle, and the Q-switch
+     .laser-more      a small "Learn more" link to the laser book;
+                      .laser-more-row a line of its own for one
      .laser-fire      Fire, centred under the drawn lamp: a lightning
                       __bolt and its word, and a ring of light that swells
                       out of it while the lamp is dark (data-ready)
@@ -456,24 +461,53 @@
 
 /* ---------- the choice of laser ---------- */
 
-/* The two dropdowns side by side when the panel is wide, one under the
-   other when it is not. A column is at least 15rem: the longest name a visitor
-   can choose, "Ներկանյութ (ռոդամին 6G)", needs about 14.5rem with the
-   dropdown's padding and arrow (at 160px the Armenian names were cut).
-   min(…, 100%): on a 320 px phone the panel is narrower than 15rem. */
-.laser-choose {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
-  gap: 0.8rem 1.1rem;
-  padding-bottom: 1.1rem;
-  margin-bottom: 1.1rem;
-  border-bottom: 1px solid var(--line);
-}
-
+/* Each dropdown sits beside its part of the drawing (stage 12c, the
+   owner's wish): the medium's in a row above the bench, centred over the
+   drawn medium (the picture is symmetric), the pump's in the middle of the
+   row under it, over Fire. Nothing is laid over the canvas. A dropdown is
+   15rem wide: the longest name a visitor can choose, "Ներկանյութ
+   (ռոդամին 6G)", needs about 14.5rem with its padding and arrow (at 160px
+   the Armenian names were cut). min(…, 100%): on a 320 px phone the row is
+   narrower than 15rem. */
 .laser-choose__item {
   display: grid;
   gap: 0.35rem;
   min-width: 0;
+}
+
+.laser-choose__item--bench {
+  width: min(15rem, 100%);
+  justify-items: center;
+  text-align: center;
+}
+
+.laser-over {
+  display: flex;
+  justify-content: center;
+  padding: 0.9rem 1.1rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.laser-under__middle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  width: 100%;
+}
+
+/* "Learn more": a small link to the part of the laser book about the thing
+   beside it (the router opens ?view=laser-study&id=section-…). */
+.laser-more {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.laser-more-row {
+  margin: 0;
+  padding: 0.35rem 0.9rem 0.55rem;
+  text-align: center;
 }
 
 .laser-choose__select {
@@ -491,7 +525,8 @@
 
 /* The list that opens: some browsers draw it with the select's colours,
    others with their own; set both so it reads in either theme. */
-.laser-choose__select option {
+.laser-choose__select option,
+.laser-choose__select optgroup {
   background-color: var(--laser-bg);
   color: var(--heading);
 }
@@ -517,7 +552,7 @@
   border-top: 1px solid var(--line);
 }
 
-.laser-under .laser-fire {
+.laser-under .laser-under__middle {
   grid-column: 2;
   grid-row: 1;
 }
@@ -536,9 +571,10 @@
     justify-items: center;
   }
 
-  /* Placed in the order they are written, Fire first: a hidden Fire
-     (a laser without a lamp) then leaves no empty row above the switch. */
-  .laser-under .laser-fire {
+  /* Placed in the order they are written, the pump's dropdown and Fire
+     first: a hidden Fire (a laser without a lamp) then leaves no empty row
+     above the switch. */
+  .laser-under .laser-under__middle {
     grid-column: 1;
     grid-row: auto;
   }

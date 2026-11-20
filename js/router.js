@@ -23,6 +23,12 @@
   var currentId = null;   // the news item being read, when route === "post"
   var app = null;
 
+  // Pages on which the id is only a place to scroll to (view:shown), not
+  // what the page shows: one build serves every id, so a new id does not
+  // build the page again (the laser book: a rebuild typesets all its
+  // formulas again and closes every open "Dig deeper").
+  var PLACE_ONLY = { "laser-study": true };
+
   /* ---------- Which route is the URL pointing at? ---------- */
 
   function isRoute(route) {
@@ -150,7 +156,7 @@
 
   /* ---------- Switching pages ---------- */
 
-  function activate(route) {
+  function activate(route, id) {
     Array.prototype.forEach.call(document.querySelectorAll(".view"), function (view) {
       view.classList.toggle("active", view.id === "view-" + route);
     });
@@ -164,8 +170,9 @@
     // For a page that waits until it is on screen before doing something
     // costly (the study page downloads its maths typesetting only then).
     // "section:ready" is no help there: it also fires for the pages built
-    // hidden in the background.
-    global.dispatchEvent(new CustomEvent("view:shown", { detail: { route: route } }));
+    // hidden in the background. The id is the item the address names
+    // (?view=laser-study&id=section-ruby: the book scrolls to it).
+    global.dispatchEvent(new CustomEvent("view:shown", { detail: { route: route, id: id || null } }));
   }
 
   function markCurrentLink(route) {
@@ -193,8 +200,10 @@
     currentId = id;
 
     var show = function () {
-      activate(route);
+      // To the top first: a page may scroll to the item it was asked for
+      // when it is shown (view:shown).
       global.scrollTo(0, 0);
+      activate(route, id);
       if (addToHistory && changed) updateURL(route, id, false);
     };
 
@@ -203,7 +212,7 @@
       // sitting there was built for a different item — another news article,
       // another lab — or for no item at all, which is how the quiet
       // background prefetch below leaves it.
-      if (loaded[route].renderedId !== id) render(route, id);
+      if (!PLACE_ONLY[route] && loaded[route].renderedId !== id) render(route, id);
       show();
       return Promise.resolve();
     }
