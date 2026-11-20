@@ -50,7 +50,6 @@ const ENGINE_FILES = [
   "pumps.js",
   "qswitch.js",
   "optics.js",
-  "lenses.js",
   "bench.js"
 ];
 
