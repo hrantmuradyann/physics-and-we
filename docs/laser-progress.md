@@ -333,7 +333,7 @@ Stage 10 was rewritten on 16 November from your requests (the mirrors, the focal
 | 10c | **A bench that looks real** (next): ruby as a red rod, Nd:YAG pale lilac, Ti:sapphire pink, dye as a coloured liquid in a glass cell, the gases in glass tubes glowing in their real colours with atoms moving inside; more realistic diodes, with the pump light visibly going into the crystal and being absorbed; the laser beam in its real colour (and the invisible infrared ones in a marked false colour). |
 | 11 | ~~Lenses outside the laser~~: **dropped** at your request (20 November). The lens physics was built and then removed; the page stays as it is. |
 | 12 | ~~The "learn" section~~: **done** as your study page (20 November, below). |
-| 13 | **Extras,** one at a time: polarisation and Brewster windows; doubling the frequency (green light from infrared); heat in the rod acting as a lens; mode-locking (very short pulses); self-focusing; the semiconductor diode laser; and the pump in more detail (lamp reflectors, discharge). |
+| 13 | **Extras,** one at a time, the five you kept (21 November): doubling the frequency (an infrared beam turned green), heat in the rod acting as a lens, mode-locking (very short pulses), the semiconductor diode laser, and the pump in more detail (the lamp's reflector). ~~Polarisation~~ and ~~self-focusing~~ were **dropped** at your request: they would hardly show on the page, and the book already explains both. |
 | 14 | A final pass over all the documentation. |
 
 ## Things to know or check before going public
