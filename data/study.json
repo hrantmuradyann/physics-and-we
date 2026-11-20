@@ -15,8 +15,8 @@
         "eyebrow": { "hy": "Գիրք", "en": "A book" },
         "title": { "hy": "Լազեր", "en": "The laser" },
         "text": {
-          "hy": "Ինչպես է լույսը լույս ծնում, և ինչպես է դրանից ստացվում լազեր․ 13 գլուխ՝ պատմությունից մինչև անվտանգություն, բանաձևերով և օրինակներով։",
-          "en": "How light makes more light, and how that becomes a laser: 13 chapters, from the history to safety, with formulas and worked examples."
+          "hy": "Ինչպես է լույսը լույս ծնում, և ինչպես է դրանից ստացվում լազեր․ գլուխներ ու բաժիններ՝ պատմությունից մինչև անվտանգություն, բանաձևերով և օրինակներով։",
+          "en": "How light makes more light, and how that becomes a laser: chapters and sections, from the history to safety, with formulas and worked examples."
         },
         "open": { "hy": "Կարդալ", "en": "Read" }
       }

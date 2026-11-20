@@ -276,6 +276,26 @@ Also in this stage, as you asked: in the cartoon of atoms and photons, a **stray
 
 **Please check:** the Armenian translation (all of it is mine), and whether you like the "Dig deeper" boxes. The pictures your guide describes ("PICTURE") are not drawn yet; tell me if you want any of them.
 
+### Stage 12b: the book in chapters and sections
+
+As you asked, the book was rebuilt and rewritten. It now has **7 chapters and 34 sections**, numbered like a real book (1, 1.1, 1.2 …); the contents list every chapter with its sections under it, and every line is a link:
+
+1. **The history of the laser**: Einstein's idea, from neon to the maser, the race to light, the first years and after.
+2. **What makes laser light special** (moved right after the history, as you asked): one colour, one direction, coherence, brightness.
+3. **The gain medium**: atoms and photons; absorption, spontaneous and stimulated emission; gain; two, three and four levels; then each medium: ruby, neodymium (Nd:YAG and glass), helium–neon, argon and CO₂, tunable lasers (dye, Ti:sapphire), the semiconductor laser.
+4. **Pumping**: what a pump does, the flashlamp, laser diodes, the gas discharge, a laser pumping a laser.
+5. **The resonator**: the threshold, the output power and the best mirror, flat and curved mirrors, modes.
+6. **How a laser starts, and pulses**: the avalanche, the flickering at the start, the giant pulse, mode locking.
+7. **Safety**: why the eye is the target, the laser classes, the rules.
+
+The text is written to read more easily, with everyday comparisons (an echo between cliffs, a dam, foxes and rabbits, a guitar string). Every formula, symbol and number with a unit is now typeset by KaTeX, also in the worked examples; the tests refuse a bare "×", "=" or Greek letter left in the text. Each section still has its **Dig deeper** box with the full version (not the history).
+
+**The pictures.** Every section has a place for a picture: a dashed box that says "Picture to come:" and describes what the picture should show. When you have a picture, put it in the project (for example in `images/study/`) and write its file name in that section's `"image"` in `data/laser-study.json`: the box disappears, and the picture shows with its caption (already written) under it. The file's `_readme` at the top explains this too.
+
+The numbers are written by the page, so if you move a chapter or a section in the file, the numbering and the contents follow by themselves, and the links in the text keep working.
+
+**Please check:** the new Armenian text (again all mine), and the picture descriptions: change any of them to what you want to draw.
+
 ## What is left
 
 Stage 9 (several laser frequencies at once, with a spectrum panel) was dropped at your request: it would have made everything too complex. The laser stays one frequency.

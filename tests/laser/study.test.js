@@ -25,44 +25,129 @@ const readJSON = (relative) => JSON.parse(read(relative));
 
 const study = readJSON("data/laser-study.json");
 
-// Every { hy, en } pair with its place, and every rich text with its place.
+// Every section of the book, with its chapter.
+function sections() {
+  const out = [];
+  study.chapters.forEach((chapter) => (chapter.sections || []).forEach((section) => out.push({ chapter, section })));
+  return out;
+}
+
+// Every { hy, en } rich text of the book, by its place.
+function richParts() {
+  const parts = [];
+  study.chapters.forEach((chapter) => {
+    if (chapter.intro) parts.push({ where: chapter.id + " intro", pair: chapter.intro });
+  });
+  for (const { section } of sections()) {
+    parts.push({ where: section.id + " text", pair: section.text });
+    if (section.deeper) parts.push({ where: section.id + " deeper", pair: section.deeper.text });
+  }
+  return parts;
+}
+
+// Every rich text with its place, and the sources.
 function richTexts() {
   const found = [];
-  study.chapters.forEach((chapter, i) => {
-    for (const lang of LANGS) {
-      found.push({ where: "chapter " + i + " text." + lang, text: chapter.text[lang] });
-      if (chapter.deeper) found.push({ where: "chapter " + i + " deeper.text." + lang, text: chapter.deeper.text[lang] });
-    }
-  });
+  for (const { where, pair } of richParts()) for (const lang of LANGS) found.push({ where: where + "." + lang, text: pair[lang] });
   for (const lang of LANGS) found.push({ where: "sources." + lang, text: study.sources.text[lang] });
+  return found;
+}
+
+// Every plain { hy, en } of the book (titles, the pictures' words).
+function plainTexts() {
+  const found = [];
+  const add = (where, pair) => { for (const lang of LANGS) found.push({ where: where + "." + lang, text: pair[lang] }); };
+  study.chapters.forEach((chapter) => add(chapter.id + " title", chapter.title));
+  for (const { section } of sections()) {
+    add(section.id + " title", section.title);
+    if (section.deeper) add(section.id + " deeper.title", section.deeper.title);
+    if (section.picture) for (const key of ["alt", "caption", "todo"]) add(section.id + " picture." + key, section.picture[key]);
+  }
   return found;
 }
 
 /* ---------- the words ---------- */
 
-test("every chapter has a title and a text in both languages, and its dig-deeper part both or none", () => {
-  assert.ok(study.chapters.length >= 10, "the guide's chapters are there");
+test("the book: seven chapters in the owner's order, each with numbered sections, in both languages", () => {
+  assert.deepEqual(study.chapters.map((c) => c.id),
+    ["history", "special", "medium", "pumping", "resonator", "pulses", "safety"]);
   const ids = new Set();
-  study.chapters.forEach((chapter, i) => {
-    assert.match(chapter.id, /^[a-z0-9-]+$/, "chapter " + i + " has an id");
-    assert.ok(!ids.has(chapter.id), "ids differ: " + chapter.id);
-    ids.add(chapter.id);
+  const unique = (id, what) => {
+    assert.match(id, /^[a-z0-9-]+$/, what + " has an id");
+    assert.ok(!ids.has(id), "ids differ: " + id);
+    ids.add(id);
+  };
+  study.chapters.forEach((chapter) => {
+    unique(chapter.id, "a chapter");
+    for (const lang of LANGS) assert.ok(chapter.title[lang] && chapter.title[lang].trim(), chapter.id + " title." + lang);
+    if (chapter.intro) for (const lang of LANGS) assert.ok(chapter.intro[lang], chapter.id + " intro." + lang);
+    assert.ok(chapter.sections.length >= 3, chapter.id + " has its sections");
+  });
+  for (const { chapter, section } of sections()) {
+    unique(section.id, "a section of " + chapter.id);
     for (const lang of LANGS) {
-      assert.ok(chapter.title[lang] && chapter.title[lang].trim(), chapter.id + " title." + lang);
-      assert.ok(chapter.text[lang] && chapter.text[lang].length > 200, chapter.id + " text." + lang);
-      if (chapter.deeper) {
-        assert.ok(chapter.deeper.title[lang] && chapter.deeper.title[lang].trim(), chapter.id + " deeper.title." + lang);
-        assert.ok(chapter.deeper.text[lang] && chapter.deeper.text[lang].length > 200, chapter.id + " deeper.text." + lang);
+      assert.ok(section.title[lang] && section.title[lang].trim(), section.id + " title." + lang);
+      assert.ok(section.text[lang] && section.text[lang].length > 300, section.id + " text." + lang);
+      if (section.deeper) {
+        assert.ok(section.deeper.title[lang] && section.deeper.title[lang].trim(), section.id + " deeper.title." + lang);
+        assert.ok(section.deeper.text[lang] && section.deeper.text[lang].length > 300, section.id + " deeper.text." + lang);
       }
     }
-  });
-  assert.ok(study.chapters.filter((c) => c.deeper).length >= 10, "most chapters can be dug deeper");
+  }
+  const all = sections();
+  assert.ok(all.length >= 30, "the outline's sections (" + all.length + ")");
+  assert.ok(study.chapters[0].sections.every((s) => !s.deeper), "the history has nothing deeper: it is history");
+  assert.ok(all.filter((x) => x.section.deeper).length >= 20, "most sections can be dug deeper");
+  for (const id of ["einstein", "meetings", "levels", "ruby", "neodymium", "he-ne", "flashlamp", "diodes", "discharge", "threshold", "giant-pulse", "eye"]) {
+    assert.ok(ids.has(id), "the outline's section " + id);
+  }
   for (const key of ["title", "lead"]) for (const lang of LANGS) assert.ok(study.head[key][lang], "head." + key + "." + lang);
   for (const lang of LANGS) {
     assert.ok(study.simulator.label[lang], "simulator.label." + lang);
     assert.ok(study.sources.title[lang], "sources.title." + lang);
   }
   assert.equal(study.simulator.route, "laser", "the button opens the simulator");
+});
+
+test("a place for a picture in nearly every section: what it should show, in both languages", () => {
+  let places = 0;
+  for (const { section } of sections()) {
+    const picture = section.picture;
+    if (!picture) continue;
+    places += 1;
+    assert.equal(typeof picture.image, "string", section.id + ": image is a file name, \"\" until there is one");
+    if (picture.image) {
+      // A misspelt name (the server tells Ruby.png from ruby.png) would show a
+      // broken picture where the description was. images/ is not copied by
+      // the mutation check, so look in the real repo.
+      assert.ok(!/^[a-z]+:|^\/\//i.test(picture.image), section.id + ": the picture is a file of the site, not a link");
+      assert.ok(fs.existsSync(path.join(REAL_ROOT, picture.image)), section.id + ": the picture " + picture.image + " exists (the name's capitals too)");
+      const folder = path.dirname(path.join(REAL_ROOT, picture.image));
+      assert.ok(fs.readdirSync(folder).includes(path.basename(picture.image)), section.id + ": " + picture.image + " is spelt with the file's own capitals");
+    }
+    for (const key of ["alt", "caption", "todo"]) {
+      for (const lang of LANGS) assert.ok(picture[key] && picture[key][lang] && picture[key][lang].trim(), section.id + " picture." + key + "." + lang);
+    }
+    for (const lang of LANGS) assert.ok(picture.todo[lang].length > 40, section.id + ": the todo says what to draw");
+  }
+  assert.ok(places >= sections().length - 3, "pictures planned (" + places + " of " + sections().length + ")");
+});
+
+test("every formula sign is inside a formula: the text has no bare symbols", () => {
+  // Outside $…$ and the links' addresses, no sign that belongs in KaTeX.
+  const bare = /[_^×≈√=≤≥·]|[Ͱ-Ͽ]/;
+  const outside = (text) => text.replace(/\$\$[^$]+\$\$|\$[^$]+\$/g, " ").replace(/\]\([^)]*\)/g, "]");
+  for (const { where, text } of richTexts()) {
+    if (where.startsWith("sources")) continue;
+    const rest = outside(text);
+    const at = rest.search(bare);
+    assert.equal(at, -1, where + ": a bare formula sign near " + JSON.stringify(rest.slice(Math.max(0, at - 30), at + 30)));
+  }
+  for (const { where, text } of plainTexts()) {
+    assert.ok(!text.includes("$"), where + ": a plain text cannot show a formula");
+    const at = text.search(bare);
+    assert.equal(at, -1, where + ": a bare formula sign near " + JSON.stringify(text.slice(Math.max(0, at - 30), at + 30)));
+  }
 });
 
 test("the page shows nothing meant for the developers", () => {
@@ -78,10 +163,7 @@ test("the page shows nothing meant for the developers", () => {
 
 test("the two languages have the same formulas, in the same order", () => {
   const formulas = (text) => (text.match(/\$\$[\s\S]+?\$\$|\$[^$]+\$/g) || []);
-  study.chapters.forEach((chapter) => {
-    assert.deepEqual(formulas(chapter.text.hy), formulas(chapter.text.en), chapter.id + " text");
-    if (chapter.deeper) assert.deepEqual(formulas(chapter.deeper.text.hy), formulas(chapter.deeper.text.en), chapter.id + " deeper");
-  });
+  for (const { where, pair } of richParts()) assert.deepEqual(formulas(pair.hy), formulas(pair.en), where);
 });
 
 /* ---------- the formulas ---------- */
@@ -124,7 +206,7 @@ test("every formula is accepted by the vendored KaTeX", () => {
       count += 1;
     }
   }
-  assert.ok(count >= 40, "the formulas were found (" + count + ")");
+  assert.ok(count >= 150, "the formulas were found (" + count + ")");
 });
 
 test("KaTeX is vendored: the script, the stylesheet, its fonts and the licence", () => {
@@ -156,18 +238,31 @@ test("the menu has Study materials right after the labs; its laser poster opens 
   assert.equal(posters[0].route, "laser-study", "the laser poster opens the laser book");
   for (const key of ["eyebrow", "title", "text", "open"]) for (const lang of LANGS) assert.ok(posters[0][key][lang], key + "." + lang);
 });
-test("the page's layout: the simulator button, the chapters, a dig-deeper <details> each, the sources", () => {
+test("the page's layout: the simulator button, chapters of sections, a dig-deeper <details> and a picture each, the sources", () => {
   const html = read("sections/laser-study.html");
   assert.match(html, /data-route="simulator\.route"/);
-  assert.match(html, /data-list="chapters"/);
-  // Each chapter's dig-deeper part is a <details> whose <summary> carries the
+  assert.match(html, /<article[^>]*data-study-chapter[\s\S]*?data-rich="intro"[\s\S]*?data-list="sections"[\s\S]*?<section[^>]*data-study-section/);
+  // Each section's dig-deeper part is a <details> whose <summary> carries the
   // shared word (a list item reads only its own keys, so it comes from "ui").
   assert.match(html, /<details[^>]*data-study-deeper[^>]*>\s*<summary[^>]*>[\s\S]*?data-ui="digDeeper"[\s\S]*?<\/summary>/);
   const ui = readJSON("data/site.json").ui;
-  for (const lang of LANGS) assert.ok(ui.digDeeper[lang], "ui.digDeeper." + lang);
+  for (const key of ["digDeeper", "toContents", "pictureToCome"]) for (const lang of LANGS) assert.ok(ui[key][lang], "ui." + key + "." + lang);
   assert.match(html, /data-rich="text"/);
   assert.match(html, /data-rich="deeper\.text"/);
   assert.match(html, /data-rich="sources\.text"/);
+  // The picture: the image, its caption, and the box for until it exists.
+  assert.match(html, /<figure[^>]*data-study-figure[\s\S]*?<img[^>]*data-study-image[^>]*data-image="picture\.image"[^>]*data-alt="picture\.alt"[\s\S]*?data-study-caption[^>]*data-text="picture\.caption"[\s\S]*?data-study-todo[\s\S]*?data-ui="pictureToCome"[\s\S]*?data-study-todo-text[^>]*data-text="picture\.todo"[\s\S]*?<\/figure>/);
+  // Every page is built in the background: a picture must not download
+  // before the visitor scrolls to it.
+  assert.match(html, /<img[^>]*loading="lazy"[^>]*data-study-image/, "the book's pictures load only when scrolled to");
+  // Lists styled without bullets keep their list meaning for screen readers (Safari).
+  assert.equal((html.match(/<ol[^>]*role="list"/g) || []).length, 2, "the contents and its sections are lists");
+  // The numbers are the page's: a place in each heading, none in the JSON's titles.
+  assert.match(html, /<h2[^>]*>\s*<span[^>]*data-study-number[^>]*><\/span>\s*<span data-text="title">/);
+  assert.match(html, /<h3[^>]*>\s*<span[^>]*data-study-number[^>]*><\/span>\s*<span data-text="title">/);
+  for (const { where, text } of plainTexts()) {
+    if (where.includes(" title.")) assert.ok(!/^\s*\d/.test(text), where + " starts with a number: the page writes it");
+  }
   assert.ok(!/<script/i.test(html), "no script in a fragment");
   assert.ok(!/style=/i.test(html), "no inline style");
   const index = read("index.html");
@@ -466,67 +561,149 @@ test("laser-study.js: a chapter with nothing deeper loses its empty dig-deeper b
 
 /* ---------- the book's contents and its links ---------- */
 
-test("every chapter link in the text points at a chapter that exists, the same in both languages", () => {
-  const links = (text) => (text.match(/\]\(#[^)]*\)/g) || []).map((m) => m.slice(2, -1));
+test("every link in the text leads to a chapter or a section that exists, named in words, the same in both languages", () => {
+  const targets = new Set(study.chapters.map((c) => "#chapter-" + c.id).concat(sections().map((x) => "#section-" + x.section.id)));
+  const links = (text) => [...text.matchAll(/\[([^\]]+)\]\((#[^)]*)\)/g)].map((m) => ({ words: m[1], href: m[2] }));
   let count = 0;
-  study.chapters.forEach((chapter) => {
-    for (const part of [chapter.text, chapter.deeper && chapter.deeper.text]) {
-      if (!part) continue;
-      assert.deepEqual(links(part.hy), links(part.en), chapter.id + ": the same links in hy and en");
-      for (const href of links(part.en)) {
-        const match = href.match(/^#chapter-([a-z0-9-]+)$/);
-        assert.ok(match, "a link inside the book is #chapter-<id>: " + href);
-        assert.ok(study.chapters.some((c) => c.id === match[1]), href + " names a chapter");
-        count += 1;
+  for (const { where, pair } of richParts()) {
+    assert.deepEqual(links(pair.hy).map((l) => l.href), links(pair.en).map((l) => l.href), where + ": the same links in hy and en");
+    for (const lang of LANGS) {
+      for (const link of links(pair[lang])) {
+        assert.ok(targets.has(link.href), where + "." + lang + ": " + link.href + " is a chapter or a section");
+        // The page numbers the book; a number written in a link would go
+        // wrong the day a chapter or a section moves.
+        assert.ok(!/\d/.test(link.words), where + "." + lang + ": a number in the link's words " + JSON.stringify(link.words));
+        if (lang === "en") count += 1;
       }
     }
-  });
-  assert.ok(count >= 10, "the text links its chapters (" + count + ")");
+  }
+  assert.ok(count >= 15, "the text links its chapters and sections (" + count + ")");
   for (const lang of LANGS) assert.ok(study.contents[lang], "contents." + lang);
-  for (const lang of LANGS) assert.ok(readJSON("data/site.json").ui.toContents[lang], "ui.toContents." + lang);
 });
 
-test("the layout has the contents, a link per chapter in it, the chapters marked, and a way back under each", () => {
+test("the layout has the contents (each chapter with its sections), the chapters marked, and a way back under each", () => {
   const html = read("sections/laser-study.html");
-  assert.match(html, /<nav[^>]*data-study-toc[\s\S]*?data-list="chapters"[\s\S]*?data-study-link[^>]*data-text="title"/);
+  assert.match(html, /<nav[^>]*data-study-toc[\s\S]*?data-list="chapters"[\s\S]*?data-study-toc-chapter[\s\S]*?data-study-link[\s\S]*?data-list="sections"[\s\S]*?data-study-link[\s\S]*?<\/nav>/);
   assert.match(html, /<article[^>]*data-study-chapter/);
   assert.match(html, /data-study-top/);
   assert.ok(html.indexOf("data-study-toc") < html.indexOf("data-study-chapter"), "the contents come first");
 });
 
-const BOOK_DATA = { chapters: [{ id: "a" }, { id: "b" }, { id: "c" }] };
+const BOOK_DATA = { chapters: [
+  { id: "a", sections: [{ id: "a1" }, { id: "a2" }] },
+  { id: "b", sections: [{ id: "b1" }] },
+  { id: "c", sections: [{ id: "c1" }] }
+] };
 
-// A built book: contents with three links, three chapters (the second with a
-// link to chapter 3 in its text and a link to an outside page), a way back.
+// A built book like the page's: contents with each chapter's link and its
+// sections' links, the chapters with their sections, a way back under each;
+// the second chapter has a link to chapter c in its text, one to section a2
+// and a link to an outside page.
 function buildBook(dom) {
   const container = dom.element("section");
+  const numbered = (tag, attrs) => {
+    const el = dom.element(tag, attrs);
+    const number = dom.element("span", { "data-study-number": "" });
+    el.appendChild(number);
+    el.number = number;
+    return el;
+  };
   const toc = dom.element("nav", { "data-study-toc": "" });
-  const links = [1, 2, 3].map(() => {
-    const li = dom.element("li");
-    const a = dom.element("a", { "data-study-link": "" });
+  const links = [];
+  const sectionLinks = [];
+  BOOK_DATA.chapters.forEach((chapter) => {
+    const li = dom.element("li", { "data-study-toc-chapter": "" });
+    const a = numbered("a", { "data-study-link": "" });
     a.appendChild(dom.text("title"));
     li.appendChild(a);
+    links.push(a);
+    const ol = dom.element("ol");
+    chapter.sections.forEach(() => {
+      const sli = dom.element("li");
+      const sa = numbered("a", { "data-study-link": "" });
+      sli.appendChild(sa);
+      ol.appendChild(sli);
+      sectionLinks.push(sa);
+    });
+    li.appendChild(ol);
     toc.appendChild(li);
-    return a;
   });
   container.appendChild(toc);
-  const chapters = [1, 2, 3].map(() => {
+  const chapters = BOOK_DATA.chapters.map((chapter) => {
     const article = dom.element("article", { "data-study-chapter": "" });
+    const heading = numbered("h2");
+    article.appendChild(heading);
+    const parts = chapter.sections.map(() => {
+      const section = dom.element("section", { "data-study-section": "" });
+      const h3 = numbered("h3");
+      section.appendChild(h3);
+      article.appendChild(section);
+      return { section, heading: h3 };
+    });
     const top = dom.element("a", { "data-study-top": "" });
     article.appendChild(top);
     container.appendChild(article);
-    return { article, top };
+    return { article, heading, sections: parts, top };
   });
   const rich = dom.element("div", { "data-rich": "text" });
   const inText = dom.element("a", { href: "#chapter-c" });
   const word = dom.element("span");
   inText.appendChild(word);
+  const toSection = dom.element("a", { href: "#section-a2" });
   const outside = dom.element("a", { href: "https://example.org/" });
   rich.appendChild(inText);
+  rich.appendChild(toSection);
   rich.appendChild(outside);
-  chapters[1].article.appendChild(rich);
-  return { container, toc, links, chapters, inText, word, outside };
+  chapters[1].sections[0].section.appendChild(rich);
+  return { container, toc, links, sectionLinks, chapters, inText, word, toSection, outside };
 }
+
+test("laser-study.js: chapters and sections are numbered in order and named by their ids, in the headings and the contents", () => {
+  const dom = makeDom();
+  const window = loadStudy(dom);
+  const book = buildBook(dom);
+  fire(window, "section:ready", { route: "laser-study", container: book.container, data: BOOK_DATA });
+  assert.deepEqual(book.chapters.map((c) => c.heading.number.textContent), ["1", "2", "3"]);
+  assert.deepEqual(book.links.map((a) => a.number.textContent), ["1", "2", "3"]);
+  const sectionNumbers = ["1.1", "1.2", "2.1", "3.1"];
+  const sectionIds = ["a1", "a2", "b1", "c1"];
+  const built = book.chapters.flatMap((c) => c.sections);
+  assert.deepEqual(built.map((x) => x.heading.number.textContent), sectionNumbers);
+  assert.deepEqual(book.sectionLinks.map((a) => a.number.textContent), sectionNumbers);
+  assert.deepEqual(built.map((x) => x.section.attributes.id), sectionIds.map((id) => "section-" + id));
+  assert.deepEqual(book.sectionLinks.map((a) => a.attributes.href), sectionIds.map((id) => "#section-" + id));
+  dom.document.click(book.sectionLinks[1]);
+  assert.equal(built[1].section.scrolledTo.length, 1, "a section's link in the contents scrolls to it");
+  dom.document.click(book.toSection);
+  assert.equal(built[1].section.scrolledTo.length, 2, "and so does one in the text");
+});
+
+test("laser-study.js: a picture shows its image, or until there is one what it should show, or nothing", () => {
+  const dom = makeDom();
+  const window = loadStudy(dom);
+  const container = dom.element("section");
+  const figure = (src, todo) => {
+    const f = dom.element("figure", { "data-study-figure": "" });
+    const img = dom.element("img", Object.assign({ "data-study-image": "" }, src ? { src } : {}));
+    const caption = dom.element("figcaption", { "data-study-caption": "" });
+    const box = dom.element("p", { "data-study-todo": "" });
+    box.appendChild(dom.element("strong"));
+    if (todo) box.appendChild(dom.element("span", { "data-study-todo-text": "" }));   // the binder drops a missing todo
+    f.appendChild(img);
+    f.appendChild(caption);
+    f.appendChild(box);
+    container.appendChild(f);
+    return { f, img, caption, box };
+  };
+  const drawn = figure("images/study/ruby.jpg", true);
+  const planned = figure(null, true);
+  const none = figure(null, false);
+  fire(window, "section:ready", { route: "laser-study", container });
+  assert.deepEqual(drawn.f.childNodes, [drawn.img, drawn.caption], "the picture and its caption");
+  assert.deepEqual(planned.f.childNodes, [planned.box], "the box saying what the picture will show");
+  assert.ok(!container.childNodes.includes(none.f), "no picture planned: no figure");
+  assert.ok(container.childNodes.includes(planned.f));
+});
 
 test("laser-study.js: the chapters are numbered and the contents and the ways back link to them", () => {
   const dom = makeDom();

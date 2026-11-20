@@ -1449,12 +1449,34 @@ body.site footer {
   scroll-margin-top: 5rem;             /* the menu bar stays at the top */
 }
 
-.study-toc__list {
+.study-toc__list,
+.study-toc__sections {
   list-style: none;
+  padding: 0;
+}
+
+.study-toc__list {
   margin-top: 1.2rem;
   display: grid;
-  gap: 0.55rem;
+  gap: 1.1rem;
   font-size: 1.05rem;
+}
+
+.study-toc__link {
+  font-weight: 700;
+}
+
+.study-toc__sections {
+  margin-top: 0.45rem;
+  padding-left: 1.6rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.97rem;
+}
+
+/* The numbers the page writes (3, 3.5) */
+.study-num {
+  font-variant-numeric: tabular-nums;
 }
 
 .study-chapter {
@@ -1470,6 +1492,46 @@ body.site footer {
 
 .study-chapter .prose {
   margin-top: 1.2rem;
+}
+
+.study-section {
+  margin-top: clamp(2.2rem, 4vw, 3rem);
+  scroll-margin-top: 5rem;
+}
+
+.study-section__title {
+  color: var(--heading);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* A picture, or until there is one the box saying what it will show */
+.study-figure {
+  margin: 1.6rem 0 0;
+}
+
+.study-figure__image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+.study-figure__caption {
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.study-figure__todo {
+  padding: 1.1rem 1.3rem;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .study-chapter__top {

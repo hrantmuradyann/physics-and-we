@@ -5914,29 +5914,29 @@ const MUTATIONS = [
   },
   {
     file: "data/laser-study.json",
-    find: "so one photon carries 2.86\u00d710\u207b\u00b9\u2079 J.",
-    replace: "so one photon carries 2.86\u00d710\u207b\u00b9\u2079 J. Its energy is $E = h\\\\nu$.",
+    find: "the medium twice per round trip.",
+    replace: "the medium twice per round trip, a length of $2l$.",
     why: "a formula in English only"
   },
   {
     file: "data/laser-study.json",
-    find: "(its frequency):\\n\\n$$E = h\\\\nu = \\\\frac{hc}{\\\\lambda}$$",
-    replace: "(its frequency):\\n\\n$$E = h\\\\nu = \\\\frac{hc}{\\\\lambda$$",
+    find: "free spectral range**) is\\n\\n$$\\\\Delta\\\\nu_{\\\\text{FSR}} = \\\\frac{c}{2L_e}$$",
+    replace: "free spectral range**) is\\n\\n$$\\\\Delta\\\\nu_{\\\\text{FSR}} = \\\\frac{c}{2L_e$$",
     why: "a formula KaTeX cannot read"
   },
   {
     file: "data/laser-study.json",
-    find: "**Spikes** happen on their own",
-    replace: "*Spikes* happen on their own",
+    find: "**Gain clamping.** In steady",
+    replace: "*Gain clamping.* In steady",
     why: "a lone star that would show on the page"
   },
 
   // ---------- stage 12: the book's contents and links ----------
   {
     file: "js/laser-study.js",
-    find: "      if (links[i]) links[i].setAttribute(\"href\", \"#\" + id);\n",
+    find: "        point(tocLinks[0], id);\n",
     replace: "",
-    why: "the contents' links lead nowhere"
+    why: "the contents' chapter links lead nowhere"
   },
   {
     file: "js/laser-study.js",
@@ -5958,7 +5958,7 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-study.js",
-    find: "    numberChapters(latest, event.detail.data);\n",
+    find: "    numberBook(latest, event.detail.data);\n",
     replace: "",
     why: "the chapters never numbered"
   },
@@ -5976,9 +5976,9 @@ const MUTATIONS = [
   },
   {
     file: "data/laser-study.json",
-    find: "[chapter 1](#chapter-emission)",
-    replace: "[chapter 1](#chapter-nowhere)",
-    why: "a link to a chapter that does not exist"
+    find: "[the section on one colour](#section-one-colour)",
+    replace: "[the section on one colour](#section-nowhere)",
+    why: "a link to a section that does not exist"
   },
   {
     file: "data/site.json",
@@ -6018,8 +6018,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-study.js",
-    find: "var name = list[i] && list[i].id ? list[i].id : String(i + 1);",
-    replace: "var name = String(i + 1);",
+    find: "var sectionId = \"section-\" + (sectionData.id || sectionNumber);",
+    replace: "var sectionId = \"section-\" + sectionNumber;",
     why: "chapters named by position: links break when chapters move"
   },
   {
@@ -6027,6 +6027,91 @@ const MUTATIONS = [
     find: "        styled = true;\n",
     replace: "",
     why: "the stylesheet's arrival ignored: nothing typeset"
+  },
+  // ---------- stage 12b: chapters of sections, and the pictures ----------
+  {
+    file: "js/laser-study.js",
+    find: "var id = \"chapter-\" + (chapterData.id || number);",
+    replace: "var id = \"chapter-\" + number;",
+    why: "chapters named by position: links break when chapters move"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "          point(tocLink, sectionId);\n",
+    replace: "",
+    why: "the contents' section links lead nowhere"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "        targets[\"#\" + sectionId] = section;\n",
+    replace: "",
+    why: "a section link that does not scroll"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "var sectionNumber = number + \".\" + (j + 1);",
+    replace: "var sectionNumber = String(j + 1);",
+    why: "sections numbered 1, 2 instead of 3.1, 3.2"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "          setNumber(tocLink, sectionNumber);\n",
+    replace: "",
+    why: "the contents' sections without their numbers"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "        setNumber(tocChapter, number);\n",
+    replace: "",
+    why: "the contents' chapters without their numbers"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "    settleFigures(latest);\n",
+    replace: "",
+    why: "a picture's place shows an empty image and its caption"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "        remove(todo);\n        return;",
+    replace: "        return;",
+    why: "a picture that has arrived still shows the box saying what it should show"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "      if (!todo || !first(todo, \"[data-study-todo-text]\")) remove(figure);\n",
+    replace: "",
+    why: "a section with no picture keeps an empty figure"
+  },
+  {
+    file: "sections/laser-study.html",
+    find: "data-study-section>",
+    replace: ">",
+    why: "the sections not marked for numbering"
+  },
+  {
+    file: "data/site.json",
+    find: "\"pictureToCome\"",
+    replace: "\"pictureLater\"",
+    why: "the picture box's word missing"
+  },
+  {
+    file: "sections/laser-study.html",
+    find: " loading=\"lazy\"",
+    replace: "",
+    why: "every visitor downloads all the book's pictures in the background"
+  },
+  {
+    file: "sections/laser-study.html",
+    find: "<ol class=\"study-toc__sections\" role=\"list\"",
+    replace: "<ol class=\"study-toc__sections\"",
+    why: "the contents' sections lose their list meaning in Safari"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "\"image\": \"\",\n            \"alt\": {\n              \"hy\": \"Լույսը գնում-գալիս է",
+    replace: "\"image\": \"images/study/Mirrors.png\",\n            \"alt\": {\n              \"hy\": \"Լույսը գնում-գալիս է",
+    why: "a picture's file that does not exist"
   },
 ];
 

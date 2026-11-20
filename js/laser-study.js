@@ -1,12 +1,14 @@
 /* =========================================================================
-   The study page (?view=laser-study): the laser explained in chapters.
+   The laser book (?view=laser-study): chapters, each with sections.
 
    The words are data/laser-study.json, the layout sections/laser-study.html,
-   both filled in by js/content.js like every page. This file only does two
-   things the binder cannot:
+   both filled in by js/content.js like every page. This file only does the
+   three things the binder cannot:
 
-   1. A chapter with no "dig deeper" text loses its empty <details> (the
-      binder removes the missing text, not the box around it).
+   1. A section with no "dig deeper" text loses its empty <details> (the
+      binder removes the missing text, not the box around it), and its
+      picture box shows either the picture or, until there is one, what the
+      picture should show.
    2. The formulas. In the JSON a formula is written in LaTeX between dollar
       signs: $E = h\nu$ inside a sentence, or $$ … $$ as a paragraph of its
       own (shown centred, on its own line). KaTeX (vendor/katex, MIT licence)
@@ -19,12 +21,13 @@
    false), so one typo never breaks the page; if KaTeX does not download,
    the formulas stay as their LaTeX text.
 
-   3. The contents. It numbers the chapters (id="chapter-1" …), points the
-      contents' links and each chapter's "Contents ↑" at them, and scrolls
-      there when one of those, or a "chapter N" link in the text
-      ([chapter 4](#chapter-4) in the JSON), is clicked. It scrolls itself
-      because the router answers a change of the address's # by showing
-      the page again from the top.
+   3. The contents and the numbers. It numbers the chapters and sections
+      (3, 3.1) in the contents and the headings, names each by its JSON id
+      (id="chapter-medium", id="section-ruby"), points the contents' links
+      and each chapter's "Contents ↑" at them, and scrolls there when one of
+      those, or a link in the text ([the ruby laser](#section-ruby) in the
+      JSON), is clicked. It scrolls itself because the router answers a
+      change of the address's # by showing the page again from the top.
 
    Adds one global, LaserStudy, with pieces() for the tests.
    ========================================================================= */
@@ -141,35 +144,92 @@
     document.head.appendChild(script);
   }
 
-  /* ---------- Empty dig-deeper boxes ---------- */
+  /* ---------- Empty dig-deeper boxes, and the pictures ---------- */
+
+  function first(element, selector) {
+    return element.querySelectorAll(selector)[0] || null;
+  }
+
+  function remove(element) {
+    if (element && element.parentNode) element.parentNode.removeChild(element);
+  }
 
   function dropEmptyDeeper(container) {
     Array.prototype.forEach.call(container.querySelectorAll("[data-study-deeper]"), function (box) {
-      if (box.querySelectorAll("[data-rich]").length === 0) box.parentNode.removeChild(box);
+      if (box.querySelectorAll("[data-rich]").length === 0) remove(box);
     });
   }
 
-  /* ---------- The contents and the links between chapters ---------- */
+  // A picture with a file shows it with its caption; without one, the box
+  // saying what it should show; with neither, the section has no figure.
+  function settleFigures(container) {
+    Array.prototype.forEach.call(container.querySelectorAll("[data-study-figure]"), function (figure) {
+      var image = first(figure, "[data-study-image]");
+      var todo = first(figure, "[data-study-todo]");
+      if (image && image.getAttribute("src")) {
+        remove(todo);
+        return;
+      }
+      remove(image);
+      remove(first(figure, "[data-study-caption]"));
+      if (!todo || !first(todo, "[data-study-todo-text]")) remove(figure);
+    });
+  }
 
-  var targets = {};           // "#chapter-3" → that chapter of the newest build
+  /* ---------- The numbers, the contents and the links ---------- */
 
-  // Each chapter's id comes from its "id" in the JSON (id="chapter-ruby"),
-  // so a link keeps its chapter when the chapters are reordered.
-  function numberChapters(container, data) {
+  var targets = {};           // "#section-ruby" → that section of the newest build
+
+  function setNumber(element, number) {
+    var place = first(element, "[data-study-number]");
+    if (place) place.textContent = number;
+  }
+
+  function point(link, id) {
+    if (link) link.setAttribute("href", "#" + id);
+  }
+
+  // The page's chapters and sections are numbered in the order they stand,
+  // and named by their "id" in the JSON (id="section-ruby"), so a link in
+  // the text keeps its target when chapters or sections are moved.
+  function numberBook(container, data) {
     var list = (data && data.chapters) || [];
     targets = {};
-    var toc = container.querySelectorAll("[data-study-toc]")[0];
+    var toc = first(container, "[data-study-toc]");
     if (toc) {
       toc.setAttribute("id", "contents");
       targets["#contents"] = toc;
     }
-    var links = container.querySelectorAll("[data-study-link]");
+    var tocChapters = toc ? toc.querySelectorAll("[data-study-toc-chapter]") : [];
     Array.prototype.forEach.call(container.querySelectorAll("[data-study-chapter]"), function (chapter, i) {
-      var name = list[i] && list[i].id ? list[i].id : String(i + 1);
-      var id = "chapter-" + name;
+      var chapterData = list[i] || {};
+      var sectionsData = chapterData.sections || [];
+      var number = String(i + 1);
+      var id = "chapter-" + (chapterData.id || number);
       chapter.setAttribute("id", id);
       targets["#" + id] = chapter;
-      if (links[i]) links[i].setAttribute("href", "#" + id);
+      setNumber(chapter, number);
+
+      var tocChapter = tocChapters[i] || null;
+      var tocLinks = tocChapter ? tocChapter.querySelectorAll("[data-study-link]") : [];
+      if (tocChapter) {
+        setNumber(tocChapter, number);
+        point(tocLinks[0], id);
+      }
+
+      Array.prototype.forEach.call(chapter.querySelectorAll("[data-study-section]"), function (section, j) {
+        var sectionData = sectionsData[j] || {};
+        var sectionNumber = number + "." + (j + 1);
+        var sectionId = "section-" + (sectionData.id || sectionNumber);
+        section.setAttribute("id", sectionId);
+        targets["#" + sectionId] = section;
+        setNumber(section, sectionNumber);
+        var tocLink = tocLinks[j + 1];
+        if (tocLink) {
+          setNumber(tocLink, sectionNumber);
+          point(tocLink, sectionId);
+        }
+      });
     });
     Array.prototype.forEach.call(container.querySelectorAll("[data-study-top]"), function (link) {
       link.setAttribute("href", "#contents");
@@ -213,7 +273,8 @@
     latest = event.detail.container;
     build += 1;
     dropEmptyDeeper(latest);
-    numberChapters(latest, event.detail.data);
+    settleFigures(latest);
+    numberBook(latest, event.detail.data);
     typeset(latest);                   // does nothing until KaTeX is here
   });
 
