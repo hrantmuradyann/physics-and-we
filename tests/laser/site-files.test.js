@@ -504,9 +504,16 @@ test("css/laser.css: theme variables only, no colour written out", () => {
   assert.deepEqual(colourLiteralsInCss(read("css/laser.css")), []);
 });
 
-test("js/laser/ui/*.js and js/laser/page.js: no colour written out", () => {
-  const files = UI_FILES.map((file) => "js/laser/ui/" + file).concat(["js/laser/page.js"]);
+// materials.js is the one exception: the physical colours of the media and
+// the beams (stage 10c), each tested for contrast in materials.test.js.
+const COLOUR_FILE = "materials.js";
+
+test("js/laser/ui/*.js and js/laser/page.js: no colour written out, except in materials.js", () => {
+  const files = UI_FILES.filter((file) => file !== COLOUR_FILE).map((file) => "js/laser/ui/" + file).concat(["js/laser/page.js"]);
   for (const file of files) assert.deepEqual(colourLiteralsInJs(read(file)), [], file);
+  // The exception holds colours, and is still listed (so it is loaded).
+  assert.ok(UI_FILES.includes(COLOUR_FILE));
+  assert.ok(colourLiteralsInJs(read("js/laser/ui/" + COLOUR_FILE)).length > 0, "materials.js holds the physical colours");
 });
 
 /* ---------- index.html ---------- */

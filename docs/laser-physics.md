@@ -549,6 +549,24 @@ The simulator's benches (`SETUPS` in `js/laser/engine/bench.js`) use these mirro
 
 The mirrors change only the losses, not the gain: the gain is still spread evenly over `area` (decided in build stage 10a, D15 of `docs/laser-plan.md`). So the beam's width on the page does not change the pump threshold, except through the light the mirrors lose.
 
+### 5.10 What each medium looks like
+
+What the bench draws for each medium (build stage 10c). These are the colours a visitor would see looking at the real thing in daylight, not the colour of the laser's light (that is Section 11.5). Where only a hobbyist or forum source describes a glow, it is marked "not checked".
+
+| Medium | What it is | Its colour | Source |
+| --- | --- | --- | --- |
+| Ruby | a rod of sapphire (Al₂O₃) with about 0.05 % Cr³⁺, ends polished flat | pink to red, deeper with more chromium: Cr³⁺ absorbs violet (400–450 nm) and yellow-green (500–600 nm), the pump bands of Section 5.2, and lets red through | [Wikipedia, Ruby laser](https://en.wikipedia.org/wiki/Ruby_laser); a ruby transmittance paper ([Scribd](https://www.scribd.com/document/740555713/Ruby-Conference-Paper)) |
+| Nd:YAG | a rod of yttrium aluminium garnet with about 1 % Nd³⁺ | pale lilac (pink-purple); its narrow absorption lines make the hue shift with the light that falls on it, bluer under daylight | [Wikipedia, YAG](https://en.wikipedia.org/wiki/Yttrium_aluminium_garnet) |
+| Nd:glass | a glass rod with Nd³⁺ | pale purple, like Nd:YAG (the same ion); not checked | — |
+| Ti:sapphire | a rod of sapphire with Ti³⁺ | pink, slightly orange | [GIA, Gems & Gemology 1995](https://www.gia.edu/gems-gemology/fall-1995-synthetic-pink-ti-sapphire-johnson) |
+| Dye (rhodamine 6G) | the dye dissolved (in ethanol or ethylene glycol), flowing through a glass cell or as a free jet | orange liquid, glowing yellow where the pump hits it | [Wikipedia, Dye laser](https://en.wikipedia.org/wiki/Dye_laser); [Rhodamine 6G](https://en.wikipedia.org/wiki/Rhodamine_6G) |
+| He-Ne | a glass tube with a thin capillary bore (0.5–1.5 mm) where the discharge runs, a wider gas reservoir round it | the bore glows a whitish red-orange (salmon, pinkish) | [repairfaq, He-Ne lasers](https://www.repairfaq.org/sam/laserhen.htm); [QMUL lab handout](https://ph.qmul.ac.uk/sites/default/files/PLAB%20-%20Ex%204%20Helium%20Neon%20Laser.pdf) |
+| Ar⁺ | a ceramic (BeO) or segmented tube with a 1–2 mm bore, water-cooled | a bright blue to violet glow in the bore; not checked (forum descriptions only) | [RP Photonics](https://www.rp-photonics.com/argon_ion_lasers.html) for the tube; the colour: forums |
+| CO₂ | a long glass tube inside a water jacket, electrodes at the ends | a pink-violet glow, from the nitrogen in the gas mix; not checked | [Wikipedia, CO₂ laser](https://en.wikipedia.org/wiki/Carbon-dioxide_laser) for the gas mix and the water cooling; the colour: not found in a source |
+| Two-level atom | symbolic | stays symbolic: no real material | — |
+
+The pump of the dye and Ti:sapphire lasers is a green 532 nm beam (a frequency-doubled Nd laser) or, in older dye lasers, an argon laser. The diodes of Nd:YAG emit at 808 nm, infrared: invisible to the eye, so a drawing of their light is a false colour, labelled as such (Section 11.5).
+
 ## 6. Pumping
 
 The pump sets one number in the equations of Section 4 — the rate W_p (or R_p, or current I) — but this is where most of the laser's overall efficiency is lost. Total efficiency is the product of a chain:

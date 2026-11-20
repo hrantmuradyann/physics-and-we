@@ -517,12 +517,13 @@ test("three and two levels in the cartoon: the share of ions up, N₂/N_t; the t
   for (const entry of seen.drives.slice(-60)) assert.ok(entry.drive.excited < 0.5, "two levels: " + entry.drive.excited);
 });
 
-test("the bench is drawn with the chosen pump", () => {
+test("the bench is drawn with the chosen pump, medium and wavelength", () => {
   const page = built("en", { watch: true });
   const { browser, section, seen } = page;
   page.clock = 1000;
   browser.runFrame(page.clock);
   assert.equal(last(seen.bench).light.pumpKind, "diode");
+  assert.equal(last(seen.bench).light.medium, "nd-yag");
   const kinds = new Set();
   const E = engine(browser);
   for (const id of E.media.list()) {
@@ -530,6 +531,9 @@ test("the bench is drawn with the chosen pump", () => {
       choose(section, id, pump);
       runFrames(page, 1);
       assert.equal(last(seen.bench).light.pumpKind, pump, id + " with " + pump);
+      // Stage 10c1: the medium's look and the beam's colour.
+      assert.equal(last(seen.bench).light.medium, id);
+      assert.equal(last(seen.bench).light.lam, E.media.get(id).lam, id + ": its own wavelength");
       kinds.add(pump);
     }
   }

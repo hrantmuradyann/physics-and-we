@@ -35,15 +35,21 @@
      LaserUI.bench.draw(view, labels, light)
          view    what LaserUI.loop hands its draw function
          labels  { backMirror, outputMirror, medium, pump, transmission,
-                 qSwitch, widths, focus }: the words, already in the
-                 visitor's language (widths: "Widths ×", written with its
-                 number; focus: "F", written F₁ and F₂); an
+                 qSwitch, widths, focus, infrared, ultraviolet }: the
+                 words, already in the visitor's language (widths:
+                 "Widths ×", written with its number; focus: "F", written
+                 F₁ and F₂; infrared / ultraviolet: "infrared, invisible",
+                 written after an invisible beam's wavelength); an
                  empty one is left out. After `transmission` the drawing
                  writes the output mirror's transmission ("Transmission
                  5.00 %"), and without a transmission in `light` it leaves
                  that label out. `qSwitch` is written only with a switch
          light   optional { beam, pump, transmission, pumpKind, qSwitch,
-                 cavity }
+                 cavity, medium, lam }
+                 medium        the engine's medium id (stage 10c1): its
+                               look and colours from materials.js
+                 lam           the laser's wavelength (m): the beam's
+                               colour
                  beam          the output power over the output at twice
                                threshold; 0 or none draws no rays
                  pump          the pump over its strongest setting, 0–1;
@@ -104,14 +110,27 @@
    least one, go on through the output mirror to the edge of the picture,
    so the mirror's transmission can be counted. Their strength (alpha) is
    the square root of `beam`, so a weak laser still shows while the
-   spontaneous emission below threshold (about 10⁻⁸) does not. 1064 nm is
-   invisible: the colour is the theme's, not the light's (§11.5 comes in a
-   later stage).
+   spontaneous emission below threshold (about 10⁻⁸) does not.
 
-   Colours come only from view.colors (the theme), so the picture follows
-   the dark and the light theme.
+   THE MEDIA AND THE BEAM'S COLOUR (stage 10c1; docs/laser-physics.md
+   §5.10, §11.5)
+   With light.medium, a medium materials.js knows, the rod is a crystal in
+   its own colour (a highlight along its top, a shade along its bottom, a
+   polished end face at each end), the dye a glass cell with two pipes, a
+   gas tube glass with its bore glowing in the gas's colour; and the beam
+   (light.lam) is drawn in its wavelength's colour, or, for light the eye
+   cannot see, in materials' false colour with "1.06 µm · infrared,
+   invisible" on its own row at the bottom right. A coloured ray is drawn
+   over a thin casing in the theme's background colour, so it shows over
+   a medium of the same hue. Every physical line goes through
+   materials.readable() against the theme's background.
 
-   Needs: format.js (the transmission's number).
+   Colours come from view.colors (the theme), and, for the media and the
+   beams, from LaserUI.materials; the two-level atom, or a light without
+   a medium, is drawn in the theme's colours only.
+
+   Needs: format.js (the transmission's number, the wavelength) and
+   materials.js, loaded before it.
    Tests: tests/laser/draw-bench.test.js
    ========================================================================== */
 (function (root) {
@@ -124,10 +143,12 @@
 
   // The labels, in the order they are written. page.js takes their words
   // from data/laser.json (bench.parts.<name>).
-  var PARTS = Object.freeze(["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch", "widths", "focus"]);
-  // The words written with the cavity's own numbers, not in PARTS' places:
-  // "Widths × 90" (bottom left) and each focal point's "F".
-  var CAVITY_WORDS = ["widths", "focus"];
+  var PARTS = Object.freeze(["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch", "widths", "focus",
+    "infrared", "ultraviolet"]);
+  // The words written in places of their own, not by the loop over PARTS:
+  // "Widths × 90" (bottom left), each focal point's "F", and the note
+  // under an invisible beam.
+  var OWN_PLACE_WORDS = ["widths", "focus", "infrared", "ultraviolet"];
 
   // The mirrors' shapes it can draw (the engine's bench.MIRROR_SHAPES).
   var SHAPES = Object.freeze(["flat", "concave", "convex"]);
@@ -300,6 +321,10 @@
       // the mirror, on its mirror's row under the rod, no wider than the
       // gap before the rod (`focusRoom.rod`) or, on a discharge, before
       // the electrode (`focusRoom.discharge`).
+      // A dye cell's pipes, under it near its ends (stage 10c), clear of
+      // the rod's posts and of the pump beam turned up at the middle.
+      cellPipes: [rodX + 0.15 * rodLength, rodX + 0.85 * rodLength],
+      cellPipe: 0.05 * h,
       apertureHalf: rodHeight / 2,
       boreHalf: boreHeight / 2,
       focusRows: [axisY + 0.17 * h, axisY + 0.17 * h + 1.15 * fontSize],
@@ -322,7 +347,12 @@
         qSwitch: sharedRow.name,
         transmissionShared: sharedRow.transmission,
         // "Widths × 90": bottom left, beside the pump's name.
-        widths: { x: pad, y: bottomRow, align: "left", maxWidth: Math.max(fontSize, lampX - pad - fontSize) }
+        widths: { x: pad, y: bottomRow, align: "left", maxWidth: Math.max(fontSize, lampX - pad - fontSize) },
+        // "1.06 µm · infrared, invisible", for a beam the eye cannot see
+        // (stage 10c1): on a row of its own under the pump's name, at the
+        // right (beside the pump's name it was squeezed to a third on a
+        // phone: stage 10c1 review).
+        invisible: { x: w - pad, y: bottomRow + 1.35 * fontSize, align: "right", maxWidth: w - 2 * pad }
       }
     };
   }
@@ -379,6 +409,23 @@
     var list = [];
     for (var i = first; i < first + howMany; i++) list.push(i);
     return list;
+  }
+
+  // A ray in its colour, over a casing 2 px wider in `casing` (the
+  // theme's background) at 0.6 of its alpha, so a beam shows over a
+  // medium of the same hue (stage 10c1 review); without a casing, the ray
+  // alone.
+  function casedLine(g, x1, y1, x2, y2, colour, casing, alpha, width) {
+    if (casing) {
+      g.globalAlpha = 0.6 * alpha;
+      g.strokeStyle = casing;
+      g.lineWidth = width + 2;
+      line(g, x1, y1, x2, y2);
+    }
+    g.globalAlpha = alpha;
+    g.strokeStyle = colour;
+    g.lineWidth = width;
+    line(g, x1, y1, x2, y2);
   }
 
   function line(g, x1, y1, x2, y2) {
@@ -677,8 +724,91 @@
     g.strokeRect(F.x, F.y, F.w, F.h);
   }
 
+  // The medium's look from materials.js (stage 10c), or null: the
+  // two-level atom, or a light without a medium, is drawn in the theme's
+  // colours as before.
+  function lookOf(light) {
+    if (!light || typeof light.medium !== "string") return null;
+    if (!Object.prototype.hasOwnProperty.call(UI.materials.MEDIA, light.medium)) return null;
+    return UI.materials.MEDIA[light.medium];
+  }
+
+  // The beam's colour: its wavelength's (materials.js), made readable on
+  // the theme's background; an infrared beam's false colour; the theme's
+  // accent for a medium with no look or no wavelength.
+  function rayColourOf(light, colors) {
+    if (!lookOf(light) || !(light.lam > 0)) return colors.accent2;
+    return UI.materials.readable(UI.materials.beam(light.lam).color, colors.bg);
+  }
+
+  // A crystal rod (stage 10c): its material's colour, darker along its
+  // bottom, a highlight along its top where it reflects the room, and a
+  // polished end face (an ellipse) at each end; its edge readable on the
+  // theme's background.
+  function drawCrystal(g, colors, L, body) {
+    var R = L.rod;
+    g.globalAlpha = 0.5;
+    g.fillStyle = body;
+    g.fillRect(R.x, R.y, R.w, R.h);
+    g.globalAlpha = 0.2;
+    g.fillStyle = UI.materials.SHADE;
+    g.fillRect(R.x, R.y + 0.7 * R.h, R.w, 0.3 * R.h);
+    g.globalAlpha = 0.35;
+    g.fillStyle = UI.materials.HIGHLIGHT;
+    g.fillRect(R.x + 0.03 * R.w, R.y + 0.14 * R.h, 0.94 * R.w, 0.12 * R.h);
+    g.globalAlpha = 1;
+    var edge = UI.materials.readable(body, colors.bg);
+    g.strokeStyle = edge;
+    g.lineWidth = 1.5;
+    g.strokeRect(R.x, R.y, R.w, R.h);
+    [R.x, R.x + R.w].forEach(function (x) {
+      g.beginPath();
+      g.ellipse(x, R.y + R.h / 2, 0.12 * R.h, R.h / 2, 0, 0, 2 * Math.PI);
+      g.globalAlpha = 0.5;
+      g.fillStyle = body;
+      g.fill();
+      g.globalAlpha = 1;
+      g.stroke();
+    });
+  }
+
+  // A dye cell (stage 10c): glass walls round the orange liquid, inside
+  // the rod's outline (outside it, the top wall ran into the medium's
+  // name), with a pipe in and a pipe out under it (the dye flows, so it
+  // does not wear out).
+  function drawCell(g, colors, L, body) {
+    var R = L.rod;
+    var wall = Math.max(3, 0.08 * R.h);
+    var glass = UI.materials.readable(UI.materials.GLASS, colors.bg);
+    g.globalAlpha = 0.25;
+    g.fillStyle = UI.materials.GLASS;
+    g.fillRect(R.x, R.y, R.w, R.h);
+    g.globalAlpha = 0.6;
+    g.fillStyle = body;
+    g.fillRect(R.x + wall, R.y + wall, R.w - 2 * wall, R.h - 2 * wall);
+    g.globalAlpha = 1;
+    g.strokeStyle = glass;
+    g.lineWidth = 1.5;
+    g.strokeRect(R.x, R.y, R.w, R.h);
+    L.cellPipes.forEach(function (x) {
+      g.globalAlpha = 0.6;
+      g.fillStyle = body;
+      g.fillRect(x - wall, R.y + R.h, 2 * wall, L.cellPipe);
+      g.globalAlpha = 1;
+      g.strokeRect(x - wall, R.y + R.h, 2 * wall, L.cellPipe);
+    });
+  }
+
   // The rod of gain medium: a see-through fill with a solid edge.
-  function drawRod(g, colors, L) {
+  function drawRod(g, colors, L, look) {
+    if (look && look.look === "rod") {
+      drawCrystal(g, colors, L, look.body);
+      return;
+    }
+    if (look && look.look === "liquid") {
+      drawCell(g, colors, L, look.body);
+      return;
+    }
     g.globalAlpha = 0.28;
     g.fillStyle = colors.accent;
     g.fillRect(L.rod.x, L.rod.y, L.rod.w, L.rod.h);
@@ -690,19 +820,22 @@
 
   // The gas tube of a discharge: lighter glass than a rod, and its gas
   // glowing with the current (never so brightly that the rays vanish in it).
-  function drawTube(g, colors, L, pump) {
+  // With a look (stage 10c) the glass is glass and the gas glows in its
+  // own colour (He-Ne salmon, Ar⁺ blue-violet, CO₂ pink-violet).
+  function drawTube(g, colors, L, pump, look) {
     var T = L.tube;
     var B = L.bore;
-    g.globalAlpha = 0.12;
-    g.fillStyle = colors.accent;
+    var glass = look ? UI.materials.GLASS : colors.accent;
+    g.globalAlpha = look ? 0.18 : 0.12;
+    g.fillStyle = glass;
     g.fillRect(T.x, T.y, T.w, T.h);
     if (pump > 0) {
       g.globalAlpha = 0.15 + 0.6 * pump;
-      g.fillStyle = colors.glow;
+      g.fillStyle = look ? look.body : colors.glow;
       g.fillRect(B.x, B.y, B.w, B.h);
     }
     g.globalAlpha = 1;
-    g.strokeStyle = colors.accent;
+    g.strokeStyle = look ? UI.materials.readable(UI.materials.GLASS, colors.bg) : colors.accent;
     g.lineWidth = 1.5;
     g.strokeRect(T.x, T.y, T.w, T.h);
   }
@@ -749,7 +882,7 @@
   // cavity (an hourglass), or, with no mode (two flat mirrors, unstable
   // mirrors), a band half as wide as the aperture. Never wider than the
   // mirrors.
-  function drawBeamBand(g, colors, L, S, cavity, beam) {
+  function drawBeamBand(g, rayColour, L, S, cavity, beam) {
     var top = [];
     var bottom = [];
     if (cavity.mode && cavity.mode.length > 1) {
@@ -765,7 +898,7 @@
       bottom = [{ x: S.x1, y: L.axis.y + band }, { x: S.x2, y: L.axis.y + band }];
     }
     g.globalAlpha = 0.45 * rayAlpha(beam);
-    g.fillStyle = colors.accent2;
+    g.fillStyle = rayColour;
     g.beginPath();
     g.moveTo(top[0].x, top[0].y);
     for (var i = 1; i < top.length; i++) g.lineTo(top[i].x, top[i].y);
@@ -783,7 +916,7 @@
   // the whole drawing and its words. They show
   // the path light would take, so they are drawn faintly with the laser
   // dark, and strongly with it shining.
-  function drawPaths(g, colors, L, S, shapes, cavity, beam, w, h) {
+  function drawPaths(g, rayColour, casing, L, S, shapes, cavity, beam, w, h) {
     if (!cavity.rays) return;
     // Only inside a band a quarter of a mirror taller than the mirrors at
     // each side: the widths are drawn many times wider than they are, so
@@ -797,7 +930,7 @@
     g.rect(0, bandTop, w, bandBottom - bandTop);
     g.clip();
     var strength = PATH_ALPHA + (1 - PATH_ALPHA) * rayAlpha(beam);
-    g.strokeStyle = colors.accent2;
+    g.strokeStyle = rayColour;
     g.lineWidth = 1.2;
     cavity.rays.forEach(function (ray) {
       if (!ray || !ray.hits || ray.hits.length === 0) return;
@@ -806,8 +939,7 @@
       ray.hits.forEach(function (hit, k) {
         var to = onMirror(L, S, shapes, hit.mirror, hit.y);
         fade = strength * Math.pow(RAY_FADE, Math.floor(k / 2));
-        g.globalAlpha = fade;
-        line(g, from.x, from.y, to.x, to.y);
+        casedLine(g, from.x, from.y, to.x, to.y, rayColour, casing, fade, 1.2);
         from = to;
       });
       if (ray.escaped) {
@@ -819,8 +951,7 @@
         var room = Math.min(ESCAPE_RUN * w, direction > 0 ? w - from.x : from.x);
         if (drop < 0) room = Math.min(room, from.y / -drop);
         if (drop > 0) room = Math.min(room, (h - from.y) / drop);
-        g.globalAlpha = 0.6 * fade;
-        line(g, from.x, from.y, from.x + direction * room, from.y + drop * room);
+        casedLine(g, from.x, from.y, from.x + direction * room, from.y + drop * room, rayColour, casing, 0.6 * fade, 1.2);
       }
     });
     g.restore();
@@ -830,7 +961,7 @@
   // transmission) of the rays across the beam at the output mirror (as
   // before stage 10b, so the transmission can be counted), straight on to
   // the edge.
-  function drawOutput(g, colors, L, S, cavity, light, beam, w) {
+  function drawOutput(g, rayColour, L, S, cavity, light, beam, w) {
     var spot = S.half / 2;
     if (cavity.mode && cavity.mode.length > 0) {
       spot = Math.min(cavity.mode[cavity.mode.length - 1].w * S.perMetreY, S.half);
@@ -841,8 +972,8 @@
     for (var i = -half; i <= half; i++) heights.push(half === 0 ? L.axis.y : L.axis.y + i * spot / half);
     var outLeft = L.outputMirror.x + L.outputMirror.w;
     g.globalAlpha = rayAlpha(beam);
-    g.strokeStyle = colors.accent2;
-    g.fillStyle = colors.accent2;
+    g.strokeStyle = rayColour;
+    g.fillStyle = rayColour;
     g.lineWidth = 1.4;
     middleRays(count, raysOut(count, light.transmission)).forEach(function (index) {
       var y = heights[index];
@@ -944,8 +1075,9 @@
     else if (kind === "discharge") drawDischarge(g, colors, L, pump);
     else if (kind === "laser") drawPumpLaser(g, colors, L, pump);
     else drawDiodes(g, colors, L, pump);
-    if (kind === "discharge") drawTube(g, colors, L, pump);
-    else drawRod(g, colors, L);
+    var look = lookOf(light);
+    if (kind === "discharge") drawTube(g, colors, L, pump, look);
+    else drawRod(g, colors, L, look);
     if (kind === "flashlamp" && pump > 0) lightRod(g, colors, L, pump);
     // The filter in the gap.
     if (qSwitch) drawFilter(g, colors, L, openOf(qSwitch));
@@ -954,10 +1086,14 @@
     // rays, and the light leaving. Without them: separate rays between the
     // mirrors, some of them leaving.
     var S = cavity ? cavityScale(L, cavity, kind) : null;
+    var rayColour = rayColourOf(light, colors);
+    // A coloured beam runs over a medium of its own hue: a thin casing in
+    // the background's colour keeps it apart (stage 10c1 review).
+    var casing = look ? colors.bg : null;
     if (cavity) {
-      if (beam > 0) drawBeamBand(g, colors, L, S, cavity, beam);
-      drawPaths(g, colors, L, S, shapes, cavity, beam, view.w, view.h);
-      if (beam > 0) drawOutput(g, colors, L, S, cavity, light, beam, view.w);
+      if (beam > 0) drawBeamBand(g, rayColour, L, S, cavity, beam);
+      drawPaths(g, rayColour, casing, L, S, shapes, cavity, beam, view.w, view.h);
+      if (beam > 0) drawOutput(g, rayColour, L, S, cavity, light, beam, view.w);
     } else if (beam > 0) {
       var count = L.rays.length;
       var leaving = middleRays(count, raysOut(count, light.transmission));
@@ -969,19 +1105,16 @@
       var leftFrom = qSwitch ? L.filter.x + L.filter.w : faceX(L, "back", L.axis.y);
       var leftGap = (leftFrom + medium.x) / 2;
       var rightGap = (medium.x + medium.w + faceX(L, "output", L.axis.y)) / 2;
-      g.globalAlpha = rayAlpha(beam);
-      g.strokeStyle = colors.accent2;
-      g.fillStyle = colors.accent2;
-      g.lineWidth = 1.4;
+      g.fillStyle = rayColour;
       L.rays.forEach(function (y, i) {
-        line(g, faceX(L, "back", y), y, faceX(L, "output", y), y);
+        casedLine(g, faceX(L, "back", y), y, faceX(L, "output", y), y, rayColour, casing, rayAlpha(beam), 1.4);
         // The light goes both ways: right on every second ray, left on the others.
         if (i % 2 === 0) arrowHead(g, rightGap + 4, y, 1, 0, 6);
         else arrowHead(g, leftGap - 4, y, -1, 0, 6);
       });
       leaving.forEach(function (i) {
         var y = L.rays[i];
-        line(g, outLeft, y, view.w, y);
+        casedLine(g, outLeft, y, view.w, y, rayColour, casing, rayAlpha(beam), 1.4);
         arrowHead(g, view.w - 0.4 * L.pad, y, 1, 0, 6);
       });
       g.globalAlpha = 1;
@@ -1001,7 +1134,7 @@
     // The filter's name on the top row, which the transmission then shares.
     var switchName = qSwitch && labels.qSwitch ? labels.qSwitch : "";
     PARTS.forEach(function (name) {
-      if (CAVITY_WORDS.indexOf(name) !== -1) return;
+      if (OWN_PLACE_WORDS.indexOf(name) !== -1) return;
       var text = name === "transmission" ? transmissionText(labels.transmission, light) : labels[name];
       var spot = L.labels[name];
       if (name === "qSwitch") text = switchName;
@@ -1015,6 +1148,14 @@
       var spot = L.labels.widths;
       g.textAlign = spot.align;
       g.fillText(labels.widths + " " + String(Number(S.widths.toPrecision(2))), spot.x, spot.y, spot.maxWidth);
+    }
+    // An invisible beam says so, with its wavelength (§11.5: otherwise the
+    // visitor thinks the laser does not work).
+    var band = look && light.lam > 0 ? UI.materials.beam(light.lam).band : "visible";
+    if (band !== "visible" && labels[band]) {
+      var where = L.labels.invisible;
+      g.textAlign = where.align;
+      g.fillText(UI.format.si(light.lam, "m") + " · " + labels[band], where.x, where.y, where.maxWidth);
     }
 
     g.restore();

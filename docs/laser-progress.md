@@ -1,6 +1,6 @@
 # The laser simulator: what is done and what is left
 
-*Last updated: 19 November 2026, at the end of stage 10b.*
+*Last updated: 20 November 2026, at the end of stage 10c1.*
 
 This page explains, in plain words, how far the laser simulator has got. The technical details are in `docs/laser-plan.md` (the build plan) and `docs/laser-physics.md` (the physics).
 
@@ -16,8 +16,8 @@ The page lives at the hidden address `?view=laser`. A banner on the Labs page li
 
 The work is split into numbered **stages**. Each stage adds one piece, and is not counted as finished until it passes four checks:
 
-1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 677 of them, and all of them pass.
-2. **Deliberate mistakes.** A tool makes 807 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes about 6 minutes (it took 25 before stage 7c made it faster; see below).
+1. **Automatic tests.** Small programs that check every formula against numbers from the book or worked out by hand. There are now 725 of them, and all of them pass.
+2. **Deliberate mistakes.** A tool makes 893 small errors in the code on purpose, one at a time: a sign flipped, a factor of 2 dropped, a wrong unit. Each time, at least one test must notice. If none does, a test is missing, and it is added. A full run takes about 6 minutes (it took 25 before stage 7c made it faster; see below).
 3. **A code review.** A separate careful reading of the whole change, looking for bugs. What it finds is fixed before the stage is finished.
 4. **A check in the browser**, for stages that change the page: both themes, both languages, a phone-sized screen, no errors.
 
@@ -48,6 +48,7 @@ The simulator has two halves:
 | 10a | **Mirror physics in the engine** (see below): flat, concave and convex mirrors, which pairs keep the light, the beam's width, the focal points, and the light the mirrors lose. Each laser now has its real mirrors. Not on the page yet. |
 | — | **The energy-levels picture removed**, as you asked (19 November): the levels and the gain gauge under the laser. The theory chapter about the giant pulse now tells the visitor to watch the power chart instead. |
 | 10b | **The mirrors on the page** (see below): each mirror flat, concave or convex, the light's path bounce by bounce, the focal points, and a stability diagram beside the chart. |
+| 10c1 | **Each laser in its real colours** (see below): the crystals, the dye and the glowing gases as they look, and the beam in the colour of its light. |
 
 ### What you can see on the page today
 
@@ -63,7 +64,31 @@ For each laser the page sets itself up to suit it:
 
 Ruby fired with a 1000 J flash lights up after a fraction of a millisecond and fires spikes reaching about 460 kW, as in stage 7b. The light and dark themes and both languages work, and the dropdowns fit on a 320 px phone.
 
-### Stage 10b, just finished: the mirrors on the page
+### Stage 10c1, just finished: each laser in its real colours
+
+Stage 10c ("a bench that looks real") is done in two parts. This is the first; the second (10c2) is the end-pumped diodes you chose, the green pump laser, and the pump light travelling into the material.
+
+**What you can see now:**
+- **the rods look like crystals in their real colours:** ruby pink-red, Nd:YAG pale lilac, Nd:glass pale purple, titanium-sapphire pink. Each is drawn as a cylinder, with a bright strip of reflected light along its top, a shade along its bottom and a polished oval face at each end;
+- **the dye is an orange liquid in a glass cell**, with a pipe in and a pipe out under it (in a real dye laser the dye flows, so it does not wear out);
+- **the gas tubes are glass**, and the gas glows in its own colour while the current flows: helium-neon salmon-red, argon blue-violet, CO₂ pink-violet;
+- **the beam is the colour of its light**, worked out from its wavelength: helium-neon red-orange, ruby deep red, argon green, the dye yellow-orange;
+- **light the eye cannot see** (Nd:YAG and Nd:glass at 1.06 µm, CO₂ at 10.6 µm, titanium-sapphire at 0.8 µm) is drawn in a hot pink that no real beam has, and the drawing says so under the pump's name: "1.06 µm · infrared, invisible". Without the note a visitor might think the laser does not work;
+- **every colour stays visible on both themes**: a colour too pale for the cream theme is darkened a little, one too dark for the dark theme lightened, until it stands out clearly. A test checks every colour against both backgrounds. The rays also have a thin dark (or cream) edge, so a red beam still shows over the red ruby.
+
+**Where the colours come from:** photographs and descriptions of each material, collected with their sources in the physics notes (§5.10). Two are only from hobbyists' descriptions and marked "not checked": the argon and the CO₂ glow.
+
+**Choices I made without asking you** (in the plan's 10c1 notes, easy to change):
+- the dye's yellow-orange beam turns brown-orange on the cream theme, where it is darkened to be seen;
+- the hot pink for invisible light;
+- the dye cell is a box with two pipes, not a jet of dye;
+- the two-level atom, which is not a real material, keeps the site's colours.
+
+**What the review caught** (and I fixed): the beam could all but vanish over a material of its own colour (the false colour over the lilac Nd:YAG, red over ruby), now fixed by the rays' thin edge; the "infrared, invisible" note was squeezed beside the pump's name on a phone, and now has a row of its own; the rod's lower shade made it lighter, not darker, on the dark theme; the false colour was too close to violet light; ultraviolet light would have been called infrared (no laser here is ultraviolet yet). The beam's shaded hourglass is still faint over a material of the same colour: I left it, since the rays over it show the beam clearly.
+
+**Checks:** 725 automatic tests pass. The deliberate-mistakes checker makes 893 mistakes (32 new) and catches every one. I looked at Nd:YAG, ruby during a flash, helium-neon and the dye in Chrome, in both themes.
+
+### Stage 10b: the mirrors on the page
 
 **What you can try now:**
 - under the output mirror's slider, each mirror has **three buttons**, Flat, Concave and Convex, each with a little picture of the mirror's face. A curved mirror also gets a **slider for its radius** (from a quarter of the laser's length to 50 m) with a box to type it in metres. Changing a mirror does not restart the laser: the chart carries on, so you see what the change does;

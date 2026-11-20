@@ -28,7 +28,9 @@
       "transmission": { "hy": "Թափանցելիություն", "en": "Transmission" },
       "qSwitch": { "hy": "Հագեցող ֆիլտր", "en": "Bleachable filter" },
       "widths": { "hy": "Լայնությունները ×", "en": "Widths ×" },
-      "focus": { "hy": "F", "en": "F" }
+      "focus": { "hy": "F", "en": "F" },
+      "infrared": { "hy": "ինֆրակարմիր, անտեսանելի", "en": "infrared, invisible" },
+      "ultraviolet": { "hy": "ուլտրամանուշակագույն, անտեսանելի", "en": "ultraviolet, invisible" }
     },
     "pumps": {
       "diode": { "hy": "Մղման դիոդներ", "en": "Pump diodes" },

@@ -63,6 +63,7 @@ const UI_FILES = [
   "format.js",
   "axis.js",
   "history.js",
+  "materials.js",
   "draw-bench.js",
   "draw-plots.js",
   "draw-photons.js",

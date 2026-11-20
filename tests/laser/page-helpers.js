@@ -13,7 +13,7 @@ const { ROOT, ENGINE_FILES, UI_FILES } = require("./helpers.js");
 const { createBrowser, fakeCanvas, fakeContainer, fakeElement } = require("./fake-browser.js");
 
 const WORDS = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "laser.json"), "utf8"));
-const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch", "widths", "focus"];
+const PARTS = ["backMirror", "outputMirror", "medium", "pump", "transmission", "qSwitch", "widths", "focus", "infrared", "ultraviolet"];
 const CANVASES = ["bench", "power", "photons", "stability"];
 const CONTROLS = ["pump", "coupler", "Rc1", "Rc2", "slowMotion", "absorberT0"];
 // The sliders in rows page.js hides: each curved mirror's radius (stage

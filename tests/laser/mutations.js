@@ -1130,8 +1130,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      g.fillText(labels.widths + \" \" + String(Number(S.widths.toPrecision(2))), spot.x, spot.y, spot.maxWidth);\n    }\n\n    g.restore();\n  }",
-    replace: "      g.fillText(labels.widths + \" \" + String(Number(S.widths.toPrecision(2))), spot.x, spot.y, spot.maxWidth);\n    }\n\n  }",
+    find: "      g.fillText(UI.format.si(light.lam, \"m\") + \" · \" + labels[band], where.x, where.y, where.maxWidth);\n    }\n\n    g.restore();\n  }",
+    replace: "      g.fillText(UI.format.si(light.lam, \"m\") + \" · \" + labels[band], where.x, where.y, where.maxWidth);\n    }\n\n  }",
     why: "the context's settings left changed for the next drawing"
   },
   {
@@ -1338,8 +1338,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"transmission\", \"qSwitch\", \"widths\", \"focus\"]);",
-    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"qSwitch\", \"widths\", \"focus\"]);",
+    find: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"transmission\", \"qSwitch\", \"widths\", \"focus\",",
+    replace: "var PARTS = Object.freeze([\"backMirror\", \"outputMirror\", \"medium\", \"pump\", \"qSwitch\", \"widths\", \"focus\",",
     why: "a part left out of PARTS: its label never written"
   },
   {
@@ -1623,8 +1623,8 @@ const MUTATIONS = [
   /* ---------- stage 6: draw-bench.js ---------- */
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      g.globalAlpha = rayAlpha(beam);\n      g.strokeStyle = colors.accent2;\n      g.fillStyle = colors.accent2;",
-    replace: "      g.globalAlpha = Math.min(1, beam);\n      g.strokeStyle = colors.accent2;\n      g.fillStyle = colors.accent2;",
+    find: "casedLine(g, faceX(L, \"back\", y), y, faceX(L, \"output\", y), y, rayColour, casing, rayAlpha(beam), 1.4);",
+    replace: "casedLine(g, faceX(L, \"back\", y), y, faceX(L, \"output\", y), y, rayColour, casing, Math.min(1, beam), 1.4);",
     why: "the beam's alpha linear in the power: a weak laser looks dark"
   },
   {
@@ -1635,8 +1635,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "line(g, outLeft, y, view.w, y);",
-    replace: "line(g, outLeft, y, view.w - 10, y);",
+    find: "casedLine(g, outLeft, y, view.w, y, rayColour, casing, rayAlpha(beam), 1.4);",
+    replace: "casedLine(g, outLeft, y, view.w - 10, y, rayColour, casing, rayAlpha(beam), 1.4);",
     why: "the rays that leave stopping short of the edge"
   },
 
@@ -2035,8 +2035,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "line(g, faceX(L, \"back\", y), y, faceX(L, \"output\", y), y);",
-    replace: "line(g, L.rod.x, y, L.rod.x + L.rod.w, y);",
+    find: "casedLine(g, faceX(L, \"back\", y), y, faceX(L, \"output\", y), y, rayColour, casing, rayAlpha(beam), 1.4);",
+    replace: "casedLine(g, L.rod.x, y, L.rod.x + L.rod.w, y, rayColour, casing, rayAlpha(beam), 1.4);",
     why: "rays only inside the rod: no light between the rod and the mirrors"
   },
   {
@@ -2420,8 +2420,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "maxWidth: w - 2 * pad }",
-    replace: "maxWidth: w / 2 - pad - fontSize }",
+    find: "transmission: { x: w - pad, y: topRow, align: \"right\", maxWidth: w - 2 * pad },",
+    replace: "transmission: { x: w - pad, y: topRow, align: \"right\", maxWidth: w / 2 - pad - fontSize },",
     why: "the transmission's row only half wide"
   },
   {
@@ -3464,8 +3464,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    if (kind === \"discharge\") drawTube(g, colors, L, pump);\n    else drawRod(g, colors, L);",
-    replace: "    drawRod(g, colors, L);",
+    find: "    if (kind === \"discharge\") drawTube(g, colors, L, pump, look);\n    else drawRod(g, colors, L, look);",
+    replace: "    drawRod(g, colors, L, look);",
     why: "a gas laser drawn with a rod, no tube"
   },
   {
@@ -5257,6 +5257,200 @@ const MUTATIONS = [
     find: "<path d=\"M15 3q-8 9 0 18\"/></svg>\n                <span data-text=\"controls.shapes.concave\">",
     replace: "<path d=\"M9 3q8 9 0 18\"/></svg>\n                <span data-text=\"controls.shapes.concave\">",
     why: "the back mirror's concave picture bulging towards the laser"
+  },
+  // stage 10c1: the media's looks and the beams' colours
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    if (!(nm >= 380 && nm <= 780)) return null;",
+    replace: "    if (!(nm >= 380 && nm <= 1100)) return null;",
+    why: "Nd's 1064 nm drawn as if it could be seen"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    } else if (nm < 490) {\n      g = (nm - 440) / 50;",
+    replace: "    } else if (nm < 490) {\n      g = (nm - 440) / 25;",
+    why: "Bruton's blue-to-cyan ramp too steep"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    if (nm > 700) strength = 0.3 + 0.7 * (780 - nm) / 80;",
+    replace: "    if (nm > 700) strength = 1;",
+    why: "deep red not dimmed at the edge of sight"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "      r: Math.pow(r * strength, GAMMA),",
+    replace: "      r: r * strength,",
+    why: "no gamma on red"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    var towards = ratio(white, bg) >= ratio(black, bg) ? 1 : 0;",
+    replace: "    var towards = 1;",
+    why: "colours lightened on the light theme too"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "      if (ratio(mixed, bg) >= MIN_CONTRAST) break;",
+    replace: "      if (ratio(mixed, bg) >= 1.5) break;",
+    why: "colours too faint against the background"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    return 0.2126 * linear(rgb.r) + 0.7152 * linear(rgb.g) + 0.0722 * linear(rgb.b);",
+    replace: "    return (rgb.r + rgb.g + rgb.b) / 3;",
+    why: "luminance as a plain average"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    \"dye-r6g\": Object.freeze({ look: \"liquid\", body: \"#f27a1e\" }),    // orange",
+    replace: "    \"dye-r6g\": Object.freeze({ look: \"rod\", body: \"#f27a1e\" }),    // orange",
+    why: "the dye drawn as a crystal"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "  var MEDIA = Object.freeze({",
+    replace: "  var MEDIA = ({",
+    why: "the media's looks not frozen"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (!lookOf(light) || !(light.lam > 0)) return colors.accent2;\n    return UI.materials.readable(UI.materials.beam(light.lam).color, colors.bg);",
+    replace: "    if (!lookOf(light) || !(light.lam > 0)) return colors.accent2;\n    return UI.materials.beam(light.lam).color;",
+    why: "a beam colour not made readable on the theme"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (!lookOf(light) || !(light.lam > 0)) return colors.accent2;",
+    replace: "    if (!(light && light.lam > 0)) return colors.accent2;",
+    why: "the two-level atom's beam in ruby's red"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.fillStyle = look ? look.body : colors.glow;",
+    replace: "      g.fillStyle = colors.glow;",
+    why: "every gas glowing in the theme's colour"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.fillStyle = UI.materials.HIGHLIGHT;\n    g.fillRect(R.x + 0.03 * R.w, R.y + 0.14 * R.h, 0.94 * R.w, 0.12 * R.h);",
+    replace: "    g.fillStyle = UI.materials.HIGHLIGHT;",
+    why: "a rod without its highlight"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    [R.x, R.x + R.w].forEach(function (x) {\n      g.beginPath();\n      g.ellipse(",
+    replace: "    [R.x].forEach(function (x) {\n      g.beginPath();\n      g.ellipse(",
+    why: "a rod with one polished end"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var edge = UI.materials.readable(body, colors.bg);",
+    replace: "    var edge = body;",
+    why: "a rod's edge not made readable"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var band = look && light.lam > 0 ? UI.materials.beam(light.lam).band : \"visible\";",
+    replace: "    var band = look && light.lam > 0 ? \"infrared\" : \"visible\";",
+    why: "every beam called invisible"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.fillText(UI.format.si(light.lam, \"m\") + \" · \" + labels[band], where.x, where.y, where.maxWidth);",
+    replace: "      g.fillText(labels[band], where.x, where.y, where.maxWidth);",
+    why: "the invisible beam's wavelength not written"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.fillRect(R.x + wall, R.y + wall, R.w - 2 * wall, R.h - 2 * wall);",
+    replace: "    g.fillRect(R.x, R.y - wall, R.w, R.h + wall);",
+    why: "the dye spilling over the cell's top"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      if (beam > 0) drawBeamBand(g, rayColour, L, S, cavity, beam);",
+    replace: "      if (beam > 0) drawBeamBand(g, colors.accent2, L, S, cavity, beam);",
+    why: "the hourglass in the theme's colour"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      cellPipes: [rodX + 0.15 * rodLength, rodX + 0.85 * rodLength],",
+    replace: "      cellPipes: [rodX + 0.02 * rodLength, rodX + 0.85 * rodLength],",
+    why: "a dye pipe on the rod's post"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        medium: state.config.medium,\n        lam: lam,",
+    replace: "        medium: state.config.medium,\n        lam: null,",
+    why: "the page not giving the beam's wavelength"
+  },
+  {
+    file: "index.html",
+    find: "  <script src=\"js/laser/ui/materials.js\"></script>\n",
+    replace: "",
+    why: "the page without materials.js"
+  },
+  // stage 10c1 review
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    var towards = ratio(white, bg) >= ratio(black, bg) ? 1 : 0;",
+    replace: "    var towards = luminance(bg) < 0.5 ? 1 : 0;",
+    why: "towards white on a mid-grey background, where black stands out more"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    return { color: INFRARED, visible: false, band: lam < 380 * NM ? \"ultraviolet\" : \"infrared\" };",
+    replace: "    return { color: INFRARED, visible: false, band: \"infrared\" };",
+    why: "ultraviolet light called infrared"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "  var INFRARED = \"#e8459b\";",
+    replace: "  var INFRARED = \"#8a2be2\";",
+    why: "a false colour a violet beam could have"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var casing = look ? colors.bg : null;",
+    replace: "    var casing = null;",
+    why: "coloured rays without their casing: lost over a medium of their hue"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.fillStyle = UI.materials.SHADE;\n",
+    replace: "",
+    why: "a rod's bottom painted in more of its colour, not shaded"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (!Object.prototype.hasOwnProperty.call(UI.materials.MEDIA, light.medium)) return null;\n",
+    replace: "",
+    why: "'constructor' taken for a medium"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.strokeStyle = look ? UI.materials.readable(UI.materials.GLASS, colors.bg) : colors.accent;",
+    replace: "    g.strokeStyle = look ? UI.materials.GLASS : colors.accent;",
+    why: "a gas tube's glass outline pale on cream"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var glass = UI.materials.readable(UI.materials.GLASS, colors.bg);",
+    replace: "    var glass = UI.materials.GLASS;",
+    why: "a dye cell's glass outline pale on cream"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "invisible: { x: w - pad, y: bottomRow + 1.35 * fontSize, align: \"right\", maxWidth: w - 2 * pad }",
+    replace: "invisible: { x: w - pad, y: bottomRow, align: \"right\", maxWidth: Math.max(fontSize, w / 3) }",
+    why: "the invisible note squeezed beside the pump's name"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        lam: lam !== null && config.medium === state.config.medium ? lam : engine.media.get(config.medium).lam",
+    replace: "        lam: lam !== null ? lam : engine.media.get(config.medium).lam",
+    why: "the old medium's wavelength kept for a new medium"
   },
 ];
 

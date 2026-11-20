@@ -338,7 +338,12 @@
       var sameCavity = cavity !== null && CAVITY_FIELDS.every(function (field) {
         return config[field] === state.config[field];
       });
-      return { derived: d, controls: bench.controls(config), cavity: sameCavity ? cavity : cavityOf(config, d) };
+      return {
+        derived: d, controls: bench.controls(config), cavity: sameCavity ? cavity : cavityOf(config, d),
+        // The wavelength changes only with the medium (stage 10c1 review:
+        // media.get copies the whole medium, on every slider move).
+        lam: lam !== null && config.medium === state.config.medium ? lam : engine.media.get(config.medium).lam
+      };
     }
     // The mirrors for the bench drawing (draw-bench.js's light.cavity): the
     // cavity's length and aperture, each mirror's shape and focal point,
@@ -360,6 +365,7 @@
       };
     }
     var cavity = null;          // cavityOf(state.config, derived)
+    var lam = null;             // the laser's wavelength (m), for the beam's colour (stage 10c)
     // A new config and its numbers, taken together. Whatever can fail (a
     // config the engine refuses, a threshold search) is worked out before,
     // so a failure leaves the old bench as it was.
@@ -368,6 +374,7 @@
       derived = numbers.derived;
       controls = numbers.controls;
       cavity = numbers.cavity;
+      lam = numbers.lam;
     }
     take(state.config, numbersOf(state.config));
 
@@ -731,6 +738,8 @@
         pump: benchPumpNow(),
         transmission: 1 - state.config.refl2,
         pumpKind: state.config.pump,
+        medium: state.config.medium,
+        lam: lam,
         qSwitch: switchLight(),
         cavity: cavity
       });

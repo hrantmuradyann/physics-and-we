@@ -13,13 +13,14 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { deepFreeze, assertClose } = require("./helpers.js");
+const { deepFreeze, assertClose, loadEngine } = require("./helpers.js");
 const { createBrowser, fakeContext, themeVariables } = require("./fake-browser.js");
 
 function load() {
   const browser = createBrowser();
   browser.load("js/laser/ui/loop.js");
   browser.load("js/laser/ui/format.js");
+  browser.load("js/laser/ui/materials.js");
   browser.load("js/laser/ui/draw-bench.js");
   return browser.window.LaserUI;
 }
@@ -54,7 +55,9 @@ const LABELS = deepFreeze({
   transmission: "Transmission",
   qSwitch: "Bleachable filter",
   widths: "Widths ×",
-  focus: "F"
+  focus: "F",
+  infrared: "infrared, invisible",
+  ultraviolet: "ultraviolet, invisible"
 });
 const NB = "\u00a0";
 
@@ -84,6 +87,30 @@ function filtered(open, pumpKind) {
 }
 const SWITCHED = [filtered(0), filtered(0.5), filtered(1), filtered(0.3, "diode"), filtered(1, "laser")];
 for (const light of SWITCHED) LIGHTS.push(light);
+
+// Each bench's own medium and beam (stage 10c), as page.js passes them:
+// light.medium, the engine's id, and light.lam, its wavelength.
+const ENGINE = loadEngine();
+const BENCHES = [];
+for (const id of ENGINE.media.list()) {
+  for (const pump of ENGINE.bench.pumpsFor(id)) {
+    BENCHES.push({ medium: id, pump: pump, lam: ENGINE.media.get(id).lam });
+  }
+}
+function ofBench(b, extra) {
+  return Object.assign({ beam: 1, pump: 0.5, transmission: 0.05, pumpKind: b.pump, medium: b.medium, lam: b.lam }, extra || {});
+}
+for (const b of BENCHES) LIGHTS.push(ofBench(b), ofBench(b, { beam: 0, pump: 0 }));
+
+// The physical colours a drawing may set besides the theme's: materials.js's
+// own, and each made readable on the theme's background.
+function physical(theme) {
+  const M = UI.materials;
+  const bg = palette(theme).bg;
+  const raw = Object.values(M.MEDIA).map((m) => m.body).concat([M.GLASS, M.HIGHLIGHT, M.SHADE, M.INFRARED]);
+  for (const b of BENCHES) raw.push(M.beam(b.lam).color);
+  return raw.concat(raw.map((c) => M.readable(c, bg)));
+}
 
 // The cavity's numbers (stage 10b), as page.js passes them: a He-Ne-like
 // pair, flat and concave (R = 45 cm, F 22.5 cm in front of it) in a 30 cm
@@ -294,7 +321,9 @@ test("layout: labels inside the canvas, readable, and never on top of each other
     const box = {};
     // Every word with a place of its own: each focal point's "F" is
     // written where the point is, so it has none.
-    for (const name of bench.PARTS.filter((part) => part !== "focus")) {
+    // The two words under an invisible beam share one place, "invisible".
+    for (const name of bench.PARTS.filter((part) => part !== "focus" && part !== "infrared" && part !== "ultraviolet")
+      .concat(["invisible"])) {
       const label = L.labels[name];
       assert.ok(["left", "center", "right"].includes(label.align), where + ": " + name);
       assert.ok(label.maxWidth >= 60, where + ": " + name + " has room for a word, got " + label.maxWidth);
@@ -325,12 +354,19 @@ test("layout: labels inside the canvas, readable, and never on top of each other
     assert.ok(box.transmission.bottom < L.outputMirror.y - 3, where + ": above the output mirror's holder");
     assert.ok(box.transmission.bottom < box.medium.top, where + ": above the medium's name");
     assert.ok(T.maxWidth >= 23 * 0.62 * fs, where + ": room for the transmission, got " + T.maxWidth);
+    // An invisible beam's note: a row of its own under the pump's name,
+    // with room for "1.06 µm · ինֆրակարմիր, անտեսանելի" (33 letters; next
+    // to the pump's name it was squeezed to a third: stage 10c1 review).
+    assert.ok(box.invisible.top >= box.pump.bottom - 1e-9, where + ": the note under the pump's name");
+    assert.ok(L.labels.invisible.maxWidth >= 33 * 0.62 * fs, where + ": room for the note, got " + L.labels.invisible.maxWidth);
   }
 });
 
 test("draw: every colour it uses is a theme colour, in both themes", () => {
   for (const theme of ["dark", "light"]) {
-    const allowed = Object.values(palette(theme));
+    // Since stage 10c a bench's medium and beam have their own colours
+    // (materials.js), each tested for contrast in materials.test.js.
+    const allowed = Object.values(palette(theme)).concat(physical(theme));
     for (const w of [327, 960]) {
       for (const light of LIGHTS) {
         const { recorder } = drawAt(w, LABELS, theme, light);
@@ -1498,4 +1534,193 @@ test("the traced rays are clipped to a band a quarter of a mirror above and belo
   }
   // Without a cavity: no clip.
   assert.equal(drawAt(800, LABELS, "dark", LIGHTS[0]).recorder.calls.filter((c) => c.name === "clip").length, 0);
+});
+
+/* ---------- stage 10c: each medium's look and its beam's colour ---------- */
+
+test("a crystal rod in its own colour: a highlight along its top, a polished end face at each end, an edge readable on the theme", () => {
+  for (const theme of ["dark", "light"]) {
+    const { recorder, view } = drawAt(800, LABELS, theme, ofBench({ medium: "ruby", pump: "flashlamp", lam: 694.3e-9 }, { pump: 0 }));
+    const L = bench.layout(800, view.h);
+    const M = UI.materials;
+    const body = M.MEDIA.ruby.body;
+    const fills = recorder.log.filter((e) => e.set === "fillStyle").map((e) => e.value);
+    assert.ok(fills.includes(body), theme + ": ruby's colour");
+    assert.ok(fills.includes(M.HIGHLIGHT), theme + ": the highlight");
+    // The highlight is a strip along the rod's top, inside the rod.
+    const at = recorder.log.findIndex((e) => e.set === "fillStyle" && e.value === M.HIGHLIGHT);
+    const strip = recorder.log.slice(at).find((e) => e.call === "fillRect");
+    assert.ok(strip && strip.args[1] > L.rod.y && strip.args[1] + strip.args[3] < L.axis.y, theme + ": a strip in the rod's upper half");
+    assert.ok(strip.args[0] > L.rod.x && strip.args[0] + strip.args[2] < L.rod.x + L.rod.w);
+    const ends = recorder.calls.filter((c) => c.name === "ellipse");
+    assert.deepEqual(ends.map((c) => c.args[0]), [L.rod.x, L.rod.x + L.rod.w], "an end face at each end");
+    for (const e of ends) assertClose(e.args[1], L.axis.y, 1e-9);
+    const edges = recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
+    assert.ok(edges.includes(M.readable(body, view.colors.bg)), theme + ": the edge readable");
+  }
+  // A pale rod on the cream theme: its edge darkened to be seen.
+  const pale = drawAt(800, LABELS, "light", ofBench({ medium: "nd-yag", pump: "diode", lam: 1064e-9 }));
+  const lilac = UI.materials.MEDIA["nd-yag"].body;
+  const readableEdge = UI.materials.readable(lilac, pale.view.colors.bg);
+  assert.notEqual(readableEdge, lilac, "lilac is too pale on cream as it is");
+  const strokes = pale.recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
+  assert.ok(strokes.includes(readableEdge) && !strokes.includes(lilac), "the edge darkened");
+  // Nd:YAG lilac, Ti:sapphire pink: each its own.
+  for (const id of ["nd-yag", "nd-glass", "ti-sapphire"]) {
+    const { recorder } = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "laser", lam: 1e-6 }));
+    assert.ok(recorder.log.some((e) => e.set === "fillStyle" && e.value === UI.materials.MEDIA[id].body), id);
+  }
+});
+
+test("the dye in a glass cell, with a pipe in and a pipe out under it", () => {
+  const { recorder, view } = drawAt(800, LABELS, "dark", ofBench({ medium: "dye-r6g", pump: "laser", lam: 600e-9 }));
+  const L = bench.layout(800, view.h);
+  const M = UI.materials;
+  const fills = recorder.log.filter((e) => e.set === "fillStyle").map((e) => e.value);
+  assert.ok(fills.includes(M.MEDIA["dye-r6g"].body) && fills.includes(M.GLASS));
+  assert.equal(recorder.calls.filter((c) => c.name === "ellipse").length, 0, "no polished rod ends");
+  // The glass stays inside the rod's outline: nothing above it, where the
+  // medium's name is written.
+  for (const c of recorder.calls.filter((c) => c.name === "fillRect" || c.name === "strokeRect")) {
+    if (c.args[0] >= L.rod.x - 1e-9 && c.args[0] + c.args[2] <= L.rod.x + L.rod.w + 1e-9) {
+      assert.ok(c.args[1] >= L.rod.y - 1e-9, "nothing of the cell above the rod's top: " + c.args.join(", "));
+    }
+  }
+  for (const x of L.cellPipes) {
+    const pipe = recorder.calls.find((c) => c.name === "strokeRect" && Math.abs(c.args[0] + c.args[2] / 2 - x) < 1e-9);
+    assert.ok(pipe, "a pipe at " + x);
+    assertClose(pipe.args[1], L.rod.y + L.rod.h, 1e-9, "from the cell's bottom down");
+    assert.ok(pipe.args[1] + pipe.args[3] < L.railY, "above the bench");
+  }
+  // Clear of the rod's posts and of the pump beam turned up at the middle.
+  for (const x of L.cellPipes) {
+    for (const post of L.rodPosts) assert.ok(Math.abs(x - post) > 10, "clear of a post");
+    assert.ok(Math.abs(x - L.fold.x) > 20, "clear of the pump beam");
+  }
+});
+
+test("a gas glows in its own colour, inside glass; with the current off it does not glow", () => {
+  const M = UI.materials;
+  for (const id of ["he-ne", "ar-ion", "co2"]) {
+    const on = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "discharge", lam: 600e-9 })).recorder;
+    const glow = on.log.findIndex((e) => e.set === "fillStyle" && e.value === M.MEDIA[id].body);
+    assert.ok(glow > 0, id + ": its glow");
+    const L = bench.layout(800, heightFor(800));
+    const bore = on.log.slice(glow).find((e) => e.call === "fillRect");
+    assert.deepEqual(bore.args, [L.bore.x, L.bore.y, L.bore.w, L.bore.h], id + ": in the bore");
+    const off = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "discharge", lam: 600e-9 }, { pump: 0 })).recorder;
+    assert.ok(!off.log.some((e) => e.set === "fillStyle" && e.value === M.MEDIA[id].body), id + ": dark without a current");
+    assert.ok(off.log.some((e) => e.set === "fillStyle" && e.value === M.GLASS), id + ": glass");
+  }
+});
+
+test("the beam in its wavelength's colour, readable on the theme: every ray, the hourglass, the light leaving", () => {
+  const M = UI.materials;
+  for (const theme of ["dark", "light"]) {
+    for (const [id, lam] of [["he-ne", 632.8e-9], ["ar-ion", 514.5e-9], ["ruby", 694.3e-9]]) {
+      const pump = id === "ruby" ? "flashlamp" : "discharge";
+      for (const cavity of [undefined, HENE]) {
+        const light = ofBench({ medium: id, pump: pump, lam: lam }, cavity ? { cavity: cavity } : {});
+        const { recorder, view } = drawAt(800, LABELS, theme, light);
+        const colour = M.readable(M.beam(lam).color, view.colors.bg);
+        const styles = recorder.log.filter((e) => e.set === "strokeStyle" || e.set === "fillStyle").map((e) => e.value);
+        assert.ok(styles.includes(colour), theme + " " + id + (cavity ? " with a cavity" : ""));
+        assert.ok(!styles.includes(view.colors.accent2), theme + " " + id + ": not the theme's beam colour");
+      }
+    }
+  }
+});
+
+test("an invisible beam: the false colour, and its wavelength written with 'infrared, invisible' at the bottom right", () => {
+  const M = UI.materials;
+  for (const [id, lam, text] of [["nd-yag", 1064e-9, "1.06" + NB + "µm"], ["co2", 10.6e-6, "10.6" + NB + "µm"]]) {
+    const { recorder, view } = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: id === "co2" ? "discharge" : "diode", lam: lam }));
+    const L = bench.layout(800, view.h);
+    const styles = recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
+    assert.ok(styles.includes(M.readable(M.INFRARED, view.colors.bg)), id + ": the false colour");
+    const note = recorder.calls.find((c) => c.name === "fillText" && /infrared, invisible$/.test(c.args[0]));
+    assert.ok(note, id);
+    assert.equal(note.args[0], text + " · infrared, invisible");
+    assert.deepEqual(note.args.slice(1), [L.labels.invisible.x, L.labels.invisible.y, L.labels.invisible.maxWidth]);
+  }
+  // A visible beam, the two-level atom, or no word: no note.
+  for (const light of [ofBench({ medium: "he-ne", pump: "discharge", lam: 632.8e-9 }),
+    ofBench({ medium: "two-level", pump: "laser", lam: 1064e-9 })]) {
+    const { recorder } = drawAt(800, LABELS, "dark", light);
+    assert.ok(!recorder.calls.some((c) => c.name === "fillText" && /invisible/.test(c.args[0])), light.medium);
+  }
+  const bare = drawAt(800, Object.assign({}, LABELS, { infrared: "" }), "dark", ofBench({ medium: "nd-yag", pump: "diode", lam: 1064e-9 }));
+  assert.ok(!bare.recorder.calls.some((c) => c.name === "fillText" && /µm/.test(c.args[0])));
+});
+
+test("the two-level atom, or a light without a medium, keeps the theme's colours", () => {
+  for (const light of [ofBench({ medium: "two-level", pump: "flashlamp", lam: 694.3e-9 }), LASING]) {
+    for (const theme of ["dark", "light"]) {
+      const { recorder, view } = drawAt(800, LABELS, theme, light);
+      const allowed = Object.values(view.colors);
+      for (const set of recorder.sets.filter((e) => /Style$/.test(e.name))) {
+        assert.ok(allowed.includes(set.value), theme + ": " + set.value);
+      }
+    }
+  }
+});
+
+test("the glass of a gas tube and of a dye cell is outlined so it shows on the theme, never in the raw pale glass", () => {
+  const M = UI.materials;
+  for (const theme of ["dark", "light"]) {
+    for (const light of [ofBench({ medium: "he-ne", pump: "discharge", lam: 632.8e-9 }), ofBench({ medium: "dye-r6g", pump: "laser", lam: 600e-9 })]) {
+      const { recorder, view } = drawAt(800, LABELS, theme, light);
+      const strokes = recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
+      const outline = M.readable(M.GLASS, view.colors.bg);
+      assert.ok(strokes.includes(outline), theme + " " + light.medium + ": the outline");
+      assert.ok(M.contrast(outline, view.colors.bg) >= 3, theme + ": it shows");
+      if (theme === "light") assert.ok(!strokes.includes(M.GLASS), light.medium + ": not the pale glass itself");
+    }
+  }
+});
+
+test("a crystal's shade along its bottom is darker on both themes, not more of its colour", () => {
+  for (const theme of ["dark", "light"]) {
+    const { recorder, view } = drawAt(800, LABELS, theme, ofBench({ medium: "ruby", pump: "flashlamp", lam: 694.3e-9 }, { pump: 0 }));
+    const L = bench.layout(800, view.h);
+    const at = recorder.log.findIndex((e) => e.set === "fillStyle" && e.value === UI.materials.SHADE);
+    assert.ok(at > 0, theme + ": a shade");
+    const strip = recorder.log.slice(at).find((e) => e.call === "fillRect");
+    assert.ok(strip.args[1] > L.axis.y && strip.args[1] + strip.args[3] <= L.rod.y + L.rod.h + 1e-9, theme + ": in the rod's lower half");
+  }
+});
+
+test("a coloured ray runs over a thin casing in the background's colour, so it shows over a medium of its own hue", () => {
+  for (const cavity of [undefined, HENE]) {
+    const light = ofBench({ medium: "he-ne", pump: "discharge", lam: 632.8e-9 }, cavity ? { cavity: cavity } : {});
+    const { recorder, view } = drawAt(800, LABELS, "dark", light);
+    const colour = UI.materials.readable(UI.materials.beam(632.8e-9).color, view.colors.bg);
+    const lines = strokedLines(recorder);
+    const rays = lines.filter((l) => l.strokeStyle === colour);
+    const casings = lines.filter((l) => l.strokeStyle === view.colors.bg);
+    // Every ray between the mirrors (the light leaving, over the
+    // background, needs none).
+    const M2 = bench.layout(800, view.h).outputMirror;
+    const inside = rays.filter((l) => Math.max(l.x1, l.x2) <= M2.x + M2.w + 1e-9);
+    assert.ok(inside.length > 0 && casings.length >= inside.length, (cavity ? "cavity" : "parallel") + ": a casing under every ray");
+    for (const c of casings) assert.ok(c.lineWidth > rays[0].lineWidth, "wider than the ray");
+  }
+  // The theme's own beam (no medium) has none.
+  const plain = drawAt(800, LABELS, "dark", LASING);
+  assert.ok(!strokedLines(plain.recorder).some((l) => l.strokeStyle === plain.view.colors.bg));
+});
+
+test("a medium id that is a name on every object ('constructor') is no medium: the theme's colours", () => {
+  for (const id of ["constructor", "toString", "__proto__"]) {
+    const { recorder, view } = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "laser", lam: 1064e-9 }));
+    const allowed = Object.values(view.colors);
+    for (const set of recorder.sets.filter((e) => /Style$/.test(e.name))) assert.ok(allowed.includes(set.value), id + ": " + set.value);
+    assert.ok(!recorder.calls.some((c) => c.name === "fillText" && /invisible/.test(c.args[0])), id);
+  }
+});
+
+test("ultraviolet light is called ultraviolet, not infrared", () => {
+  const { recorder } = drawAt(800, LABELS, "dark", ofBench({ medium: "ruby", pump: "flashlamp", lam: 347.15e-9 }));
+  const note = recorder.calls.find((c) => c.name === "fillText" && /invisible$/.test(c.args[0]));
+  assert.ok(note && /ultraviolet, invisible$/.test(note.args[0]), note && note.args[0]);
 });

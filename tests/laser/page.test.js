@@ -84,6 +84,8 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     const widths = texts(section.recorder).find((text) => text.indexOf(WORDS.bench.parts.widths[lang] + " ") === 0);
     assert.ok(widths && /× \d+$/.test(widths), "the widths' scale: " + widths);
     expected.push(widths);
+    // Nd:YAG's 1064 nm cannot be seen: the drawing says so (stage 10c).
+    expected.push("1.06" + NB + "µm · " + WORDS.bench.parts.infrared[lang]);
     assert.deepEqual(texts(section.recorder).sort(), expected.sort(), lang);
     // Each canvas has the height its drawing asks for.
     const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE, stability: UI.stability.SIZE };
