@@ -89,6 +89,11 @@ English-language textbooks (Svelto, Siegman, Koechner) reuse the letters g and R
 | P_out | output power | W | `P_out` |
 | w, w₀, z_R | Gaussian beam radius, waist radius, Rayleigh range | m | `w`, `w0`, `zR` |
 | q | complex beam parameter | m | `q` |
+| c₁, c₂ (Section 8) | a lens's surface curvatures 1/R₁, 1/R₂, positive when the centre of curvature lies ahead (in the light's direction; §8.1), so a biconvex lens has c₁ > 0, c₂ < 0. **Not the mirrors' sign rule** (Section 7): there a concave mirror is positive | m⁻¹ | `c1`, `c2` (in `lenses.js`) |
+| f, d, n | focal length, centre thickness, glass index | m, m, — | `f`, `d`, `n` |
+| M² | beam quality (1 for an ideal TEM₀₀ beam) | — | `M2` |
+| E₀, E_rms | the light's field amplitude and its rms value (§8.8) | V/m | `E0`, `Erms` |
+| T_eff | brightness temperature (§8.3) | K | `brightnessTemperature` |
 
 ## 1. Spontaneous and stimulated emission (§119)
 
@@ -803,10 +808,15 @@ Chromatic aberration (§16): the refractive index of the glass is given by the S
 n^2(\lambda) = 1 + \sum_{i=1}^{3}\frac{B_i\lambda^2}{\lambda^2 - C_i}
 ```
 
-| Glass | B₁ | B₂ | B₃ | C₁, µm² | C₂, µm² | C₃, µm² |
-| --- | --- | --- | --- | --- | --- | --- |
-| N-BK7 | 1.03961212 | 0.231792344 | 1.01046945 | 0.00600069867 | 0.0200179144 | 103.560653 |
-| Fused silica | 0.6961663 | 0.4079426 | 0.8974794 | 0.0046791 | 0.0135121 | 97.934003 |
+| Glass | B₁ | B₂ | B₃ | C₁, µm² | C₂, µm² | C₃, µm² | Valid, µm |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| N-BK7 | 1.03961212 | 0.231792344 | 1.01046945 | 0.00600069867 | 0.0200179144 | 103.560653 | 0.3–2.5 |
+| Fused silica | 0.6961663 | 0.4079426 | 0.8974794 | 0.0684043² | 0.1162414² | 9.896161² | 0.21–3.71 |
+| ZnSe (CVD, 23 °C) | 4.45813734 | 0.467216334 | 2.89566290 | 0.200859853² | 0.391371166² | 47.1362108² | 0.54–18.2 |
+
+Sources (checked for stage 11, D6): N-BK7 from SCHOTT's N-BK7 data sheet (the same six numbers are in Wikipedia's "Sellmeier equation" table); fused silica from I. H. Malitson, *JOSA* 55, 1205 (1965), who gives the resonances as wavelengths (0.0684043, 0.1162414, 9.896161 µm), so C = their squares (this table had them rounded to 0.0046791, 0.0135121, 97.934003 until stage 11); ZnSe from J. Connolly et al., *Proc. SPIE* 181, 141 (1979), as fitted by B. Tatian, *Appl. Opt.* 23, 4477 (1984), read from the refractiveindex.info database ("formula 1", whose C are wavelengths). Checks: n_d(587.56 nm) = 1.5168 (N-BK7) and 1.4585 (silica), the catalogue values; ZnSe 2.403 at 10.6 µm and 2.591 at 632.8 nm.
+
+**Why ZnSe:** CO₂'s 10.6 µm light does not pass through BK7 or silica (both absorb it within a millimetre); real CO₂ lasers use zinc selenide lenses and windows (its flat output mirror in §5.9 is ZnSe too). ZnSe in turn absorbs below about 0.5 µm, so it cannot carry the argon lines or a lamp's blue. A glass outside its valid range is refused, not extrapolated.
 
 White lamp light fans out into colours behind a lens: blue focuses closer than red. The laser beam is monochromatic and shows no colour fringes. Spherical aberration appears automatically: marginal rays cross the axis closer than paraxial ones, and the caustic becomes visible (§14). Flipping a plano-convex lens so that its flat side faces the beam makes the aberration noticeably larger — a good visual experiment.
 
@@ -892,7 +902,7 @@ Problem 1 to §121 is a ready-made test for the "laser + lens + target" scene. I
 I = \frac{W}{S}, \qquad E_0 = \sqrt{\frac{2I}{c\,\varepsilon_0\,n}}, \qquad p_{\text{rad}} = \frac{I}{c}\ (\text{absorber}),\ \ \frac{2I}{c}\ (\text{mirror})
 ```
 
-Ruby, 100 MW on 1 cm²: E_rms ≈ 1.94×10⁵ V/cm, pressure ≈ 0.033 atm. After a lens with f = 5 cm (Airy disk): E ≈ 2.9×10⁸ V/cm, pressure ≈ 7.4×10⁴ atm. Matter at the focus vaporizes instantly and turns into plasma. The simulator can show this as a threshold: if the focal intensity exceeds ~10⁹–10¹¹ W/cm² (depending on material and pulse duration), draw a plasma flash.
+Ruby, 100 MW on 1 cm²: E_rms ≈ 1.94×10⁵ V/cm, pressure ≈ 0.033 atm. After a lens with f = 5 cm (Airy disk): E ≈ 2.9×10⁸ V/cm, pressure ≈ 7.4×10⁴ atm. Matter at the focus vaporizes instantly and turns into plasma. The simulator can show this as a threshold: if the focal intensity exceeds ~10⁹–10¹¹ W/cm² (depending on material and pulse duration), draw a plasma flash. The simulator takes one number, 10¹⁰ W/cm² (`lenses.BREAKDOWN`), the middle of that range on a log scale: an illustration, not a property of any material.
 
 ## 9. Polarization and Q-switches (§121, items 4, 6–8; §122)
 

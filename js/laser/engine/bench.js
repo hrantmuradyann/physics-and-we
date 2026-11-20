@@ -27,6 +27,9 @@
                                           what the page draws of the
                                           mirrors: { mode: [{ z, w }] or
                                           null, rays: traceRay's answers }
+     LaserEngine.bench.outputBeam(config) the beam just outside the output
+                                          mirror: { lam, mode, w, curvature,
+                                          radius } (stage 11a)
      LaserEngine.bench.defaultConfig()    a new config: the default bench
                                           (Nd:YAG with diodes)
      LaserEngine.bench.derive(config)     threshold, output power, best
@@ -525,6 +528,27 @@
       return E.optics.traceRay(Object.assign({ aperture: config.aperture, y: y, theta: 0, roundTrips: roundTrips }, mirrors));
     });
     return { mode: mode, rays: rays };
+  }
+
+  // The beam just outside the output mirror (stage 11a), for the lenses:
+  // a Gaussian mode leaves with its radius on mirror 2 and that mirror's
+  // own curvature (the mode's wavefront fits the mirror; the mirror's
+  // substrate is taken as not bending it). Without a mode (on the
+  // stability edge, as two flat mirrors are, or unstable) the light
+  // leaves as a uniform beam as wide as the aperture, which a lens
+  // focuses to an Airy disk (§8.4). So does a mode wider than the
+  // aperture: the mirror's edge cuts it off (derive counts that loss), and
+  // what leaves is no longer a clean Gaussian.
+  function outputBeam(config) {
+    var read = readConfig(at("outputBeam"), config);
+    var lam = read.medium.lam;
+    if (read.resonator.w0 === null || read.resonator.w2 > config.aperture) {
+      return { lam: lam, mode: false, w: null, curvature: null, radius: config.aperture };
+    }
+    return {
+      lam: lam, mode: true, w: read.resonator.w2,
+      curvature: curvatureOf(config.mirror2, config.Rc2), radius: null
+    };
   }
 
   function defaultConfig() {
@@ -1479,6 +1503,7 @@
     carryOver: carryOver,
     giantPulse: giantPulse,
     beamPath: beamPath,
+    outputBeam: outputBeam,
     MIRROR_SHAPES: MIRROR_SHAPES
   });
 })(this);

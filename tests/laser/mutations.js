@@ -5794,6 +5794,256 @@ const MUTATIONS = [
     replace: "    return UI.format.si(lam, \"m\", 4);",
     why: "the atom's wavelength written otherwise than the bench's (1.064 µm under 1.06 µm)"
   },
+
+  // ---------- stage 11a: lenses in the engine ----------
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var x = lam / um;",
+    replace: "var x = lam / K.nm;",
+    why: "\u03bb in nm passed to Sellmeier"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "if (nz * dz + ny * dy > 0) {",
+    replace: "if (nz * dz + ny * dy < 0) {",
+    why: "the surface's normal flipped"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "s: f + magnification * magnification * (s - f),",
+    replace: "s: f - magnification * magnification * (s - f),",
+    why: "Self's formula with the wrong sign"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var b = (n - 1) * d * c1 * c2 / n;",
+    replace: "var b = 0;",
+    why: "a thick lens ground with the thin lens's curvatures"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "return matrix(1, 0, (n1 - n2) * c / n2, n1 / n2);",
+    replace: "return matrix(1, 0, (n1 - n2) * c, n1 / n2);",
+    why: "a surface's power not divided by n\u2082"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var E0 = Math.sqrt(2 * I / (K.c * K.eps0 * n));",
+    replace: "var E0 = Math.sqrt(I / (K.c * K.eps0 * n));",
+    why: "the field from the intensity without its 2"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "pressureMirror: 2 * I / K.c",
+    replace: "pressureMirror: I / K.c",
+    why: "a mirror pushed as hard as an absorber"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "return 0.61 * f * lam / r;",
+    replace: "return 1.22 * f * lam / r;",
+    why: "the Airy disk's diameter for its radius"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var onVertexSide = c * (Z + t * dz) < 1;",
+    replace: "var onVertexSide = true;",
+    why: "a ray meeting the far side of a surface's sphere"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "if (under < 0) {",
+    replace: "if (under < -1) {",
+    why: "total internal reflection never flagged"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var eta = n / s.n;",
+    replace: "var eta = s.n / n;",
+    why: "Snell's ratio upside down"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "backFocus: -M.A / M.C",
+    replace: "backFocus: M.A / M.C",
+    why: "the back focus behind the lens"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "frontFocus: -M.D / M.C",
+    replace: "frontFocus: -M.A / M.C",
+    why: "the front focus measured as the back one"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "scale = Math.abs(root1 - 1) <= Math.abs(root2 - 1) ? root1 : root2;",
+    replace: "scale = Math.abs(root1 - 1) <= Math.abs(root2 - 1) ? root2 : root1;",
+    why: "lensFor's other root: a wildly curved lens"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var c1 = k * (shape.bend + 1) / 2;",
+    replace: "var c1 = k * (1 - shape.bend) / 2;",
+    why: "a lens shape turned round (plano-convex flat side first)"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "if (Math.abs(y) > s.aperture) {",
+    replace: "if (Math.abs(y) > 2 * s.aperture) {",
+    why: "rays through a lens beyond its edge"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var b = readM2(where, params.M2) * lam / (Math.PI * w * w);",
+    replace: "var b = lam / (Math.PI * w * w);",
+    why: "beamQ without M\u00b2"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "im: (topIm * bottomRe - topRe * bottomIm) / size",
+    replace: "im: (topRe * bottomIm + topIm * bottomRe) / size",
+    why: "the beam's complex division wrong"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "w0: Math.sqrt(M2 * lam * q.im / Math.PI),",
+    replace: "w0: Math.sqrt(lam * q.im / Math.PI),",
+    why: "the waist without M\u00b2"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "return { w: wf, depth: 2 * Math.PI * wf * wf / (M2 * lam) };",
+    replace: "return { w: wf, depth: Math.PI * wf * wf / (M2 * lam) };",
+    why: "the depth of focus one z_R, not two"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "return { magnification: -f2 / f1, length: length, internalFocus: f1 > 0 && f2 > 0 };",
+    replace: "return { magnification: f2 / f1, length: length, internalFocus: f1 > 0 && f2 > 0 };",
+    why: "a Keplerian telescope's image upright"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "return { magnification: -f2 / f1, length: length, internalFocus: f1 > 0 && f2 > 0 };",
+    replace: "return { magnification: -f2 / f1, length: length, internalFocus: f1 > 0 || f2 > 0 };",
+    why: "a Galilean telescope with a focus inside"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "return power / (2 * K.k * linewidth);",
+    replace: "return power / (K.k * linewidth);",
+    why: "the brightness temperature twice too hot"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "if (lam < glass.from || lam > glass.to) {",
+    replace: "if (lam > glass.to) {",
+    why: "a glass used below its range (argon through ZnSe)"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "C: [0.0684043 * 0.0684043, 0.1162414 * 0.1162414, 9.896161 * 9.896161],",
+    replace: "C: [0.0684043, 0.1162414, 9.896161],",
+    why: "Malitson's wavelengths used unsquared"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "BREAKDOWN: 1e10 / (cm * cm)",
+    replace: "BREAKDOWN: 1e10 * (cm * cm)",
+    why: "the breakdown in W/cm\u00b2 taken as W/m\u00b2 the wrong way"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "return z - y / Math.tan(angle);",
+    replace: "return z + y / Math.tan(angle);",
+    why: "the axis crossed behind the ray"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var zR1 = Math.PI * w0 * w0 / (M2 * lam);",
+    replace: "var zR1 = Math.PI * w0 * w0 / lam;",
+    why: "Self's formula without M\u00b2"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "if (shape.converging && f < 0)",
+    replace: "if (shape.converging && f > 0)",
+    why: "a converging shape refused a positive f"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "    for (var i = 0; i < 3; i++) n2 += glass.B[i] * x2 / (x2 - glass.C[i]);",
+    replace: "    for (var i = 0; i < 2; i++) n2 += glass.B[i] * x2 / (x2 - glass.C[i]);",
+    why: "Sellmeier's infrared term dropped"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "curvature: curvatureOf(config.mirror2, config.Rc2), radius: null",
+    replace: "curvature: curvatureOf(config.mirror1, config.Rc1), radius: null",
+    why: "the beam leaving with the back mirror's curvature"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "lam: lam, mode: true, w: read.resonator.w2,",
+    replace: "lam: lam, mode: true, w: read.resonator.w1,",
+    why: "the beam leaving with its radius on the back mirror"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "return { lam: lam, mode: false, w: null, curvature: null, radius: config.aperture };",
+    replace: "return { lam: lam, mode: false, w: null, curvature: null, radius: config.aperture / 2 };",
+    why: "a uniform beam half the aperture"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (read.resonator.w0 === null || read.resonator.w2 > config.aperture) {\n      return { lam: lam, mode: false,",
+    replace: "    if (false) {\n      return { lam: lam, mode: false,",
+    why: "a flat-flat laser given a Gaussian mode it does not have"
+  },
+
+  // stage 11a, the review's fixes
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var firstAt = surfaces[0].z + sagAt(surfaces[0].c, y);",
+    replace: "var firstAt = surfaces[0].z;",
+    why: "a ray allowed to start inside a concave face's rim"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "      if (dz <= 0) {\n        return",
+    replace: "      if (dz < -2) {\n        return",
+    why: "a ray turned backwards traced on through the lens"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "if (Math.abs(det - 1) > 1e-9 * scale) {",
+    replace: "if (false) {",
+    why: "a beam carried into glass as if it stayed in air"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "if (read.resonator.w0 === null || read.resonator.w2 > config.aperture) {",
+    replace: "if (read.resonator.w0 === null) {",
+    why: "a mode wider than the mirror leaving as a clean Gaussian"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var q = B < 0 ? -(B - root) / 2 : -(B + root) / 2;",
+    replace: "var q = -(B + root) / 2;",
+    why: "the intersection's roots by the cancelling formula"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "var gy = s.c * y;",
+    replace: "var gy = -s.c * y;",
+    why: "a curved surface's normal tilted the wrong way"
+  },
+  {
+    file: "js/laser/engine/lenses.js",
+    find: "    if (A !== 0) roots.push(q / A);\n",
+    replace: "",
+    why: "only one root of the sphere tried"
+  },
 ];
 
 module.exports = { MUTATIONS };
