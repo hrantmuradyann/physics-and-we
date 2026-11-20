@@ -145,7 +145,11 @@
           .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (match, label, href) {
             // Only ordinary web links and mail links are allowed.
             if (!/^(https?:|mailto:|\/|#|\?)/i.test(href)) return label;
-            return '<a href="' + href + '" class="link">' + label + "</a>";
+            // A link to another website (https://… or //…) opens in a new tab, as data-link's
+            // do, so the reader keeps this page (the laser book's Wikipedia
+            // links). rel: the other site gets no hold on this tab.
+            var outside = /^(https?:|\/\/)/i.test(href) ? ' target="_blank" rel="noopener noreferrer"' : "";
+            return '<a href="' + href + '" class="link"' + outside + ">" + label + "</a>";
           })
           .replace(/\n/g, "<br>");
         return "<p>" + html + "</p>";

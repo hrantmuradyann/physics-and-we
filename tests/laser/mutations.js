@@ -6241,6 +6241,62 @@ const MUTATIONS = [
     replace: "if (loaded[route].renderedId !== id)",
     why: "every Learn more builds the whole book again"
   },
+
+  // ---------- stage 12d: Wikipedia links in the book ----------
+  {
+    file: "js/content.js",
+    find: "var outside = /^(https?:|\\/\\/)/i.test(href) ? ' target=\"_blank\" rel=\"noopener noreferrer\"' : \"\";",
+    replace: "var outside = \"\";",
+    why: "a Wikipedia link takes the reader out of the book"
+  },
+  {
+    file: "js/content.js",
+    find: "' target=\"_blank\" rel=\"noopener noreferrer\"'",
+    replace: "' target=\"_blank\"'",
+    why: "an outside page gets a hold on the book's tab"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "[Theodore Maiman](https://en.wikipedia.org/wiki/Theodore_Maiman), at the",
+    replace: "[Theodore Maiman](https://www.example.com/Theodore_Maiman), at the",
+    why: "a link to a site other than Wikipedia"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "[Մալիբու](https://hy.wikipedia.org/wiki/Մալիբու)",
+    replace: "Մալիբու",
+    why: "a name linked in English but not in Armenian"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "(https://en.wikipedia.org/wiki/Nature_%28journal%29)",
+    replace: "(https://en.wikipedia.org/wiki/Nature_(journal))",
+    why: "a bracket in an address that ends the link early"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "[Gordon Gould](https://en.wikipedia.org/wiki/Gordon_Gould)",
+    replace: "[Gordon Gould](https://hy.wikipedia.org/wiki/Gordon_Gould)",
+    why: "the English text linked to the Armenian Wikipedia"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "A race began.",
+    replace: "A race began (www.laserfest.org).",
+    why: "an address written out in the text"
+  },
+  {
+    file: "js/content.js",
+    find: "/^(https?:|\\/\\/)/i.test(href)",
+    replace: "/^https?:/i.test(href)",
+    why: "a //… address leaves the site in the reader's tab"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "[Ուիլյամ Բենեթը](https://en.wikipedia.org/wiki/William_R._Bennett_Jr.)",
+    replace: "[Ուիլյամ Բենեթը](https://hy.wikipedia.org/wiki/IBM)",
+    why: "the Armenian text links one article twice in a chapter"
+  },
 ];
 
 module.exports = { MUTATIONS };

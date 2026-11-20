@@ -306,6 +306,20 @@ As you asked:
 - **The dropdowns sit beside their parts**: the gain medium's right above the drawing, over the drawn medium; the pump's right under it, over the drawn pump, with Fire under it. Nothing covers the laser. (On a phone the mirror buttons come between the drawing and the pump's dropdown.)
 - **"Learn more" links** beside the medium, the pump, each mirror, the output mirror's slider, the Q-switch, the power chart, the stability diagram, the cartoon and "inside one atom". Each opens the book right at its section (ruby → 3.5 Ruby, the flashlamp → 4.2, inside one atom → 3.4 Two, three and four levels, and so on), and the medium's and pump's links follow your choice. Which section each opens is written in `data/laser.json` under `more`, so it is easy to change.
 
+### Stage 12d: Wikipedia links in the book
+
+As you asked, I went through the whole book and linked the first mention in each chapter of every person, place, material and device a reader may not know (Fabrikant, Maiman, the neon lamp, xenon, rhodamine 6G, Bell Labs, the cornea, …): **99 names in each language**. The English text links to English Wikipedia. The Armenian text links to Armenian Wikipedia where it has the article (44 of them, e.g. Einstein, the maser, chromium), otherwise to the same English article. Every address was checked to open a real article. A Wikipedia link opens in a new tab, so the reader keeps their place in the book. Kurt Nassau (neodymium crystal, 1961) has no article, so his name stays plain text.
+
+**To add a link yourself**, in `data/laser-study.json`, put the words in square brackets and the address right after them in round brackets, with no space between:
+
+    [Theodore Maiman](https://en.wikipedia.org/wiki/Theodore_Maiman)
+
+- Copy the address from the browser's address bar on the Wikipedia article.
+- A space in the address is written `_`. A round bracket must be written `%28` for `(` and `%29` for `)`, because a plain `)` would end the link: `https://en.wikipedia.org/wiki/Nature_%28journal%29`. (Armenian letters can stay as they are.)
+- Add the link in both `"en"` and `"hy"`, in the same paragraph. In `"hy"` use the Armenian article (`https://hy.wikipedia.org/wiki/…`) if it exists (on the English article, "Հայերեն" in the languages list), else the same English address.
+- Only link a name the first time it appears in a chapter.
+- Then run `node --test`: it says if a link breaks a rule (another website, a link in one language only, the same link twice in a chapter).
+
 ## What is left
 
 Stage 9 (several laser frequencies at once, with a spectrum panel) was dropped at your request: it would have made everything too complex. The laser stays one frequency.

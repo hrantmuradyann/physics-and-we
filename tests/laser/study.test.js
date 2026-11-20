@@ -151,7 +151,16 @@ test("every formula sign is inside a formula: the text has no bare symbols", () 
 });
 
 test("the page shows nothing meant for the developers", () => {
-  for (const { where, text } of richTexts()) {
+  for (const { where, text: written } of richTexts()) {
+    // A Wikipedia link's words stand in brackets ("[calcium fluoride](…)"):
+    // only its words count. Every other link is checked as written, so a
+    // leftover note made into a link is still found.
+    let text = written;
+    for (const link of outsideLinks(written)) {
+      if (WIKI_EN.test(link.href) || WIKI_HY.test(link.href) || WIKI_PHOTO.test(link.href)) {
+        text = text.replace("[" + link.words + "](" + link.href + ")", link.words);
+      }
+    }
     for (const mark of ["[A §", "[A§", "[A]", "[calc", "[CHECK", "TRY IT", "PICTURE", "laser-physics.md", "laser.json", "textbook value"]) {
       assert.ok(!text.includes(mark), where + " has " + JSON.stringify(mark));
     }
@@ -590,6 +599,109 @@ test("every link in the text leads to a chapter or a section that exists, named 
   }
   assert.ok(count >= 15, "the text links its chapters and sections (" + count + ")");
   for (const lang of LANGS) assert.ok(study.contents[lang], "contents." + lang);
+});
+
+// The outside links of a text, as content.js reads them: [words](address),
+// the address starting with http(s): or //, with no space and no ")".
+function outsideLinks(text) {
+  const found = [];
+  for (const m of text.matchAll(/\[([^\]]+)\]\(((?:https?:|\/\/)[^)\s]*)\)/g)) {
+    found.push({ words: m[1], href: m[2] });
+  }
+  return found;
+}
+
+const WIKI_EN = /^https:\/\/en\.wikipedia\.org\/wiki\/[^\s()]+$/;
+const WIKI_HY = /^https:\/\/hy\.wikipedia\.org\/wiki\/[^\s()]+$/;
+const WIKI_PHOTO = /^https:\/\/commons\.wikimedia\.org\/wiki\/File:[^\s()]+$/;
+
+test("names a reader may not know link to Wikipedia: the English text to the English one, the Armenian to the Armenian one where it has the article (stage 12d)", () => {
+  // Which chapter each rich text belongs to.
+  const chapterOf = new Map();
+  for (const chapter of study.chapters) {
+    if (chapter.intro) chapterOf.set(chapter.intro, chapter.id);
+    for (const section of chapter.sections || []) {
+      chapterOf.set(section.text, chapter.id);
+      if (section.deeper) chapterOf.set(section.deeper.text, chapter.id);
+    }
+  }
+  const seen = { en: new Map(), hy: new Map() };   // "chapter address" -> where it was first linked
+  let count = 0;
+
+  for (const { where, pair } of richParts()) {
+    const en = outsideLinks(pair.en);
+    const hy = outsideLinks(pair.hy);
+    const enAddresses = new Set();
+    for (const link of en) enAddresses.add(link.href);
+    const hyAddresses = new Set();
+    for (const link of hy) hyAddresses.add(link.href);
+
+    // The English text links only to English Wikipedia (or a photo).
+    for (const link of en) {
+      assert.ok(WIKI_EN.test(link.href) || WIKI_PHOTO.test(link.href), where + ".en: " + link.href + " is an English Wikipedia article (or a photo)");
+    }
+    // The Armenian text links to Armenian Wikipedia, or, where it has no
+    // article, to the same English one as the English text.
+    let armenianArticles = 0;
+    for (const link of hy) {
+      if (WIKI_HY.test(link.href)) {
+        armenianArticles += 1;
+      } else {
+        assert.ok(WIKI_EN.test(link.href) || WIKI_PHOTO.test(link.href), where + ".hy: " + link.href + " is a Wikipedia article (or a photo)");
+        assert.ok(enAddresses.has(link.href), where + ".hy: " + link.href + " is linked in the English text too");
+      }
+    }
+    // Every name linked in English is linked in Armenian too: each English
+    // address is either in the Armenian text as well, or replaced there by
+    // one Armenian article. (Armenian may put the names in another order, so
+    // not by position.)
+    let replaced = 0;
+    for (const address of enAddresses) {
+      if (!hyAddresses.has(address)) replaced += 1;
+    }
+    assert.equal(hy.length, en.length, where + ": as many links in hy as in en");
+    assert.equal(armenianArticles, replaced, where + ": each English link has its Armenian one");
+
+    // Only the first mention in a chapter is linked, in each language.
+    for (const lang of LANGS) {
+      const links = lang === "en" ? en : hy;
+      for (const link of links) {
+        const key = chapterOf.get(pair) + " " + link.href;
+        assert.ok(!seen[lang].has(key), where + "." + lang + ": " + link.href + " is linked once a chapter (also at " + seen[lang].get(key) + ")");
+        seen[lang].set(key, where);
+      }
+    }
+    count += en.length;
+
+    // No address written out as text: a reader sees words, not a URL.
+    for (const lang of LANGS) {
+      const withoutAddresses = pair[lang].replace(/\]\([^)]*\)/g, "]");
+      assert.ok(!/https?:|www\./.test(withoutAddresses), where + "." + lang + ": an address outside a link");
+    }
+  }
+  assert.ok(count >= 90, "the people, places, materials and devices are linked (" + count + ")");
+});
+
+test("an outside link in the text opens in a new tab, so the reader keeps the book (stage 12d)", () => {
+  const el = {
+    innerHTML: "",
+    getAttribute: (name) => (name === "data-rich" ? "t" : null)
+  };
+  const root = { querySelectorAll: (selector) => (selector === "[data-rich]" ? [el] : []) };
+  const context = vm.createContext({ window: {} });
+  vm.runInContext(read("js/content.js"), context, { filename: "js/content.js" });
+  const bind = (text) => {
+    context.window.Content.bind(root, { t: { en: text } }, { lang: "en" });
+    return el.innerHTML;
+  };
+  assert.equal(bind("See [Maser](https://en.wikipedia.org/wiki/Maser)."),
+    '<p>See <a href="https://en.wikipedia.org/wiki/Maser" class="link" target="_blank" rel="noopener noreferrer">Maser</a>.</p>');
+  assert.equal(bind("Back to [the ruby section](#section-ruby)."),
+    '<p>Back to <a href="#section-ruby" class="link">the ruby section</a>.</p>', "a link inside the site stays in its tab");
+  assert.equal(bind("[home](?view=home)"), '<p><a href="?view=home" class="link">home</a></p>');
+  assert.equal(bind("[Maser](//en.wikipedia.org/wiki/Maser)"),
+    '<p><a href="//en.wikipedia.org/wiki/Maser" class="link" target="_blank" rel="noopener noreferrer">Maser</a></p>',
+    "an address without its https: leaves the site too");
 });
 
 test("the layout has the contents (each chapter with its sections), the chapters marked, and a way back under each", () => {
