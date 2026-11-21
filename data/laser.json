@@ -1,5 +1,5 @@
 {
-  "_readme": "THE LASER LAB (?view=laser): every word of the page. Edit the text between the quotes only. hy = Armenian, en = English. The physics numbers are not here; they are in js/laser/engine/. The Play, Pause and Reset buttons use the shared words labPlay, labPause and labReset in data/site.json. The lab is still being built, so more words will be added here as it grows.",
+  "_readme": "THE LASER LAB (?view=laser): every word of the page. Edit the text between the quotes only. hy = Armenian, en = English. The physics numbers are not here; they are in js/laser/engine/. The Play, Pause and Reset buttons use the shared words labPlay, labPause and labReset in data/site.json. Each block below starts with its own _readme: what its words are and where they appear.",
 
   "page": {
     "eyebrow": { "hy": "Ինտերակտիվ լաբորատորիա", "en": "Interactive lab" },

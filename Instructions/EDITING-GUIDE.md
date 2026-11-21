@@ -26,6 +26,8 @@ touch `sections` or `css`.
 | any text on the **labs** page | `data/labs.json` |
 | the words of one **interactive lab** | `data/labs/<lab>.json` |
 | the words of the **laser lab** (its banner on the labs page is `featured` in `data/labs.json`) | `data/laser.json` |
+| the **study materials** page (its posters) | `data/study.json` |
+| the **laser book** (chapters, sections, pictures, formulas) | `data/laser-study.json` |
 | the **summer camp** page | `data/camp.json` |
 | the **research** page | `data/research.json` |
 | the **our story** page (year by year) | `data/story.json` |
@@ -109,6 +111,34 @@ Example:
   "en": "We started in one classroom.\n\nToday we work with **dozens** of schools."
 }
 ```
+
+---
+
+## The laser lab and the laser book
+
+These two files are bigger than the others, so each block in them starts
+with a `"_readme"` that says what its words are and where they appear. Read
+it before you change that block. The main points:
+
+- **`data/laser.json`** holds words only, never physics numbers (those live in
+  the code). Words drawn on a picture (`bench.parts`, `atoms.words`, the
+  charts' titles) must stay short: a long word is squeezed to fit. The
+  `"more"` block holds no words: each value is a section of the book that a
+  "Learn more" link opens, written `section-` and that section's `id`.
+- **`data/laser-study.json`** is the book. Never put numbers in a title (the
+  page numbers the chapters and sections itself). A formula is written
+  between dollar signs, `$E = h\\nu$`, with every backslash doubled; keep
+  the same formulas, in the same order, in `hy` and `en`. To add a picture,
+  put its file name in that section's `"image"`: the dashed "picture to
+  come" box then goes away by itself.
+- Links to Wikipedia go only to `en.wikipedia.org` (in `en`) and
+  `hy.wikipedia.org` (in `hy`, or the English article when there is no
+  Armenian one).
+
+If you can, run `node --test` in the site's folder afterwards: it checks
+both files (both languages present, every section a link points to exists,
+the formulas the same in both languages). If a test fails, its message says
+which word or section is wrong.
 
 ---
 
@@ -244,11 +274,11 @@ without getting in each other's way:
 | Person | Files they own |
 |---|---|
 | Labs coordinator | `data/labs.json` |
-| Camp coordinator | `data/camp.json` |x
+| Camp coordinator | `data/camp.json` |
 | Research mentor | `data/research.json` |
 | Partnerships | `data/organisers.json`, `data/sponsors&partners.json` |
 | Anyone, via the admin page | news items |
-| Translator | the `en` and `ru` lines in every `data/*.json` |
+| Translator | the `en` lines in every `data/*.json` (and the `hy` ones, read by a fluent speaker) |
 | Whoever maintains the site | `data/site.json`, `sections/`, `css/`, `js/` |
 
 ---

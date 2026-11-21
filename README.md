@@ -58,7 +58,7 @@ Every page is two files that never mix:
 
 ```
 sections/faq.html    the SHAPE   — empty boxes, no text
-data/faq.json        the WORDS   — hy / en / ru, no markup
+data/faq.json        the WORDS   — hy / en, no markup
 ```
 
 `js/content.js` pours the second into the first.
@@ -151,7 +151,7 @@ Physics-and-we/
 ├── Instructions/        → the guides for humans
 │   ├── EDITING-GUIDE.md     → how to change content (written for non-coders)
 │   ├── LABS-GUIDE.md        → how to write an interactive lab
-│   ├── HTML-CLASSES.md      → every CSS class in the markup, explained (RU)
+│   ├── HTML-CLASSES.md      → every CSS class in the markup, explained
 │   ├── ADMIN-SETUP.md       → running the admin panel, locally and deployed
 │   └── SECURITY.md          → what protects /admin/ — READ BEFORE DEPLOYING
 │

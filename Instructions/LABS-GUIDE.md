@@ -7,6 +7,17 @@ This guide is for whoever writes the code. If you only want to change the
 **words** of a lab that already exists, you do not need any of this — open
 `data/labs/<name>.json` and read `EDITING-GUIDE.md` instead.
 
+> **The laser lab is not built this way.** It is one big simulation on its
+> own page (`?view=laser`), too large for the shell this guide describes. Its
+> physics is in `js/laser/engine/`, its drawing in `js/laser/ui/`, and
+> `js/laser/page.js` connects them; every word is in `data/laser.json`, and
+> its book in `data/laser-study.json`. Before changing its code read
+> `docs/laser-plan.md` (how it is built, and the recipe every change follows)
+> and `docs/laser-physics.md` (the physics it uses), and the laser section of
+> `CLAUDE.md`. Its tests run with `node --test` from the repository's folder
+> (only Node is needed), and `node tests/laser/mutation-check.js` checks that
+> they catch deliberate mistakes.
+
 ---
 
 ## The one rule
@@ -25,7 +36,7 @@ longer fix it without you.
 | | |
 |---|---|
 | `js/labs/pendulum.js` | the physics and the drawing |
-| `data/labs/pendulum.json` | the title, the explanation, every label — in hy / en / ru |
+| `data/labs/pendulum.json` | the title, the explanation, every label — in hy / en |
 | `data/labs.json` → `simulations.items` | the card that links to it from the Labs page |
 | `index.html` | one `<script>` line so the browser loads it |
 
