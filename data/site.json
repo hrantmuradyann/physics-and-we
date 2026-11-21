@@ -21,6 +21,18 @@
       "label": { "hy": "Լաբորատորիաներ", "en": "Interactive Labs" }
     },
     {
+      "_readme": "Study materials: a page of posters, one per subject (words in data/study.json). The laser poster leads to the laser book (route laser-study).",
+      "route": "study",
+      "hidden": true,
+      "label": { "hy": "Ուսումնական նյութեր", "en": "Study materials" }
+    },
+    {
+      "_readme": "The laser book: chapters, each with a 'dig deeper' part. Hidden: reached from the laser poster on Study materials. Words in data/laser-study.json.",
+      "route": "laser-study",
+      "hidden": true,
+      "label": { "hy": "Լազեր", "en": "Laser" }
+    },
+    {
       "route": "research",
       "label": { "hy": "Հետազոտություններ", "en": "Research" }
     },
@@ -56,6 +68,12 @@
       "route": "lab",
       "hidden": true,
       "label": { "hy": "Լաբորատորիա", "en": "Lab" }
+    },
+    {
+      "_readme": "The laser lab: one big lab with a page of its own. Hidden: it is reached from the banner on the Labs page, never from the menu.",
+      "route": "laser",
+      "hidden": true,
+      "label": { "hy": "Լազեր", "en": "The Laser" }
     }
   ],
 
@@ -80,6 +98,9 @@
   "ui": {
     "_readme": "Short words reused across many pages. Change here = changes everywhere.",
     "learnMore": { "hy": "Իմանալ ավելին", "en": "Learn more" },
+    "digDeeper": { "hy": "Խորանալ", "en": "Dig deeper" },
+    "toContents": { "hy": "Բովանդակություն", "en": "Contents" },
+    "pictureToCome": { "hy": "Ապագա նկարը․", "en": "Picture to come:" },
     "loading": { "hy": "Բեռնվում է…", "en": "Loading…" },
     "loadError": {
       "hy": "Բովանդակությունը չհաջողվեց բեռնել։ Թարմացրե՛ք էջը։",

@@ -64,6 +64,39 @@
   --canvas-faint: rgba(255, 255, 255, 0.22);
   --canvas-glow: rgba(47, 128, 237, 0.75);
 
+  /* THE LASER LAB (sections/laser.html, css/laser.css, js/laser/ui/).
+     One look in BOTH themes, so these are set only here, never in
+     :root.theme-light: a plain near-white background (the laser light's own
+     colour reads true on it), charcoal text, graphite controls, so the only colour is the laser's.
+     .laser-lab in css/laser.css maps the site's names (--bg, --text,
+     --accent, ...) onto these, and js/laser/ui/loop.js draws with them. */
+  --laser-bg: #fafafa;                        /* the one background colour */
+  --laser-heading: #1c1f24;
+  --laser-text: #33373d;
+  --laser-muted: #5f646b;
+  --laser-line: rgba(28, 31, 36, 0.14);       /* borders of boxes and buttons */
+  --laser-faint-bg: #ffffff;                  /* number boxes, the status note */
+  --laser-shadow: rgba(28, 31, 36, 0.16);
+  --laser-accent: #3d434b;                    /* graphite: sliders, On, pressed buttons */
+  --laser-accent-2: #1f2328;                  /* near-black: the second end of the buttons' gradient */
+  --laser-accent-soft: #3d434b;               /* small text and links */
+  --laser-accent-ring: rgba(61, 67, 75, 0.18);
+  --laser-hover-line: rgba(61, 67, 75, 0.45);
+  --laser-hover-tint: rgba(61, 67, 75, 0.06);
+  --laser-button-glow: rgba(31, 35, 40, 0.28);
+  --laser-button-glow-hover: rgba(31, 35, 40, 0.4);
+  --laser-ghost-bg: #ffffff;
+  --laser-ghost-border: rgba(28, 31, 36, 0.22);
+  --laser-ghost-border-hover: rgba(28, 31, 36, 0.4);
+  --laser-icon: #3d434b;
+  --laser-icon-bg: rgba(61, 67, 75, 0.1);
+  --laser-canvas-line: rgba(28, 31, 36, 0.30);
+  --laser-canvas-grid: rgba(28, 31, 36, 0.10);
+  --laser-canvas-faint: rgba(28, 31, 36, 0.30);
+  --laser-canvas-glow: rgba(61, 67, 75, 0.22);
+  --laser-canvas-flash: #c4ccd6;              /* a lit flashlamp: bright silver-white (pure white would vanish on the white page) */
+  --laser-canvas-lamp: #6f7883;               /* a flashlamp's glass edge and metal caps: steel */
+
   --font-main: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --max-width: 1100px;
   --radius: 16px;

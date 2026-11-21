@@ -14,6 +14,7 @@
    a news item                                  the admin page at /admin/
    the order of the blocks on a page            sections/<page>.html
    the words of an interactive lab              data/labs/<lab>.json
+   the words of the laser lab                   data/laser.json
    colours (dark and light theme)               css/style.css
    sizes, spacing, the look of the blocks       css/site.css
    ----------------------------------------------------------------------------
@@ -35,6 +36,7 @@
   <link rel="stylesheet" href="css/site.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/labs.css">
+  <link rel="stylesheet" href="css/laser.css">
 
   <!-- Dark or light theme. Loaded here, before the page is drawn, so a
        visitor who chose the light theme never sees a flash of dark. -->
@@ -64,5 +66,35 @@
   <script src="js/labs.js"></script>
   <script src="js/labs/pendulum.js"></script>
   <script src="js/labs/refraction.js"></script>
+
+  <!-- The laser lab (?view=laser). It has a page of its own instead of
+       running inside labs.js. First the physics (js/laser/engine/, in the
+       order of ENGINE_FILES in tests/laser/helpers.js), then the drawing
+       (js/laser/ui/, UI_FILES), then page.js, which connects them.
+       tests/laser/site-files.test.js checks this order. -->
+  <script src="js/laser/engine/check.js"></script>
+  <script src="js/laser/engine/constants.js"></script>
+  <script src="js/laser/engine/spectrum.js"></script>
+  <script src="js/laser/engine/media.js"></script>
+  <script src="js/laser/engine/cavity.js"></script>
+  <script src="js/laser/engine/ode.js"></script>
+  <script src="js/laser/engine/rates.js"></script>
+  <script src="js/laser/engine/pumps.js"></script>
+  <script src="js/laser/engine/qswitch.js"></script>
+  <script src="js/laser/engine/optics.js"></script>
+  <script src="js/laser/engine/harmonic.js"></script>
+  <script src="js/laser/engine/bench.js"></script>
+  <script src="js/laser/ui/loop.js"></script>
+  <script src="js/laser/ui/format.js"></script>
+  <script src="js/laser/ui/axis.js"></script>
+  <script src="js/laser/ui/history.js"></script>
+  <script src="js/laser/ui/materials.js"></script>
+  <script src="js/laser/ui/draw-bench.js"></script>
+  <script src="js/laser/ui/draw-plots.js"></script>
+  <script src="js/laser/ui/draw-photons.js"></script>
+  <script src="js/laser/ui/draw-atoms.js"></script>
+  <script src="js/laser/ui/draw-stability.js"></script>
+  <script src="js/laser/page.js"></script>
+  <script src="js/laser-study.js"></script>
 </body>
 </html>

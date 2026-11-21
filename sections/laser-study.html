@@ -1,0 +1,90 @@
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+  THE LASER BOOK (?view=laser-study) — layout only.
+  The words are NOT here. They are in  data/laser-study.json .
+  The book has chapters, each with sections. Every section is the easy
+  version; its "Dig deeper" box (a <details>, it opens and closes by itself)
+  holds the full version with the maths. A section without "deeper" has no
+  box, and one without "picture" has no picture.
+  js/laser-study.js writes the numbers (3, 3.1) into [data-study-number],
+  so chapters and sections can be moved in the JSON freely.
+  Formulas in the JSON are LaTeX between $ … $, typeset by js/laser-study.js.
+  ══════════════════════════════════════════════════════════════════════════
+-->
+
+<!-- ░░ PAGE TITLE, AND THE WAY TO THE SIMULATOR ░░ -->
+<header class="page-head">
+  <div class="container container--narrow">
+    <p class="eyebrow reveal" data-text="head.eyebrow"></p>
+    <h1 class="page-head__title reveal" data-text="head.title"></h1>
+    <p class="lead reveal" data-text="head.lead"></p>
+    <p class="study__go reveal">
+      <a class="btn btn--primary" data-route="simulator.route" data-text="simulator.label"></a>
+    </p>
+  </div>
+</header>
+
+<section class="band">
+  <div class="container container--narrow study-book">
+
+    <!-- ░░ THE CONTENTS: each chapter, and its sections under it ░░ -->
+    <nav class="study-toc" data-study-toc>
+      <h2 class="section-title" data-text="contents"></h2>
+      <ol class="study-toc__list" role="list" data-list="chapters">
+        <template>
+          <li class="study-toc__chapter" data-study-toc-chapter>
+            <a class="link study-toc__link" data-study-link><span class="study-num" data-study-number></span> <span data-text="title"></span></a>
+            <ol class="study-toc__sections" role="list" data-list="sections">
+              <template>
+                <li><a class="link" data-study-link><span class="study-num" data-study-number></span> <span data-text="title"></span></a></li>
+              </template>
+            </ol>
+          </li>
+        </template>
+      </ol>
+    </nav>
+
+    <!-- ░░ THE CHAPTERS ░░ -->
+    <div class="study__chapters" data-list="chapters">
+      <template>
+        <article class="study-chapter" data-study-chapter>
+          <h2 class="section-title study-chapter__title"><span class="study-num" data-study-number></span> <span data-text="title"></span></h2>
+          <div class="prose study-chapter__intro" data-rich="intro"></div>
+
+          <div class="study-chapter__sections" data-list="sections">
+            <template>
+              <section class="study-section" data-study-section>
+                <h3 class="study-section__title"><span class="study-num" data-study-number></span> <span data-text="title"></span></h3>
+                <div class="prose" data-rich="text"></div>
+
+                <!-- A picture: shown when "image" names a file, else a box
+                     saying what the picture should show ("todo"). -->
+                <figure class="study-figure" data-study-figure>
+                  <img class="study-figure__image" loading="lazy" data-study-image data-image="picture.image" data-alt="picture.alt">
+                  <figcaption class="study-figure__caption" data-study-caption data-text="picture.caption"></figcaption>
+                  <p class="study-figure__todo" data-study-todo><strong data-ui="pictureToCome"></strong> <span data-study-todo-text data-text="picture.todo"></span></p>
+                </figure>
+
+                <details class="study-deeper" data-study-deeper>
+                  <summary class="btn btn--ghost"><span data-ui="digDeeper"></span></summary>
+                  <div class="study-deeper__body">
+                    <h4 class="study-deeper__title" data-text="deeper.title"></h4>
+                    <div class="prose" data-rich="deeper.text"></div>
+                  </div>
+                </details>
+              </section>
+            </template>
+          </div>
+
+          <p class="study-chapter__top"><a class="link" data-study-top><span data-ui="toContents"></span> ↑</a></p>
+        </article>
+      </template>
+    </div>
+
+    <!-- ░░ SOURCES ░░ -->
+    <div class="study__sources">
+      <h2 class="section-title" data-text="sources.title"></h2>
+      <div class="prose" data-rich="sources.text"></div>
+    </div>
+  </div>
+</section>

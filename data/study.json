@@ -1,0 +1,25 @@
+{
+  "_readme": "The Study materials page (sections/study.html). 'featured.items' is the list of posters; each one's 'route' is the page it opens (the laser poster: the laser book, laser-study).",
+  "page": {
+    "eyebrow": { "hy": "Սովորել", "en": "Learn" },
+    "title": { "hy": "Ուսումնական նյութեր", "en": "Study materials" },
+    "lead": {
+      "hy": "Ֆիզիկան՝ գլուխներով, ինչպես գրքում․ սկզբում պարզ, հետո՝ խորությամբ։",
+      "en": "Physics in chapters, as in a book: simple first, then in depth."
+    }
+  },
+  "featured": {
+    "items": [
+      {
+        "route": "laser-study",
+        "eyebrow": { "hy": "Գիրք", "en": "A book" },
+        "title": { "hy": "Լազեր", "en": "The laser" },
+        "text": {
+          "hy": "Ինչպես է լույսը լույս ծնում, և ինչպես է դրանից ստացվում լազեր․ գլուխներ ու բաժիններ՝ պատմությունից մինչև անվտանգություն, բանաձևերով և օրինակներով։",
+          "en": "How light makes more light, and how that becomes a laser: chapters and sections, from the history to safety, with formulas and worked examples."
+        },
+        "open": { "hy": "Կարդալ", "en": "Read" }
+      }
+    ]
+  }
+}

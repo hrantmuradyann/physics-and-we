@@ -33,6 +33,7 @@ A class in the markup is only a name that CSS uses to find the element.
 16. [The closing invitation `.cta`](#16-the-closing-invitation-cta)
 17. [The opening screen of the home page `.hero`](#17-the-opening-screen-of-the-home-page-hero)
 18. [News: the feed and the item page](#18-news-the-feed-post-card-and-the-item-page-post)
+18b. [The laser lab `.laser-*` and its banner `.lab-feature`](#18b-the-laser-lab-laser--and-its-banner-lab-feature)
 19. [The appearing animation `.reveal`](#19-the-appearing-animation-reveal)
 20. [Admin panel classes `/admin/`](#20-admin-panel-classes-admin)
 21. [`data-*` attributes (not classes, but important)](#21-data--attributes-not-classes-but-important)
@@ -52,6 +53,7 @@ A class in the markup is only a name that CSS uses to find the element.
 | [css/site.css](css/site.css) | The look of every public page, in both themes. |
 | [css/home.css](css/home.css) | Only the opening screen of the home page (`.hero`). |
 | [css/labs.css](css/labs.css) | The labs pages: one lab, and the silver lines (`.line-art`). |
+| [css/laser.css](css/laser.css) | The laser lab (`?view=laser`) and the banner on the Labs page that leads to it. |
 | [css/admin.css](css/admin.css) | Only the admin panel `/admin/` (always light). |
 
 One important point: almost all of `site.css` is written as `body.site .something`.
@@ -160,7 +162,7 @@ body.site.home #site-header { background: transparent; }     /* home page */
 ### `.line-art`
 **What it is:** a wrapper around a whole page, written by hand as the first and last thing in the fragment. It puts faint silver lines behind that page.
 **How it looks:** waves, orbits, field lines and a bending ray (the picture [images/lab-lines.svg](images/lab-lines.svg)) behind all the bands of the page, which turn see-through so the lines show. On the dark theme the lines are dimmed; on the light theme they are shown as they are. On a computer they stay still while the page scrolls over them; on a phone they sit at the top of the page. Cards and the lab's panel keep a solid colour, so the lines never run through words.
-**Where:** the Labs page ([sections/labs.html](sections/labs.html)) and the page of one lab ([sections/lab.html](sections/lab.html)).
+**Where:** the Labs page ([sections/labs.html](sections/labs.html)), the page of one lab ([sections/lab.html](sections/lab.html)) and the laser lab ([sections/laser.html](sections/laser.html)).
 **CSS:** [css/labs.css](css/labs.css)
 
 ```html
@@ -689,6 +691,138 @@ so it does not appear in the header, but it can still be opened by link.
 
 ---
 
+## 18b. The laser lab `.laser-*` and its banner `.lab-feature`
+
+The laser lab is one big lab with a page of its own, `?view=laser`
+([sections/laser.html](sections/laser.html), words in [data/laser.json](data/laser.json)).
+It is not built by `js/labs.js`; its pictures are drawn by the scripts in `js/laser/`.
+It is still being built, stage by stage (`docs/laser-plan.md`). The sliders and numbers
+use the labs' own `.lab__panel`, `.lab-control` and `.lab-readout` (from [css/labs.css](css/labs.css)), arranged by the `.laser-*` classes below.
+The page follows a drawing by the site's owner, described in `docs/laser-plan.md` ("Stage 6b").
+
+```html
+<div class="line-art">
+  <div class="page-head laser-head">            <!-- a <div>: a <header> would get the site's header bar -->
+    <div class="container container--laser">
+      <a class="lab__back" …>← All labs</a>
+      … eyebrow, title, lead …
+      <p class="laser-status">This lab is still being built …</p>
+    </div>
+  </div>
+  <section class="band band--laser">
+    <div class="container container--laser">
+      <div class="laser-stage">
+        <div class="laser-stage__more"><button class="btn btn--primary" data-laser-action="learn">Dig deeper …</button></div>
+        <div class="laser-stage__bench laser-bench">
+          <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
+          <div class="laser-under" data-laser-under hidden>   <!-- right under the drawing -->
+            <button class="btn btn--primary laser-fire" data-laser-action="fire" data-ready="false" hidden>
+              <svg class="laser-fire__bolt" aria-hidden="true">…</svg><span>Fire the flash</span>
+            </button>
+            <div class="laser-switch" data-laser-switch hidden>
+              <span class="laser-switch__name" id="laser-switch-name">Q-switch (bleachable filter)</span>
+              <button class="laser-switch__toggle" role="switch" aria-checked="false" aria-labelledby="laser-switch-name" data-laser-action="qSwitch">
+                <span class="laser-switch__track"><span class="laser-switch__knob"></span></span>
+                <span class="laser-switch__word" data-laser-name="qSwitchState">Off</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="laser-stage__controls lab__panel">
+          <div class="laser-choose">
+            <div class="laser-choose__item">
+              <label class="lab-control__name" for="laser-medium">Medium</label>
+              <select class="laser-choose__select" id="laser-medium" data-laser-choose="medium"></select>
+            </div>
+            … the same for the pump (data-laser-choose="pump") …
+          </div>
+          <div class="lab__controls">
+            <div class="lab-control">
+              <div class="lab-control__label">
+                <label class="lab-control__name" for="laser-pump" id="laser-pump-name" data-laser-name="pump"></label>
+                <span class="laser-field">
+                  <input class="laser-field__input" type="text" inputmode="decimal" aria-labelledby="laser-pump-name" data-laser-input="pump">
+                  <span class="laser-field__unit" data-laser-unit="pump">W</span>
+                </span>
+              </div>
+              <input class="lab-control__input" id="laser-pump" type="range" data-laser-control="pump">
+            </div>
+            … the output mirror's slider, then each mirror's shapes: …
+            <div class="laser-mirror" data-laser-mirror="mirror1">
+              <span class="lab-control__name" id="laser-mirror1-name">Back mirror</span>
+              <div class="laser-shapes" role="group" aria-labelledby="laser-mirror1-name">
+                <button class="laser-shape" type="button" aria-pressed="false" data-laser-shape="flat">
+                  <svg class="laser-shape__icon" aria-hidden="true">…</svg><span>Flat</span>
+                </button>
+                … concave, convex …
+              </div>
+            </div>
+            <div class="lab-control" data-laser-slider="Rc1" hidden> … its radius slider, like the pump's … </div>
+            … the same for the output mirror (mirror2, Rc2), the filter's slider, and the slow motion, which has <p class="laser-hint" data-laser-value="slowMotion"> under it …
+          </div>
+          <div class="lab__buttons"> … Play (data-laser-action="play"), Reset … </div>
+          <p class="laser-note" data-laser-note="behind" hidden>…</p>
+        </div>
+        <div class="laser-stage__side">
+          <div class="laser-side__chart laser-bench"><canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="power" role="img"></canvas></div>
+          <div class="laser-side__stability laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="stability" role="img"></canvas></div>
+          <div class="laser-side__numbers lab__panel"><div class="lab__readouts laser-readouts"> … one .lab-readout data-laser-row="…" per number … </div></div>
+        </div>
+        <div class="laser-stage__photons">
+          <div class="laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas></div>
+          <div class="laser-bench"><canvas class="laser-bench__canvas" data-laser-canvas="atoms" role="img"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="band laser-learn" data-laser-learn>
+    <div class="container container--narrow">
+      <h2 class="section-title">How a laser works</h2>
+      <div class="laser-chapters" data-list="learn.chapters">
+        <template><article class="laser-chapter"><h3 class="laser-chapter__title"></h3><div class="prose"></div></article></template>
+      </div>
+    </div>
+  </section>
+</div>
+```
+
+| Class | How it looks | CSS |
+|---|---|---|
+| `.container--laser` | The laser page's own container: up to 1480 px wide (the other labs' is 960 px), because its blocks stand in three columns. | [css/laser.css](css/laser.css) |
+| `.laser-head` | The title block of the laser page. It is a `.page-head` (the same big title as every inner page); this class only spaces the back link above the eyebrow. | [css/laser.css](css/laser.css) |
+| `.laser-status` | The small note under the lead that says the lab is still being built: muted text in a lightly filled box with a thin border and rounded corners. Delete its words in `data/laser.json` and it disappears. | [css/laser.css](css/laser.css) |
+| `.band--laser` | The stripe the bench sits in. Less padding on top than an ordinary `.band`, so the bench is on the first screen. | [css/laser.css](css/laser.css) |
+| `.laser-stage` | The grid of the page's main blocks. Wide screens (1100 px and up): three columns, with the bench over the first two, the controls and the photon picture under it, and the chart with the numbers down the third. From 760 px: two columns (controls beside photons; the chart beside its numbers). Narrower: one column, in the order the blocks are written. | [css/laser.css](css/laser.css) |
+| `.laser-stage__more` | The row with the "dig deeper" button, centred over the bench. | [css/laser.css](css/laser.css) |
+| `.laser-stage__bench`, `__controls`, `__photons`, `__side` | Where each block goes in the grid. `__side` holds the big chart, the mirrors' stability diagram and the panel of numbers. | [css/laser.css](css/laser.css) |
+| `.laser-side__chart`, `__stability`, `__numbers` | The three blocks of the side column. On a wide screen (1100 px and up) they stand one under the other beside the bench: the chart, the stability diagram right under it (to watch while the laser runs), the numbers. From 760 px the chart and the diagram stand on the left with the numbers beside them. | [css/laser.css](css/laser.css) |
+| `.laser-mirror` | One mirror's name and its three shape buttons, on one line (wrapping on a narrow panel). | [css/laser.css](css/laser.css) |
+| `.laser-shapes` | The group of the three buttons (`role="group"`, named by the mirror's name). | [css/laser.css](css/laser.css) |
+| `.laser-shape` | One shape: a small button with a picture of the mirror's face (`.laser-shape__icon`, drawn in the text colour) and its word. The chosen one (`aria-pressed="true"`, set by `js/laser/page.js`) has an accent border, bold words and an accent picture. | [css/laser.css](css/laser.css) |
+| `.laser-bench` | The box around a picture of the lab (the bench, the chart, the photons): rounded corners, a thin border, a soft glow at the top and a deep shadow — the same look as the frame of the other labs. It sets the width of the canvas inside it. | [css/laser.css](css/laser.css) |
+| `.laser-bench__canvas` | A canvas the lab draws on, as wide as its box. Its height is set by `js/laser/ui/loop.js`. | [css/laser.css](css/laser.css) |
+| `.laser-bench__canvas--chart` | The chart of the output power: the mouse pointer is a crosshair, and on a touch screen a sideways drag moves the chart's crosshair while an up-and-down drag still scrolls the page (`touch-action: pan-y`). | [css/laser.css](css/laser.css) |
+| `.laser-under` | The row right under the drawing of the laser, inside the bench's box, with a thin line above it: the Q-switch on the left (under the drawn filter), Fire in the middle (under the drawn lamp, which is centred). On a screen under 760 px wide the two go one under the other, Fire first. It starts `hidden`; `js/laser/page.js` shows it on a laser that has Fire or the Q-switch. | [css/laser.css](css/laser.css) |
+| `.laser-fire` | Fire (also a `.btn .btn--primary`): a big pill with a lightning bolt (`.laser-fire__bolt`) and its word, white on the accent gradient. While the lamp is dark (`data-ready="true"`, set by `js/laser/page.js`) a ring of light keeps swelling out of it and the bolt pulses, so a visitor who does not know what it is still wants to press it; while a flash is lit it waits. For a visitor who asks for less motion the ring stands still. | [css/laser.css](css/laser.css) |
+| `.laser-switch` | The Q-switch's group in that row: its name (`.laser-switch__name`) over the On/Off (beside it on a narrow screen). Starts `hidden`; shown on a laser that can have the filter. | [css/laser.css](css/laser.css) |
+| `.laser-switch__toggle` | The On/Off: a button with `role="switch"`, a rounded track (`__track`) that fills with the accent gradient when on, while its knob (`__knob`) slides right, and the word On or Off (`__word`, written by `js/laser/page.js`). | [css/laser.css](css/laser.css) |
+| `.laser-choose` | The two dropdowns that choose the laser (the medium, then its pump), at the top of the controls, with a thin line under them. Side by side when the panel is wide enough, one under the other when it is not: a column is at least 15rem, so the longest Armenian name is not cut. | [css/laser.css](css/laser.css) |
+| `.laser-choose__item` | One dropdown with its name above it. The name is a `.lab-control__name`, like a slider's. | [css/laser.css](css/laser.css) |
+| `.laser-choose__select` | The dropdown itself: as wide as its column, bold, on the page's second background colour with a thin border. Its options are made by `js/laser/page.js` (the names are `media.*` and `pumps.*` in `data/laser.json`); a medium that cannot be simulated yet is greyed out, with "(coming later)" after its name. | [css/laser.css](css/laser.css) |
+| `.laser-field` | A number box with its unit, on the same line as a slider's name. | [css/laser.css](css/laser.css) |
+| `.laser-field__input` | The number box: small, right-aligned bold figures on a lightly filled background with a thin border. It is a text box (`type="text" inputmode="decimal"`), not `type="number"`, so a decimal comma ("13,5") works in every browser; the page reads the number itself. | [css/laser.css](css/laser.css) |
+| `.laser-field__unit` | The unit after the box ("W", "%", "×"), in the accent colour. Written by `js/laser/page.js`. | [css/laser.css](css/laser.css) |
+| `.laser-hint` | The small muted line under the slow-motion slider ("1 s = 100 µs"). | [css/laser.css](css/laser.css) |
+| `.laser-readouts` | The numbers (also a `.lab__readouts`), in a panel of their own, so without the line the labs draw above them. | [css/laser.css](css/laser.css) |
+| `.laser-note` | A small note in the accent colour under the buttons. It starts `hidden`; `js/laser/page.js` shows it only while the computer cannot keep up with the chosen slow motion. Do not give it a `display` rule, or `hidden` stops working. | [css/laser.css](css/laser.css) |
+| `.laser-learn` | The theory section at the bottom, where the "dig deeper" button scrolls to. | [css/laser.css](css/laser.css) |
+| `.laser-chapters`, `.laser-chapter`, `.laser-chapter__title` | The list of chapters; one chapter, a rounded panel with a solid colour under it (so the silver lines do not run through the words); its heading. The text inside is a `.prose`. | [css/laser.css](css/laser.css) |
+| `.lab-feature` | The big banner on the Labs page that leads to the laser lab. It is also a `.card .card--link`, so it answers the mouse like the other cards (border, shadow, the arrow moving); it is larger, has a blue-to-violet stripe down its left edge (terracotta on the light theme), and sits above the grid of the other labs. It is the one item of the list `featured.items` in `data/labs.json`: deleting that item removes the whole banner. Where it leads is written in the layout. | [css/laser.css](css/laser.css) |
+| `.lab-feature__title` | The banner's heading: larger than a card title (1.5–2.1rem), extra bold. | [css/laser.css](css/laser.css) |
+| `.lab-feature__text` | The banner's sentence: muted, 1.02rem, at most 62 characters wide. | [css/laser.css](css/laser.css) |
+
+---
+
 ## 19. The appearing animation `.reveal`
 
 The most general class of all: it can be added **to anything**.
@@ -828,7 +962,20 @@ Classes are responsible for **the look**, and `data-*` attributes for **the cont
 | `data-route="cta.button.route"` | Turns the element into a link to another page of the site. |
 | `data-number="number"` + `data-suffix="suffix"` | A number that counts up from zero when scrolled to, plus whatever follows it (`+`, `%`). |
 | `data-ui="learnMore"` | A word shared by every page (taken from `data/site.json`). |
-| `data-goto="labs"` | Set by the script; [js/router.js](js/router.js) uses it to catch the click and change page without a reload. |
+| `data-goto="labs"` | Set by the script; [js/router.js](js/router.js) uses it to catch the click and change page without a reload. It can also be written in the layout, when where a link leads is part of the layout (the lab cards, the laser banner). |
+| `data-laser-canvas="bench"` | Marks a canvas of the laser lab and what [js/laser/page.js](js/laser/page.js) draws on it: `bench`, `power` (the chart of the output power), or `photons` (the cartoon of atoms and photons). |
+| `data-laser-choose="medium"` | A dropdown that chooses the laser: `medium` or `pump`. It is empty in the layout; `page.js` fills in its options and reads the choice. |
+| `data-laser-control="pump"` | A slider of the laser lab (`pump`, `coupler`, `slowMotion`). `page.js` sets its range and reads it; the pump slider's range changes with the chosen laser. |
+| `data-laser-name="pump"` | The pump slider's name. `page.js` writes it for the chosen pump (`controls.pump.*` in `data/laser.json`: "Pump power (absorbed)", "Flash energy (electrical)", "Discharge current"). |
+| `data-laser-input="pump"` | The number box of the slider of the same name: it shows the slider's value, and a number typed into it sets the slider. |
+| `data-laser-unit="pump"` | Where `page.js` writes the unit of that number box. |
+| `data-laser-value="slowMotion"` | Where the meaning of the slow motion is written ("1 s = 100 µs"). |
+| `data-laser-readout="P_out"` | Where one number of the laser lab is written; the names are the keys of `readouts` in `data/laser.json`. |
+| `data-laser-row="P_out"` | The row around that number, with its name. `page.js` hides the rows the chosen laser does not have (a flashlamp has no steady output power, a discharge's threshold is a current). |
+| `data-laser-action="play"` | A button of the laser lab: `play` (Play / Pause), `reset`, `learn` (scrolls to the theory), or `fire` (fires the flashlamp; it starts `hidden`, and `page.js` shows it only when the pump is a flashlamp). |
+| `data-laser-learn` | The theory section the `learn` button scrolls to. |
+| `data-laser-note="behind"` | The note `page.js` shows while the simulation cannot keep up. |
+| `data-running="true"` / `"false"` | Set by the laser lab's drawing loop on each of its canvases: whether that picture is being redrawn frame after frame right now. It is `false` while the page is hidden, while that canvas is scrolled away, and while the lab is paused. Useful for checking in the browser that nothing runs in the background. |
 | `data-keep` | Keep the wrapper visible even when there is no text for it in the JSON. On a `data-link` the wording stays visible too, as a button that does nothing until the address is written in — that is how the photo-album buttons on the our story page work. |
 
 If there is no text in the JSON for an element, the script **hides it by itself** so no empty holes are left on the page ([js/content.js:242](js/content.js#L242)).

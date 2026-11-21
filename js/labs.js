@@ -289,13 +289,16 @@
     var lastDpr = 0;
 
     function measure() {
-      var box = frame.getBoundingClientRect();
+      // The inside of the frame, without its 1 px border (clientWidth): the
+      // canvas fills only that. Measured with the border, the canvas was
+      // 2 px wider than it is shown, so every picture was drawn slightly
+      // squeezed.
+      var width = frame.clientWidth;
       // While the lab is on a page the visitor is not looking at, the frame
       // has no size at all. Keep the last good measurement rather than
       // collapsing the canvas to nothing.
-      if (!box.width) return;
+      if (!width) return;
 
-      var width = box.width;
       // Setting the height below changes the frame, which calls this again.
       // Nothing has really changed unless the width or the screen did.
       if (width === lastWidth && Math.min(global.devicePixelRatio || 1, 2) === lastDpr) return;

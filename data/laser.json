@@ -1,0 +1,253 @@
+{
+  "_readme": "THE LASER LAB (?view=laser): every word of the page. Edit the text between the quotes only. hy = Armenian, en = English. The physics numbers are not here; they are in js/laser/engine/. The Play, Pause and Reset buttons use the shared words labPlay, labPause and labReset in data/site.json. Each block below starts with its own _readme: what its words are and where they appear.",
+
+  "page": {
+    "eyebrow": { "hy": "Ինտերակտիվ լաբորատորիա", "en": "Interactive lab" },
+    "title": { "hy": "Լազերը", "en": "The Laser" },
+    "lead": {
+      "hy": "Լազերը կազմված է մի քանի մասից՝ միջավայր, որն ուժեղացնում է լույսը, մղում, որը նրան էներգիա է տալիս, և երկու հայելի, որոնք լույսը հետ ու առաջ են ուղարկում։ Այստեղ դուք կհավաքեք լազերը այդ մասերից և կտեսնեք, թե երբ և ինչու է այն սկսում լույս արձակել։",
+      "en": "A laser is made of a few parts: a medium that amplifies light, a pump that gives it energy, and two mirrors that send the light back and forth. Here you will put a laser together from these parts and see when, and why, it starts to shine."
+    },
+    "status": {
+      "hy": "Լաբորատորիան դեռ կառուցվում է։ Սահիչների վերևում ընտրեք ակտիվ միջավայրը և մղումը, իսկ գծագրի տակ բռնկեք լամպը և միացրեք կամ անջատեք բարորակության մոդուլյատորը։ CaF₂:Dy-ն, կիսահաղորդչային լազերը և մյուս մասերը կավելանան հաջորդ քայլերում։",
+      "en": "This lab is still being built. Choose a gain medium and a pump above the sliders; under the drawing, fire the flashlamp and turn the Q-switch on or off. CaF₂:Dy, the semiconductor laser and more parts come next."
+    }
+  },
+
+  "bench": {
+    "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short. After 'transmission' the drawing writes the number, as in 'Transmission 5.00 %'. 'pumps' is the name written under the pump, one for each kind of pump ('parts.pump' is used for a pump that has none). 'parts.qSwitch' is written by the bleachable filter when it is switched on.",
+    "alt": {
+      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, իսկ նրանց միջև՝ ակտիվ միջավայրը և մղումը, որը նրան էներգիա է տալիս․ ձողի տակ՝ լազերային դիոդներ կամ բռնկման լամպ, կամ մեկ այլ լազեր, որի ճառագայթը փոքր հայելին ուղղում է դեպի ձողը, իսկ գազային լազերում՝ էլեկտրական հոսանք գազով լցված խողովակի միջով։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։ Երբ բարորակության մոդուլյատորը միացված է, հետին հայելու և ձողի միջև կանգնած է հագեցող ֆիլտր։ Երբ կրկնապատկիչը միացված է, ելքային հայելուց հետո բյուրեղը լույսի մի մասը դարձնում է կանաչ։",
+      "en": "A drawing of the laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, and between them the gain medium with the pump that gives it energy: laser diodes or a flashlamp under a rod, another laser whose beam a small mirror turns up into the rod, or, in a gas laser, an electric current through the tube of gas. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror. With the Q-switch on, a bleachable filter stands between the back mirror and the rod. With the doubling crystal on, a crystal past the output mirror turns part of the light green."
+    },
+    "parts": {
+      "backMirror": { "hy": "Հետին հայելի", "en": "Back mirror" },
+      "outputMirror": { "hy": "Ելքային հայելի", "en": "Output mirror" },
+      "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
+      "pump": { "hy": "Մղում", "en": "Pump" },
+      "transmission": { "hy": "Թափանցելիություն", "en": "Transmission" },
+      "qSwitch": { "hy": "Հագեցող ֆիլտր", "en": "Bleachable filter" },
+      "widths": { "hy": "Լայնությունները ×", "en": "Widths ×" },
+      "focus": { "hy": "F", "en": "F" },
+      "infrared": { "hy": "ինֆրակարմիր, անտեսանելի", "en": "infrared, invisible" },
+      "ultraviolet": { "hy": "ուլտրամանուշակագույն, անտեսանելի", "en": "ultraviolet, invisible" }
+    },
+    "pumps": {
+      "diode": { "hy": "Մղման դիոդներ", "en": "Pump diodes" },
+      "laser": { "hy": "Մղող լազեր", "en": "Pump laser" },
+      "flashlamp": { "hy": "Բռնկման լամպ", "en": "Flashlamp" },
+      "discharge": { "hy": "Էլեկտրական պարպում", "en": "Electric discharge" }
+    }
+  },
+
+  "choose": {
+    "_readme": "The dropdowns beside the drawing: the gain medium (above it, in the groups of 'groups') and the pumps that medium can use (under it). 'later' is added in brackets after a medium the lab cannot simulate yet. Under the drawing, for a laser that can have one: the Q-switch's name ('qSwitch') and its On/Off switch ('on', 'off': the word beside the switch); for the 1.06 µm lasers the doubling crystal's ('doubler').",
+    "groups": {
+      "solid": { "hy": "Բյուրեղներ և ապակի", "en": "Crystals and glass" },
+      "gas": { "hy": "Գազեր", "en": "Gases" },
+      "liquid": { "hy": "Հեղուկ", "en": "Liquid" },
+      "semiconductor": { "hy": "Կիսահաղորդիչ", "en": "Semiconductor" }
+    },
+    "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
+    "pump": { "hy": "Մղում", "en": "Pump" },
+    "qSwitch": { "hy": "Բարորակության մոդուլյատոր (հագեցող ֆիլտր)", "en": "Q-switch (bleachable filter)" },
+    "doubler": { "hy": "Հաճախականության կրկնապատկիչ (կանաչ)", "en": "Doubling crystal (green)" },
+    "on": { "hy": "Միացված", "en": "On" },
+    "off": { "hy": "Անջատված", "en": "Off" },
+    "later": { "hy": "հետագայում", "en": "coming later" }
+  },
+
+  "media": {
+    "_readme": "The names of the gain media in the dropdown, in the order the page lists them.",
+    "ruby": { "hy": "Ռուբին", "en": "Ruby" },
+    "nd-glass": { "hy": "Nd:ապակի", "en": "Nd:glass" },
+    "nd-yag": { "hy": "Nd:YAG", "en": "Nd:YAG" },
+    "caf2-dy": { "hy": "CaF₂:Dy", "en": "CaF₂:Dy" },
+    "he-ne": { "hy": "Հելիում-նեոն", "en": "Helium-neon" },
+    "ar-ion": { "hy": "Արգոնի իոն", "en": "Argon ion" },
+    "co2": { "hy": "Ածխաթթու գազ (CO₂)", "en": "Carbon dioxide (CO₂)" },
+    "diode": { "hy": "Կիսահաղորդչային դիոդ", "en": "Semiconductor diode" },
+    "dye-r6g": { "hy": "Ներկանյութ (ռոդամին 6G)", "en": "Dye (rhodamine 6G)" },
+    "ti-sapphire": { "hy": "Տիտան-շափյուղա", "en": "Titanium-sapphire" },
+    "two-level": { "hy": "Երկմակարդակ ատոմ", "en": "Two-level atom" }
+  },
+
+  "pumps": {
+    "_readme": "The names of the pumps in the second dropdown.",
+    "diode": { "hy": "Լազերային դիոդներ", "en": "Laser diodes" },
+    "laser": { "hy": "Մեկ այլ լազեր", "en": "Another laser" },
+    "flashlamp": { "hy": "Բռնկման լամպ", "en": "Flashlamp" },
+    "discharge": { "hy": "Էլեկտրական պարպում", "en": "Electric discharge" }
+  },
+
+  "controls": {
+    "_readme": "The names of the sliders. The pump slider's name depends on the pump chosen; the filter's ('absorberT0') is shown only while the Q-switch is on. Each slider also has a box to type a number in; the units (W, J, A, mA, %, ×) are written by the page.",
+    "pump": {
+      "diode": { "hy": "Մղման հզորություն (կլանված)", "en": "Pump power (absorbed)" },
+      "laser": { "hy": "Մղող լազերի հզորություն (կլանված)", "en": "Pump laser power (absorbed)" },
+      "flashlamp": { "hy": "Բռնկման էներգիա (էլեկտրական)", "en": "Flash energy (electrical)" },
+      "discharge": { "hy": "Պարպման հոսանք", "en": "Discharge current" }
+    },
+    "coupler": { "hy": "Ելքային հայելու թափանցելիություն", "en": "Output mirror transmission" },
+    "slowMotion": { "hy": "Դանդաղեցում", "en": "Slow motion" },
+    "absorberT0": { "hy": "Ֆիլտրի թափանցելիությունը (չհագեցած)", "en": "Filter transmission (unbleached)" },
+    "shapes": {
+      "flat": { "hy": "Հարթ", "en": "Flat" },
+      "concave": { "hy": "Գոգավոր", "en": "Concave" },
+      "convex": { "hy": "Ուռուցիկ", "en": "Convex" }
+    },
+    "Rc1": { "hy": "Հետին հայելու կորության շառավիղ", "en": "Back mirror's radius of curvature" },
+    "Rc2": { "hy": "Ելքային հայելու կորության շառավիղ", "en": "Output mirror's radius of curvature" }
+  },
+
+  "buttons": {
+    "_readme": "The button that fires the flashlamp, right under the drawing; it is shown only when the pump is a flashlamp.",
+    "fire": { "hy": "Բռնկել լամպը", "en": "Fire the flash" }
+  },
+
+  "readouts": {
+    "_readme": "The names of the numbers the page shows; each pump shows some of them. 'Steady' means the value the laser settles to. 'never' is written instead of a threshold the laser cannot reach. 'peak' names the highest output on a laser with a flash, 'peakStart' on one with a steady pump and the Q-switch on. 'giant' is followed by three numbers: the pulse's energy, its peak power and its length.",
+    "pumpThreshold": { "hy": "Շեմային մղման հզորություն", "en": "Threshold pump power" },
+    "currentThreshold": { "hy": "Շեմային հոսանք", "en": "Threshold current" },
+    "flashThreshold": { "hy": "Բռնկման շեմային էներգիա", "en": "Threshold flash energy" },
+    "x": { "hy": "Մղումը հիմա ÷ շեմ", "en": "Pump now ÷ threshold" },
+    "gth": { "hy": "Շեմային ուժեղացում", "en": "Threshold gain" },
+    "tau_c": { "hy": "Ֆոտոնի կյանքը ռեզոնատորում", "en": "Photon lifetime in the cavity" },
+    "lossNow": { "hy": "Կորուստը հիմա ÷ բաց ռեզոնատորինը", "en": "Loss now ÷ the open cavity's" },
+    "giant": { "hy": "Հսկա իմպուլսը, եթե ֆիլտրը հիմա հագենար (էներգիա · գագաթ · տևողություն)", "en": "Giant pulse if the filter bleached now (energy · peak · length)" },
+    "P_out": { "hy": "Ելքային հզորություն (կայուն)", "en": "Output power (steady)" },
+    "peak": { "hy": "Ամենաբարձր ելքային հզորությունը բռնկումից ի վեր", "en": "Highest output since the flash" },
+    "peakStart": { "hy": "Ամենաբարձր ելքային հզորությունը սկզբից ի վեր", "en": "Highest output since the start" },
+    "powerNow": { "hy": "Ելքային հզորություն հիմա", "en": "Output power now" },
+    "harmonic": { "hy": "Կանաչ լույսը հիմա", "en": "Green light now" },
+    "T_best": { "hy": "Լավագույն ելքային հայելի", "en": "Best output mirror" },
+    "period": { "hy": "Ռելաքսացիոն տատանումների պարբերություն", "en": "Relaxation oscillation period" },
+    "time": { "hy": "Մոդելավորված ժամանակ", "en": "Simulated time" },
+    "never": { "hy": "անհասանելի", "en": "never reached" },
+    "stability": { "hy": "Հայելիների զույգը", "en": "The mirror pair" },
+    "stable": { "hy": "կայուն", "en": "stable" },
+    "unstable": { "hy": "անկայուն", "en": "unstable" },
+    "edge": { "hy": "կայունության սահմանին", "en": "on the edge of stable" },
+    "waist": { "hy": "Փնջի ամենանեղ տեղը (շառավիղ)", "en": "Beam at its narrowest (radius)" },
+    "mirrorLoss": { "hy": "Հայելիներում կորած լույսը (մեկ շրջապտույտում)", "en": "Light lost at the mirrors (per round trip)" },
+    "thermalLens": { "hy": "Տաքացած ձողի ոսպնյակը (կիզակետային հեռավորություն)", "en": "Lens of the heated rod (focal length)" }
+  },
+
+  "notes": {
+    "behind": {
+      "hy": "Համակարգիչը չի հասցնում հաշվել այս դանդաղեցմամբ, ուստի մոդելը ընթանում է ավելի դանդաղ, քան ցույց է տալիս սահիչը։ Դանդաղեցման սահիչը տեղափոխեք աջ։",
+      "en": "The computer cannot keep up at this setting, so the simulation runs slower than the slow-motion slider says. Move that slider to the right."
+    },
+    "doubler": {
+      "hy": "Բյուրեղը կանաչ է դարձնում միայն ուժեղ իմպուլսները․ միացրեք հագեցող ֆիլտրը։",
+      "en": "The crystal turns only strong pulses green: turn on the bleachable filter."
+    }
+  },
+
+  "power": {
+    "_readme": "The big chart of the output power against time. 'title' is written above it; 'steady' beside the dashed line of the steady output: keep both short. The numbers and units on the axes are written by the page.",
+    "alt": {
+      "hy": "Լազերի ելքային հզորության գրաֆիկն ըստ ժամանակի․ ուղղահայաց առանցքին՝ հզորությունը, հորիզոնականին՝ մոդելավորված ժամանակը։ Անընդհատ մղման դեպքում կետագիծը ցույց է տալիս կայուն ելքային հզորությունը։",
+      "en": "A chart of the laser's output power against time: the power on the vertical axis, the simulated time on the horizontal one. With a steady pump, a dashed line marks the steady output power."
+    },
+    "words": {
+      "title": { "hy": "Ելքային հզորություն", "en": "Output power" },
+      "steady": { "hy": "կայուն", "en": "steady" }
+    }
+  },
+
+  "photons": {
+    "_readme": "The cartoon of atoms and photons inside the gain medium. 'title' is written above it, the other words are its legend: keep them short.",
+    "alt": {
+      "hy": "Ակտիվ միջավայրի ներսի պարզեցված պատկեր․ ատոմներ, որոնց մի մասը գրգռված է, և նրանց միջով թռչող ֆոտոններ։ Գրգռված ատոմի կողքով անցնող ֆոտոնը ստիպում է նրան արձակել երկրորդ ֆոտոն, որը թռչում է առաջինի հետ միասին, իսկ մղումը ատոմները նորից գրգռում է։",
+      "en": "A cartoon of the inside of the gain medium: atoms, some of them excited, and photons flying through. A photon that passes an excited atom makes it emit a second photon that flies along with it; the pump lifts the atoms up again."
+    },
+    "words": {
+      "title": { "hy": "Ակտիվ միջավայրի ներսում (մասշտաբը պահպանված չէ)", "en": "Inside the gain medium (not to scale)" },
+      "excited": { "hy": "գրգռված ատոմ", "en": "excited atom" },
+      "ground": { "hy": "չգրգռված ատոմ", "en": "atom at rest" },
+      "photon": { "hy": "լազերային ֆոտոն", "en": "laser photon" },
+      "stray": { "hy": "պատահական ֆոտոն", "en": "stray photon" }
+    }
+  },
+
+
+  "atoms": {
+    "_readme": "Inside one atom of the chosen gain medium: its energy levels, drawn by js/laser/ui/draw-atoms.js. 'title' is written top left; the medium's name and its scheme ('two', 'three', 'four') top right; the levels' roles on the right of each level; the note at the bottom says what the scheme teaches. Keep them short: a phone squeezes them.",
+    "alt": {
+      "hy": "Ընտրված ակտիվ միջավայրի մեկ ատոմի էներգիական մակարդակները և ատոմների մի շարք, որոնք ցույց են տալիս, թե ինչ է կատարվում լազերում․ մղումը ատոմները բարձրացնում է վերին մակարդակներ, իսկ վերին լազերային մակարդակից իջնող ատոմը լույս է արձակում։ Պատկերը փոխվում է միջավայրի հետ՝ երեք կամ չորս մակարդակ, օգնական գազ (հելիում, ազոտ) կամ ընդամենը երկու մակարդակ։",
+      "en": "The energy levels of one atom of the chosen gain medium, with a row of atoms acting out the laser: the pump lifts atoms to the higher levels, and an atom stepping down from the upper laser level gives out light. The picture changes with the medium: three or four levels, a helper gas (helium, nitrogen), or only two levels."
+    },
+    "words": {
+      "title": { "hy": "Մեկ ատոմի ներսում (մասշտաբը պահպանված չէ)", "en": "Inside one atom (not to scale)" },
+      "two": { "hy": "երկու մակարդակ", "en": "two levels" },
+      "three": { "hy": "երեք մակարդակ", "en": "three levels" },
+      "four": { "hy": "չորս մակարդակ", "en": "four levels" },
+      "ground": { "hy": "հիմնական մակարդակ", "en": "ground level" },
+      "lower": { "hy": "ստորին լազերային", "en": "lower laser level" },
+      "upper": { "hy": "վերին լազերային", "en": "upper laser level" },
+      "band": { "hy": "մղման գոտի", "en": "pump band" },
+      "pump": { "hy": "մղում", "en": "pump" },
+      "electrons": { "hy": "էլեկտրոններ", "en": "electrons" },
+      "heat": { "hy": "ջերմություն", "en": "heat" },
+      "transfer": { "hy": "բախում", "en": "collision" },
+      "noteTwo": { "hy": "Մղումը ատոմներն իջեցնում է այնքան, որքան բարձրացնում․ կեսից ավելին վեր չեն ելնում, լազեր չկա։", "en": "The pump knocks atoms down as often as it lifts them: never over half up, so no laser." },
+      "noteThree": { "hy": "Անցումն ավարտվում է հիմնական մակարդակում․ ատոմների կեսից ավելին պետք է վերևում լինի։", "en": "The laser step ends on the ground level: over half the atoms must be up first." },
+      "noteFour": { "hy": "Ստորին մակարդակը միանգամից դատարկվում է․ նույնիսկ թույլ մղումն է բավական։", "en": "The lower level empties at once, so even a weak pump is enough." }
+    }
+  },
+
+  "stability": {
+    "_readme": "The stability diagram of the two mirrors, beside the chart. 'title' is written above it, 'stable' inside the shaded region, 'g1' and 'g2' at the ends of the axes: keep them short.",
+    "alt": {
+      "hy": "Երկու հայելիների կայունության դիագրամը․ յուրաքանչյուր հայելու g = 1 − L/R թիվը մեկ առանցքի վրա է։ Ստվերագծված տիրույթում հայելիների զույգը լույսը պահում է իրենց միջև, իսկ դրանից դուրս լույսը կողքով դուրս է գնում։ Կետը սարքի հայելիների զույգն է և շարժվում է, երբ հայելին ծռում եք։",
+      "en": "The stability diagram of the two mirrors: each mirror's g = 1 − L/R on one axis. Inside the shaded region the pair keeps the light between the mirrors; outside it the light walks out sideways. The dot is the pair on the bench, and it moves as you bend a mirror."
+    },
+    "words": {
+      "title": { "hy": "Հայելիների կայունություն", "en": "Mirror stability" },
+      "stable": { "hy": "կայուն", "en": "stable" },
+      "g1": { "hy": "g₁ հետին", "en": "g₁ back" },
+      "g2": { "hy": "g₂ ելքային", "en": "g₂ output" }
+    }
+  },
+
+  "more": {
+    "_readme": "The 'Learn more' links of the lab: each opens the laser book (data/laser-study.json) at one section, written 'section-' then that section's id. 'media' and 'pumps' follow the chosen medium and pump; the others belong to one part of the page. A medium or pump missing here has no link.",
+    "media": {
+      "ruby": "section-ruby",
+      "nd-glass": "section-neodymium",
+      "nd-yag": "section-neodymium",
+      "he-ne": "section-he-ne",
+      "ar-ion": "section-argon-co2",
+      "co2": "section-argon-co2",
+      "dye-r6g": "section-tunable",
+      "ti-sapphire": "section-tunable"
+    },
+    "pumps": {
+      "flashlamp": "section-flashlamp",
+      "diode": "section-diodes",
+      "discharge": "section-discharge",
+      "laser": "section-laser-pump"
+    },
+    "mirrors": "section-curved",
+    "coupler": "section-best-mirror",
+    "qSwitch": "section-giant-pulse",
+    "doubler": "section-neodymium",
+    "chart": "section-spikes",
+    "stability": "section-curved",
+    "photons": "section-meetings",
+    "atoms": "section-levels"
+  },
+
+  "learn": {
+    "_readme": "The way to the study page (route 'laser-study', its words in data/laser-study.json). 'button' is the button above the bench, 'title', 'lead' and 'link' the last section of this page.",
+    "route": "laser-study",
+    "button": { "hy": "Խորանալ լազերի ֆիզիկայի մեջ", "en": "Dig deeper into the physics of the laser" },
+    "title": { "hy": "Ինչպես է աշխատում լազերը", "en": "How a laser works" },
+    "lead": {
+      "hy": "Լազերի ֆիզիկան՝ պարզից մինչև բանաձևեր, իր առանձին էջում է։",
+      "en": "The physics of the laser, from the simple picture to the formulas, has a page of its own."
+    },
+    "link": { "hy": "Բացել ուսումնական նյութը", "en": "Open the study material" }
+  }
+}

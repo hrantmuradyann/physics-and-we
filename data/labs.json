@@ -13,6 +13,20 @@
     }
   },
 
+  "featured": {
+    "_readme": "THE BIG BANNER above the simulations. It leads to the laser lab (?view=laser); where it leads is fixed in sections/labs.html, only the words are here. To hide the banner, delete the whole { ... } block inside \"items\" (leave the empty brackets: \"items\": []).",
+    "items": [
+      {
+        "eyebrow": { "hy": "Մեծ լաբորատորիա", "en": "The big lab" },
+        "title": { "hy": "Կառուցե՛ք ձեր լազերը", "en": "Build your own laser" },
+        "text": {
+          "hy": "Հավաքե՛ք լազերը իր մասերից՝ ակտիվ միջավայր, մղում և հայելիներ, և պարզե՛ք, թե երբ և ինչու է այն սկսում լույս արձակել։",
+          "en": "Put a laser together from its parts (gain medium, pump and mirrors) and find out when, and why, it starts to shine."
+        }
+      }
+    ]
+  },
+
   "simulations": {
     "_readme": "THE LABS THAT RUN IN THE BROWSER. 'slug' is the address of the lab: it must match a file in js/labs/ and one in data/labs/ with the same name. An entry with no slug is simply not shown. See Instructions/LABS-GUIDE.md.",
 

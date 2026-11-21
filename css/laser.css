@@ -1,0 +1,888 @@
+/* ============================================================================
+   laser.css — the laser lab (?view=laser) and the banner that leads to it.
+
+   The bench itself is drawn on a canvas by js/laser/ui/, so there is little
+   here: the box around the canvas and a few blocks of text.
+
+   THE BLOCKS
+     .container--laser  the page's own, wider container
+     .laser-head      the title block of the laser page (also a .page-head)
+     .laser-status    the small "still being built" note under the lead
+     .band--laser     the stripe the bench sits in
+     .laser-stage     the grid of the page's main blocks:
+                        __more      the button that leads to the theory
+                        __bench     the drawing of the laser
+                        __controls  sliders, number boxes, buttons
+                        __photons   the cartoon of atoms and photons
+                        __side      the big chart with the numbers under it
+     .laser-bench     the box a canvas sits in (it sets the width)
+     .laser-end       a column at one end of the drawing (--back on the
+                      left, --output on the right): that mirror's shapes
+                      and its upright radius slider (__radius)
+     .laser-choose    a dropdown that chooses the laser: __item is one
+                      with its name (--bench beside the drawing), __select
+                      the dropdown itself
+     .laser-over      the row right above the drawing: the medium's
+                      dropdown, centred over the drawn medium
+     .laser-under     the row right under the drawing: the pump's dropdown
+                      and Fire in its __middle, and the Q-switch
+     .laser-more      a small "Learn more" link to the laser book;
+                      .laser-more-row a line of its own for one
+     .laser-fire      Fire, centred under the drawn lamp: a lightning
+                      __bolt and its word, and a ring of light that swells
+                      out of it while the lamp is dark (data-ready)
+     .laser-switch    the Q-switch in that row: __name and the On/Off
+                      __toggle (its __track and __knob, and the __word On
+                      or Off)
+     .laser-mirror    one mirror's name and its __shapes: three buttons
+                      (.laser-shape, a toggle button each, with an __icon of the
+                      face and its word), the chosen one lit
+     .laser-side__chart, __stability, __numbers   the three blocks of the
+                      side column: the chart, the stability diagram and
+                      the numbers
+     .laser-field     a number box with its unit, beside a slider's name
+     .laser-hint      the line under the slow-motion slider
+     .laser-readouts  the numbers, in a panel of their own
+     .laser-note      the note shown when the computer cannot keep up
+     .laser-learn     the last section: a link to the study page
+     .lab-feature     the big banner on the Labs page (sections/labs.html)
+
+   The sliders, numbers and buttons themselves are the labs' own
+   .lab__panel, .lab-control, .lab-readout and .lab__buttons (css/labs.css).
+
+   Colours: only the theme variables of css/style.css, so everything follows
+   the dark / light theme. tests/laser/site-files.test.js checks that no
+   colour is written out in this file.
+   ========================================================================== */
+
+/* ============================================================================
+   THE TITLE BLOCK
+   ========================================================================== */
+
+/* "← All labs" above the eyebrow (.lab__back is in css/labs.css). */
+.laser-head .lab__back {
+  margin-bottom: 1.4rem;
+}
+
+.laser-status {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--line);
+  /* Not a round pill: in Armenian, and on a phone, it wraps to several lines. */
+  border-radius: var(--radius-sm);
+  background: var(--faint-bg);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ============================================================================
+   THE BENCH
+   ========================================================================== */
+
+/* The bench sits close under the title, so it is on the first screen. */
+/* The whole laser page: one plain neutral colour, grey in both themes (no
+   silver lines, no blue or cream tint, no glow), so the colour of the laser
+   light and of each part reads true. The page head's and the bands' own
+   backgrounds and glows are taken away so nothing shows through. */
+.laser-lab {
+  /* The site's colour names, set to the lab's fixed colours (css/style.css,
+     --laser-*), so every block inside, the site's own (.btn, .prose,
+     .eyebrow, the sliders) and this file's, looks the same in both themes. */
+  --bg: var(--laser-bg);
+  --bg-2: var(--laser-bg);
+  --bg-3: var(--laser-bg);
+  --heading: var(--laser-heading);
+  --text: var(--laser-text);
+  --muted: var(--laser-muted);
+  --line: var(--laser-line);
+  --frame-line: var(--laser-line);
+  --faint-bg: var(--laser-faint-bg);
+  --card-bg: none;
+  --shadow: var(--laser-shadow);
+  --glow-1: transparent;
+  --glow-2: transparent;
+  --accent: var(--laser-accent);
+  --accent-2: var(--laser-accent-2);
+  --accent-soft: var(--laser-accent-soft);
+  --accent-ring: var(--laser-accent-ring);
+  --hover-line: var(--laser-hover-line);
+  --hover-tint: var(--laser-hover-tint);
+  --button-glow: var(--laser-button-glow);
+  --button-glow-hover: var(--laser-button-glow-hover);
+  --ghost-bg: var(--laser-ghost-bg);
+  --ghost-border: var(--laser-ghost-border);
+  --ghost-bg-hover: var(--laser-ghost-bg);
+  --ghost-border-hover: var(--laser-ghost-border-hover);
+  --icon: var(--laser-icon);
+  --icon-bg: var(--laser-icon-bg);
+  /* The browser's own parts (the dropdowns' lists, the sliders' tracks)
+     drawn light too, on the dark theme as well. */
+  color-scheme: light;
+  background-color: var(--laser-bg);
+  color: var(--text);
+}
+
+.laser-lab .page-head,
+.laser-lab .band,
+.laser-lab .band--alt {
+  background: none;
+}
+
+.band--laser {
+  padding-top: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+/* The same look as the frame of the other labs (.lab__frame in
+   css/labs.css), so the laser lab feels like part of the same set. */
+.laser-bench {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background-color: var(--laser-bg);
+}
+
+/* The width comes from the box; js/laser/ui/loop.js sets the height. */
+.laser-bench__canvas {
+  display: block;
+  width: 100%;
+}
+
+/* ---------- the mirrors' columns, at each end of the drawing ----------
+
+   [back mirror's column] [the drawing] [output mirror's column]
+   Each column: the mirror's name, its three shapes one under another, and,
+   for a curved mirror, a vertical slider for its radius (top = largest)
+   with its number box. The drawing's box (.laser-bench__view) is what
+   js/laser/ui/loop.js measures for the canvas's width. Under 760 px the
+   columns go under the drawing, side by side, with ordinary sliders. */
+.laser-bench__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: stretch;
+}
+
+.laser-bench__view {
+  min-width: 0;
+  align-self: center;
+}
+
+.laser-end {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.8rem;
+  width: 7.6rem;
+  padding: 0.9rem 0.6rem;
+}
+
+.laser-end--back {
+  border-right: 1px solid var(--line);
+}
+
+.laser-end--output {
+  border-left: 1px solid var(--line);
+}
+
+.laser-end .laser-mirror {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: center;
+}
+
+.laser-end .laser-shapes {
+  display: flex;
+  flex-direction: column;
+}
+
+.laser-end .laser-shape {
+  justify-content: flex-start;
+}
+
+/* The radius: "R", the number box and its unit, and the slider standing
+   up. The long name (controls.Rc1 / Rc2) is kept for screen readers only. */
+.laser-end__radius {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 9rem;
+}
+
+.laser-end__radius .lab-control__label {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0;
+}
+
+.laser-end__r {
+  font-size: 1rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--heading);
+}
+
+.laser-end__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.laser-end .laser-field__input {
+  width: 4.6rem;
+  text-align: center;
+}
+
+/* writing-mode turns the range input upright; direction: rtl puts its
+   smallest value at the bottom. */
+.laser-end__radius .lab-control__input {
+  flex: 1;
+  width: 1.6rem;
+  height: auto;
+  min-height: 6rem;
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
+@media (max-width: 759px) {
+  .laser-bench__row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "view view"
+      "back output";
+  }
+
+  .laser-bench__view {
+    grid-area: view;
+  }
+
+  .laser-end {
+    width: auto;
+    border-top: 1px solid var(--line);
+  }
+
+  .laser-end--back {
+    grid-area: back;
+    border-right: 0;
+  }
+
+  .laser-end--output {
+    grid-area: output;
+    border-left: 1px solid var(--line);
+  }
+
+  .laser-end__radius {
+    min-height: 0;
+  }
+
+  .laser-end__radius .lab-control__input {
+    flex: none;
+    width: 100%;
+    height: 1.5rem;
+    min-height: 0;
+    writing-mode: horizontal-tb;
+    direction: ltr;
+  }
+}
+
+/* The two charts: a crosshair follows the pointer (js/laser/page.js). On a
+   touch screen an up-and-down drag still scrolls the page, and a sideways
+   drag moves the crosshair instead of being taken by the browser. */
+.laser-bench__canvas--chart {
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+
+/* ============================================================================
+   THE STAGE — the page's main blocks (docs/laser-plan.md, stage 6b)
+
+   One column on a narrow screen, in the order of sections/laser.html.
+   From 760 px: the controls and the photons side by side.
+   From 1100 px: three columns; the bench over the first two, the chart
+   and the numbers down the third.
+   ========================================================================== */
+
+/* Three columns do not fit in the other labs' 960 px. */
+.container--laser {
+  max-width: 1480px;
+}
+
+.laser-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.3rem;
+  align-items: start;
+}
+
+.laser-stage__more {
+  display: flex;
+  justify-content: center;
+}
+
+/* The cartoon inside the medium, and the atom's levels under it. */
+.laser-stage__photons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.3rem;
+  align-content: start;
+}
+
+.laser-stage__side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.3rem;
+  align-content: start;
+}
+
+@media (min-width: 760px) {
+  .laser-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-areas:
+      "more     more"
+      "bench    bench"
+      "controls photons"
+      "side     side";
+  }
+
+  .laser-stage__more { grid-area: more; }
+  .laser-stage__bench { grid-area: bench; }
+  .laser-stage__controls { grid-area: controls; }
+  .laser-stage__photons { grid-area: photons; }
+  .laser-stage__side { grid-area: side; }
+
+  /* The chart and the stability diagram under it, beside the numbers. */
+  .laser-stage__side {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-areas:
+      "chart     numbers"
+      "stability numbers";
+  }
+
+  .laser-side__chart { grid-area: chart; }
+  .laser-side__stability { grid-area: stability; }
+  .laser-side__numbers { grid-area: numbers; }
+}
+
+@media (min-width: 1100px) {
+  .laser-stage {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr) minmax(0, 1.2fr);
+    grid-template-areas:
+      "more     more    side"
+      "bench    bench   side"
+      "controls photons side";
+  }
+
+  /* Beside the bench: the chart, the stability diagram right under it
+     (the owner wanted it where it can be watched while the laser runs),
+     then the numbers. */
+  .laser-stage__side {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "chart"
+      "stability"
+      "numbers";
+  }
+}
+
+/* js/laser/page.js hides what a bench does not have: readout rows, Fire,
+   the row under the drawing, the Q-switch's group and the filter's slider
+   row. Their own display rules (.lab-readout and .laser-switch are flex,
+   .btn inline-flex, .laser-under grid) would beat the hidden attribute and
+   show them again. */
+.laser-stage [hidden] {
+  display: none;
+}
+
+/* ---------- the mirrors' shapes ---------- */
+
+.laser-mirror {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.8rem;
+}
+
+/* The three buttons wrap onto a second line on a narrow panel (a 320 px
+   phone, with the Armenian words). */
+.laser-shapes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* One shape: a small picture of the face and its word. The chosen one
+   (aria-pressed, set by js/laser/page.js) is lit in the accent. */
+.laser-shape {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.55rem 0.3rem 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background-color: var(--laser-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.laser-shape:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.laser-shape[aria-pressed="true"] {
+  border-color: var(--accent-soft);
+  color: var(--heading);
+  font-weight: 600;
+}
+
+.laser-shape__icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.laser-shape[aria-pressed="true"] .laser-shape__icon {
+  stroke: var(--accent-soft);
+}
+
+/* ---------- the choice of laser ---------- */
+
+/* Each dropdown sits beside its part of the drawing (stage 12c, the
+   owner's wish): the medium's in a row above the bench, centred over the
+   drawn medium (the picture is symmetric), the pump's in the middle of the
+   row under it, over Fire. Nothing is laid over the canvas. A dropdown is
+   15rem wide: the longest name a visitor can choose, "Ներկանյութ
+   (ռոդամին 6G)", needs about 14.5rem with its padding and arrow (at 160px
+   the Armenian names were cut). min(…, 100%): on a 320 px phone the row is
+   narrower than 15rem. */
+.laser-choose__item {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.laser-choose__item--bench {
+  width: min(15rem, 100%);
+  justify-items: center;
+  text-align: center;
+}
+
+.laser-over {
+  display: flex;
+  justify-content: center;
+  padding: 0.9rem 1.1rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.laser-under__middle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  width: 100%;
+}
+
+/* "Learn more": a small link to the part of the laser book about the thing
+   beside it (the router opens ?view=laser-study&id=section-…). */
+.laser-more {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.laser-more-row {
+  margin: 0;
+  padding: 0.35rem 0.9rem 0.55rem;
+  text-align: center;
+}
+
+.laser-choose__select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background-color: var(--laser-bg);
+  color: var(--heading);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* The list that opens: some browsers draw it with the select's colours,
+   others with their own; set both so it reads in either theme. */
+.laser-choose__select option,
+.laser-choose__select optgroup {
+  background-color: var(--laser-bg);
+  color: var(--heading);
+}
+
+.laser-choose__select:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+/* ---------- under the drawing: Fire and the Q-switch ---------- */
+
+/* A row along the bench's bottom edge, each control under its part of
+   the drawing: Fire in the middle, under the lamp (which is centred), and
+   the Q-switch's name over its On/Off on the left, under the filter (the
+   doubling crystal's on the right, stage 13b). The
+   bench spans the stage's full width from 760 px (.laser-stage); below
+   that the two go one under the other, Fire first. */
+.laser-under {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  padding: 0.9rem 1.1rem 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.laser-under .laser-under__middle {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.laser-under .laser-switch {
+  grid-column: 1;
+  grid-row: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+/* The doubling crystal's On/Off (stage 13b) on the right, under the
+   crystal past the output mirror. */
+.laser-under .laser-switch--doubler {
+  grid-column: 3;
+  align-items: flex-end;
+  justify-self: end;
+  text-align: right;
+}
+
+@media (max-width: 759px) {
+  .laser-under {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  /* Placed in the order they are written, the pump's dropdown and Fire
+     first: a hidden Fire (a laser without a lamp) then leaves no empty row
+     above the switch. */
+  .laser-under .laser-under__middle {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .laser-under .laser-switch {
+    grid-column: 1;
+    grid-row: auto;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .laser-under .laser-switch--doubler {
+    justify-self: center;
+    text-align: left;
+  }
+}
+
+/* Fire: a big pill with a lightning bolt, the button a visitor who does
+   not know what it is still wants to press (the owner's wish). While the
+   lamp is dark (data-ready="true", js/laser/page.js) a ring of light keeps
+   swelling out of it and the bolt pulses; while a flash is lit it waits.
+   Its colours are .btn--primary's: white on the accent gradient. */
+.laser-fire {
+  position: relative;
+  padding: 0.85rem 1.7rem 0.85rem 1.35rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.laser-fire:active {
+  transform: scale(0.96);
+}
+
+.laser-fire:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 3px;
+}
+
+.laser-fire__bolt {
+  flex-shrink: 0;
+  width: 1.3rem;
+  height: 1.3rem;
+  fill: currentColor;
+}
+
+/* The ring: a copy of the pill's outline that grows and fades. */
+.laser-fire::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  bottom: -2px;
+  left: -2px;
+  border: 2px solid var(--accent);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.laser-fire[data-ready="true"]::after {
+  animation: laser-fire-ring 1.8s ease-out infinite;
+}
+
+.laser-fire[data-ready="true"] .laser-fire__bolt {
+  animation: laser-fire-bolt 1.8s ease-in-out infinite;
+}
+
+@keyframes laser-fire-ring {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12, 1.5);
+  }
+}
+
+@keyframes laser-fire-bolt {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.22) rotate(-10deg);
+  }
+}
+
+.laser-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+}
+
+/* Under the doubling crystal's switch: green needs the filter's pulses. */
+.laser-switch__note {
+  flex-basis: 100%;
+  max-width: 18rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.laser-switch__name {
+  color: var(--heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* A switch, not a checkbox: a track with a knob, and the word On or Off
+   (role="switch" and aria-checked in sections/laser.html; js/laser/page.js
+   sets them). */
+.laser-switch__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.2rem 0.35rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.laser-switch__toggle:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.laser-switch__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 1.45rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background-color: var(--laser-bg);
+  transition: background-color 0.2s;
+}
+
+.laser-switch__knob {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background-color: var(--muted);
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+/* On: the track in the accent, the knob moved to the right. */
+.laser-switch__toggle[aria-checked="true"] .laser-switch__track {
+  border-color: transparent;
+  background-image: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+.laser-switch__toggle[aria-checked="true"] .laser-switch__knob {
+  transform: translateX(1.15rem);
+  background-color: var(--laser-bg);
+}
+
+.laser-switch__word {
+  min-width: 2.2rem;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .laser-switch__track,
+  .laser-switch__knob {
+    transition: none;
+  }
+
+  /* Fire still shows it is ready, with a ring that stands still. */
+  .laser-fire[data-ready="true"]::after,
+  .laser-fire[data-ready="true"] .laser-fire__bolt {
+    animation: none;
+  }
+
+  .laser-fire[data-ready="true"]::after {
+    opacity: 0.6;
+  }
+}
+
+/* ---------- a slider's number box ---------- */
+
+.laser-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.laser-field__input {
+  width: 5.4rem;
+  padding: 0.28rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--faint-bg);
+  color: var(--heading);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.laser-field__input:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.laser-field__unit {
+  min-width: 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+
+/* What the slow motion means: "1 s = 100 µs". */
+.laser-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* In a panel of their own the numbers need no line above them. */
+.laser-readouts {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* No display rule here: the hidden attribute must keep it hidden. */
+.laser-note {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--accent-soft);
+}
+
+/* ============================================================================
+   THE LINK TO THE STUDY PAGE (the theory has a page of its own)
+   ========================================================================== */
+.laser-learn .section-title {
+  margin-bottom: 1rem;
+}
+
+.laser-learn__go {
+  margin-top: 1.6rem;
+}
+
+/* ============================================================================
+   THE BANNER ON THE LABS PAGE
+   A larger card (it is also .card .card--link), with a coloured stripe
+   down its left edge, above the grid of the other labs.
+   ========================================================================== */
+.lab-feature {
+  padding: clamp(1.8rem, 4vw, 2.6rem) clamp(1.5rem, 4vw, 2.6rem);
+  margin-bottom: 2.4rem;
+  border-color: var(--hover-line);
+}
+
+.lab-feature::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+}
+
+.lab-feature__title {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 800;
+  color: var(--heading);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0.6rem 0 0.8rem;
+}
+
+.lab-feature__text {
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.7;
+  max-width: 62ch;
+}
+
+/* ============================================================================
+   SMALL SCREENS
+   ========================================================================== */
+@media (max-width: 640px) {
+  .laser-bench {
+    border-radius: 14px;
+  }
+}
