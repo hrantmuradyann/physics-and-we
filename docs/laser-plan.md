@@ -117,6 +117,7 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
 
 - **Owner's change (2026-11-20, after the first build), done:** the menu item is "Study materials" (route `study`, `sections/study.html`, `data/study.json`: a page of posters like Labs, one laser poster, reusing `.lab-feature`); `laser-study` is hidden and reached from that poster; the book has contents (`data-study-toc`, a link per chapter), a "Contents ↑" link under each chapter, and every "chapter N" in the text is a link; `js/laser-study.js` scrolls to them itself (the router's `hashchange` would show the page from the top).
 - **Stage 12a (the study page) is committed:** Study materials in the menu, the laser poster, the laser book (13 chapters, contents, links by chapter id, KaTeX), the simulator's links, the dashed stray photons; 788 tests, 987 of 987 mutations caught, `/code-review medium` done. **Next, stage 12b (the owner's request of 2026-11-20):** rebuild the book as 7 chapters with numbered sections (1 History; 2 What makes laser light special; 3 The gain medium, 3.1–3.10 incl. levels, coherence and each medium; 4 Pumping; 5 The resonator; 6 How a laser starts, and pulses; 7 Safety; the full outline is in the conversation of 2026-11-20 and must be written into a scope card first), section numbers made by the page, friendlier text, every formula and symbol in KaTeX (also in worked examples; decimal point in formulas in both languages), and a framed picture placeholder per section describing what the picture should show (the owner will make them).
+- **Stage 13 is finished** (2026-11-21): 13f dropped; 13g's pump chamber built and removed at the owner's request; committed with it, the doubling crystal's fixes (the diode Nd:glass's filter, the note "turn on the filter", its Learn more) and the book's corrected sentence on green pointers (record under Stage 13). **Next:** stage 14 (docs), when the owner asks.
 - **Stage 13d (mode locking) dropped by the owner** (2026-11-21). It was built as a picture of its own under the atom (the N modes added up, locked or random, against time in round trips, with an N slider and the chosen laser's T_R, modes and shortest pulse); seen on the page, the owner said the graph "gives 0 info" and chose to remove it rather than show the waves adding up or the laser's real times. Nothing was committed. Kept: the doc fix in §4.5 (ruby's locked pulse is about 3 ps with equal amplitudes, 1.3 ps for a Gaussian spectrum, not "~1 ps"). **Next:** 13f, 13g, asking the owner first.
 - **2026-11-21, end of day:** the green flash's fade (the owner's choice) is committed with its review fixes (834 tests, 1082 of 1082 mistakes caught). The owner's answers: the laser need not go out at high pump (13c as it is); the green fades. **Next:** 13d, 13f, 13g, asking the owner first now that they are back.
 - **Stage 13b (the green beam, a KDP doubler outside the cavity) is committed** (2026-11-21, unattended; record in its scope card). **Next:** 13d (mode locking), then 13f, 13g, smallest version first.
@@ -141,7 +142,7 @@ each frame: sim = LaserEngine.bench.advance(sim, config, wallDt × slowMotion, s
   - use the Edit tool, not shell scripts, for Armenian text;
   - the review runs as `/code-review medium` (the owner's setting, 2026-11-20; stages up to 10c2 used xhigh).
 
-Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking. `docs/laser-progress.md` tells the same story in plain words for the owner; update it with each stage's commit.
+Working agreement: every stage follows the recipe in section 3, ends with `/code-review` (findings fixed before the stage counts as done), and is committed to `feature/laser` as one commit. Nothing is pushed without asking. (`docs/laser-progress.md`, the same story in plain words for the owner, was deleted at the owner's request on 2026-11-21; older records below still name it.)
 
 ## What went wrong in stage 1, and the rule that prevents it
 
@@ -1616,8 +1617,8 @@ The owner's request: go over the whole book again and, wherever it names somethi
 | 13c | Thermal lens in the round trip | f = 1.08 m; the cavity goes unstable with more pump |
 | ~~13d~~ | ~~Mode-locking scene~~ **dropped** (owner, 2026-11-21) | — |
 | ~~13e~~ | ~~Self-focusing~~ **dropped** (owner, 2026-11-21) | — |
-| 13f | Diode carrier model (§5.7) + collimation (§8.6) | I_th 10–30 mA, slope 0.5–1 W/A |
-| 13g | Pumping chain: elliptical reflector ray tracing, Fan–Byer, discharge optimum, Planck lamp | P_th = 0.133 W, I_opt formula |
+| ~~13f~~ | ~~Diode carrier model (§5.7) + collimation (§8.6)~~ **dropped** (owner, 2026-11-21) | — |
+| ~~13g~~ | ~~Pumping chain: elliptical reflector ray tracing~~ built, then **removed** by the owner (2026-11-21); Fan–Byer and the discharge optimum were already on the page | — |
 
 #### Stage 13b scope card (2026-11-21, decided without the owner)
 
@@ -1677,6 +1678,20 @@ The owner was asleep and asked for stage 13 to go on unattended ("don't ask me a
 **Tests** (`tests/laser/thermal.test.js`, new): §8.7's example 1.0845 m (uniform formula, as a check of the doc's number); the bench's f at 5 W = 1.21173 m, at 20 W = 0.302932 m, at threshold 4.03909 m; f doubles when the pump halves; null at 0 W, on the flashlamp Nd:YAG, on every other bench; heat share 1 − 0.9·808/1064; `lens: 0` gives the old answers bit for bit on every bench; the equivalent g's give m = (A + D)/2 of the matrix product (random lenses and mirrors, 1e-12); `beamRadius` with a lens: continuous at the lens, equal to the equivalent resonator's w₁, w₂ at the mirrors, and to the empty formula for a lens of 10⁻¹² m⁻¹; `traceRay` with a lens: `middle` on every hit, each hit = the ray matrices by hand; the cavity unstable at 40 W and stable again at 50 W; derive's resonator follows the pump; inputs deep-frozen; `lens` refused when missing or not finite. Page (`page-mirrors.test.js`): the row shows on the Nd:YAG diode bench and hides on ruby; its text at 5 W; a pump move rebuilds the drawing's cavity; rays drawn through `middle`.
 
 **Breaks** (mutations): the heat share without η; the uniform rod's 2KA for the end-pumped K·A; the lens at a mirror instead of the middle; L* instead of |L₀| in the spots; `middle` dropped from the drawing; `pumpPower` dropped from `CAVITY_FIELDS`; the lens's sign flipped; and more (21 in all, `tests/laser/mutations.js`).
+
+#### Stage 13g record (2026-11-21): the chamber removed; the doubling crystal's fixes kept
+
+The owner dropped 13f (the diode carrier model) and asked for 13g. Its visible piece, the flashlamp's elliptical pump chamber seen from the end (§6.2: a traced ellipse, the lamp on one focus, the rod on the other, "63 % of the lamp's light reaches the rod"), was built and shown on the page; the owner asked to delete it ("delete this"). Nothing of it is kept. The Fan–Byer threshold and the discharge's optimum current were on the page already; the Planck lamp was not built. So stage 13 ends here.
+
+Kept, done in the same stage at the owner's request:
+- **The crystal and the filter drawn as the real ones** (the owner: "make it look real"): KDP a water-clear block in clamps on a tilt stage; Cr⁴⁺:YAG a dark brown disc in a holder; ruby's cryptocyanine a blue dye in a glass cell (`materials.KDP`, `materials.ABSORBERS`).
+- **The doubling crystal's "Learn more"** (`more.doubler` = the book's neodymium section, where doubling is explained).
+- **Nd:glass with diodes gets the bleachable filter** (T₀ 0.99, a thin Cr⁴⁺:YAG plate: the 5 mm disc's cavity loses so little that 0.95 needs 1.9 W; behind it the threshold is 0.65 W, under the default 1 W; 0.57 kW pulses; frame cost 554 steps, measured). The owner found its crystal made no green: a steady watt turns about 10⁻⁵ of itself green, and this bench had no pulses.
+- **A note under the crystal's switch** while the filter is off: "The crystal turns only strong pulses green: turn on the bleachable filter." (`data-laser-note="doubler"`, `notes.doubler`).
+- **The book's neodymium section** (the owner's correction): "Green laser pointers work exactly this way" became "use the same effect, with the crystal inside the laser, where the trapped infrared is much stronger, so it works continuously"; its "Dig deeper" gains "Why green needs strong light" (the share grows with intensity; about $0.001\ \%$ for a steady beam outside the laser; a pointer's crystal inside the cavity, a tiny spot, KTP).
+- **The progress doc deleted** at the owner's request (`docs/laser-progress.md`).
+
+`/code-review medium`: 7 findings, fixed: the dye cell's glass walls were drawn under the dye (now over it, made readable); the crystal's white glints vanished on the near-white bench (now the edges of its faces in its readable colour) and its 0.55 fill washed out the light through it (now 0.3); the filter's glint fades with the plate; the doubler note also asks `hasFilter`; the diode Nd:glass's filter slider starts at 0.9 (`absorberMin`; 3.56 W, under its 5 W top: from 0.2, 95 % of it never lased); the holder's clearance (mirror, rod, name) is now tested at every width (it was clear). 837 tests. Mutation check: 1092 of 1092 caught before the review fixes; after them the 6 changed entries checked alone, all caught (the note's `hasFilter` cannot be caught: every crystal bench has the filter, so it has no entry).
 
 ### Stage 14 — Docs
 A final pass over `CLAUDE.md`, `Instructions/LABS-GUIDE.md` (pointer to the laser page) and editing notes for `data/laser.json`. Each earlier stage has already kept them current (recipe step 8).

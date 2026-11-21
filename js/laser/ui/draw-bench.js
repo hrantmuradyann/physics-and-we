@@ -1043,15 +1043,42 @@
     drawLens(g, colors, L);
   }
 
-  // A bleachable filter: a plate, shaded by its share still unbleached.
-  function drawFilter(g, colors, F, open) {
-    g.globalAlpha = 0.15 + FILTER_SHADE * (1 - open);
+  // A bleachable filter, as a real one looks from the side: a thin disc
+  // of its own colour (Cr⁴⁺:YAG dark brown) or a glass cell of dye
+  // (ruby's cryptocyanine, deep blue), held at the top and the bottom in a
+  // ring holder, shaded by its unbleached share, with a glint along it.
+  // `absorber` is the engine's id; without one the theme's grey.
+  function drawFilter(g, colors, F, open, absorber) {
+    var M = UI.materials;
+    var look = absorber ? M.ABSORBERS[absorber] : null;
+    var body = look ? look.body : colors.muted;
+    // the holder's clamps, above and below the disc
     g.fillStyle = colors.muted;
+    g.fillRect(F.x - 2, F.y - 5, F.w + 4, 5);
+    g.fillRect(F.x - 2, F.y + F.h, F.w + 4, 5);
+    var shade = 0.15 + FILTER_SHADE * (1 - open);
+    g.globalAlpha = shade;
+    g.fillStyle = body;
     g.fillRect(F.x, F.y, F.w, F.h);
     g.globalAlpha = 1;
-    g.strokeStyle = colors.faint;
+    if (look && look.look === "liquid") {
+      // the cell's glass walls, over the dye between them (under it,
+      // the dye hid them: review)
+      g.fillStyle = M.readable(M.GLASS, colors.bg);
+      g.fillRect(F.x, F.y, 1.5, F.h);
+      g.fillRect(F.x + F.w - 1.5, F.y, 1.5, F.h);
+    }
+    g.strokeStyle = look ? M.readable(body, colors.bg) : colors.faint;
     g.lineWidth = 1;
     g.strokeRect(F.x, F.y, F.w, F.h);
+    if (look) {
+      // a white glint drawn over the plate, as strong as the plate is
+      // dark: on a bleached plate it would be white on white
+      g.globalAlpha = 0.9 * shade;
+      g.strokeStyle = M.HIGHLIGHT;
+      line(g, F.x + 0.35 * F.w, F.y + 0.1 * F.h, F.x + 0.35 * F.w, F.y + 0.4 * F.h);
+      g.globalAlpha = 1;
+    }
   }
 
   // The light beyond a filter, towards the mirror on its far side: the
@@ -1437,18 +1464,43 @@
     return UI.materials.readable(UI.materials.beam(light.lam / 2).color, colors.bg);
   }
 
-  // The doubling crystal: a clear block on a post, outlined.
+  // The doubling crystal, as a real one looks: a water-clear KDP block
+  // (faint, so the light through it shows) with the edges of its polished
+  // faces, held by metal clamps at the
+  // top and the bottom, on a small tilt stage with its knob (the crystal
+  // is turned to the phase-matching angle), on a post.
   function drawDoubler(g, colors, L) {
+    var M = UI.materials;
     var C = L.doubler;
     g.fillStyle = colors.faint;
     post(g, C.x + C.w / 2, C.y + C.h, L.railY);
-    g.globalAlpha = 0.25;
+    // the tilt stage under the crystal, with its knob
+    var stageY = C.y + C.h + 2;
+    var stageH = Math.max(3, 0.12 * C.h);
     g.fillStyle = colors.muted;
+    g.fillRect(C.x - 2, stageY, C.w + 4, stageH);
+    g.fillRect(C.x + C.w + 2, stageY + stageH / 2 - 1, 3, 2);
+    g.fillRect(C.x + C.w + 5, stageY - 1, 3, stageH + 2);
+    // the clamps
+    g.fillRect(C.x - 2, C.y - 3, C.w + 4, 3);
+    g.fillRect(C.x - 2, C.y + C.h, C.w + 4, 2);
+    // the crystal, a little darker at the bottom
+    g.globalAlpha = 0.3;
+    g.fillStyle = M.KDP;
     g.fillRect(C.x, C.y, C.w, C.h);
+    g.globalAlpha = 0.12;
+    g.fillStyle = M.SHADE;
+    g.fillRect(C.x, C.y + 0.75 * C.h, C.w, 0.25 * C.h);
     g.globalAlpha = 1;
-    g.strokeStyle = colors.heading;
+    g.strokeStyle = M.readable(M.KDP, colors.bg);
     g.lineWidth = 1;
     g.strokeRect(C.x, C.y, C.w, C.h);
+    // the edges of its polished faces, seen through the clear crystal (a
+    // white glint vanished on the near-white bench: review)
+    g.globalAlpha = 0.6;
+    line(g, C.x + 0.18 * C.w, C.y, C.x + 0.18 * C.w, C.y + C.h);
+    line(g, C.x + 0.82 * C.w, C.y, C.x + 0.82 * C.w, C.y + C.h);
+    g.globalAlpha = 1;
   }
 
   // Each curved mirror's focal point F, R/2 from it along the axis
@@ -1608,7 +1660,7 @@
     if (qSwitch) {
       var open = openOf(qSwitch);
       dimBeyond(g, colors, L, filterRect, filterBeyond, open);
-      drawFilter(g, colors, filterRect, open);
+      drawFilter(g, colors, filterRect, open, qSwitch.absorber);
     }
 
     // The pump's photons, or the gas's atoms, over the rays, each on a

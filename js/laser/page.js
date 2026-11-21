@@ -833,7 +833,7 @@
     function switchLight() {
       var now = switchNow();
       if (now === null) return null;
-      return { kind: state.config.qSwitch, open: now.open };
+      return { kind: state.config.qSwitch, open: now.open, absorber: state.config.absorber || null };
     }
     addCanvas("bench", UI.bench.SIZE, function (view) {
       UI.bench.draw(view, labels, {
@@ -978,6 +978,11 @@
       var doubled = doublingNow();
       if (doublerToggle) doublerToggle.setAttribute("aria-checked", doubled ? "true" : "false");
       setText('[data-laser-name="doublerState"]', word(data, doubled ? "choose.on" : "choose.off"));
+      // A steady beam turns almost nothing green (η ~ 10⁻⁵): the note says
+      // to turn on the filter, whose pulses do (every bench with the
+      // crystal has it).
+      var doublerNote = find('[data-laser-note="doubler"]');
+      if (doublerNote) doublerNote.hidden = !(doubled && state.config.qSwitch === "none" && hasFilter(state.config));
     }
     // A new config is taken in two steps: its numbers (and anything that
     // can fail) first, then the config. showBench then shows it: the

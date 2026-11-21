@@ -159,6 +159,9 @@ function laserSection(boxWidth) {
   by['[data-laser-action="reset"]'] = section.reset;
   by['[data-laser-action="fire"]'] = section.fire;
   by['[data-laser-note="behind"]'] = section.note;
+  section.doublerNote = fakeElement("p");               // "turn on the filter" (stage 13g)
+  section.doublerNote.hidden = true;
+  by['[data-laser-note="doubler"]'] = section.doublerNote;
   section.by = by;
   section.container = fakeContainer(by);
   section.canvas = section.canvases.bench;

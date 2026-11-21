@@ -291,7 +291,15 @@
     // Stage 12c: Nd:glass end-pumped by diodes at its 802 nm absorption
     // peak, as in diode-pumped phosphate-glass lasers: a 5 mm disc, a
     // 0.1 mm² spot, a 2 % coupler on a 20 cm mirror. Threshold 0.34 W.
+    // Stage 13g's fix: the bleachable filter, a thin Cr⁴⁺:YAG plate of
+    // T₀ = 0.99 (the cavity loses so little that 0.95 needs 1.9 W): behind
+    // it the threshold is 0.65 W, under the default 1 W, and it pulses
+    // (0.57 kW peaks), as the diode Nd:YAG does; its doubling crystal had
+    // no pulses to turn green. Its filter's slider starts at 0.9
+    // (absorberMin; threshold 3.56 W, under the 5 W top): from the usual
+    // 0.2, 95 % of it never lased (0.85 needs 5.31 W; review).
     { medium: "nd-glass", pump: "diode", max: 5,
+      qSwitches: ["absorber"], absorber: "cr-yag", absorberT0: 0.99, absorberMin: 0.9,
       config: { l_g: 5 * mm, area: 0.1 * mm2, L: 10 * cm, refl1: 1, refl2: 0.98, alpha_i: 0.2,
         mirror1: "flat", Rc1: 1, mirror2: "concave", Rc2: 20 * cm, aperture: 1 * mm,
         pumpPower: 1, pumpLam: 802 * nm, eta: 0.9 } },
@@ -497,7 +505,7 @@
       pump: { name: CONTROL_NAMES[setup.pump], min: 0, max: top, log: false },
       coupler: { min: COUPLER_RANGE.min, max: COUPLER_RANGE.max, log: COUPLER_RANGE.log },
       absorberT0: config.qSwitch === "absorber" ? {
-        name: "absorberT0", min: ABSORBER_T0_RANGE.min, max: ABSORBER_T0_RANGE.max, log: ABSORBER_T0_RANGE.log
+        name: "absorberT0", min: setup.absorberMin || ABSORBER_T0_RANGE.min, max: ABSORBER_T0_RANGE.max, log: ABSORBER_T0_RANGE.log
       } : null,
       Rc1: radiusRange(config, config.mirror1, "Rc1"),
       Rc2: radiusRange(config, config.mirror2, "Rc2")

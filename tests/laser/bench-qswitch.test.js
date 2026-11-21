@@ -152,12 +152,13 @@ const FLASH_BENCHES = ["ruby", "nd-glass", "nd-yag"];
 
 /* ---------- which setups have a Q-switch, and its fields ---------- */
 
-test("qSwitchesFor: \"none\" for every setup; the flashlamp rods have all three; the diode bench a filter", () => {
+test("qSwitchesFor: \"none\" for every setup; the flashlamp rods have all three; the two diode benches a filter", () => {
   const expected = {
     "ruby flashlamp": ["none", "cell", "prism", "absorber"],
     "nd-glass flashlamp": ["none", "cell", "prism", "absorber"],
     "nd-yag flashlamp": ["none", "cell", "prism", "absorber"],
-    "nd-yag diode": ["none", "absorber"]
+    "nd-yag diode": ["none", "absorber"],
+    "nd-glass diode": ["none", "absorber"]
   };
   for (const medium of E.media.list()) {
     for (const pump of B.pumpsFor(medium)) {
@@ -426,6 +427,17 @@ test("controls: the filter's transmission, 20–99 %, for a filter; null for eve
     }
   }
   assert.equal(B.controls(B.configFor({ medium: "he-ne", pump: "discharge" })).absorberT0, null);
+});
+
+test("controls: the diode Nd:glass's filter from 0.9, where it still lases under the pump slider's top (stage 13g review)", () => {
+  const cfg = bench("nd-glass", "diode", "absorber");
+  const controls = B.controls(cfg);
+  assert.equal(JSON.stringify(controls.absorberT0), JSON.stringify({ name: "absorberT0", min: 0.9, max: 0.99, log: false }));
+  for (const end of [0.9, 0.99]) {
+    const threshold = B.derive(bench("nd-glass", "diode", "absorber", { absorberT0: end })).pumpThreshold;
+    assert.ok(threshold < controls.pump.max, end + ": " + threshold + " W under " + controls.pump.max + " W");
+  }
+  assert.ok(B.derive(bench("nd-glass", "diode", "absorber", { absorberT0: 0.85 })).pumpThreshold > controls.pump.max, "0.85 would never lase");
 });
 
 test("switchNow: null without a Q-switch; the cell's loss and how open it is, before Fire, while it switches and after", () => {

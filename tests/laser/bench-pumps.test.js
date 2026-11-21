@@ -252,7 +252,8 @@ test("stage 12c's two common pairs: Nd:glass with 802 nm diodes, dye with a coax
   assertClose(B.flashThreshold(dye), 6.6094, 1e-4, "dye E_th, J");
   assertClose(B.derive(dye).xPeak, 3.0261, 1e-4, "dye at 20 J");
   assert.deepEqual(plain(B.qSwitchesFor({ medium: "dye-r6g", pump: "flashlamp" })), ["none"], "no Q-switch: its pulse is already short");
-  assert.deepEqual(plain(B.qSwitchesFor({ medium: "nd-glass", pump: "diode" })), ["none"]);
+  // Its filter (stage 13g's fix): a thin Cr⁴⁺:YAG plate, as on the diode Nd:YAG.
+  assert.deepEqual(plain(B.qSwitchesFor({ medium: "nd-glass", pump: "diode" })), ["none", "absorber"]);
 });
 
 /* ---------- derive, by pump kind ---------- */

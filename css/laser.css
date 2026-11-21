@@ -680,6 +680,16 @@
   gap: 0.4rem 0.8rem;
 }
 
+/* Under the doubling crystal's switch: green needs the filter's pulses. */
+.laser-switch__note {
+  flex-basis: 100%;
+  max-width: 18rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .laser-switch__name {
   color: var(--heading);
   font-size: 0.95rem;

@@ -452,7 +452,7 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
     }
     assert.ok(part.indexOf('data-laser-slider="Rc' + (i + 1) + '"') !== -1, name + "'s radius slider after its shapes");
   });
-  assert.deepEqual(attributeValues(html, "data-laser-note"), ["behind"]);
+  assert.deepEqual(attributeValues(html, "data-laser-note"), ["doubler", "behind"]);
   // The theory has a page of its own (study.test.js); nothing scrolls to it here.
   assert.equal((html.match(/\sdata-laser-learn[\s>]/g) || []).length, 0);
   const page = read("js/laser/page.js");

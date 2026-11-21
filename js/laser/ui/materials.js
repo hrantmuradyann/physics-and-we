@@ -75,6 +75,15 @@
   // Drawn over a rod, not over the background: the light it reflects
   // along its top, and the shade along its bottom (black at a low alpha,
   // darker on both themes).
+  // The doubling crystal (stage 13b, drawn as a real one after it): KDP
+  // is water-clear, a faint blue-grey where it is thick.
+  var KDP = "#cfe3ec";
+  // The bleachable filters as they look in daylight: Cr⁴⁺:YAG a dark
+  // brown disc, cryptocyanine (ruby's) a deep blue dye in a glass cell.
+  var ABSORBERS = Object.freeze({
+    "cr-yag": Object.freeze({ look: "plate", body: "#6e3b1f" }),
+    "cryptocyanine": Object.freeze({ look: "liquid", body: "#1d5fa8" })
+  });
   var HIGHLIGHT = "#ffffff";
   var SHADE = "#000000";
   // The false colour of an invisible beam: a hot pink, off the spectrum
@@ -228,6 +237,8 @@
     GLASS: GLASS,
     MIRROR_GLASS: MIRROR_GLASS,
     SILVER: SILVER,
+    KDP: KDP,
+    ABSORBERS: ABSORBERS,
     HIGHLIGHT: HIGHLIGHT,
     SHADE: SHADE,
     INFRARED: INFRARED,

@@ -4155,8 +4155,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    g.globalAlpha = 0.15 + FILTER_SHADE * (1 - open);",
-    replace: "    g.globalAlpha = 0.15 + FILTER_SHADE * open;",
+    find: "    var shade = 0.15 + FILTER_SHADE * (1 - open);",
+    replace: "    var shade = 0.15 + FILTER_SHADE * open;",
     why: "the filter darker as it bleaches"
   },
   {
@@ -4389,8 +4389,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "    g.globalAlpha = 0.15 + FILTER_SHADE * (1 - open);",
-    replace: "    g.globalAlpha = 0.15 + FILTER_SHADE * open;",
+    find: "    var shade = 0.15 + FILTER_SHADE * (1 - open);",
+    replace: "    var shade = 0.15 + FILTER_SHADE * open;",
     why: "the filter drawn darker as it bleaches"
   },
   {
@@ -5558,8 +5558,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      dimBeyond(g, colors, L, filterRect, filterBeyond, open);\n      drawFilter(g, colors, filterRect, open);",
-    replace: "      drawFilter(g, colors, filterRect, open);",
+    find: "      dimBeyond(g, colors, L, filterRect, filterBeyond, open);\n      drawFilter(g, colors, filterRect, open, qSwitch.absorber);",
+    replace: "      drawFilter(g, colors, filterRect, open, qSwitch.absorber);",
     why: "the light beyond a dark filter not dimmed"
   },
   {
@@ -6602,6 +6602,72 @@ const MUTATIONS = [
     find: "          state.greenGlow = 0;                            // out, or in afresh: no old glow\n",
     replace: "",
     why: "the crystal out and in while paused brings the old glow back"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      qSwitches: [\"absorber\"], absorber: \"cr-yag\", absorberT0: 0.99,",
+    replace: "      qSwitches: [\"absorber\"], absorber: \"cr-yag\", absorberT0: 0.95,",
+    why: "the diode Nd:glass's filter too dark to pulse at its default pump"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    { medium: \"nd-glass\", pump: \"diode\", max: 5,\n      qSwitches: [\"absorber\"], absorber: \"cr-yag\", absorberT0: 0.99, absorberMin: 0.9,\n",
+    replace: "    { medium: \"nd-glass\", pump: \"diode\", max: 5,\n",
+    why: "the diode Nd:glass without its filter: its green never shows"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (doublerNote) doublerNote.hidden = !(doubled && state.config.qSwitch === \"none\" && hasFilter(state.config));",
+    replace: "      if (doublerNote) doublerNote.hidden = !doubled;",
+    why: "the note to turn on the filter staying with the filter on"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (doublerNote) doublerNote.hidden = !(doubled && state.config.qSwitch === \"none\" && hasFilter(state.config));",
+    replace: "      if (doublerNote) doublerNote.hidden = state.config.qSwitch !== \"none\";",
+    why: "the note shown with the crystal out"
+  },
+  {
+    file: "data/laser.json",
+    find: "    \"doubler\": \"section-neodymium\",",
+    replace: "    \"doubler\": \"section-doubling\",",
+    why: "the crystal's Learn more to a section that does not exist"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var body = look ? look.body : colors.muted;",
+    replace: "    var body = colors.muted;",
+    why: "the filter grey whatever it is made of"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    g.fillRect(F.x - 2, F.y - 5, F.w + 4, 5);",
+    replace: "    g.fillRect(F.x - 2, F.y - 5, F.w + 4, 0);",
+    why: "the filter without its holder"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (look && look.look === \"liquid\") {\n      // the cell's glass walls, over the dye",
+    replace: "    if (false) {\n      // the cell's glass walls, over the dye",
+    why: "the dye cell without its glass walls"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      return { kind: state.config.qSwitch, open: now.open, absorber: state.config.absorber || null };",
+    replace: "      return { kind: state.config.qSwitch, open: now.open, absorber: null };",
+    why: "the page not telling the drawing which filter"
+  },
+  {
+    file: "js/laser/ui/materials.js",
+    find: "    \"cr-yag\": Object.freeze({ look: \"plate\", body: \"#6e3b1f\" }),",
+    replace: "    \"cr-yag\": Object.freeze({ look: \"liquid\", body: \"#6e3b1f\" }),",
+    why: "Cr:YAG made a liquid"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "absorberT0: 0.99, absorberMin: 0.9,",
+    replace: "absorberT0: 0.99,",
+    why: "the diode Nd:glass's filter slider mostly dark"
   },
 ];
 

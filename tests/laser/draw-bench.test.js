@@ -85,7 +85,9 @@ function filtered(open, pumpKind) {
     qSwitch: { kind: "absorber", open: open }
   };
 }
-const SWITCHED = [filtered(0), filtered(0.5), filtered(1), filtered(0.3, "diode"), filtered(1, "laser")];
+const SWITCHED = [filtered(0), filtered(0.5), filtered(1), filtered(0.3, "diode"), filtered(1, "laser"),
+  Object.assign(filtered(0.2), { qSwitch: { kind: "absorber", open: 0.2, absorber: "cr-yag" } }),
+  Object.assign(filtered(0.7), { qSwitch: { kind: "absorber", open: 0.7, absorber: "cryptocyanine" } })];
 for (const light of SWITCHED) LIGHTS.push(light);
 
 // Each bench's own medium and beam (stage 10c), as page.js passes them:
@@ -110,7 +112,7 @@ for (const b of BENCHES) LIGHTS.push(ofBench(b), ofBench(b, { beam: 0, pump: 0 }
 function physical(theme) {
   const M = UI.materials;
   const bg = palette(theme).bg;
-  const raw = Object.values(M.MEDIA).map((m) => m.body).concat([M.GLASS, M.MIRROR_GLASS, M.SILVER, M.HIGHLIGHT, M.SHADE, M.INFRARED, M.PUMP_INFRARED,
+  const raw = Object.values(M.MEDIA).map((m) => m.body).concat(Object.values(M.ABSORBERS).map((a) => a.body)).concat([M.KDP, M.GLASS, M.MIRROR_GLASS, M.SILVER, M.HIGHLIGHT, M.SHADE, M.INFRARED, M.PUMP_INFRARED,
     palette(theme).flash]);
   for (const b of BENCHES) {
     raw.push(M.beam(b.lam).color);
@@ -716,9 +718,11 @@ function rectKey(r) {
 function filledWithAlpha(recorder) {
   const list = [];
   let alpha = 1;
+  let color = null;
   for (const entry of recorder.log) {
     if (entry.set === "globalAlpha") alpha = entry.value;
-    if (entry.call === "fillRect") list.push({ key: entry.args.join(","), alpha: alpha });
+    if (entry.set === "fillStyle") color = entry.value;
+    if (entry.call === "fillRect") list.push({ key: entry.args.join(","), alpha: alpha, color: color });
   }
   return list;
 }
@@ -1289,6 +1293,36 @@ test("draw: a filter is a plate in the gap, shaded by its unbleached share", () 
   const rays = strokedLines(recorder).filter((line) => line.y1 === line.y2 &&
     Math.abs(line.x1 - bench.faceX(L, "back", line.y1)) < 1e-9 && Math.abs(line.x2 - bench.faceX(L, "output", line.y1)) < 1e-9);
   assert.deepEqual(rays.map((ray) => ray.y1), Array.from(L.rays), "every ray, mirror to mirror");
+});
+
+test("draw: the filter as a real one: Cr:YAG a brown disc, ruby's dye a blue cell, in a holder, still shaded by its unbleached share", () => {
+  const M = UI.materials;
+  const w = 900;
+  const L = bench.layout(w, heightFor(w));
+  const of = (absorber, open) => Object.assign(filtered(open), { qSwitch: { kind: "absorber", open, absorber } });
+  const plate = (absorber, open) => filledWithAlpha(drawAt(w, LABELS, "dark", of(absorber, open)).recorder)
+    .filter((f) => f.key === rectKey(L.filter));
+  for (const id of ["cr-yag", "cryptocyanine"]) {
+    assert.ok(plate(id, 0).some((f) => f.color === M.ABSORBERS[id].body && Math.abs(f.alpha - 0.75) < 1e-12), id + ": its colour, dark");
+    assert.ok(plate(id, 1).some((f) => f.color === M.ABSORBERS[id].body && Math.abs(f.alpha - 0.15) < 1e-12), id + ": bleached");
+  }
+  const filled = rects(drawAt(w, LABELS, "dark", of("cr-yag", 0)).recorder, "fillRect");
+  assert.ok(filled.includes([L.filter.x - 2, L.filter.y - 5, L.filter.w + 4, 5].join(",")), "the holder's top clamp");
+  assert.ok(filled.includes([L.filter.x - 2, L.filter.y + L.filter.h, L.filter.w + 4, 5].join(",")), "and its bottom one");
+  const cellLog = filledWithAlpha(drawAt(w, LABELS, "dark", of("cryptocyanine", 0)).recorder);
+  const cell = cellLog.map((f) => f.key);
+  const wallKey = [L.filter.x, L.filter.y, 1.5, L.filter.h].join(",");
+  assert.ok(cell.includes(wallKey), "the dye cell's glass wall");
+  assert.ok(cell.lastIndexOf(wallKey) > cell.lastIndexOf(rectKey(L.filter)), "the wall over the dye, not hidden under it");
+  // The holder clears the back mirror, the rod and the filter's name at every width.
+  for (const width of WIDTHS) {
+    const W = bench.layout(width, heightFor(width));
+    const F = W.filter;
+    assert.ok(F.x - 2 > W.backMirror.x + W.backMirror.w + 4, width + ": clear of the back mirror");
+    assert.ok(F.x + F.w + 2 < W.rod.x - 4, width + ": clear of the rod");
+    assert.ok(F.y - 5 > W.labels.qSwitch.y + 4, width + ": below its name");
+  }
+  assert.ok(!filled.includes([L.filter.x, L.filter.y, 1.5, L.filter.h].join(",")), "no cell wall on the disc");
 });
 
 test("draw: the left arrowheads move between the filter and the rod", () => {

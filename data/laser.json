@@ -137,6 +137,10 @@
     "behind": {
       "hy": "Համակարգիչը չի հասցնում հաշվել այս դանդաղեցմամբ, ուստի մոդելը ընթանում է ավելի դանդաղ, քան ցույց է տալիս սահիչը։ Դանդաղեցման սահիչը տեղափոխեք աջ։",
       "en": "The computer cannot keep up at this setting, so the simulation runs slower than the slow-motion slider says. Move that slider to the right."
+    },
+    "doubler": {
+      "hy": "Բյուրեղը կանաչ է դարձնում միայն ուժեղ իմպուլսները․ միացրեք հագեցող ֆիլտրը։",
+      "en": "The crystal turns only strong pulses green: turn on the bleachable filter."
     }
   },
 
@@ -228,6 +232,7 @@
     "mirrors": "section-curved",
     "coupler": "section-best-mirror",
     "qSwitch": "section-giant-pulse",
+    "doubler": "section-neodymium",
     "chart": "section-spikes",
     "stability": "section-curved",
     "photons": "section-meetings",

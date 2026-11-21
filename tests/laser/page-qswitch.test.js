@@ -99,7 +99,7 @@ test("under the drawing: the pump's dropdown always, Fire on a flashlamp bench, 
   assert.equal(configNow(page).qSwitch, "none");
   // Neither: the row stays for the pump's dropdown (stage 12c), and a
   // stray click on the hidden switch changes nothing.
-  for (const [medium, pump] of [["he-ne", "discharge"], ["dye-r6g", "laser"], ["nd-glass", "diode"]]) {
+  for (const [medium, pump] of [["he-ne", "discharge"], ["dye-r6g", "laser"], ["co2", "discharge"]]) {
     choose(section, medium, pump);
     assert.equal(section.under.hidden, false, medium + " " + pump + ": the row, for the pump's dropdown");
     assert.equal(section.switchRow.hidden, true, medium + ": no switch");
@@ -531,7 +531,7 @@ test("the bench gets the filter now and its name, in the visitor's language", ()
     runFrames(page, 1);
     const entry = last(seen.bench);
     const now = B(page).switchNow({ sim: last(seen.after), config: configNow(page) });
-    assert.equal(JSON.stringify(entry.light.qSwitch), JSON.stringify({ kind: "absorber", open: now.open }), lang);
+    assert.equal(JSON.stringify(entry.light.qSwitch), JSON.stringify({ kind: "absorber", open: now.open, absorber: "cr-yag" }), lang + ": with its filter, to draw it as itself");
     assert.equal(entry.labels.qSwitch, WORDS.bench.parts.qSwitch[lang], lang + ": its name");
     choose(section, "nd-yag", "flashlamp", "none");
     runFrames(page, 1);
@@ -585,10 +585,12 @@ test("every bench with the filter through a whole flash (or 600 µs of its diode
   // frame, at most the frame's 1500. Ruby's dye filter (22 ps recovery)
   // runs out of steps in 2 frames of its pulse: too few for the note,
   // which needs a quarter of a second's frames. (Stage 10a: Nd:glass's
-  // flat mirrors lose 7.9×10⁻⁴ per pass, §7.7; its pulse was 2.825×10⁷ W.)
+  // flat mirrors lose 7.9×10⁻⁴ per pass, §7.7; its pulse was 2.825×10⁷ W.
+  // Stage 13g: the diode Nd:glass got the filter, measured the same way.)
   const cases = [
     ["ruby", "flashlamp", 1500, 2.097e8], ["nd-glass", "flashlamp", 955, 2.816e7],
-    ["nd-yag", "flashlamp", 871, 7.275e6], ["nd-yag", "diode", 562, 2.573e3]
+    ["nd-yag", "flashlamp", 871, 7.275e6], ["nd-yag", "diode", 562, 2.573e3],
+    ["nd-glass", "diode", 554, 567.92]
   ];
   const page = built("en", { watch: true, show: ["bench"] });
   const { browser, section, seen } = page;

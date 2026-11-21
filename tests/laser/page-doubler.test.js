@@ -24,6 +24,7 @@ function on(section) {
 test("the doubling crystal's On/Off shows on Nd:YAG and Nd:glass only, and starts off", () => {
   const page = built("en", { reducedMotion: true, watch: true });
   const { section } = page;
+  assert.equal(section.doublerNote.hidden, true, "crystal out: no note");
   assert.equal(section.doublerRow.hidden, false, "the diode Nd:YAG");
   assert.equal(on(section), false);
   assert.equal(section.doublerWord.textContent, WORDS.choose.off.en);
@@ -117,6 +118,28 @@ test("a Q-switched pulse shorter than a frame still lights the drawn green: at t
   assert.ok(checked === 300);
   assert.ok(most > 0.5, "a pulse's green, in the beam's units: " + most);
   assert.ok(most > 1e4 * steady);
+});
+
+test("Nd:glass turns green too: on its diodes without the filter almost nothing, with its filter's pulses the full green (stage 13g's fix)", () => {
+  const page = built("en", { watch: true });
+  const { section, seen } = page;
+  section.doubler.fire("click");
+  choose(section, "nd-glass", "diode");
+  runFrames(page, 100);
+  const steady = last(seen.bench).light.doubler.green;
+  assert.ok(steady < 1e-3, "a steady beam's green cannot be seen: " + steady);
+  // The filter's On/Off is shown on this bench now, and turns the beam
+  // into pulses; until it is on, a note says so.
+  assert.equal(section.switchRow.hidden, false, "the filter's switch");
+  assert.equal(section.doublerNote.hidden, false, "the note: turn on the filter");
+  choose(section, "nd-glass", "diode", "absorber");
+  assert.equal(section.doublerNote.hidden, true, "the filter on: no note");
+  let most = 0;
+  for (let k = 0; k < 300; k++) {
+    runFrames(page, 1);
+    most = Math.max(most, last(seen.bench).light.doubler.green);
+  }
+  assert.ok(most > 0.5, "the pulses' green, in the beam's units: " + most);
 });
 
 test("after a pulse the drawn green fades over about half a second of screen time (the readout is the green now)", () => {
