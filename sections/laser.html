@@ -175,6 +175,16 @@
             </button>
             <a class="link laser-more" data-goto="laser-study" data-route-id="more.qSwitch"><span data-ui="learnMore"></span></a>
           </div>
+          <!-- On the right, the doubling crystal (stage 13b; only for the
+               1.06 µm lasers): in the beam past the output mirror, it turns
+               some of the light green. -->
+          <div class="laser-switch laser-switch--doubler" data-laser-doubler hidden>
+            <span class="laser-switch__name" id="laser-doubler-name" data-text="choose.doubler"></span>
+            <button class="laser-switch__toggle" type="button" role="switch" aria-checked="false" aria-labelledby="laser-doubler-name" data-laser-action="doubler">
+              <span class="laser-switch__track" aria-hidden="true"><span class="laser-switch__knob"></span></span>
+              <span class="laser-switch__word" data-laser-name="doublerState"></span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -312,6 +322,10 @@
             <div class="lab-readout" data-laser-row="powerNow">
               <span class="lab-readout__label" data-text="readouts.powerNow"></span>
               <span class="lab-readout__value" data-laser-readout="powerNow">—</span>
+            </div>
+            <div class="lab-readout" data-laser-row="harmonic">
+              <span class="lab-readout__label" data-text="readouts.harmonic"></span>
+              <span class="lab-readout__value" data-laser-readout="harmonic">—</span>
             </div>
             <div class="lab-readout" data-laser-row="T_best">
               <span class="lab-readout__label" data-text="readouts.T_best"></span>

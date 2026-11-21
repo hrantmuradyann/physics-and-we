@@ -140,10 +140,28 @@ function makeCopy() {
 
 // Runs one test file against the project copy at copyRoot, with
 // `node --test`, as the whole suite runs it (each file in a process of its
-// own). Resolves to { outcome: "passed" | "failed" | "timed out", output,
+// own), and once more if it died before reporting any test. Resolves to { outcome: "passed" | "failed" | "timed out", output,
 // ms }; rejects if the run cannot start or prints more than
 // options.maxOutput characters.
 function runFile(copyRoot, file, options) {
+  return runFileOnce(copyRoot, file, options).then((run) => {
+    if (run.outcome !== "failed" || !diedBeforeAnyTest(run.output)) return run;
+    // Node itself sometimes crashes (exit 139, a segmentation fault: 1 run
+    // in about 30 of page-choose.test.js under a full machine, Node 24.14,
+    // 2026-11-21) before the file reports a single test. Run it once
+    // more: a file that really cannot load fails again, so the verdict is
+    // the same, and a crash no longer stops the whole check.
+    return runFileOnce(copyRoot, file, options);
+  });
+}
+
+// True when a run failed as a whole file without reporting any test of
+// its own (node --test's summary: one test, the file, and it failed).
+function diedBeforeAnyTest(output) {
+  return /ℹ tests 1\b/.test(output) && /ℹ pass 0\b/.test(output) && /test at [^\n]*:1:1/.test(output);
+}
+
+function runFileOnce(copyRoot, file, options) {
   const env = Object.assign({}, process.env, {
     LASER_TEST_ROOT: copyRoot,
     LASER_MUTATION_CHECK: "1"

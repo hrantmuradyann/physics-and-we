@@ -158,7 +158,9 @@ function withCavity(cavity, light) {
   return Object.assign({ beam: 1, pump: 0.25, transmission: 0.05, pumpKind: "discharge" }, light || {}, { cavity: cavity });
 }
 for (const light of [withCavity(HENE), withCavity(UNSTABLE, { pumpKind: "flashlamp" }), withCavity(HENE, { beam: 0 }),
-  withCavity(UNSTABLE, { beam: 0, pumpKind: "diode" })]) LIGHTS.push(light);
+  withCavity(UNSTABLE, { beam: 0, pumpKind: "diode" }),
+  // The doubling crystal (stage 13b) on the Nd:YAG.
+  withCavity(HENE, { pumpKind: "diode", medium: "nd-yag", lam: 1064e-9, pumpLam: 808e-9, doubler: { share: 0.3, green: 0.3 } })]) LIGHTS.push(light);
 
 // t: the seconds the loop has run (view.t), 0 if not given; still: the
 // visitor asked for less motion (view.still).
@@ -1473,6 +1475,59 @@ test("the traced rays: straight from mirror face to mirror face, at the heights 
   const first = dark.find((l) => Math.abs(l.x1 - bench.faceX(L, "back", 0, "flat")) < 1e-9 && l.x2 > l.x1 + 100);
   assert.ok(first, "a path from the back mirror");
   assertClose(first.alpha, 0.3, 1e-12, "a dark laser's path");
+});
+
+test("the doubling crystal (stage 13b): a block past the output mirror; past it the leaving light in λ/2's colour, as strong as its own light", () => {
+  const nd = { pumpKind: "diode", medium: "nd-yag", lam: 1064e-9, pumpLam: 808e-9, beam: 1 };
+  const green = UI.materials.readable(UI.materials.beam(532e-9).color, palette("dark").bg);
+  for (const w of [280, 327, 800, 1400]) {
+    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(HENE, Object.assign({ doubler: { share: 0.3, green: 0.5 } }, nd)));
+    const L = bench.layout(w, view.h);
+    const C = L.doubler;
+    const outLeft = L.outputMirror.x + L.outputMirror.w;
+    assert.ok(C.x > outLeft && C.x + C.w < w - L.pad / 2, "w " + w + ": between the output mirror and the edge");
+    assert.ok(C.y < L.axis.y && C.y + C.h > L.axis.y, "on the axis");
+    assert.ok(recorder.calls.some((c) => c.name === "strokeRect" && Math.abs(c.args[0] - C.x) < 1e-9 && Math.abs(c.args[2] - C.w) < 1e-9), "the crystal drawn");
+    const lines = strokedLines(recorder);
+    const past = lines.filter((l) => Math.abs(l.x1 - (C.x + C.w)) < 1e-9 && l.x2 === w && l.y1 === l.y2);
+    const greens = past.filter((l) => l.strokeStyle === green);
+    assert.ok(greens.length > 0, "w " + w + ": green rays past the crystal");
+    greens.forEach((l) => assertClose(l.alpha, bench.rayAlpha(0.5), 1e-12, "green as strong as its own light"));
+    const rest = past.filter((l) => l.strokeStyle !== green);
+    rest.forEach((l) => assertClose(l.alpha, bench.rayAlpha(0.7), 1e-12, "what is left of the infrared"));
+    const before = lines.filter((l) => l.x1 === outLeft && Math.abs(l.x2 - C.x) < 1e-9);
+    assert.equal(before.length, greens.length, "the laser's light up to the crystal");
+  }
+  // Without the crystal: no block, the light straight to the edge, never green.
+  const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE, nd));
+  const L = bench.layout(800, view.h);
+  assert.ok(!recorder.calls.some((c) => c.name === "strokeRect" && Math.abs(c.args[0] - L.doubler.x) < 1e-9), "no crystal");
+  assert.ok(!strokedLines(recorder).some((l) => l.strokeStyle === green), "no green light");
+  // Weak green: the arrowheads stay, in the stronger (infrared) light.
+  {
+    const weak = drawAt(800, LABELS, "dark", withCavity(HENE, Object.assign({ doubler: { share: 1e-7, green: 1e-6 } }, nd))).recorder;
+    const red = UI.materials.readable(UI.materials.INFRARED, palette("dark").bg);
+    const heads = [];
+    let state = { fillStyle: null, globalAlpha: 1 };
+    for (const entry of weak.log) {
+      if (entry.set && entry.set in state) state[entry.set] = entry.value;
+      if (entry.call === "fill") heads.push(Object.assign({}, state));
+    }
+    assert.ok(heads.some((h) => h.fillStyle === red && h.globalAlpha > 0.9), "the infrared's arrowheads, at its strength");
+    assert.ok(!heads.some((h) => h.fillStyle === green), "no faint green arrowheads");
+  }
+  // The crystal stays clear of the off-picture F₂ arrowhead (at w − 7..w − 2, on focusRows) at every width.
+  for (const w of [280, 327, 400, 800, 1400]) {
+    const L = bench.layout(w, heightFor(w));
+    assert.ok(L.doubler.x + L.doubler.w < w - 7 || L.doubler.y + L.doubler.h < Math.min(...L.focusRows) - 7, "w " + w);
+    assert.ok(L.doubler.x + L.doubler.w < w - 7, "w " + w + ": room for the arrowhead beside it");
+  }
+  // Without the cavity's numbers no crystal: the old rays do not pass through it.
+  const old = drawAt(800, LABELS, "dark", Object.assign({ doubler: { share: 0.5, green: 1 } }, nd)).recorder;
+  assert.ok(!old.calls.some((c) => c.name === "strokeRect" && Math.abs(c.args[0] - L.doubler.x) < 1e-9), "no crystal without a cavity");
+  // A crystal in a dark laser: drawn, no light.
+  const dark = drawAt(800, LABELS, "dark", withCavity(HENE, Object.assign({}, nd, { beam: 0, doubler: { share: 0, green: 0 } }))).recorder;
+  assert.ok(dark.calls.some((c) => c.name === "strokeRect" && Math.abs(c.args[0] - L.doubler.x) < 1e-9), "the crystal stays");
 });
 
 // The rod's thermal lens (stage 13c): each hit carries `middle`, the

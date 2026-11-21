@@ -67,6 +67,13 @@
                  qSwitch       optional { kind, open }: kind one of
                                Q_KINDS (none, or one it does not know,
                                draws no switch); open 0 (closed) to 1
+                 doubler       optional (stage 13b) { share, green }: a
+                               doubling crystal past the output mirror
+                               turning that share (0–1) of the leaving
+                               light into its second harmonic (λ/2),
+                               green its light in beam's units; drawn
+                               only with cavity; null or none draws no
+                               crystal
                  cavity        optional (stage 10b) { length, aperture,
                                shapes: { back, output }, focus: { back,
                                output } (R/2, m; negative behind, null
@@ -388,6 +395,9 @@
       // The filter on the end-pumped diodes (stage 10c2): the mirror image,
       // between the rod and the output mirror.
       filterBeyond: { x: w - filterX - filterWidth, y: axisY - filterHeight / 2, w: filterWidth, h: filterHeight },
+      // The doubling crystal (stage 13b): a small block on the beam past
+      // the output mirror, in the room left for the light that leaves.
+      doubler: { x: w - 0.75 * side, y: axisY - 0.08 * h, w: 0.3 * side, h: 0.16 * h },
       diodeModule: { x: w / 2 - moduleWidth / 2, y: railY - moduleHeight, w: moduleWidth, h: moduleHeight },
       fins: 5,
       finHeight: 0.03 * h,
@@ -1359,7 +1369,7 @@
   // transmission) of the rays across the beam at the output mirror (as
   // before stage 10b, so the transmission can be counted), straight on to
   // the edge.
-  function drawOutput(g, rayColour, L, S, cavity, light, beam, w) {
+  function drawOutput(g, rayColour, L, S, cavity, light, beam, w, colors) {
     var spot = S.half / 2;
     if (cavity.mode && cavity.mode.length > 0) {
       spot = Math.min(cavity.mode[cavity.mode.length - 1].w * S.perMetreY, S.half);
@@ -1369,16 +1379,76 @@
     var heights = [];
     for (var i = -half; i <= half; i++) heights.push(half === 0 ? L.axis.y : L.axis.y + i * spot / half);
     var outLeft = L.outputMirror.x + L.outputMirror.w;
-    g.globalAlpha = rayAlpha(beam);
-    g.strokeStyle = rayColour;
-    g.fillStyle = rayColour;
+    var leaving = middleRays(count, raysOut(count, light.transmission));
+    var doubler = doublerOf(light);
     g.lineWidth = 1.4;
-    middleRays(count, raysOut(count, light.transmission)).forEach(function (index) {
+    if (doubler === null) {
+      g.globalAlpha = rayAlpha(beam);
+      g.strokeStyle = rayColour;
+      g.fillStyle = rayColour;
+      leaving.forEach(function (index) {
+        var y = heights[index];
+        line(g, outLeft, y, w, y);
+        arrowHead(g, w - 0.4 * L.pad, y, 1, 0, 6);
+      });
+      g.globalAlpha = 1;
+      return;
+    }
+    // Through the doubling crystal (stage 13b): the laser's light up to
+    // it; past it what is left of that light, and the green light it
+    // made, each as strong as its own power.
+    var crystal = L.doubler;
+    var past = crystal.x + crystal.w;
+    var green = greenColourOf(light, colors);
+    var restAlpha = rayAlpha(beam * (1 - doubler.share));
+    var greenAlpha = rayAlpha(doubler.green);
+    leaving.forEach(function (index) {
       var y = heights[index];
-      line(g, outLeft, y, w, y);
+      g.globalAlpha = rayAlpha(beam);
+      g.strokeStyle = rayColour;
+      line(g, outLeft, y, crystal.x, y);
+      g.globalAlpha = restAlpha;
+      line(g, past, y, w, y);
+      g.globalAlpha = greenAlpha;
+      g.strokeStyle = green;
+      line(g, past, y, w, y);
+      // The arrowhead in the stronger of the two lights.
+      g.globalAlpha = Math.max(restAlpha, greenAlpha);
+      g.fillStyle = greenAlpha > restAlpha ? green : rayColour;
       arrowHead(g, w - 0.4 * L.pad, y, 1, 0, 6);
     });
     g.globalAlpha = 1;
+  }
+
+  // The doubling crystal (light.doubler): { share (0 to 1), green (≥ 0) },
+  // or null when there is no crystal in the beam.
+  function doublerOf(light) {
+    if (!light || !light.doubler) return null;
+    var share = light.doubler.share;
+    var green = light.doubler.green;
+    if (!(share >= 0) || !(green >= 0)) return null;
+    return { share: Math.min(1, share), green: green };
+  }
+
+  // The second harmonic's colour, λ/2 (532 nm for Nd:YAG: green), made
+  // readable on the background like the laser's own.
+  function greenColourOf(light, colors) {
+    if (!(light && light.lam > 0)) return colors.accent;
+    return UI.materials.readable(UI.materials.beam(light.lam / 2).color, colors.bg);
+  }
+
+  // The doubling crystal: a clear block on a post, outlined.
+  function drawDoubler(g, colors, L) {
+    var C = L.doubler;
+    g.fillStyle = colors.faint;
+    post(g, C.x + C.w / 2, C.y + C.h, L.railY);
+    g.globalAlpha = 0.25;
+    g.fillStyle = colors.muted;
+    g.fillRect(C.x, C.y, C.w, C.h);
+    g.globalAlpha = 1;
+    g.strokeStyle = colors.heading;
+    g.lineWidth = 1;
+    g.strokeRect(C.x, C.y, C.w, C.h);
   }
 
   // Each curved mirror's focal point F, R/2 from it along the axis
@@ -1503,7 +1573,7 @@
     if (cavity) {
       if (beam > 0) drawBeamBand(g, rayColour, L, S, cavity, beam);
       drawPaths(g, rayColour, casing, L, S, shapes, cavity, beam, view.w, view.h);
-      if (beam > 0) drawOutput(g, rayColour, L, S, cavity, light, beam, view.w);
+      if (beam > 0) drawOutput(g, rayColour, L, S, cavity, light, beam, view.w, colors);
     } else if (beam > 0) {
       var count = L.rays.length;
       var leaving = middleRays(count, raysOut(count, light.transmission));
@@ -1557,6 +1627,11 @@
     mirror(g, colors, L, "back", true, shapes.back);
     mirror(g, colors, L, "output", false, shapes.output);
     if (cavity) drawFocus(g, colors, L, S, cavity, labels.focus, view);
+
+    // The doubling crystal (stage 13b) over the light it turns green:
+    // only with the cavity's numbers, the drawing that sends the leaving
+    // light through it (drawOutput).
+    if (cavity && doublerOf(light) !== null) drawDoubler(g, colors, L);
 
     // The names of the parts. fillText's fourth argument squeezes a word
     // that is too long for its place instead of letting it run into the

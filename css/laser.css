@@ -540,7 +540,8 @@
 
 /* A row along the bench's bottom edge, each control under its part of
    the drawing: Fire in the middle, under the lamp (which is centred), and
-   the Q-switch's name over its On/Off on the left, under the filter. The
+   the Q-switch's name over its On/Off on the left, under the filter (the
+   doubling crystal's on the right, stage 13b). The
    bench spans the stage's full width from 760 px (.laser-stage); below
    that the two go one under the other, Fire first. */
 .laser-under {
@@ -565,6 +566,15 @@
   gap: 0.3rem;
 }
 
+/* The doubling crystal's On/Off (stage 13b) on the right, under the
+   crystal past the output mirror. */
+.laser-under .laser-switch--doubler {
+  grid-column: 3;
+  align-items: flex-end;
+  justify-self: end;
+  text-align: right;
+}
+
 @media (max-width: 759px) {
   .laser-under {
     grid-template-columns: minmax(0, 1fr);
@@ -584,6 +594,11 @@
     grid-row: auto;
     flex-direction: row;
     align-items: center;
+  }
+
+  .laser-under .laser-switch--doubler {
+    justify-self: center;
+    text-align: left;
   }
 }
 

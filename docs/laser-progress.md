@@ -320,6 +320,16 @@ As you asked, I went through the whole book and linked the first mention in each
 - Only link a name the first time it appears in a chapter.
 - Then run `node --test`: it says if a link breaks a rule (another website, a link in one language only, the same link twice in a chapter).
 
+### Stage 13b: the green beam (done while you slept, 21 November)
+
+The second extra, also with every choice mine (the "Stage 13b scope card" in `docs/laser-plan.md`).
+
+**What you will see:** on the two neodymium lasers (Nd:YAG and Nd:glass, whose light is invisible infrared at 1.06 µm), the row under the drawing has one more On/Off: "Doubling crystal (green)". Turn it on and a small crystal (KDP, the one in the book) stands in the beam just outside the output mirror. Some of the light that passes it comes out green, at half the wavelength (532 nm), and one readout line says how much: "Green light now".
+
+**The physics shows itself:** a steady beam of a few watts makes almost no green (less than a millionth of it), so nothing green shows. Turn on the Q-switch, or fire the flashlamp lasers, and each short, strong pulse makes a bright green flash: the crystal works far better on strong light (on the flashlamp Nd:YAG about 7 % of a 10 MW pulse turns green). That is why real green pointers and green pulsed lasers are built the way they are.
+
+**Kept simple:** the crystal is outside the laser, so it changes nothing in the laser itself; it is always turned to the right angle (41.2°, the angle real KDP crystals are cut at); no new slider. It is offered only on the 1.06 µm lasers: the others would give ultraviolet or a colour that is not a common doubled laser.
+
 ### Stage 13c: the heated rod becomes a lens (done while you slept, 21 November)
 
 You asked me to go on with stage 13 without asking, so I picked the smallest extra first and made every choice myself; each is written in `docs/laser-plan.md` (the "Stage 13c scope card") for you to check.
@@ -332,7 +342,7 @@ You asked me to go on with stage 13 without asking, so I picked the smallest ext
 
 **No new button or slider.** Nothing changes on the other lasers: the flashlamp ones fire single flashes (the heat depends on how often you fire, which the page does not have), the gases have no crystal, the dye flows, laser glass is made so it barely forms a lens, and the Ti:sapphire's straight cavity is only a stand-in for the real folded one.
 
-**One thing I decided not to do, and you may want:** the books say a laser can go *out* when pumped harder, because the lens pushes the mirrors past the stable edge. On this laser that only happens at 37 W, and even there the laser keeps shining, because it is then 24 times over its threshold and the unstable mirrors lose only a little. So I kept the slider at 20 W rather than show a dot in the "unstable" area with a laser still shining, which would confuse. If you want the laser to go out on screen, I can make the pump spot smaller (a stronger lens) or set up another laser where it happens: tell me.
+**One thing I decided not to do, and you may want:** the books say a laser can go *out* when pumped harder, because the lens pushes the mirrors past the stable edge. On this laser that only happens at 37 W, and even there the laser keeps shining, because it is then 24 times over its threshold and the unstable mirrors lose only a little. So I kept the slider at 20 W rather than show a dot in the "unstable" area with a laser still shining, which would confuse. You agreed to keep it this way (21 November).
 
 ## What is left
 
@@ -347,7 +357,7 @@ Stage 10 was rewritten on 16 November from your requests (the mirrors, the focal
 | 10c | **A bench that looks real** (next): ruby as a red rod, Nd:YAG pale lilac, Ti:sapphire pink, dye as a coloured liquid in a glass cell, the gases in glass tubes glowing in their real colours with atoms moving inside; more realistic diodes, with the pump light visibly going into the crystal and being absorbed; the laser beam in its real colour (and the invisible infrared ones in a marked false colour). |
 | 11 | ~~Lenses outside the laser~~: **dropped** at your request (20 November). The lens physics was built and then removed; the page stays as it is. |
 | 12 | ~~The "learn" section~~: **done** as your study page (20 November, below). |
-| 13 | **Extras,** one at a time, the five you kept (21 November): doubling the frequency (an infrared beam turned green), heat in the rod acting as a lens (**done**, 13c, above), mode-locking (very short pulses), the semiconductor diode laser, and the pump in more detail (the lamp's reflector). ~~Polarisation~~ and ~~self-focusing~~ were **dropped** at your request: they would hardly show on the page, and the book already explains both. |
+| 13 | **Extras,** one at a time, the five you kept (21 November): doubling the frequency (an infrared beam turned green; **done**, 13b, above), heat in the rod acting as a lens (**done**, 13c, above), mode-locking (very short pulses), the semiconductor diode laser, and the pump in more detail (the lamp's reflector). ~~Polarisation~~ and ~~self-focusing~~ were **dropped** at your request: they would hardly show on the page, and the book already explains both. |
 | 14 | A final pass over all the documentation. |
 
 ## Things to know or check before going public

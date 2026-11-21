@@ -28,7 +28,7 @@ const Q_CONTROLS = ["absorberT0"];
 // Every number the page can show, in the layout's order; each bench shows
 // some of them (ROWS in page.js, and page-choose.test.js).
 const READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
-  "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+  "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "harmonic", "T_best", "period", "time"];
 const CHOICES = ["medium", "pump"];
 const UI_WORDS = { labPlay: "Play", labPause: "Pause", labReset: "Reset" };
 const NB = "\u00a0";          // the no-break space between a number and its unit
@@ -124,6 +124,13 @@ function laserSection(boxWidth) {
   by['[data-laser-action="qSwitch"]'] = section.toggle;
   section.switchWord = fakeElement("span");
   by['[data-laser-name="qSwitchState"]'] = section.switchWord;
+  // The doubling crystal's group, its On/Off and its word (stage 13b).
+  section.doublerRow = fakeElement("div");
+  by["[data-laser-doubler]"] = section.doublerRow;
+  section.doubler = fakeElement("button");
+  by['[data-laser-action="doubler"]'] = section.doubler;
+  section.doublerWord = fakeElement("span");
+  by['[data-laser-name="doublerState"]'] = section.doublerWord;
   section.hint = fakeElement("p");                      // "1 s = 100 µs"
   by['[data-laser-value="slowMotion"]'] = section.hint;
   for (const name of READOUTS) {
@@ -414,7 +421,7 @@ function assertNoListeners(section, label) {
   for (const name of CHOICES) {
     assert.equal(section.choose[name].listenerCount("change"), 0, label + ": the " + name + " dropdown");
   }
-  for (const name of ["play", "reset", "fire", "toggle"]) {
+  for (const name of ["play", "reset", "fire", "toggle", "doubler"]) {
     assert.equal(section[name].listenerCount("click"), 0, label + ": the " + name + " button");
   }
   for (const mirror of MIRRORS) {

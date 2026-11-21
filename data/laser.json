@@ -17,8 +17,8 @@
   "bench": {
     "_readme": "The drawing of the laser. 'alt' describes it for people who cannot see it. 'parts' are the names written on the drawing next to each part: keep them short. After 'transmission' the drawing writes the number, as in 'Transmission 5.00 %'. 'pumps' is the name written under the pump, one for each kind of pump ('parts.pump' is used for a pump that has none). 'parts.qSwitch' is written by the bleachable filter when it is switched on.",
     "alt": {
-      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, իսկ նրանց միջև՝ ակտիվ միջավայրը և մղումը, որը նրան էներգիա է տալիս․ ձողի տակ՝ լազերային դիոդներ կամ բռնկման լամպ, կամ մեկ այլ լազեր, որի ճառագայթը փոքր հայելին ուղղում է դեպի ձողը, իսկ գազային լազերում՝ էլեկտրական հոսանք գազով լցված խողովակի միջով։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։ Երբ բարորակության մոդուլյատորը միացված է, հետին հայելու և ձողի միջև կանգնած է հագեցող ֆիլտր։",
-      "en": "A drawing of the laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, and between them the gain medium with the pump that gives it energy: laser diodes or a flashlamp under a rod, another laser whose beam a small mirror turns up into the rod, or, in a gas laser, an electric current through the tube of gas. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror. With the Q-switch on, a bleachable filter stands between the back mirror and the rod."
+      "hy": "Լազերի նկար օպտիկական նստարանի վրա․ ձախում՝ հայելի, որն անդրադարձնում է գրեթե ամբողջ լույսը, աջում՝ ելքային հայելի, որը լույսի մի մասը բաց է թողնում, իսկ նրանց միջև՝ ակտիվ միջավայրը և մղումը, որը նրան էներգիա է տալիս․ ձողի տակ՝ լազերային դիոդներ կամ բռնկման լամպ, կամ մեկ այլ լազեր, որի ճառագայթը փոքր հայելին ուղղում է դեպի ձողը, իսկ գազային լազերում՝ էլեկտրական հոսանք գազով լցված խողովակի միջով։ Երբ լազերն աշխատում է, լույսի ճառագայթները գնում են հայելիների միջև, և նրանց մի մասը դուրս է գալիս ելքային հայելու միջով։ Երբ բարորակության մոդուլյատորը միացված է, հետին հայելու և ձողի միջև կանգնած է հագեցող ֆիլտր։ Երբ կրկնապատկիչը միացված է, ելքային հայելուց հետո բյուրեղը լույսի մի մասը դարձնում է կանաչ։",
+      "en": "A drawing of the laser on an optical bench: on the left a mirror that reflects nearly all the light, on the right an output mirror that lets part of it out, and between them the gain medium with the pump that gives it energy: laser diodes or a flashlamp under a rod, another laser whose beam a small mirror turns up into the rod, or, in a gas laser, an electric current through the tube of gas. When the laser shines, rays of light run between the mirrors, and some of them leave through the output mirror. With the Q-switch on, a bleachable filter stands between the back mirror and the rod. With the doubling crystal on, a crystal past the output mirror turns part of the light green."
     },
     "parts": {
       "backMirror": { "hy": "Հետին հայելի", "en": "Back mirror" },
@@ -41,7 +41,7 @@
   },
 
   "choose": {
-    "_readme": "The dropdowns beside the drawing: the gain medium (above it, in the groups of 'groups') and the pumps that medium can use (under it). 'later' is added in brackets after a medium the lab cannot simulate yet. Under the drawing, for a laser that can have one: the Q-switch's name ('qSwitch') and its On/Off switch ('on', 'off': the word beside the switch).",
+    "_readme": "The dropdowns beside the drawing: the gain medium (above it, in the groups of 'groups') and the pumps that medium can use (under it). 'later' is added in brackets after a medium the lab cannot simulate yet. Under the drawing, for a laser that can have one: the Q-switch's name ('qSwitch') and its On/Off switch ('on', 'off': the word beside the switch); for the 1.06 µm lasers the doubling crystal's ('doubler').",
     "groups": {
       "solid": { "hy": "Բյուրեղներ և ապակի", "en": "Crystals and glass" },
       "gas": { "hy": "Գազեր", "en": "Gases" },
@@ -51,6 +51,7 @@
     "medium": { "hy": "Ակտիվ միջավայր", "en": "Gain medium" },
     "pump": { "hy": "Մղում", "en": "Pump" },
     "qSwitch": { "hy": "Բարորակության մոդուլյատոր (հագեցող ֆիլտր)", "en": "Q-switch (bleachable filter)" },
+    "doubler": { "hy": "Հաճախականության կրկնապատկիչ (կանաչ)", "en": "Doubling crystal (green)" },
     "on": { "hy": "Միացված", "en": "On" },
     "off": { "hy": "Անջատված", "en": "Off" },
     "later": { "hy": "հետագայում", "en": "coming later" }
@@ -118,6 +119,7 @@
     "peak": { "hy": "Ամենաբարձր ելքային հզորությունը բռնկումից ի վեր", "en": "Highest output since the flash" },
     "peakStart": { "hy": "Ամենաբարձր ելքային հզորությունը սկզբից ի վեր", "en": "Highest output since the start" },
     "powerNow": { "hy": "Ելքային հզորություն հիմա", "en": "Output power now" },
+    "harmonic": { "hy": "Կանաչ լույսը հիմա", "en": "Green light now" },
     "T_best": { "hy": "Լավագույն ելքային հայելի", "en": "Best output mirror" },
     "period": { "hy": "Ռելաքսացիոն տատանումների պարբերություն", "en": "Relaxation oscillation period" },
     "time": { "hy": "Մոդելավորված ժամանակ", "en": "Simulated time" },

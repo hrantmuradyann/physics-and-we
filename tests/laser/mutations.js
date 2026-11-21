@@ -4209,8 +4209,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "  var LIVE_READOUTS = [\"x\", \"lossNow\", \"giant\", \"peak\", \"powerNow\", \"time\"];",
-    replace: "  var LIVE_READOUTS = [\"x\", \"peak\", \"powerNow\", \"time\"];",
+    find: "  var LIVE_READOUTS = [\"x\", \"lossNow\", \"giant\", \"peak\", \"powerNow\", \"harmonic\", \"time\"];",
+    replace: "  var LIVE_READOUTS = [\"x\", \"peak\", \"powerNow\", \"harmonic\", \"time\"];",
     why: "the loss now and §4.3's pulse written only when a control moves"
   },
   {
@@ -6416,6 +6416,168 @@ const MUTATIONS = [
     find: "data-laser-readout=\"thermalLens\"",
     replace: "data-laser-readout=\"thermalLenz\"",
     why: "the lens's readout missing from the layout"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    o: { A: 2.259276, B: 0.01008956, C: 0.012942625, D: 13.00522 },",
+    replace: "    o: { A: 2.259276, B: 0.01008956, C: 0.012942625, D: 1.300522 },",
+    why: "n_o's infrared term mistyped"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    e: { A: 2.132668, B: 0.008637494, C: 0.012281043, D: 3.2279924 }",
+    replace: "    e: { A: 2.123668, B: 0.008637494, C: 0.012281043, D: 3.2279924 }",
+    why: "n_e's constant mistyped"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    var half = lam / 2;\n    var top",
+    replace: "    var half = lam;\n    var top",
+    why: "the harmonic at the light's own wavelength"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    var dEff = KDP.d36 * Math.sin(theta);",
+    replace: "    var dEff = KDP.d36;",
+    why: "d_eff without sin θ_m"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    var share = t * t;",
+    replace: "    var share = Math.sqrt(eta0);",
+    why: "no depletion: η can pass 1"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    var eta0 = 8 * Math.PI * Math.PI * dEff * dEff * length * length * intensity /",
+    replace: "    var eta0 = 8 * Math.PI * Math.PI * dEff * dEff * length * intensity /",
+    why: "η₀ linear in the crystal's length"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "      (n * n * n * C.eps0 * C.c * lam * lam);",
+    replace: "      (n * n * C.eps0 * C.c * lam * lam);",
+    why: "one n missing from η₀"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    if (!(sin2 >= 0 && sin2 <= 1)) return null;",
+    replace: "    if (!(sin2 >= 0)) return null;",
+    why: "an impossible angle not refused"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    d36: 0.39 * C.pm,",
+    replace: "    d36: 0.39 * C.nm,",
+    why: "d₃₆ in nm/V"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "  var LAM_MAX = 1.5 * um;",
+    replace: "  var LAM_MAX = 15 * um;",
+    why: "the fit used past KDP's transparency"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var DOUBLER_MEDIA = [\"nd-yag\", \"nd-glass\"];",
+    replace: "  var DOUBLER_MEDIA = [\"nd-yag\", \"nd-glass\", \"ruby\"];",
+    why: "the crystal offered on ruby"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          state.doubler = !state.doubler;\n",
+    replace: "",
+    why: "the crystal's switch does nothing"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        framePeak = Math.max(framePeak, run.peak.power);\n",
+    replace: "",
+    why: "a pulse between frames makes no green"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (doublingNow()) rows = rows.concat([\"harmonic\"]);\n",
+    replace: "",
+    why: "no green readout"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      return { share: greenNow().share, green: greenAt(top).power / derived.powerAtTwiceThreshold };",
+    replace: "      return { share: greenNow().share, green: greenAt(top).power / derived.powerPerPhoton };",
+    why: "the green's strength in the wrong unit"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (doublerGroup) doublerGroup.hidden = !hasDoubler(state.config);",
+    replace: "      if (doublerGroup) doublerGroup.hidden = false;",
+    why: "the crystal's switch on every bench"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          if (!hasDoubler(state.config)) return;         // a hidden switch: a stray click\n",
+    replace: "",
+    why: "a hidden switch takes a click"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    var greenAlpha = rayAlpha(doubler.green);",
+    replace: "    var greenAlpha = rayAlpha(beam);",
+    why: "the green as bright as the infrared"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    return UI.materials.readable(UI.materials.beam(light.lam / 2).color, colors.bg);",
+    replace: "    return UI.materials.readable(UI.materials.beam(light.lam).color, colors.bg);",
+    why: "the harmonic in the laser's own colour"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (cavity && doublerOf(light) !== null) drawDoubler(g, colors, L);",
+    replace: "",
+    why: "the crystal not drawn"
+  },
+  {
+    file: "sections/laser.html",
+    find: "data-laser-action=\"doubler\"",
+    replace: "data-laser-action=\"doubled\"",
+    why: "the crystal's switch missing from the layout"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var fresh = framePeak !== null && state.playing;",
+    replace: "      var fresh = framePeak !== null;",
+    why: "a paused redraw shows the last frame's pulse"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.fillStyle = greenAlpha > restAlpha ? green : rayColour;",
+    replace: "      g.fillStyle = green;",
+    why: "the arrowheads always in the faint green"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.globalAlpha = Math.max(restAlpha, greenAlpha);",
+    replace: "      g.globalAlpha = greenAlpha;",
+    why: "the arrowheads as faint as the green"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "    if (cavity && doublerOf(light) !== null) drawDoubler(g, colors, L);",
+    replace: "    if (doublerOf(light) !== null) drawDoubler(g, colors, L);",
+    why: "the crystal over rays that do not pass through it"
+  },
+  {
+    file: "js/laser/engine/harmonic.js",
+    find: "    if (lam / 2 < LAM_MIN) {",
+    replace: "    if (lam / 3 < LAM_MIN) {",
+    why: "a harmonic below KDP's range let through"
+  },
+  {
+    file: "js/laser/engine/constants.js",
+    find: "    pm: 1e-12,",
+    replace: "    pm: 1e-9,",
+    why: "the picometre a nanometre"
   },
 ];
 

@@ -166,6 +166,9 @@
   }
   // The one Q-switch the page offers: the engine's bleachable filter.
   var FILTER = "absorber";
+  // The media whose light a KDP crystal turns green (1.06 µm → 532 nm;
+  // stage 13b): the doubling crystal's On/Off shows only on them.
+  var DOUBLER_MEDIA = ["nd-yag", "nd-glass"];
   // Every number the page can show, and the ones each pump shows (the
   // others are hidden): a threshold in the pump's own terms, and for a
   // flash the highest output since it was fired instead of the steady
@@ -174,7 +177,7 @@
   // radius and the light they lose (stage 10b), and a bench whose pump
   // heats its rod into a lens that lens's focal length (stage 13c).
   var READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
-    "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+    "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "harmonic", "T_best", "period", "time"];
   var MIRROR_ROWS = ["stability", "waist", "mirrorLoss", "thermalLens"];
   var STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c"].concat(MIRROR_ROWS, ["P_out", "powerNow", "T_best", "period", "time"]);
   var ROWS = {
@@ -189,7 +192,7 @@
   var SWITCH_ROWS = ["lossNow", "giant"];
   var PULSING_HIDES = ["P_out", "T_best", "period"];
   // The readouts that change while the simulation runs ("x" for a flash).
-  var LIVE_READOUTS = ["x", "lossNow", "giant", "peak", "powerNow", "time"];
+  var LIVE_READOUTS = ["x", "lossNow", "giant", "peak", "powerNow", "harmonic", "time"];
   var CANVASES = ["bench", "power", "photons", "atoms", "stability"];
   var POWER_WORDS = ["title", "steady"];
 
@@ -232,6 +235,10 @@
   function hasFilter(config) {
     return root.LaserEngine.bench.qSwitchesFor({ medium: config.medium, pump: config.pump }).indexOf(FILTER) !== -1;
   }
+  // Whether a bench has the doubling crystal's On/Off (stage 13b).
+  function hasDoubler(config) {
+    return DOUBLER_MEDIA.indexOf(config.medium) !== -1;
+  }
 
   // Where the highest output starts for a new run of the bench: a flash
   // bench's at Fire (null until then), a steady bench's at the run's start,
@@ -265,6 +272,9 @@
       // ({ "ruby flashlamp": 0.3 }), so the filter turned off and on again,
       // or a visit to another laser and back, keeps it.
       filterT0: {},
+      // The doubling crystal (stage 13b) in the beam, on a bench that has
+      // one: kept across benches that have it and a language switch.
+      doubler: false,
       // True while the output mirror's or the filter's slider is dragged:
       // the threshold flash is then the old one, and is found again when
       // it is let go.
@@ -450,6 +460,35 @@
     function powerNow() {
       return derived.powerPerPhoton * Math.exp(state.sim.lnPhi);
     }
+    // The highest output in the last frame's runs (W): the drawn green
+    // flashes with a pulse shorter than a frame. It counts only while the
+    // loop runs (each frame works it out again before it draws): a paused
+    // redraw, after Reset or a new bench too, shows the light at this
+    // moment, as the readouts do.
+    var framePeak = null;
+    // Whether the doubling crystal is in the beam now (stage 13b).
+    function doublingNow() {
+      return state.doubler && hasDoubler(state.config);
+    }
+    // The green light now: the KDP crystal's share of the output and its
+    // power (harmonic.doubling, the beam spread over the bench's area).
+    function greenNow() {
+      return greenAt(powerNow());
+    }
+    function greenAt(power) {
+      return engine.harmonic.doubling({
+        power: power, area: state.config.area, length: engine.harmonic.KDP.length, lam: lam
+      });
+    }
+    // The crystal for the bench drawing: the share of the light now, and
+    // the green light's strength (in the beam's unit) at the frame's
+    // highest output, so a short pulse's green shows; null when off.
+    function doublerLight() {
+      if (!doublingNow()) return null;
+      var fresh = framePeak !== null && state.playing;
+      var top = fresh ? Math.max(framePeak, powerNow()) : powerNow();
+      return { share: greenNow().share, green: greenAt(top).power / derived.powerAtTwiceThreshold };
+    }
     // The inversion over threshold, y = N/N_c (§11.2): from −n_t (every
     // ion down) for three and two levels, from 0 for four.
     function inversionNow() {
@@ -544,6 +583,7 @@
       if (!hasLens) {
         rows = without(rows, ["thermalLens"]);
       }
+      if (doublingNow()) rows = rows.concat(["harmonic"]);
       if (derived.P_out === null) {
         rows = without(rows, PULSING_HIDES);
         if (rows.indexOf("peak") === -1) rows = rows.concat(["peak"]);
@@ -610,6 +650,7 @@
       if (name === "T_best") return d.T_best === null || d.T_best <= 0 ? "—" : F.number(100 * d.T_best) + NO_BREAK + "%";
       if (name === "period") return d.period === null ? "—" : F.si(d.period, "s");
       if (name === "powerNow") return F.si(powerNow(), "W");
+      if (name === "harmonic") return doublingNow() ? F.si(greenNow().power, "W") : "—";
       return F.si(state.sim.t, "s");                       // "time"
     }
     // The mirror pair in words: "stable", "unstable", or "edge" right on
@@ -698,6 +739,7 @@
       var piece = dt / state.slowMotion / pieces;
       var stepsLeft = FRAME_STEPS;
       var behind = false;
+      framePeak = powerNow();
       for (var i = 0; i < pieces; i++) {
         if (stepsLeft < 1) {
           behind = true;
@@ -714,6 +756,7 @@
         remember();
         // The highest output since Fire (or the start), at the runs' peaks.
         if (state.peak !== null) state.peak = Math.max(state.peak, run.peak.power);
+        framePeak = Math.max(framePeak, run.peak.power);
         if (!run.reachedEnd) {
           behind = true;
           break;
@@ -789,6 +832,7 @@
         lam: lam,
         pumpLam: state.config.pumpLam,
         qSwitch: switchLight(),
+        doubler: doublerLight(),
         cavity: cavity
       });
     });
@@ -834,6 +878,7 @@
 
     /* the choice of laser */
     var toggle = find('[data-laser-action="qSwitch"]');        // the Q-switch's On/Off
+    var doublerToggle = find('[data-laser-action="doubler"]'); // the doubling crystal's On/Off (stage 13b)
     var selects = {};
     CHOICES.forEach(function (name) {
       selects[name] = find('[data-laser-choose="' + name + '"]');
@@ -915,6 +960,11 @@
       if (switchGroup) switchGroup.hidden = !filter;
       if (toggle) toggle.setAttribute("aria-checked", on ? "true" : "false");
       setText('[data-laser-name="qSwitchState"]', word(data, on ? "choose.on" : "choose.off"));
+      var doublerGroup = find("[data-laser-doubler]");
+      if (doublerGroup) doublerGroup.hidden = !hasDoubler(state.config);
+      var doubled = doublingNow();
+      if (doublerToggle) doublerToggle.setAttribute("aria-checked", doubled ? "true" : "false");
+      setText('[data-laser-name="doublerState"]', word(data, doubled ? "choose.on" : "choose.off"));
     }
     // A new config is taken in two steps: its numbers (and anything that
     // can fail) first, then the config. showBench then shows it: the
@@ -1001,6 +1051,17 @@
         listen(toggle, "click", function () {
           if (!hasFilter(state.config)) return;           // a hidden switch: a stray click
           turnSwitch(state.config.qSwitch === "none" ? FILTER : "none");
+        });
+      }
+      // The doubling crystal, in and out of the beam: the laser runs on.
+      if (doublerToggle) {
+        listen(doublerToggle, "click", function () {
+          if (!hasDoubler(state.config)) return;         // a hidden switch: a stray click
+          state.doubler = !state.doubler;
+          showUnderBench();
+          showRows();
+          showAll();
+          loop.redraw();
         });
       }
     }

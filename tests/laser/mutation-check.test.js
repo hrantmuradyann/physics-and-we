@@ -135,6 +135,30 @@ for (const entry of BROKEN_ENTRIES) {
   });
 }
 
+test("a test file whose Node crashes before any test is run once more; one that cannot load still fails", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "laser-crash-"));
+  try {
+    // Crashes (as Node's segmentation faults do) on its first run only.
+    const marker = path.join(dir, "crashed-once");
+    const crashing = path.join(dir, "crash-once.test.js");
+    fs.writeFileSync(crashing, "const fs = require('node:fs');\n" +
+      "if (!fs.existsSync(" + JSON.stringify(marker) + ")) { fs.writeFileSync(" + JSON.stringify(marker) + ", ''); process.kill(process.pid, 'SIGSEGV'); }\n" +
+      "require('node:test')('fine', () => {});\n");
+    const ok = await runBaseline({ testFiles: [crashing] });
+    assert.equal(ok.outcome, "passed", ok.output);
+    assert.ok(fs.existsSync(marker), "it did crash once");
+    // Fails to load every time: still failed after the second run.
+    const broken = path.join(dir, "broken.test.js");
+    fs.writeFileSync(broken, "throw new Error('cannot load');\n");
+    const bad = await runBaseline({ testFiles: [broken] });
+    assert.equal(bad.outcome, "failed");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("a run that prints too much is stopped and reported, not collected without end", async () => {
   await assert.rejects(runBaseline(Object.assign({ maxOutput: 100 }, SMALL)),
     /the tests printed more than 100 characters/);

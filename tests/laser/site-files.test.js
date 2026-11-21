@@ -321,7 +321,7 @@ const PAGE_CONTROLS = ["Rc1", "Rc2", "pump", "coupler", "absorberT0", "slowMotio
 // 10b) and the filter's.
 const PAGE_Q_CONTROLS = ["Rc1", "Rc2", "absorberT0"];
 const PAGE_READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
-  "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+  "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "harmonic", "T_best", "period", "time"];
 const PAGE_CHOICES = ["medium", "pump"];
 
 test("sections/laser.html: every slider, number box, readout and button page.js needs, once each", () => {
@@ -340,7 +340,7 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
     assert.ok(inside.includes('data-laser-readout="' + PAGE_READOUTS[i] + '"'), PAGE_READOUTS[i] + " is in its own row");
     assert.ok(inside.includes('data-text="readouts.' + PAGE_READOUTS[i] + '"'), PAGE_READOUTS[i] + " is named in its row");
   });
-  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["fire", "play", "qSwitch", "reset"]);
+  assert.deepEqual(attributeValues(html, "data-laser-action").sort(), ["doubler", "fire", "play", "qSwitch", "reset"]);
   // Fire starts hidden: the default bench has no flashlamp. It holds a
   // lightning bolt, hidden from screen readers, and its word, and starts
   // not asking to be pressed (data-ready, which page.js sets).
@@ -395,7 +395,7 @@ test("sections/laser.html: every slider, number box, readout and button page.js 
   // page.js (they depend on the switch and the pump): they have
   // data-laser-name, not data-text. The highest output's name has both:
   // page.js writes the one for a continuous bench over the flash's.
-  assert.deepEqual(attributeValues(html, "data-laser-name"), ["qSwitchState", "pump", "peak"]);
+  assert.deepEqual(attributeValues(html, "data-laser-name"), ["qSwitchState", "doublerState", "pump", "peak"]);
   const pumpName = html.match(/<label\b[^>]*\sdata-laser-name="pump"[^>]*>/);
   assert.match(pumpName[0], /\sfor="laser-pump"/);
   assert.doesNotMatch(pumpName[0], /\sdata-text=/);
