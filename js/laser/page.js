@@ -156,11 +156,13 @@
   // engine's two-level atom is in none, so the page does not offer it.
   // The groups' names are choose.groups.* in data/laser.json.
   var MEDIA_GROUPS = [
-    { name: "solid", media: ["ruby", "nd-glass", "caf2-dy", "nd-yag", "ti-sapphire"] },
+    { name: "solid", media: ["ruby", "nd-glass", "nd-yag", "ti-sapphire"] },
     { name: "gas", media: ["he-ne", "ar-ion", "co2"] },
-    { name: "liquid", media: ["dye-r6g"] },
-    { name: "semiconductor", media: ["diode"] }
+    { name: "liquid", media: ["dye-r6g"] }
   ];
+  // CaF₂:Dy and the diode laser were listed "(coming later)" until the
+  // owner dropped stage 13f (2026-11-21): the engine keeps them, the page
+  // does not offer them.
   function offered(medium) {
     return MEDIA_GROUPS.some(function (group) { return group.media.indexOf(medium) !== -1; });
   }

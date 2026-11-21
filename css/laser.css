@@ -7,7 +7,6 @@
    THE BLOCKS
      .container--laser  the page's own, wider container
      .laser-head      the title block of the laser page (also a .page-head)
-     .laser-status    the small "still being built" note under the lead
      .band--laser     the stripe the bench sits in
      .laser-stage     the grid of the page's main blocks:
                         __more      the button that leads to the theory
@@ -62,19 +61,6 @@
 /* "← All labs" above the eyebrow (.lab__back is in css/labs.css). */
 .laser-head .lab__back {
   margin-bottom: 1.4rem;
-}
-
-.laser-status {
-  display: inline-block;
-  margin-top: 0.4rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--line);
-  /* Not a round pill: in Armenian, and on a phone, it wraps to several lines. */
-  border-radius: var(--radius-sm);
-  background: var(--faint-bg);
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.5;
 }
 
 /* ============================================================================

@@ -706,7 +706,6 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
     <div class="container container--laser">
       <a class="lab__back" …>← All labs</a>
       … eyebrow, title, lead …
-      <p class="laser-status">This lab is still being built …</p>
     </div>
   </div>
   <section class="band band--laser">
@@ -790,7 +789,6 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
 |---|---|---|
 | `.container--laser` | The laser page's own container: up to 1480 px wide (the other labs' is 960 px), because its blocks stand in three columns. | [css/laser.css](css/laser.css) |
 | `.laser-head` | The title block of the laser page. It is a `.page-head` (the same big title as every inner page); this class only spaces the back link above the eyebrow. | [css/laser.css](css/laser.css) |
-| `.laser-status` | The small note under the lead that says the lab is still being built: muted text in a lightly filled box with a thin border and rounded corners. Delete its words in `data/laser.json` and it disappears. | [css/laser.css](css/laser.css) |
 | `.band--laser` | The stripe the bench sits in. Less padding on top than an ordinary `.band`, so the bench is on the first screen. | [css/laser.css](css/laser.css) |
 | `.laser-stage` | The grid of the page's main blocks. Wide screens (1100 px and up): three columns, with the bench over the first two, the controls and the photon picture under it, and the chart with the numbers down the third. From 760 px: two columns (controls beside photons; the chart beside its numbers). Narrower: one column, in the order the blocks are written. | [css/laser.css](css/laser.css) |
 | `.laser-stage__more` | The row with the "dig deeper" button, centred over the bench. | [css/laser.css](css/laser.css) |

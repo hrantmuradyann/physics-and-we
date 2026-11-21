@@ -1212,8 +1212,8 @@ const MUTATIONS = [
   },
   {
     file: "data/laser.json",
-    find: "\"status\": {",
-    replace: "\"note\": {",
+    find: "    \"title\": { \"hy\": \"Լազերը\", \"en\": \"The Laser\" },",
+    replace: "    \"heading\": { \"hy\": \"Լազերը\", \"en\": \"The Laser\" },",
     why: "a word renamed in the data but not in the layout"
   },
   {
@@ -1248,8 +1248,8 @@ const MUTATIONS = [
   },
   {
     file: "css/laser.css",
-    find: "color: var(--muted);\n  font-size: 0.88rem;",
-    replace: "color: #9aa6c4;\n  font-size: 0.88rem;",
+    find: "  color: var(--muted);\n  font-size: 0.82rem;",
+    replace: "  color: #9aa6c4;\n  font-size: 0.82rem;",
     why: "a colour written out in the CSS"
   },
   {
@@ -1344,8 +1344,8 @@ const MUTATIONS = [
   },
   {
     file: "css/laser.css",
-    find: "  background: var(--faint-bg);\n  color: var(--muted);",
-    replace: "  background: var(--faint-bg);\n  color: crimson;",
+    find: ".lab-feature__text {\n  color: var(--muted);",
+    replace: ".lab-feature__text {\n  color: crimson;",
     why: "a colour name beyond the basic ones written in the CSS"
   },
   {
@@ -6135,8 +6135,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "    { name: \"semiconductor\", media: [\"diode\"] }\n",
-    replace: "    { name: \"semiconductor\", media: [\"diode\"] },\n    { name: \"model\", media: [\"two-level\"] }\n",
+    find: "    { name: \"liquid\", media: [\"dye-r6g\"] }\n",
+    replace: "    { name: \"liquid\", media: [\"dye-r6g\"] },\n    { name: \"model\", media: [\"two-level\"] }\n",
     why: "the two-level atom offered again"
   },
   {
