@@ -48,9 +48,10 @@
 
   /* ---------- Header ---------- */
 
-  // The white logo for the dark theme, the navy one for the light theme.
+  // The white logo for the dark theme, the navy one for the light and the
+  // simple (white) theme.
   function logoFile() {
-    return global.Theme.current === "light" ? "images/logo-dark.png" : "images/logo-light.png";
+    return global.Theme.current === "dark" ? "images/logo-light.png" : "images/logo-dark.png";
   }
 
   // A new theme needs the other logo and the other icon on the button.
@@ -107,14 +108,20 @@
       switcher.appendChild(button);
     });
 
-    // The sun / moon button. It shows the theme you would switch TO: a sun
-    // while the site is dark, a moon while it is light.
-    var goingLight = global.Theme.current === "dark";
+    // The theme button. It shows the theme you would switch TO: a sun
+    // while the site is dark (to light), a page while it is light (to
+    // simple), a moon while it is simple (back to dark).
+    var BUTTON = {
+      light: { icon: "sun", word: "themeLight" },
+      simple: { icon: "page", word: "themeSimple" },
+      dark: { icon: "moon", word: "themeDark" }
+    };
+    var going = BUTTON[global.Theme.next()];
     var themeButton = document.createElement("button");
     themeButton.type = "button";
     themeButton.className = "theme-switch";
-    themeButton.innerHTML = Content.icon(goingLight ? "sun" : "moon");
-    var themeLabel = Content.inLang((site.ui || {})[goingLight ? "themeLight" : "themeDark"], lang);
+    themeButton.innerHTML = Content.icon(going.icon);
+    var themeLabel = Content.inLang((site.ui || {})[going.word], lang);
     themeButton.setAttribute("aria-label", themeLabel);
     themeButton.title = themeLabel;
     themeButton.addEventListener("click", function () { global.Theme.toggle(); });
