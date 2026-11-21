@@ -235,6 +235,44 @@
     "atoms": "section-levels"
   },
 
+  "intro": {
+    "_readme": "The short film that plays full screen each time the laser page opens (js/laser-intro.js). 'captions' are what a narrator would say, one per scene, in this order (the film's timing is in the script, so keep eight); 'skip' is the button at the top right; 'excited' writes {n} and {total} as the numbers of atoms; the three levels are ruby's (ground, middle, top band), not two: with two levels a pump can never put more atoms up than down. The film's title is page.eyebrow and page.title; the parts' names are bench.parts, media.ruby and pumps.flashlamp.",
+    "label": { "hy": "Ինչպես է աշխատում լազերը․ կարճ ներածություն", "en": "How a laser works: a short introduction" },
+    "skip": { "hy": "Բաց թողնել", "en": "Skip" },
+    "question": { "hy": "Ինչպե՞ս է աշխատում լազերը", "en": "How does a laser work?" },
+    "captions": [
+      { "hy": "Լազերը շատ յուրահատուկ լույս է ստեղծում։ Ինչպե՞ս է դա անում։", "en": "A laser makes a very special kind of light. How does it do it?" },
+      { "hy": "Ամեն ինչ կազմված է ատոմներից։ Ատոմը կարող է էներգիա կլանել․ այն ցատկում է վերև, իսկ հետո արագ իջնում է միջին մակարդակ, որտեղ կարող է սպասել։", "en": "Everything is made of atoms. An atom can take in energy: it jumps up high, then quickly settles on a middle level, where it can wait." },
+      { "hy": "Բռնկման լամպը նորից ու նորից ատոմներ է բարձրացնում։ Նրանք կուտակվում են միջին մակարդակում, և շուտով այնտեղ ավելի շատ ատոմ կա, քան ներքևում։", "en": "The flash lamp pumps atoms up, again and again. They pile up on the middle level: soon more atoms wait there than sit below." },
+      { "hy": "Գրգռված ատոմը կարող է ինքնիրեն ներքև վերադառնալ և արձակել լույսի մեկ մասնիկ՝ ֆոտոն։", "en": "An excited atom can fall back by itself and give out one particle of light: a photon." },
+      { "hy": "Ահա գաղտնիքը․ գրգռված ատոմի կողքով անցնող ֆոտոնը ստիպում է նրան արձակել իր ճիշտ նույն երկվորյակը՝ նույն գույնի, նույն ուղղությամբ, համաքայլ։", "en": "Here is the trick: a photon passing an excited atom makes it give out an identical twin. Same colour, same direction, in step." },
+      { "hy": "Ատոմները (այստեղ՝ ռուբինի բյուրեղը) դնում ենք երկու հայելիների միջև։ Լույսը ետ ու առաջ է գնում և ամեն անցումով ուժեղանում է։", "en": "We put the atoms (here, a ruby crystal) between two mirrors. The light bounces back and forth and grows stronger on every pass." },
+      { "hy": "Հայելիներից մեկը մի քիչ լույս դուրս է թողնում։ Դա է լազերային փունջը՝ մեկ գույն, մեկ ուղղություն, բոլորը համաքայլ։", "en": "One mirror lets a little light out. That is the laser beam: one colour, one direction, all in step." },
+      { "hy": "Հիմա քո հերթն է։ Մղիր, փոխիր հայելիները և կառուցիր քո սեփական լազերը։", "en": "Now it's your turn. Pump it, change the mirrors and build your own laser." }
+    ],
+    "groundLevel": { "hy": "ցածր մակարդակ", "en": "ground level" },
+    "upperLevel": { "hy": "միջին մակարդակ․ այստեղ ատոմները սպասում են", "en": "middle level: atoms wait here" },
+    "bandLevel": { "hy": "վերին գոտի․ այստեղ ատոմները մի ակնթարթ են մնում", "en": "top band: atoms stay only a moment" },
+    "heat": { "hy": "մի քիչ ջերմություն", "en": "a little heat" },
+    "extraEnergy": { "hy": "ավելորդ էներգիա", "en": "extra energy" },
+    "lamp": { "hy": "Բռնկման լամպ (մղում)", "en": "Flashlamp (the pump)" },
+    "excited": { "hy": "Սպասող ատոմներ՝ {n}-ը {total}-ից", "en": "Atoms waiting: {n} of {total}" },
+    "byItself": { "hy": "ինքնիրեն", "en": "by itself!" },
+    "excitedAtoms": { "hy": "գրգռված ատոմներ", "en": "excited atoms" },
+    "twin": { "hy": "երկվորյակ", "en": "a twin!" },
+    "photon": { "hy": "ֆոտոն", "en": "photon" },
+    "photons": { "hy": "ֆոտոն", "en": "photons" },
+    "reflectsAll": { "hy": "անդրադարձնում է ամբողջ լույսը", "en": "reflects all the light" },
+    "letsOut": { "hy": "մի քիչ լույս է թողնում", "en": "lets a little light out" },
+    "beam": { "hy": "Լազերային փունջ", "en": "Laser beam" },
+    "chips": [
+      { "hy": "մեկ գույն", "en": "one colour" },
+      { "hy": "մեկ ուղղություն", "en": "one direction" },
+      { "hy": "համաքայլ", "en": "in step" }
+    ],
+    "last": { "hy": "Մղիր այն։ Փոխիր հայելիները։ Կառուցիր քո լազերը։", "en": "Pump it. Change the mirrors. Build your own laser." }
+  },
+
   "learn": {
     "_readme": "The way to the study page (route 'laser-study', its words in data/laser-study.json). 'button' is the button above the bench, 'title', 'lead' and 'link' the last section of this page.",
     "route": "laser-study",

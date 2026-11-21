@@ -872,3 +872,65 @@
     border-radius: 14px;
   }
 }
+
+/* ============================================================================
+   THE INTRO FILM (js/laser-intro.js)
+   A one-minute film over the whole screen each time the laser page opens:
+   the canvas as large as fits at 16:9, on the lab's background, and a
+   "Skip" button at the top right. The lab's own colours (--laser-*), as
+   the film sits outside .laser-lab.
+   ========================================================================== */
+.laser-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;          /* over the site's header (1000) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--laser-bg);
+}
+
+.laser-intro[hidden] {
+  display: none;
+}
+
+/* No scrolling the page behind the film. */
+html.laser-intro-open,
+html.laser-intro-open body {
+  overflow: hidden;
+}
+
+.laser-intro__film {
+  display: block;
+  width: min(100vw, 177.78vh);   /* 16:9, as large as the screen allows */
+  aspect-ratio: 16 / 9;
+}
+
+/* Like the site's ghost button (.btn--ghost), in the lab's colours. */
+.laser-intro__skip {
+  position: absolute;
+  top: clamp(0.8rem, 2.5vw, 1.6rem);
+  right: clamp(0.8rem, 2.5vw, 1.6rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--laser-ghost-border);
+  background: var(--laser-ghost-bg);
+  color: var(--laser-heading);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -12px var(--laser-shadow);
+}
+
+.laser-intro__skip:hover {
+  border-color: var(--laser-ghost-border-hover);
+}
+
+.laser-intro__skip:focus-visible {
+  outline: 2px solid var(--laser-accent);
+  outline-offset: 3px;
+}
