@@ -2369,7 +2369,27 @@ test("a mirror's mount has a hole for the light: its plate never crosses the ray
   }
 });
 
-test("a lit flash shows on the lab's near-white: its streaks and its burning gas are readable, the raw silver-white only a glow", () => {
+test("a lit xenon lamp burns white-hot in its middle, inside its readable blue-white edge; dark, no white", () => {
+  const w = 900;
+  const L = bench.layout(w, heightFor(w));
+  const F = L.flashTube;
+  const M = UI.materials;
+  function core(pump) {
+    const { recorder } = drawAt(w, LABELS, "dark", lit("flashlamp", pump));
+    return painted(recorder).filter((p) => p.call === "fillRect" && p.color === M.HIGHLIGHT &&
+      p.args[0] === F.x + L.flashCap && p.args[2] === F.w - 2 * L.flashCap);
+  }
+  assert.equal(core(0).length, 0, "not fired: no white gas");
+  const [white] = core(1);
+  assert.ok(white, "the white-hot middle");
+  // Inside the tube, a band thinner than it, so the blue-white edge shows round it.
+  assert.ok(white.args[1] > F.y && white.args[1] + white.args[3] < F.y + F.h);
+  assert.ok(white.args[3] > 0.4 * F.h, "most of the tube is white");
+  assert.equal(white.blur, 0, "the bloom is the edge's, not the white's");
+  assert.ok(core(0.2)[0].alpha < white.alpha, "brighter with a stronger flash");
+});
+
+test("a lit flash shows on the lab's near-white: its streaks and its burning gas are readable, the raw blue-white only a glow", () => {
   const M = UI.materials;
   for (const theme of ["dark", "light"]) {
     const colors = palette(theme);

@@ -61,12 +61,18 @@ The `site` class sits on `<body class="site home">` in [index.html](index.html#L
 That is why the site's themes apply only to the public pages, and the admin panel
 keeps its own look.
 
-**Two themes.** The public site is dark by default; the sun / moon button in the
-header switches it to a light, creamy-white theme (and the choice is remembered).
+**Three themes.** The public site is dark by default; the button in the header
+switches it to a light, creamy-white theme, then to a **simple** one (the look
+of an old scientific website: white paper, black serif type, thin black rules,
+one red), then back to dark; the choice is remembered.
 Nothing in the CSS names a colour directly: it uses the variables in
 [section 22](#22-css-variables-colours-and-sizes), and [js/theme.js](js/theme.js)
-swaps their values by adding the class `theme-light` to `<html>`. A new block that
-uses those variables works in both themes without any extra CSS.
+swaps their values by adding the class `theme-light` or `theme-simple` to `<html>`.
+A new block that uses those variables works in every theme without any extra CSS.
+The simple theme also takes away rounded corners, shadows, hover lifts, the
+fade-ins and the home page's moving stars: that is in [css/simple.css](css/simple.css),
+every rule starting with `:root.theme-simple`. If a new block has its own
+shadow, rounded corners or animation, add a line for it there too.
 
 ---
 
@@ -986,7 +992,7 @@ If there is no text in the JSON for an element, the script **hides it by itself*
 
 All the colours are gathered in one place — [css/style.css:19](css/style.css#L19). Change them here and they change across the whole site.
 
-The public site has **two themes**. Every colour variable is written twice: once in `:root` (the dark theme, the default) and once more in `:root.theme-light` (the light, creamy-white theme). [js/theme.js](js/theme.js) adds the class `theme-light` to `<html>` when the visitor picks the light theme. So when you change a colour, change it in the theme you mean — or in both.
+The public site has **three themes**. Every colour variable is written three times: once in `:root` (the dark theme, the default), once more in `:root.theme-light` (the light, creamy-white theme) and once in `:root.theme-simple` (white, black and the red `--red`, #d40000, which the laser intro's beam uses too). [js/theme.js](js/theme.js) adds the class `theme-light` or `theme-simple` to `<html>` when the visitor picks one. So when you change a colour, change it in the theme you mean — or in all three.
 
 ```css
 :root {

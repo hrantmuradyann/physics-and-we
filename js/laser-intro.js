@@ -8,8 +8,8 @@
 
    It is drawn on a canvas, in the lab's own look: the colours are the
    lab's --laser-* variables (css/style.css), and the physical ones (the
-   ruby, the mirrors' glass and silver, the red of the beam) come from
-   js/laser/ui/materials.js, as on the bench. The words are the "intro"
+   ruby, the mirrors' glass and silver) come from js/laser/ui/materials.js,
+   as on the bench; the beam is the site's --red (css/style.css). The words are the "intro"
    block of data/laser.json (plus page.eyebrow, page.title, bench.parts,
    media.ruby and pumps.flashlamp), taken from the page's own build, so a
    language switch changes them too. The film's timing is here.
@@ -95,7 +95,9 @@
       flash: flash,
       flashLine: M.readable(flash, bg),
       lamp: cssColour("--laser-canvas-lamp"),
-      beam: M.readable(M.beam(lam).color, bg),
+      // The beam's red is the site's --red (the simple theme's too): ruby's
+      // 694 nm, a little darker than its pure red so it reads well on white.
+      beam: cssColour("--red") || M.readable(M.beam(lam).color, bg),
       lam: lam,
       ruby: M.MEDIA[RUBY].body,
       mirrorGlass: M.MIRROR_GLASS,
@@ -313,13 +315,17 @@
       }
       g.restore();
 
-      // the burning gas, blooming
+      // the burning gas, blooming: xenon's blue-white at its edge, so it
+      // shows on the white page, and white-hot in its middle, as on the bench
       g.save();
       g.globalAlpha *= 0.4 + 0.6 * pump;
       g.fillStyle = colors.flashLine;
       g.shadowColor = colors.flash;
       g.shadowBlur = 24 * pump;
       g.fillRect(F.x + F.cap, F.y, F.w - 2 * F.cap, F.h);
+      g.shadowBlur = 0;
+      g.fillStyle = colors.highlight;
+      g.fillRect(F.x + F.cap, F.y + 0.22 * F.h, F.w - 2 * F.cap, 0.56 * F.h);
       g.restore();
     }
     g.save();
@@ -744,6 +750,10 @@
   var TUBE = { x: 390, y: AXIS + 95, w: 500, h: 22, cap: 14 };
   var RAIL = AXIS + 195;
   var RAY_OFFSETS = [-20, -10, 0, 10, 20];
+  // The photons' lanes in the order they fill up (the middle first), and
+  // the lane each new one splits off from.
+  var LANE_ORDER = [2, 1, 3, 0, 4];
+  var LANE_PARENT = { 1: 2, 3: 2, 0: 1, 4: 3 };
 
   function sceneBench(t) {
     var tt = t - 35;
@@ -799,11 +809,12 @@
     drawMirror(BACK, true, true, AXIS, 38);
     drawMirror(OUTPUT, false, false, AXIS, 38);
 
-    // A few photons bouncing back and forth; one more on every pass.
+    // A few photons bouncing back and forth. A new twin is born inside the
+    // ruby, where the excited atoms are (in its middle, on each pass), never
+    // at a mirror: it splits off the photon in the lane beside it.
     if (t < 46) {
       var passTime = 1.6;
       var pass = Math.floor(tt / passTime);
-      var count = Math.min(1 + pass, RAY_OFFSETS.length);
       var phase = (tt % (2 * passTime)) / (2 * passTime);
       var x;
       var direction;
@@ -814,11 +825,23 @@
         x = lerp(right - 30, left + 50, (phase - 0.5) * 2);
         direction = -1;
       }
-      var firstLane = Math.floor((RAY_OFFSETS.length - count) / 2);
+      var middle = ROD.x + ROD.w / 2;
+      var pastMiddle = direction === 1 ? x >= middle : x <= middle;
+      var born = 1 + pass + (pastMiddle ? 1 : 0);
+      var count = Math.min(born, LANE_ORDER.length);
+      // How far the newest photon has come since it was born (px).
+      var sinceBirth = Math.abs(x - middle);
       g.save();
       g.globalAlpha *= 1 - fadeIn(t, 45.2, 0.8);
       for (var p = 0; p < count; p++) {
-        drawPhoton(x, AXIS + RAY_OFFSETS[firstLane + p], direction, 0, colors.beam, false);
+        var lane = LANE_ORDER[p];
+        var y = AXIS + RAY_OFFSETS[lane];
+        // The newest, just born this pass: it slides out of its parent's lane.
+        if (p === count - 1 && p > 0 && pastMiddle && born <= LANE_ORDER.length) {
+          var parentY = AXIS + RAY_OFFSETS[LANE_PARENT[lane]];
+          y = lerp(parentY, y, ease(sinceBirth / 60));
+        }
+        drawPhoton(x, y, direction, 0, colors.beam, false);
       }
       g.restore();
     }

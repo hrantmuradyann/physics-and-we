@@ -111,7 +111,7 @@
                 the lens behind the back mirror into the rod, as the
                 diodes' light
    A diode's or a pump laser's light has its wavelength's colour (stage
-   10c2); the flash's is colors.flash (a silver-white, the same in both
+   10c2); the flash's is colors.flash (xenon's blue-white, the same in both
    themes), made readable on the bench; without a medium, the theme's glow.
 
    THE Q-SWITCH (docs/laser-plan.md, stage 8b)
@@ -888,6 +888,10 @@
 
   // A lit flashlamp, behind every part: the bench lit by the flash, and a
   // halo round the tube, rings that grow and fade outward.
+  // The share of the tube's height on each side of its white-hot middle:
+  // the blue-white edge that outlines the burning gas.
+  var WHITE_CORE_EDGE = 0.22;
+
   function flashBehind(g, colors, L, w, h, pump) {
     var F = L.flashTube;
     g.fillStyle = colors.flash;
@@ -908,7 +912,7 @@
   function flashStreaks(g, colors, L, pump, t) {
     var F = L.flashTube;
     var time = t;
-    // Lines, so readable on the bench (the silver-white flash is too pale
+    // Lines, so readable on the bench (the blue-white flash is too pale
     // for the near-white lab as it is; the tint and the halo stay a glow).
     g.strokeStyle = UI.materials.readable(colors.flash, colors.bg);
     g.lineWidth = 2;
@@ -955,13 +959,19 @@
       g.fill();
       flashStreaks(g, colors, L, pump, t);
       // The gas, blooming: a canvas shadow of its own colour, set back
-      // by restore() so no other part blooms.
+      // by restore() so no other part blooms. Xenon burns white with a
+      // touch of blue: its edge is the flash's blue-white made readable,
+      // so the tube shows on the lab's near-white, and its middle white-hot
+      // (HIGHLIGHT), the brightest thing on the bench.
       g.save();
       g.globalAlpha = 0.4 + 0.6 * pump;
       g.fillStyle = UI.materials.readable(colors.flash, colors.bg);
       g.shadowColor = colors.flash;
       g.shadowBlur = L.bloom * pump;
       g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);
+      g.shadowBlur = 0;
+      g.fillStyle = UI.materials.HIGHLIGHT;
+      g.fillRect(F.x + cap, F.y + WHITE_CORE_EDGE * F.h, F.w - 2 * cap, (1 - 2 * WHITE_CORE_EDGE) * F.h);
       g.restore();
     }
     // The glass's edge and the metal caps in the lamp's own colour (the
