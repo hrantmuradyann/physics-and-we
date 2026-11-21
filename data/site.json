@@ -23,6 +23,7 @@
     {
       "_readme": "Study materials: a page of posters, one per subject (words in data/study.json). The laser poster leads to the laser book (route laser-study).",
       "route": "study",
+      "hidden": true,
       "label": { "hy": "Ուսումնական նյութեր", "en": "Study materials" }
     },
     {

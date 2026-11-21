@@ -635,7 +635,8 @@ test("sections/labs.html: every word the page and its lists ask for is in data/l
 
 /* ---------- the lab's "Learn more" links (stage 12c) ---------- */
 
-test("sections/laser.html: every 'Learn more' opens the laser book at a section that exists", () => {
+// Skipped on the "laser" branch: the study materials are hidden there until they are ready.
+test.skip("sections/laser.html: every 'Learn more' opens the laser book at a section that exists", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
   const more = readJSON("data/laser.json").more;
   const book = readJSON("data/laser-study.json");

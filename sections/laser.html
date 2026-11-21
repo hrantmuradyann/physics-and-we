@@ -55,11 +55,6 @@
   <div class="container container--laser">
     <div class="laser-stage">
 
-      <!-- The way to the study page (?view=laser-study): the theory. -->
-      <div class="laser-stage__more reveal">
-        <a class="btn btn--primary" data-route="learn.route" data-text="learn.button"></a>
-      </div>
-
       <div class="laser-stage__bench laser-bench reveal">
         <!-- Above the drawing, centred over the drawn medium (the picture is
              symmetric): the gain medium's dropdown, filled in by
@@ -70,7 +65,6 @@
           <div class="laser-choose__item laser-choose__item--bench">
             <label class="lab-control__name" for="laser-medium" data-text="choose.medium"></label>
             <select class="laser-choose__select" id="laser-medium" data-laser-choose="medium"></select>
-            <a class="link laser-more" data-goto="laser-study" data-laser-more="medium" hidden><span data-ui="learnMore"></span></a>
           </div>
         </div>
         <!-- The drawing with a column at each end: on the left, beside the
@@ -98,7 +92,6 @@
                   <span data-text="controls.shapes.convex"></span>
                 </button>
               </div>
-              <a class="link laser-more" data-goto="laser-study" data-route-id="more.mirrors"><span data-ui="learnMore"></span></a>
             </div>
             <div class="lab-control laser-end__radius" data-laser-slider="Rc1" hidden>
               <div class="lab-control__label">
@@ -132,7 +125,6 @@
                   <span data-text="controls.shapes.convex"></span>
                 </button>
               </div>
-              <a class="link laser-more" data-goto="laser-study" data-route-id="more.mirrors"><span data-ui="learnMore"></span></a>
             </div>
             <div class="lab-control laser-end__radius" data-laser-slider="Rc2" hidden>
               <div class="lab-control__label">
@@ -160,7 +152,6 @@
             <div class="laser-choose__item laser-choose__item--bench">
               <label class="lab-control__name" for="laser-pump-kind" data-text="choose.pump"></label>
               <select class="laser-choose__select" id="laser-pump-kind" data-laser-choose="pump"></select>
-              <a class="link laser-more" data-goto="laser-study" data-laser-more="pump" hidden><span data-ui="learnMore"></span></a>
             </div>
             <button class="btn btn--primary laser-fire" type="button" data-laser-action="fire" data-ready="false" hidden>
               <svg class="laser-fire__bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.5 2 4.5 13.5h6.2L9.5 22l10-12.5h-6.3z"/></svg>
@@ -173,7 +164,6 @@
               <span class="laser-switch__track" aria-hidden="true"><span class="laser-switch__knob"></span></span>
               <span class="laser-switch__word" data-laser-name="qSwitchState"></span>
             </button>
-            <a class="link laser-more" data-goto="laser-study" data-route-id="more.qSwitch"><span data-ui="learnMore"></span></a>
           </div>
           <!-- On the right, the doubling crystal (stage 13b; only for the
                1.06 µm lasers): in the beam past the output mirror, it turns
@@ -186,7 +176,6 @@
             </button>
             <!-- Shown while the crystal is in and the Q-switch is off: a
                  steady beam turns almost nothing green. -->
-            <a class="link laser-more" data-goto="laser-study" data-route-id="more.doubler"><span data-ui="learnMore"></span></a>
             <p class="laser-switch__note" data-laser-note="doubler" data-text="notes.doubler" hidden></p>
           </div>
         </div>
@@ -218,8 +207,7 @@
               </span>
             </div>
             <input class="lab-control__input" id="laser-coupler" type="range" min="0" max="1000" step="1" data-laser-control="coupler">
-            <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.coupler"><span data-ui="learnMore"></span></a></p>
-          </div>
+            </div>
           <div class="lab-control" data-laser-slider="absorberT0" hidden>
             <div class="lab-control__label">
               <label class="lab-control__name" for="laser-absorberT0" id="laser-absorberT0-name" data-text="controls.absorberT0"></label>
@@ -255,12 +243,10 @@
       <div class="laser-stage__side">
         <div class="laser-side__chart laser-bench reveal">
           <canvas class="laser-bench__canvas laser-bench__canvas--chart" data-laser-canvas="power" role="img"></canvas>
-          <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.chart"><span data-ui="learnMore"></span></a></p>
-        </div>
+          </div>
         <div class="laser-side__stability laser-bench reveal">
           <canvas class="laser-bench__canvas" data-laser-canvas="stability" role="img"></canvas>
-          <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.stability"><span data-ui="learnMore"></span></a></p>
-        </div>
+          </div>
         <div class="laser-side__numbers lab__panel reveal">
           <!-- One row per number. Each pump shows some of them; js/laser/page.js
                hides the others (data-laser-row). -->
@@ -352,29 +338,15 @@
       <div class="laser-stage__photons">
         <div class="laser-bench reveal">
           <canvas class="laser-bench__canvas" data-laser-canvas="photons" role="img"></canvas>
-          <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.photons"><span data-ui="learnMore"></span></a></p>
-        </div>
+          </div>
         <div class="laser-bench reveal">
           <canvas class="laser-bench__canvas" data-laser-canvas="atoms" role="img"></canvas>
-          <p class="laser-more-row"><a class="link laser-more" data-goto="laser-study" data-route-id="more.atoms"><span data-ui="learnMore"></span></a></p>
-        </div>
+          </div>
       </div>
 
     </div>
   </div>
 </section>
 
-<!-- ░░ THE THEORY ░░
-     It has a page of its own, the study page (?view=laser-study, words in
-     data/laser-study.json); this last section only points there. -->
-<section class="band laser-learn">
-  <div class="container container--narrow">
-    <h2 class="section-title reveal" data-text="learn.title"></h2>
-    <p class="lead reveal" data-text="learn.lead"></p>
-    <p class="laser-learn__go reveal">
-      <a class="btn btn--ghost" data-route="learn.route" data-text="learn.link"></a>
-    </p>
-  </div>
-</section>
 
 </div><!-- /.laser-lab -->
