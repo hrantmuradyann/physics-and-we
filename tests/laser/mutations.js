@@ -4582,9 +4582,15 @@ const MUTATIONS = [
     why: "the rod as brightly lit by a weak flash as by a strong one"
   },
   {
+    file: "js/laser/ui/draw-bench.js",
+    find: "      g.fillStyle = UI.materials.HIGHLIGHT;\n      g.fillRect(F.x + cap, F.y + WHITE_CORE_EDGE * F.h",
+    replace: "      g.fillStyle = UI.materials.HIGHLIGHT;\n      g.strokeRect(F.x + cap, F.y + WHITE_CORE_EDGE * F.h",
+    why: "a lit xenon lamp without its white-hot middle"
+  },
+  {
     file: "css/style.css",
-    find: "  --laser-canvas-flash: #c4ccd6;",
-    replace: "  --laser-unused-flash: #c4ccd6;",
+    find: "  --laser-canvas-flash: #b3c8ff;",
+    replace: "  --laser-unused-flash: #b3c8ff;",
     why: "the lab without the flash colour"
   },
   {
@@ -5744,13 +5750,13 @@ const MUTATIONS = [
     file: "js/laser/ui/draw-bench.js",
     find: "    g.strokeStyle = UI.materials.readable(colors.flash, colors.bg);",
     replace: "    g.strokeStyle = colors.flash;",
-    why: "the flash's streaks in a silver-white lost on the near-white lab"
+    why: "the flash's streaks in the raw blue-white, lost on the near-white lab"
   },
   {
     file: "js/laser/ui/draw-bench.js",
     find: "      g.fillStyle = UI.materials.readable(colors.flash, colors.bg);\n      g.shadowColor",
     replace: "      g.fillStyle = colors.flash;\n      g.shadowColor",
-    why: "the burning gas in a silver-white lost on the near-white lab"
+    why: "the burning gas in the raw blue-white, lost on the near-white lab"
   },
   {
     file: "js/laser/ui/draw-bench.js",

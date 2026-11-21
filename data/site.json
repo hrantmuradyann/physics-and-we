@@ -130,6 +130,7 @@
 
     "_readmeTheme": "The sun / moon button in the header. These words appear when you point at it, and are read out by screen readers.",
     "themeLight": { "hy": "Բաց թեմա", "en": "Light theme" },
-    "themeDark": { "hy": "Մուգ թեմա", "en": "Dark theme" }
+    "themeDark": { "hy": "Մուգ թեմա", "en": "Dark theme" },
+    "themeSimple": { "hy": "Պարզ թեմա", "en": "Simple theme" }
   }
 }
