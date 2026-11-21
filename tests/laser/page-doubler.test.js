@@ -11,7 +11,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { WORDS, built, last, runFrames, engine, choose, shownRows, type } = require("./page-helpers.js");
+const { WORDS, FRAME, laserSection, sectionReady, built, last, runFrames, engine, choose, shownRows, type } = require("./page-helpers.js");
 
 function configNow(page) {
   return last(page.seen.configs);
@@ -92,41 +92,38 @@ test("a Q-switched pulse shorter than a frame still lights the drawn green: at t
   const steady = last(seen.bench).light.doubler.green;
   assert.ok(steady < 1e-3, "the steady beam's green cannot be seen: " + steady);
   choose(section, "nd-yag", "diode", "absorber");
+  runFrames(page, 1);
   const E = engine(page.browser);
   let most = 0;
   let checked = 0;
+  let before = last(seen.bench).light.doubler.green;
   for (let k = 0; k < 300; k++) {
     const from = seen.peaks.length;
     runFrames(page, 1);
     const green = last(seen.bench).light.doubler.green;
     most = Math.max(most, green);
-    // Each frame's green is the green at the highest of its runs' peaks.
+    // Each frame: the green its highest output made, or the last one fading.
     const peaks = seen.peaks.slice(from);
-    if (peaks.length === 0) continue;
+    assert.ok(peaks.length > 0, "frame " + k + " ran the simulation");
     const c = configNow(page);
     const top = Math.max(...peaks.map((p) => p.power));
-    const expected = E.harmonic.doubling({ power: top, area: c.area, length: E.harmonic.KDP.length, lam: 1064e-9 }).power /
+    const made = E.harmonic.doubling({ power: top, area: c.area, length: E.harmonic.KDP.length, lam: 1064e-9 }).power /
       E.bench.derive(c).powerAtTwiceThreshold;
+    const expected = Math.max(made, before * Math.exp(-(FRAME / 1000) / 0.15));
     assert.ok(Math.abs(green - expected) <= 1e-9 * expected + 1e-300, "frame " + k + ": " + green + " against " + expected);
+    before = green;
     checked += 1;
   }
-  assert.ok(checked > 200, "frames checked: " + checked);
+  assert.ok(checked === 300);
   assert.ok(most > 0.5, "a pulse's green, in the beam's units: " + most);
   assert.ok(most > 1e4 * steady);
 });
 
-test("paused, or after Reset, the drawn green is the light at this moment, not the last frame's pulse", () => {
+test("after a pulse the drawn green fades over about half a second of screen time (the readout is the green now)", () => {
   const page = built("en", { watch: true });
   const { section, seen } = page;
   section.doubler.fire("click");
   choose(section, "nd-yag", "diode", "absorber");
-  const E = engine(page.browser);
-  const greenOf = (sim) => {
-    const c = configNow(page);
-    const d = E.bench.derive(c);
-    const power = d.powerPerPhoton * Math.exp(sim.lnPhi);
-    return E.harmonic.doubling({ power: power, area: c.area, length: E.harmonic.KDP.length, lam: 1064e-9 }).power / d.powerAtTwiceThreshold;
-  };
   runFrames(page, 1);
   let k = 0;
   while (last(seen.bench).light.doubler.green < 0.5 && k < 400) {
@@ -134,12 +131,50 @@ test("paused, or after Reset, the drawn green is the light at this moment, not t
     k += 1;
   }
   assert.ok(k < 400, "a pulse came");
+  const peak = last(seen.bench).light.doubler.green;
+  // The filter off: the laser runs on steadily, so no new pulse comes.
+  choose(section, "nd-yag", "diode", "none");
+  const frames = Math.round(0.3 / (FRAME / 1000));
+  runFrames(page, frames);
+  const later = last(seen.bench).light.doubler.green;
+  // At least the fade (the laser's own spikes after the filter can only
+  // add green), and well below the pulse.
+  assert.ok(later >= peak * Math.exp(-(frames * FRAME / 1000) / 0.15) * (1 - 1e-9), "0.3 s on, at least the fade: " + later / peak);
+  assert.ok(later > 0.1 * peak && later < 0.3 * peak, "still glowing: " + later / peak);
+  runFrames(page, frames * 3);
+  assert.ok(last(seen.bench).light.doubler.green < 0.01 * peak, "gone after about a second");
+  assert.match(section.readouts.harmonic.textContent, /W$/);
+});
+
+test("paused, the drawn green stands still; the crystal out and in, or Reset, clears it", () => {
+  const page = built("en", { watch: true });
+  const { section, seen } = page;
+  section.doubler.fire("click");
+  choose(section, "nd-yag", "diode", "absorber");
+  runFrames(page, 1);
+  let k = 0;
+  while (last(seen.bench).light.doubler.green < 0.5 && k < 400) {
+    runFrames(page, 1);
+    k += 1;
+  }
+  assert.ok(k < 400, "a pulse came");
+  const atPause = last(seen.bench).light.doubler.green;
   section.play.fire("click");                           // pause
   section.doubler.fire("click");                        // off and on again: two paused redraws
   section.doubler.fire("click");
-  const paused = last(seen.bench).light.doubler.green;
-  const now = greenOf(last(seen.after));
-  assert.ok(Math.abs(paused - now) <= 1e-9 * now + 1e-300, "paused: " + paused + " against " + now);
+  runFrames(page, 30);
+  assert.ok(last(seen.bench).light.doubler.green < 1e-3 * atPause, "the crystal out and in while paused: no old glow");
+  section.play.fire("click");
+  let j = 0;
+  while (last(seen.bench).light.doubler.green < 0.5 && j < 400) {
+    runFrames(page, 1);
+    j += 1;
+  }
+  assert.ok(j < 400, "another pulse came");
+  const glowing = last(seen.bench).light.doubler.green;
+  section.play.fire("click");                           // pause
+  runFrames(page, 30);
+  assert.equal(last(seen.bench).light.doubler.green, glowing, "stands still while paused");
   section.reset.fire("click");
   assert.ok(last(seen.bench).light.doubler.green < 1e-20, "after Reset: " + last(seen.bench).light.doubler.green);
 });
@@ -160,4 +195,58 @@ test("Reset while running, right after a pulse: the next picture has no green fr
   // The loop runs: the next frame first draws the new run (dt 0 after a restart).
   runFrames(page, 1);
   assert.ok(last(seen.bench).light.doubler.green < 1e-20, "after Reset: " + last(seen.bench).light.doubler.green);
+});
+
+test("the crystal taken out mid-glow and put back while paused: no old glow, the green of the light now", () => {
+  const page = built("en", { watch: true });
+  const { section, seen } = page;
+  const E = engine(page.browser);
+  const greenNow = () => {
+    const c = configNow(page);
+    const d = E.bench.derive(c);
+    const power = d.powerPerPhoton * Math.exp(last(seen.after).lnPhi);
+    return E.harmonic.doubling({ power: power, area: c.area, length: E.harmonic.KDP.length, lam: 1064e-9 }).power / d.powerAtTwiceThreshold;
+  };
+  // A steady laser, paused, the crystal put in: its green is the light's now.
+  runFrames(page, 60);
+  section.play.fire("click");
+  section.doubler.fire("click");
+  assert.ok(greenNow() > 0);
+  assert.equal(last(seen.bench).light.doubler.green, greenNow(), "paused, steady");
+  section.play.fire("click");
+  // A pulse's glow, the crystal out for a frame, back in while paused.
+  choose(section, "nd-yag", "diode", "absorber");
+  runFrames(page, 1);
+  let k = 0;
+  while (last(seen.bench).light.doubler.green < 0.5 && k < 400) {
+    runFrames(page, 1);
+    k += 1;
+  }
+  assert.ok(k < 400, "a pulse came");
+  section.doubler.fire("click");
+  runFrames(page, 1);
+  section.play.fire("click");
+  section.doubler.fire("click");
+  assert.equal(last(seen.bench).light.doubler.green, greenNow(), "no old glow");
+});
+
+test("a language switch keeps the green's glow", () => {
+  const page = built("en", { watch: true });
+  const { section, seen } = page;
+  section.doubler.fire("click");
+  choose(section, "nd-yag", "diode", "absorber");
+  runFrames(page, 1);
+  let k = 0;
+  while (last(seen.bench).light.doubler.green < 0.5 && k < 400) {
+    runFrames(page, 1);
+    k += 1;
+  }
+  assert.ok(k < 400, "a pulse came");
+  section.play.fire("click");                           // pause: the glow stands still
+  const glowing = last(seen.bench).light.doubler.green;
+  page.browser.window.Site.lang = "hy";
+  const again = laserSection(600);
+  sectionReady(page.browser, "laser", again.container, WORDS);
+  assert.equal(again.doubler.getAttribute("aria-checked"), "true", "the crystal still in");
+  assert.equal(last(seen.bench).light.doubler.green, glowing, "the same glow");
 });

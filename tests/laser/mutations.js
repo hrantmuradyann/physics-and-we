@@ -3285,8 +3285,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      state.peak = peakFrom(state.config, powerNow());\n      remember();",
-    replace: "      remember();",
+    find: "      state.peak = peakFrom(state.config, powerNow());\n      state.greenGlow = 0;",
+    replace: "      state.greenGlow = 0;",
     why: "Reset keeping the old flash's highest output"
   },
   {
@@ -6503,12 +6503,6 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      return { share: greenNow().share, green: greenAt(top).power / derived.powerAtTwiceThreshold };",
-    replace: "      return { share: greenNow().share, green: greenAt(top).power / derived.powerPerPhoton };",
-    why: "the green's strength in the wrong unit"
-  },
-  {
-    file: "js/laser/page.js",
     find: "      if (doublerGroup) doublerGroup.hidden = !hasDoubler(state.config);",
     replace: "      if (doublerGroup) doublerGroup.hidden = false;",
     why: "the crystal's switch on every bench"
@@ -6544,12 +6538,6 @@ const MUTATIONS = [
     why: "the crystal's switch missing from the layout"
   },
   {
-    file: "js/laser/page.js",
-    find: "      var fresh = framePeak !== null && state.playing;",
-    replace: "      var fresh = framePeak !== null;",
-    why: "a paused redraw shows the last frame's pulse"
-  },
-  {
     file: "js/laser/ui/draw-bench.js",
     find: "      g.fillStyle = greenAlpha > restAlpha ? green : rayColour;",
     replace: "      g.fillStyle = green;",
@@ -6578,6 +6566,42 @@ const MUTATIONS = [
     find: "    pm: 1e-12,",
     replace: "    pm: 1e-9,",
     why: "the picometre a nanometre"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "  var GREEN_FADE = 0.15;",
+    replace: "  var GREEN_FADE = 1.5;",
+    why: "the green lingering for seconds"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      return { share: now.share, green: Math.max(state.greenGlow, now.power) / derived.powerAtTwiceThreshold };",
+    replace: "      return { share: now.share, green: Math.max(state.greenGlow, now.power) / derived.powerPerPhoton };",
+    why: "the green's strength in the wrong unit"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "        state.greenGlow = Math.max(made, state.greenGlow * Math.exp(-dt / GREEN_FADE));",
+    replace: "        state.greenGlow = made;",
+    why: "no fade: the green gone after one frame"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      state.greenGlow = 0;\n      remember();",
+    replace: "      remember();",
+    why: "an old run's green glowing on after Reset"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      return { share: now.share, green: Math.max(state.greenGlow, now.power) / derived.powerAtTwiceThreshold };",
+    replace: "      return { share: now.share, green: state.greenGlow / derived.powerAtTwiceThreshold };",
+    why: "the crystal put in while paused drawn without the green now"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "          state.greenGlow = 0;                            // out, or in afresh: no old glow\n",
+    replace: "",
+    why: "the crystal out and in while paused brings the old glow back"
   },
 ];
 

@@ -166,6 +166,12 @@
   }
   // The one Q-switch the page offers: the engine's bleachable filter.
   var FILTER = "absorber";
+  // How fast the drawn green fades after a pulse (s of screen time, the
+  // e-folding time of its light): a pulse lasts nanoseconds, one frame on
+  // screen, so the green glows on and fades over about half a second
+  // (the owner's choice, 2026-11-21). Only the picture: the readout is the
+  // green power now.
+  var GREEN_FADE = 0.15;
   // The media whose light a KDP crystal turns green (1.06 µm → 532 nm;
   // stage 13b): the doubling crystal's On/Off shows only on them.
   var DOUBLER_MEDIA = ["nd-yag", "nd-glass"];
@@ -275,6 +281,13 @@
       // The doubling crystal (stage 13b) in the beam, on a bench that has
       // one: kept across benches that have it and a language switch.
       doubler: false,
+      // The drawn green light (W): each frame the green the frame's
+      // highest output made (a pulse shorter than a frame still shows),
+      // or what is left of the last one, fading by GREEN_FADE. Here, not
+      // in the build, so a language switch keeps it; in watts, so a new
+      // derived scale cannot change it. It stands still while paused; a
+      // new run (Reset, a new bench) and the crystal taken out clear it.
+      greenGlow: 0,
       // True while the output mirror's or the filter's slider is dragged:
       // the threshold flash is then the old one, and is found again when
       // it is let go.
@@ -460,12 +473,6 @@
     function powerNow() {
       return derived.powerPerPhoton * Math.exp(state.sim.lnPhi);
     }
-    // The highest output in the last frame's runs (W): the drawn green
-    // flashes with a pulse shorter than a frame. It counts only while the
-    // loop runs (each frame works it out again before it draws): a paused
-    // redraw, after Reset or a new bench too, shows the light at this
-    // moment, as the readouts do.
-    var framePeak = null;
     // Whether the doubling crystal is in the beam now (stage 13b).
     function doublingNow() {
       return state.doubler && hasDoubler(state.config);
@@ -481,13 +488,12 @@
       });
     }
     // The crystal for the bench drawing: the share of the light now, and
-    // the green light's strength (in the beam's unit) at the frame's
-    // highest output, so a short pulse's green shows; null when off.
+    // the green light's strength in the beam's unit: the glow
+    // (state.greenGlow), never below the green now; null when off.
     function doublerLight() {
       if (!doublingNow()) return null;
-      var fresh = framePeak !== null && state.playing;
-      var top = fresh ? Math.max(framePeak, powerNow()) : powerNow();
-      return { share: greenNow().share, green: greenAt(top).power / derived.powerAtTwiceThreshold };
+      var now = greenNow();
+      return { share: now.share, green: Math.max(state.greenGlow, now.power) / derived.powerAtTwiceThreshold };
     }
     // The inversion over threshold, y = N/N_c (§11.2): from −n_t (every
     // ion down) for three and two levels, from 0 for four.
@@ -566,6 +572,7 @@
       state.cartoon = newCartoon();       // no atoms or light left from the old run
       state.atoms = newAtoms();
       state.peak = peakFrom(state.config, powerNow());
+      state.greenGlow = 0;
       remember();
     }
 
@@ -739,7 +746,7 @@
       var piece = dt / state.slowMotion / pieces;
       var stepsLeft = FRAME_STEPS;
       var behind = false;
-      framePeak = powerNow();
+      var framePeak = powerNow();
       for (var i = 0; i < pieces; i++) {
         if (stepsLeft < 1) {
           behind = true;
@@ -763,6 +770,12 @@
         }
       }
       judgeFrame(dt, behind);
+      // The green the frame's highest output made, or the last one fading
+      // (the switch and a new run clear it).
+      if (doublingNow()) {
+        var made = greenAt(framePeak).power;
+        state.greenGlow = Math.max(made, state.greenGlow * Math.exp(-dt / GREEN_FADE));
+      }
 
       // The cartoon acts the simulation out in screen time, its light as
       // bright as the beam.
@@ -1058,6 +1071,7 @@
         listen(doublerToggle, "click", function () {
           if (!hasDoubler(state.config)) return;         // a hidden switch: a stray click
           state.doubler = !state.doubler;
+          state.greenGlow = 0;                            // out, or in afresh: no old glow
           showUnderBench();
           showRows();
           showAll();

@@ -328,6 +328,8 @@ The second extra, also with every choice mine (the "Stage 13b scope card" in `do
 
 **The physics shows itself:** a steady beam of a few watts makes almost no green (less than a millionth of it), so nothing green shows. Turn on the Q-switch, or fire the flashlamp lasers, and each short, strong pulse makes a bright green flash: the crystal works far better on strong light (on the flashlamp Nd:YAG about 7 % of a 10 MW pulse turns green). That is why real green pointers and green pulsed lasers are built the way they are.
 
+**The green flash now fades** (your choice, 21 November): a real pulse lasts billionths of a second, so the green now glows on and fades over about half a second, easy to see; the "Green light now" number stays the true green power at that moment.
+
 **Kept simple:** the crystal is outside the laser, so it changes nothing in the laser itself; it is always turned to the right angle (41.2°, the angle real KDP crystals are cut at); no new slider. It is offered only on the 1.06 µm lasers: the others would give ultraviolet or a colour that is not a common doubled laser.
 
 ### Stage 13c: the heated rod becomes a lens (done while you slept, 21 November)
