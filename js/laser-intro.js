@@ -8,8 +8,8 @@
 
    It is drawn on a canvas, in the lab's own look: the colours are the
    lab's --laser-* variables (css/style.css), and the physical ones (the
-   ruby, the mirrors' glass and silver, the red of the beam) come from
-   js/laser/ui/materials.js, as on the bench. The words are the "intro"
+   ruby, the mirrors' glass and silver) come from js/laser/ui/materials.js,
+   as on the bench; the beam is the site's --red (css/style.css). The words are the "intro"
    block of data/laser.json (plus page.eyebrow, page.title, bench.parts,
    media.ruby and pumps.flashlamp), taken from the page's own build, so a
    language switch changes them too. The film's timing is here.
@@ -95,7 +95,9 @@
       flash: flash,
       flashLine: M.readable(flash, bg),
       lamp: cssColour("--laser-canvas-lamp"),
-      beam: M.readable(M.beam(lam).color, bg),
+      // The beam's red is the site's --red (the simple theme's too): ruby's
+      // 694 nm, a little darker than its pure red so it reads well on white.
+      beam: cssColour("--red") || M.readable(M.beam(lam).color, bg),
       lam: lam,
       ruby: M.MEDIA[RUBY].body,
       mirrorGlass: M.MIRROR_GLASS,

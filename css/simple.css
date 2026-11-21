@@ -3,7 +3,7 @@
 
    Every rule here starts with  :root.theme-simple , so it does nothing in
    the dark and the light theme. js/theme.js puts that class on <html>.
-   The theme's colours (white, black, the laser intro's red #ff0000) are in
+   The theme's colours (white, black, the laser intro's red --red) are in
    css/style.css, under :root.theme-simple; this file only takes away what
    the colours alone cannot: the rounded corners, the shadows, the hover
    lifts, the animations and the home page's moving stars, and sets serif

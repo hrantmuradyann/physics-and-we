@@ -98,6 +98,10 @@
   --laser-canvas-lamp: #6f7883;               /* a flashlamp's glass edge and metal caps: steel */
 
   --font-main: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* One red for the simple theme and the laser intro's beam (js/laser-intro.js):
+     a little darker than pure #ff0000 (4.0:1 on white), so small red text
+     reads well, 5.5:1 on white, and white text on it too. */
+  --red: #d40000;
   --font-serif: Georgia, "Times New Roman", Times, serif;   /* the simple theme's type (css/simple.css) */
   --max-width: 1100px;
   --radius: 16px;
@@ -149,7 +153,7 @@
 
 /* The SIMPLE theme: the look of an old scientific website. White paper,
    black ink, thin black rules, one red (the red of the laser beam in the
-   laser intro, #ff0000) for links, buttons and small headings; no glows,
+   laser intro, --red) for links, buttons and small headings; no glows,
    no gradients, no shadows. Same names as above; its serif type, square
    corners and the home page without effects are in css/simple.css. */
 :root.theme-simple {
@@ -161,10 +165,10 @@
   --muted: #4d4d4d;
   --line: rgba(0, 0, 0, 0.22);
   --frame-line: rgba(0, 0, 0, 0.3);
-  --accent: #ff0000;                          /* the laser intro's red */
-  --accent-2: #ff0000;                        /* the same: every gradient becomes flat red */
-  --accent-soft: #ff0000;
-  --icon: #ff0000;
+  --accent: var(--red);                       /* the laser intro's red */
+  --accent-2: var(--red);                     /* the same: every gradient becomes flat red */
+  --accent-soft: var(--red);
+  --icon: var(--red);
   --icon-bg: transparent;
   --card-bg: #ffffff;
   --faint-bg: #ffffff;
@@ -176,16 +180,16 @@
   --button-glow: transparent;
   --button-glow-hover: transparent;
   --accent-ring: transparent;
-  --hover-line: #ff0000;
+  --hover-line: var(--red);
   --hover-tint: transparent;
   --ghost-bg: #ffffff;
   --ghost-border: #000000;
   --ghost-bg-hover: #ffffff;
-  --ghost-border-hover: #ff0000;
+  --ghost-border-hover: var(--red);
   --canvas-line: rgba(0, 0, 0, 0.30);
   --canvas-grid: rgba(0, 0, 0, 0.10);
   --canvas-faint: rgba(0, 0, 0, 0.30);
-  --canvas-glow: rgba(255, 0, 0, 0.30);
+  --canvas-glow: rgba(212, 0, 0, 0.30);
 }
 
 html,

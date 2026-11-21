@@ -992,7 +992,7 @@ If there is no text in the JSON for an element, the script **hides it by itself*
 
 All the colours are gathered in one place — [css/style.css:19](css/style.css#L19). Change them here and they change across the whole site.
 
-The public site has **three themes**. Every colour variable is written three times: once in `:root` (the dark theme, the default), once more in `:root.theme-light` (the light, creamy-white theme) and once in `:root.theme-simple` (white, black and the red #ff0000 of the laser intro). [js/theme.js](js/theme.js) adds the class `theme-light` or `theme-simple` to `<html>` when the visitor picks one. So when you change a colour, change it in the theme you mean — or in all three.
+The public site has **three themes**. Every colour variable is written three times: once in `:root` (the dark theme, the default), once more in `:root.theme-light` (the light, creamy-white theme) and once in `:root.theme-simple` (white, black and the red `--red`, #d40000, which the laser intro's beam uses too). [js/theme.js](js/theme.js) adds the class `theme-light` or `theme-simple` to `<html>` when the visitor picks one. So when you change a colour, change it in the theme you mean — or in all three.
 
 ```css
 :root {
