@@ -73,6 +73,10 @@
        N_t         density of active ions, m⁻³: only where the rate
                      equations need it, the three- and two-level ones
                      (§4.1). null for every other medium
+       thermalK,   thermal conductivity K, W/(m·K), and the index's change
+       dndT          with temperature, 1/K (§8.7): only where the simulator
+                     makes the rod's thermal lens (stage 13c: Nd:YAG).
+                     null for every other medium
        pumps       how it can be pumped: "flashlamp", "diode", "lamp",
                      "discharge", "current", "laser"
        cw, pulsed  whether it runs continuously and/or in pulses
@@ -93,6 +97,7 @@
       ng: null,
       // 0.05 % Cr₂O₃ by weight, the usual doping (§3.1, §5.1)
       N_t: 1.6e19 / cm3,
+      thermalK: null, dndT: null,
       pumps: ["flashlamp"],
       cw: false, pulsed: true
     },
@@ -109,6 +114,7 @@
       n: 1.5,
       ng: null,
       N_t: null,
+      thermalK: null, dndT: null,
       pumps: ["flashlamp", "diode"],
       cw: true, pulsed: true
     },
@@ -125,6 +131,8 @@
       n: 1.82,
       ng: null,
       N_t: null,
+      // §8.7: the thermal lens of stage 13c
+      thermalK: 14, dndT: 7.3e-6,
       pumps: ["flashlamp", "diode"],
       cw: true, pulsed: true
     },
@@ -145,6 +153,7 @@
       n: 1.43,
       ng: null,
       N_t: null,
+      thermalK: null, dndT: null,
       pumps: ["lamp"],
       cw: true, pulsed: true
     },
@@ -161,6 +170,7 @@
       n: 1,
       ng: null,
       N_t: null,
+      thermalK: null, dndT: null,
       pumps: ["discharge"],
       cw: true, pulsed: false
     },
@@ -177,6 +187,7 @@
       n: 1,
       ng: null,
       N_t: null,
+      thermalK: null, dndT: null,
       pumps: ["discharge"],
       cw: true, pulsed: false
     },
@@ -197,6 +208,7 @@
       n: 1,
       ng: null,
       N_t: null,
+      thermalK: null, dndT: null,
       pumps: ["discharge"],
       cw: true, pulsed: true
     },
@@ -215,6 +227,7 @@
       n: 3.6,
       ng: 4,
       N_t: null,
+      thermalK: null, dndT: null,
       pumps: ["current"],
       cw: true, pulsed: false
     },
@@ -233,6 +246,7 @@
       n: 1.36,
       ng: null,
       N_t: null,
+      thermalK: null, dndT: null,
       pumps: ["laser", "flashlamp"],
       cw: true, pulsed: true
     },
@@ -251,6 +265,7 @@
       n: 1.76,
       ng: null,
       N_t: null,
+      thermalK: null, dndT: null,
       pumps: ["laser"],
       cw: true, pulsed: true
     }

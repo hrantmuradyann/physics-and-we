@@ -352,11 +352,11 @@ test("the readouts with the filter: the loss now and §4.3's pulse; on the diode
   choose(section, "ruby", "flashlamp", "none");
   assert.deepEqual(shownRows(section), order(FLASH_ROWS), "off");
   choose(section, "nd-yag", "diode", "absorber");
-  assert.deepEqual(shownRows(section), ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "lossNow", "giant", "peak", "powerNow", "time"],
+  assert.deepEqual(shownRows(section), ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "giant", "peak", "powerNow", "time"],
     "the filter's train: no steady numbers, the highest output instead");
   assert.equal(section.peakName.textContent, WORDS.readouts.peakStart.en, "since the start");
   choose(section, "nd-yag", "diode", "none");
-  assert.deepEqual(shownRows(section), ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"]);
+  assert.deepEqual(shownRows(section), ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "thermalLens", "P_out", "powerNow", "T_best", "period", "time"]);
   choose(section, "nd-yag", "flashlamp");
   assert.equal(section.peakName.textContent, WORDS.readouts.peak.en, "a flash bench names it after the flash");
 });

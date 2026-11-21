@@ -11,7 +11,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { loadEngine, deepFreeze, assertClose, plain } = require("./helpers.js");
+const { loadEngine, deepFreeze, assertClose, plain, thermalLens } = require("./helpers.js");
 
 const E = loadEngine();
 const B = E.bench;
@@ -75,7 +75,7 @@ test("derive agrees with cavity.js and rates.js (one loss at a time and all toge
     assertClose(d.L_e, L_e, 1e-12, "L_e");
     // The mirrors' loss (optics.js, §7.7) joins α_i, spread over the rod.
     const mirrors = E.optics.resonator({
-      L: c.L, l_g: c.l_g, n: YAG.n, c1: 0, c2: 1 / c.Rc2, lam: YAG.lam, aperture: c.aperture
+      L: c.L, l_g: c.l_g, n: YAG.n, c1: 0, c2: 1 / c.Rc2, lens: thermalLens(E, c), lam: YAG.lam, aperture: c.aperture
     });
     const alpha = c.alpha_i + mirrors.gamma / c.l_g;
     assertClose(d.alphaWithMirrors, alpha, 1e-12, "alphaWithMirrors");
@@ -111,7 +111,10 @@ test("the pump: R_p = η·P/(hν_p·V_a), x = R_p/R_c, g₀l = xγ, x = P/thresh
 
 test("§6.3 Fan–Byer: a 200 µm pump spot matched to the mode, 5 % loss, η = 0.9 → about 0.13 W", () => {
   const w = 200e-6;
-  const d = derive({ area: Math.PI * w * w, refl1: 1, refl2: Math.exp(-0.05), alpha_i: 0 });
+  // Pumped at about its threshold: the thermal lens of so small a spot
+  // (stage 13c) is weak there (f = 5.8 m), while at the bench's 5 W it
+  // makes this short cavity unstable.
+  const d = derive({ area: Math.PI * w * w, refl1: 1, refl2: Math.exp(-0.05), alpha_i: 0, pumpPower: 0.13 });
   const hnuP = E.units.photonEnergy(808e-9);
   // P_th = π·hν_p·(w_L² + w_p²)·(T + L_i)/(4στη) with w_L = w_p = w; the
   // only other loss is the mirrors', L_i = 2γ_m (5×10⁻¹⁰ here, §7.7).
@@ -344,9 +347,11 @@ test("pump off for 750τ, then on again: the photons settle at the seed of y = 1
   // falls past 10⁻³⁰⁰ of threshold; the seed counts it as y + 10⁻¹²
   // (rates.js, Y_FLOOR), so ln φ settles near ln(β·10⁻¹²) − sOnePhoton
   // instead of following the atoms down.
-  // Its output mirror: R = 10 m, so the 3 m pair stays stable, and a wide
-  // aperture, so the mirrors lose nothing (§7.7).
-  const long = { L: 3, refl2: 0.999, alpha_i: 0, pumpPower: 4, Rc2: 10, aperture: 5e-3 };
+  // Its output mirror: R = 100 m, so the 3 m pair stays stable with the
+  // rod's thermal lens at 4 W (f = 1.5 m, stage 13c: with R = 10 m it was
+  // unstable) and without it, and a wide aperture, so the mirrors lose
+  // almost nothing (§7.7).
+  const long = { L: 3, refl2: 0.999, alpha_i: 0, pumpPower: 4, Rc2: 100, aperture: 5e-3 };
   const on = config(long);
   const off = config(Object.assign({}, long, { pumpPower: 0 }));
   const d = B.derive(on);

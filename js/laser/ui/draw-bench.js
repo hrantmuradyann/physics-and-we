@@ -72,7 +72,9 @@
                                output } (R/2, m; negative behind, null
                                flat), mode: [{ z, w }] or null, rays:
                                [{ y0, hits, escaped }] (the engine's
-                               traceRay from mirror 1 at height y0) }.
+                               traceRay from mirror 1 at height y0; a
+                               hit's `middle`, with the rod's thermal
+                               lens, bends the ray at the middle) }.
                                With it: the mirrors in their shapes, the
                                mode's hourglass (a band without a mode),
                                the traced rays, F, "Widths × k"; without
@@ -1297,7 +1299,8 @@
   }
 
   // The traced rays (`cavity.rays`: { y0, hits, escaped }, the engine's
-  // ray trace from mirror 1): straight pieces from mirror to mirror,
+  // ray trace from mirror 1): straight pieces from mirror to mirror (bent
+  // at the cavity's middle when a hit has `middle`: the thermal lens),
   // fainter on each round trip. A ray that walks out goes on past the
   // mirror's edge, still straight, for a short run (ESCAPE_RUN of the
   // picture's width, less at the picture's edge), so it does not cross
@@ -1327,6 +1330,13 @@
       ray.hits.forEach(function (hit, k) {
         var to = onMirror(L, S, shapes, hit.mirror, hit.y);
         fade = strength * Math.pow(RAY_FADE, Math.floor(k / 2));
+        // Through the rod's thermal lens (stage 13c): bent at the cavity's
+        // middle, where the hit says it crossed.
+        if (typeof hit.middle === "number") {
+          var middle = { x: S.x1 + (cavity.length / 2) * S.perMetreX, y: L.axis.y - hit.middle * S.perMetreY };
+          casedLine(g, from.x, from.y, middle.x, middle.y, rayColour, casing, fade, 1.2);
+          from = middle;
+        }
         casedLine(g, from.x, from.y, to.x, to.y, rayColour, casing, fade, 1.2);
         from = to;
       });

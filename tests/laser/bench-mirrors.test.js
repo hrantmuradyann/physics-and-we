@@ -10,7 +10,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { loadEngine, deepFreeze, assertClose, plain, mirrorCurvature } = require("./helpers.js");
+const { loadEngine, deepFreeze, assertClose, plain, mirrorCurvature, thermalLens } = require("./helpers.js");
 
 const E = loadEngine();
 const B = E.bench;
@@ -44,7 +44,9 @@ test("§5.9: every bench has its real mirrors, aperture and loss", () => {
   for (const key of Object.keys(MIRRORS)) {
     const [medium, pump] = key.split(" ");
     const [shape1, R1, shape2, R2, aperture, stable, gamma] = MIRRORS[key];
-    const c = configFor(medium, pump);
+    // With the pump off, so the rod's thermal lens (stage 13c,
+    // thermal.test.js) is not in γ_m: these are the mirrors alone.
+    const c = configFor(medium, pump, "pumpPower" in configFor(medium, pump) ? { pumpPower: 0 } : {});
     assert.equal(c.mirror1, shape1, key + " mirror 1");
     assert.equal(c.mirror2, shape2, key + " mirror 2");
     if (R1 !== null) assertClose(c.Rc1, R1, 1e-12, key + " R₁");
@@ -65,7 +67,7 @@ test("derive's resonator is optics.resonator of the config's mirrors: concave c 
     const d = B.derive(c);
     const expected = E.optics.resonator({
       L: c.L, l_g: c.l_g, n: E.media.get("nd-yag").n, c1: mirrorCurvature(shape1, 2), c2: mirrorCurvature(shape2, 3),
-      lam: E.media.get("nd-yag").lam, aperture: c.aperture
+      lens: thermalLens(E, c), lam: E.media.get("nd-yag").lam, aperture: c.aperture
     });
     assert.deepEqual(plain(d.resonator), plain(expected), shape1 + ", " + shape2);
   }
@@ -217,7 +219,7 @@ test("beamPath: the mode's width along the cavity and the traced rays, from the 
   const medium = E.media.get("he-ne");
   const base = {
     L: c.L, l_g: c.l_g, n: medium.n,
-    c1: mirrorCurvature(c.mirror1, c.Rc1), c2: mirrorCurvature(c.mirror2, c.Rc2)
+    c1: mirrorCurvature(c.mirror1, c.Rc1), c2: mirrorCurvature(c.mirror2, c.Rc2), lens: 0
   };
   const path = B.beamPath(deepFreeze({ config: c, starts: [0.2e-3, -0.1e-3], roundTrips: 3, points: 10 }));
   // 11 points from mirror 1 (z = 0) to mirror 2 (z = L), each optics.beamRadius.
@@ -237,7 +239,8 @@ test("beamPath: the mode's width along the cavity and the traced rays, from the 
   const yag = E.media.get("nd-yag");
   const ray = B.beamPath(deepFreeze({ config: d, starts: [0.3e-3], roundTrips: 2, points: 4 })).rays[0];
   const expected = E.optics.traceRay({
-    L: d.L, l_g: d.l_g, n: yag.n, c1: 0, c2: 1 / d.Rc2, aperture: d.aperture, y: 0.3e-3, theta: 0, roundTrips: 2
+    L: d.L, l_g: d.l_g, n: yag.n, c1: 0, c2: 1 / d.Rc2, lens: thermalLens(E, d), aperture: d.aperture,
+    y: 0.3e-3, theta: 0, roundTrips: 2
   });
   assert.deepEqual(plain(ray), plain(expected));
 });

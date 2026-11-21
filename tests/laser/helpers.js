@@ -147,21 +147,34 @@ function mirrorCurvature(shape, radius) {
   throw new Error("mirrorCurvature: unknown shape " + shape);
 }
 
+// The power 1/f (m⁻¹) of a bench config's thermal lens (docs/laser-physics.md
+// §8.7, stage 13c), written out here: a steady pump (diodes, a pump laser)
+// on a medium with K and dn/dT heats the rod with (1 − η·λ_p/λ_l)·P_abs over
+// the pumped area A, and 1/f = P_h·(dn/dT)/(K·A). 0 for every other bench.
+function thermalLens(engine, config) {
+  if (config.pump !== "diode" && config.pump !== "laser") return 0;
+  const medium = engine.media.get(config.medium);
+  if (medium.thermalK === null) return 0;
+  const heat = config.pumpPower * (1 - config.eta * config.pumpLam / medium.lam);
+  return heat * medium.dndT / (medium.thermalK * config.area);
+}
+
 // α_i with a bench config's mirrors' loss spread over the rod
 // (docs/laser-physics.md §7.7): α_i + γ_m/l_g, from optics.resonator of
-// the config's mirrors.
+// the config's mirrors (with its thermal lens).
 function alphaWithMirrors(engine, config) {
   const medium = engine.media.get(config.medium);
   const mirrors = engine.optics.resonator({
     L: config.L, l_g: config.l_g, n: medium.n,
     c1: mirrorCurvature(config.mirror1, config.Rc1), c2: mirrorCurvature(config.mirror2, config.Rc2),
-    lam: medium.lam, aperture: config.aperture
+    lens: thermalLens(engine, config), lam: medium.lam, aperture: config.aperture
   });
   return config.alpha_i + mirrors.gamma / config.l_g;
 }
 
 module.exports = {
   mirrorCurvature,
+  thermalLens,
   alphaWithMirrors,
   REAL_ROOT,
   ROOT,

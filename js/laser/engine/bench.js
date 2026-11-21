@@ -12,6 +12,10 @@
                                           ([] for one it cannot run yet)
      LaserEngine.bench.configFor({ medium, pump })   a new config: that setup,
                                           with no Q-switch
+     LaserEngine.bench.hasThermalLens({ medium, pump })   true when the
+                                          pump heats that bench's rod into
+                                          a lens (stage 13c: Nd:YAG with
+                                          diodes)
      LaserEngine.bench.qSwitchesFor({ medium, pump })   the Q-switches that
                                           setup can have: "none" first
      LaserEngine.bench.withQSwitch({ config, qSwitch })   a new config: the
@@ -427,6 +431,15 @@
     return ["none"].concat(setup.qSwitches || []);
   }
 
+  // hasThermalLens({ medium, pump }) -> whether that bench's pump makes a
+  // thermal lens in its rod (stage 13c), at any pump above 0.
+  function hasThermalLens(params) {
+    var where = at("hasThermalLens");
+    check.params(where, params, ["medium", "pump"]);
+    var found = findSetup(where, params.medium, params.pump);
+    return lensKindOf(found.medium, found.setup);
+  }
+
   // qSwitchesFor({ medium, pump }) -> ["none", "cell", ...], a new array
   function qSwitchesFor(params) {
     var where = at("qSwitchesFor");
@@ -526,7 +539,8 @@
     var medium = read.medium;
     var mirrors = {
       L: config.L, l_g: config.l_g, n: medium.n,
-      c1: curvatureOf(config.mirror1, config.Rc1), c2: curvatureOf(config.mirror2, config.Rc2)
+      c1: curvatureOf(config.mirror1, config.Rc1), c2: curvatureOf(config.mirror2, config.Rc2),
+      lens: read.lens
     };
     var mode = null;
     if (read.resonator.w0 !== null) {
@@ -549,8 +563,9 @@
 
   /* ---------- the config ---------- */
 
-  // Checks a config and returns { medium, setup, resonator } (the mirrors:
-  // optics.resonator). Every check is made here, so an error always names
+  // Checks a config and returns { medium, setup, lens, resonator } (the
+  // rod's thermal lens, 1/f in m⁻¹, 0 without one; the mirrors:
+  // optics.resonator with it). Every check is made here, so an error always names
   // the function the page called.
   function readConfig(where, config) {
     if (config === null || typeof config !== "object" || Array.isArray(config)) {
@@ -569,28 +584,13 @@
     if (l_g > L) {
       check.fail(where, "l_g (" + l_g + " m) is longer than the cavity (L = " + L + " m).");
     }
-    var refl1 = check.reflectivity(where, "refl1", config.refl1);
-    var refl2 = check.reflectivity(where, "refl2", config.refl2);
-    var alpha_i = check.atLeast(where, "alpha_i", config.alpha_i, 0);
+    check.reflectivity(where, "refl1", config.refl1);
+    check.reflectivity(where, "refl2", config.refl2);
+    check.atLeast(where, "alpha_i", config.alpha_i, 0);
     check.between(where, "beta", config.beta, 0, 1);
     readMirror(where, config, "mirror1", "Rc1");
     readMirror(where, config, "mirror2", "Rc2");
     check.positive(where, "aperture", config.aperture);
-    // The mirrors (§7.7), worked out once here; compute uses them. Every
-    // input is checked above, so optics.js cannot refuse them, and with
-    // radii of 1 mm or more its numbers stay finite (an unstable pair's
-    // γ_m = ln M).
-    var resonator = resonatorOf(config, medium);
-    // γ with the mirrors' loss, as compute will have it.
-    var loss = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2)) + resonator.gamma;
-    if (!isFinite(loss)) {
-      check.fail(where, "the mirrors lose too much light to compute (γ = " + loss + " per pass).");
-    }
-    if (!(loss >= MIN_LOSS)) {
-      check.fail(where, "the cavity loses almost no light (γ = " + loss + " per pass, below " +
-        MIN_LOSS + "), so its photons would live for seconds. Lower a mirror's reflectivity " +
-        "or add internal loss.");
-    }
 
     if (setup.pump === "discharge") {
       check.atLeast(where, "current", config.current, 0);
@@ -602,7 +602,7 @@
           medium.id + (setup.law === "optimum" ? ": past that the discharge gives no gain." :
           ": the tube's rated current."));
       }
-      return { medium: medium, setup: setup, resonator: resonator };
+      return { medium: medium, setup: setup, lens: 0, resonator: mirrorsOf(where, config, medium, 0) };
     }
 
     if (setup.pump === "flashlamp") {
@@ -625,7 +625,42 @@
     }
     var eta = check.between(where, "eta", config.eta, 0, 1);
     if (eta === 0) check.fail(where, "eta must be above 0: with none of the pump reaching the upper level nothing happens.");
-    return { medium: medium, setup: setup, resonator: resonator };
+    var lens = lensPowerOf(config, medium, setup);
+    return { medium: medium, setup: setup, lens: lens, resonator: mirrorsOf(where, config, medium, lens) };
+  }
+
+  // The mirrors (§7.7) of a config whose every field is checked, with the
+  // rod's thermal lens of power `lens` (stage 13c), worked out once in
+  // readConfig; compute uses them. optics.js cannot refuse checked inputs, and with radii of
+  // 1 mm or more its numbers stay finite (an unstable pair's γ_m = ln M).
+  // Refuses a cavity whose loss, the mirrors' included, cannot be used.
+  function mirrorsOf(where, config, medium, lens) {
+    var resonator = resonatorOf(config, medium, lens);
+    // γ with the mirrors' loss, as compute will have it.
+    var loss = config.alpha_i * config.l_g - 0.5 * (Math.log(config.refl1) + Math.log(config.refl2)) + resonator.gamma;
+    if (!isFinite(loss)) {
+      check.fail(where, "the mirrors lose too much light to compute (γ = " + loss + " per pass).");
+    }
+    if (!(loss >= MIN_LOSS)) {
+      check.fail(where, "the cavity loses almost no light (γ = " + loss + " per pass, below " +
+        MIN_LOSS + "), so its photons would live for seconds. Lower a mirror's reflectivity " +
+        "or add internal loss.");
+    }
+    return resonator;
+  }
+
+  // The rod's thermal lens (docs/laser-physics.md §8.7, stage 13c): its
+  // power 1/f (m⁻¹), 0 without one. Only a steady pump (diodes, a pump
+  // laser) on a medium with known thermalK and dndT makes one: the heat
+  // P_h = (1 − η·λ_p/λ_l)·P_abs (the quantum defect, and the absorbed
+  // photons that never reach the upper level) spread over the pumped area
+  // A gives §8.7's end-pumped lens, 1/f = P_h·(dn/dT)/(K·A) (πw_p² = A).
+  // Only the thermo-optic part: stress and bulging (20–30 % more) are not
+  // modelled, and the lens follows the pump at once.
+  function lensPowerOf(config, medium, setup) {
+    if (!lensKindOf(medium, setup)) return 0;
+    var heat = (1 - config.eta * config.pumpLam / medium.lam) * config.pumpPower;
+    return heat * medium.dndT / (medium.thermalK * config.area);
   }
 
   // Checks one mirror: its shape and its radius of curvature (m). A flat
@@ -647,12 +682,20 @@
     return 0;
   }
 
-  // The mirrors of a checked config (optics.js, docs/laser-physics.md §7.7).
-  function resonatorOf(config, medium) {
+  // Whether a bench makes a thermal lens: a steady pump on a medium whose
+  // K and dn/dT are known.
+  function lensKindOf(medium, setup) {
+    if (setup.pump !== "diode" && setup.pump !== "laser") return false;
+    return medium.thermalK !== null && medium.dndT !== null;
+  }
+
+  // The mirrors of a checked config (optics.js, docs/laser-physics.md §7.7),
+  // with a lens of power `lens` (m⁻¹) at the rod's middle.
+  function resonatorOf(config, medium, lens) {
     return E.optics.resonator({
       L: config.L, l_g: config.l_g, n: medium.n,
       c1: curvatureOf(config.mirror1, config.Rc1), c2: curvatureOf(config.mirror2, config.Rc2),
-      lam: medium.lam, aperture: config.aperture
+      lens: lens, lam: medium.lam, aperture: config.aperture
     });
   }
 
@@ -815,6 +858,9 @@
       L_e: L_e,
       // The mirrors (optics.resonator): stability, the mode, F, their loss.
       resonator: resonator,
+      // The rod's thermal lens (stage 13c): its focal length, m; null
+      // without one, or with no heat (the pump off).
+      thermalFocus: read.lens === 0 ? null : 1 / read.lens,
       // α_i with the mirrors' loss spread over the rod, m⁻¹.
       alphaWithMirrors: alphaWithMirrors,
       gamma: scales.gamma,
@@ -919,7 +965,9 @@
   // derive(config) -> the still numbers of the bench, in SI:
   //   for every bench: medium, scheme, pump, lam, tau, I_sat, L_e,
   //   resonator (optics.resonator of the config's mirrors: stable, g1, g2,
-  //   the mode, focus1, focus2, the mirrors' loss), alphaWithMirrors, gamma
+  //   the mode, focus1, focus2, the mirrors' loss; with the rod's thermal
+  //   lens in it), thermalFocus (that lens's focal length, m, null without
+  //   one: only a steady pump on Nd:YAG, stage 13c), alphaWithMirrors, gamma
   //   (single pass), gth, N_c, tau_c, eps, powerPerP, powerPerPhoton,
   //   thresholdRate, powerAtTwiceThreshold, sOnePhoton, beta; R_c for four
   //   levels; N_t, n_t for three and two,
@@ -1489,6 +1537,7 @@
     pumpNow: pumpNow,
     flashThreshold: flashThreshold,
     qSwitchesFor: qSwitchesFor,
+    hasThermalLens: hasThermalLens,
     withQSwitch: withQSwitch,
     lossNow: lossNow,
     switchNow: switchNow,

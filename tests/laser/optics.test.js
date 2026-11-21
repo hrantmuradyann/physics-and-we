@@ -16,7 +16,15 @@ const { loadEngine, deepFreeze, assertClose, plain } = require("./helpers.js");
 const E = loadEngine();
 const O = E.optics;
 
+// The functions that take the mirrors also take `lens` (stage 13c); the
+// tests here are of cavities without one, so they get lens: 0 unless
+// they give one (the lens itself: thermal.test.js).
+const WITH_LENS = ["roundTrip", "resonator", "beamRadius", "traceRay"];
+
 function call(name, params) {
+  if (WITH_LENS.indexOf(name) !== -1 && params !== null && typeof params === "object" && !("lens" in params)) {
+    params = Object.assign({ lens: 0 }, params);
+  }
   return O[name](deepFreeze(params));
 }
 

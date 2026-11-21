@@ -28,7 +28,7 @@ const Q_CONTROLS = ["absorberT0"];
 // Every number the page can show, in the layout's order; each bench shows
 // some of them (ROWS in page.js, and page-choose.test.js).
 const READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
-  "stability", "waist", "mirrorLoss", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+  "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
 const CHOICES = ["medium", "pump"];
 const UI_WORDS = { labPlay: "Play", labPause: "Pause", labReset: "Reset" };
 const NB = "\u00a0";          // the no-break space between a number and its unit

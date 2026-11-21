@@ -1475,6 +1475,40 @@ test("the traced rays: straight from mirror face to mirror face, at the heights 
   assertClose(first.alpha, 0.3, 1e-12, "a dark laser's path");
 });
 
+// The rod's thermal lens (stage 13c): each hit carries `middle`, the
+// ray's height where it crossed the lens at the cavity's middle.
+const LENSED = deepFreeze(Object.assign({}, HENE, {
+  rays: [{ y0: 0.2e-3, hits: [{ mirror: 2, y: 0.1e-3, theta: -0.9e-3, middle: 0.3e-3 },
+    { mirror: 1, y: -0.2e-3, theta: -0.5e-3, middle: -0.05e-3 }], escaped: null }]
+}));
+
+test("the traced rays through a thermal lens: bent at the cavity's middle, at the height the engine traced there", () => {
+  for (const w of [327, 800, 1400]) {
+    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(LENSED));
+    const L = bench.layout(w, view.h);
+    const { perX, perY } = scalesOf(L, LENSED);
+    const lines = strokedLines(recorder);
+    const at = (mirror, y) => {
+      const Y = L.axis.y - y * perY;
+      const which = mirror === 1 ? "back" : "output";
+      return { x: bench.faceX(L, which, Y, LENSED.shapes[which]), y: Y };
+    };
+    const middleX = L.axis.x1 + 0.15 * perX;
+    const ray = LENSED.rays[0];
+    let from = at(1, ray.y0);
+    ray.hits.forEach((hit, k) => {
+      const middle = { x: middleX, y: L.axis.y - hit.middle * perY };
+      const to = at(hit.mirror, hit.y);
+      const near = (l, a, b) => Math.abs(l.x1 - a.x) < 1e-9 && Math.abs(l.y1 - a.y) < 1e-9 &&
+        Math.abs(l.x2 - b.x) < 1e-9 && Math.abs(l.y2 - b.y) < 1e-9;
+      assert.ok(lines.find((l) => near(l, from, middle)), "w " + w + ": to the lens, piece " + k);
+      assert.ok(lines.find((l) => near(l, middle, to)), "w " + w + ": from the lens, piece " + k);
+      assert.ok(!lines.find((l) => near(l, from, to)), "w " + w + ": not straight across, piece " + k);
+      from = to;
+    });
+  }
+});
+
 test("the beam's shape: the mode's width along the cavity, as an hourglass; a band without a mode; nothing when dark", () => {
   const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE));
   const L = bench.layout(800, view.h);

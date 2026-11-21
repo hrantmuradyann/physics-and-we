@@ -127,7 +127,8 @@
     "unstable": { "hy": "անկայուն", "en": "unstable" },
     "edge": { "hy": "կայունության սահմանին", "en": "on the edge of stable" },
     "waist": { "hy": "Փնջի ամենանեղ տեղը (շառավիղ)", "en": "Beam at its narrowest (radius)" },
-    "mirrorLoss": { "hy": "Հայելիներում կորած լույսը (մեկ շրջապտույտում)", "en": "Light lost at the mirrors (per round trip)" }
+    "mirrorLoss": { "hy": "Հայելիներում կորած լույսը (մեկ շրջապտույտում)", "en": "Light lost at the mirrors (per round trip)" },
+    "thermalLens": { "hy": "Տաքացած ձողի ոսպնյակը (կիզակետային հեռավորություն)", "en": "Lens of the heated rod (focal length)" }
   },
 
   "notes": {

@@ -190,8 +190,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/media.js",
-    find: "n: 1.76,\n      ng: null,\n      N_t: null,\n      pumps: [\"laser\"],",
-    replace: "n: 1.67,\n      ng: null,\n      N_t: null,\n      pumps: [\"laser\"],",
+    find: "n: 1.76,\n      ng: null,\n      N_t: null,\n      thermalK: null, dndT: null,\n      pumps: [\"laser\"],",
+    replace: "n: 1.67,\n      ng: null,\n      N_t: null,\n      thermalK: null, dndT: null,\n      pumps: [\"laser\"],",
     why: "Ti:sapphire refractive index mistyped"
   },
   {
@@ -4837,14 +4837,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "  function resonatorOf(config, medium) {\n    return E.optics.resonator({\n      L: config.L, l_g: config.l_g, n: medium.n,",
-    replace: "  function resonatorOf(config, medium) {\n    return E.optics.resonator({\n      L: config.L, l_g: config.l_g, n: 1,",
+    find: "  function resonatorOf(config, medium, lens) {\n    return E.optics.resonator({\n      L: config.L, l_g: config.l_g, n: medium.n,",
+    replace: "  function resonatorOf(config, medium, lens) {\n    return E.optics.resonator({\n      L: config.L, l_g: config.l_g, n: 1,",
     why: "the rod counted as air"
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "      lam: medium.lam, aperture: config.aperture",
-    replace: "      lam: 1e-6, aperture: config.aperture",
+    find: "      lens: lens, lam: medium.lam, aperture: config.aperture",
+    replace: "      lens: lens, lam: 1e-6, aperture: config.aperture",
     why: "every medium's mirrors at 1 µm"
   },
   {
@@ -4910,8 +4910,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/engine/bench.js",
-    find: "    var loss = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2)) + resonator.gamma;",
-    replace: "    var loss = alpha_i * l_g - 0.5 * (Math.log(refl1) + Math.log(refl2));",
+    find: "    var loss = config.alpha_i * config.l_g - 0.5 * (Math.log(config.refl1) + Math.log(config.refl2)) + resonator.gamma;",
+    replace: "    var loss = config.alpha_i * config.l_g - 0.5 * (Math.log(config.refl1) + Math.log(config.refl2));",
     why: "the lossless-cavity guard blind to the mirrors' loss"
   },
   {
@@ -5194,8 +5194,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/page.js",
-    find: "      var sameCavity = cavity !== null && CAVITY_FIELDS.every(function (field) {",
-    replace: "      var sameCavity = false && CAVITY_FIELDS.every(function (field) {",
+    find: "      var sameCavity = cavity !== null && d.thermalFocus === derived.thermalFocus &&",
+    replace: "      var sameCavity = false && d.thermalFocus === derived.thermalFocus &&",
     why: "the cavity traced again on every pump move"
   },
   {
@@ -6296,6 +6296,126 @@ const MUTATIONS = [
     find: "[Ուիլյամ Բենեթը](https://en.wikipedia.org/wiki/William_R._Bennett_Jr.)",
     replace: "[Ուիլյամ Բենեթը](https://hy.wikipedia.org/wiki/IBM)",
     why: "the Armenian text links one article twice in a chapter"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    var heat = (1 - config.eta * config.pumpLam / medium.lam) * config.pumpPower;",
+    replace: "    var heat = (1 - config.pumpLam / medium.lam) * config.pumpPower;",
+    why: "the heat share without η (stage 13c)"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    return heat * medium.dndT / (medium.thermalK * config.area);",
+    replace: "    return heat * medium.dndT / (2 * medium.thermalK * config.area);",
+    why: "the uniform rod's 2KA instead of the end-pumped K·A"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    return heat * medium.dndT / (medium.thermalK * config.area);",
+    replace: "    return -heat * medium.dndT / (medium.thermalK * config.area);",
+    why: "the thermal lens's sign flipped"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "    if (setup.pump !== \"diode\" && setup.pump !== \"laser\") return false;",
+    replace: "    if (setup.pump !== \"diode\" && setup.pump !== \"laser\" && setup.pump !== \"flashlamp\") return false;",
+    why: "a flashlamp bench gets a lens"
+  },
+  {
+    file: "js/laser/engine/bench.js",
+    find: "      lens: read.lens\n",
+    replace: "      lens: 0\n",
+    why: "beamPath without the lens"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var L0 = 2 * d - d * d * P;\n    return { L0: L0, g1: 1 - d * P - L0 * c1, g2: 1 - d * P - L0 * c2 };",
+    replace: "    var L0 = 2 * d;\n    return { L0: L0, g1: 1 - d * P - L0 * c1, g2: 1 - d * P - L0 * c2 };",
+    why: "L* for L₀ in the equivalent resonator"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    return { L0: L0, g1: 1 - d * P - L0 * c1, g2: 1 - d * P - L0 * c2 };",
+    replace: "    return { L0: L0, g1: 1 - L0 * c1, g2: 1 - d * P - L0 * c2 };",
+    why: "the lens at mirror 2's end of the pass (d₂ = 0 for g₁)"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      spotLength: Math.abs(eq.L0),",
+    replace: "      spotLength: Lr,",
+    why: "L* instead of |L₀| in the spots' clip"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      var half = matrix(1, Lr / 2, 0, 1);\n      pass = times(half, times(matrix(1, 0, 0 - P, 1), half));",
+    replace: "      var half = matrix(1, Lr / 2, 0, 1);\n      pass = times(matrix(1, Lr, 0, 1), matrix(1, 0, 0 - P, 1));",
+    why: "the lens at a mirror in the round trip"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var re = x / size - P;",
+    replace: "    var re = x / size + P;",
+    why: "the beam through the lens bent the wrong way"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "      if (waist > piece.from && waist < end) candidates.push({ at: waist, piece: piece });",
+    replace: "",
+    why: "the narrowest place misses a waist inside a piece"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    var piece = zr <= mode.half ? mode.pieces[0] : mode.pieces[1];",
+    replace: "    var piece = mode.pieces[0];",
+    why: "beamRadius ignores the lens past the middle"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "          middle = y;\n          theta = theta - P * y;",
+    replace: "          middle = y;\n          theta = theta - 2 * P * y;",
+    why: "the ray bent twice as much at the lens"
+  },
+  {
+    file: "js/laser/engine/optics.js",
+    find: "    if (middle !== null) hit.middle = middle;",
+    replace: "",
+    why: "no `middle` on the hits"
+  },
+  {
+    file: "js/laser/engine/media.js",
+    find: "      thermalK: 14, dndT: 7.3e-6,",
+    replace: "      thermalK: 14, dndT: 7.3e-5,",
+    why: "dn/dT ten times too big"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      var sameCavity = cavity !== null && d.thermalFocus === derived.thermalFocus &&",
+    replace: "      var sameCavity = cavity !== null &&",
+    why: "the pump no longer redraws the cavity with its lens"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (!hasLens) {\n        rows = without(rows, [\"thermalLens\"]);\n      }\n",
+    replace: "",
+    why: "the lens row on every bench"
+  },
+  {
+    file: "js/laser/page.js",
+    find: "      if (name === \"thermalLens\") return d.thermalFocus === null ? \"—\" : F.si(d.thermalFocus, \"m\");",
+    replace: "      if (name === \"thermalLens\") return \"—\";",
+    why: "the lens's focal length not written"
+  },
+  {
+    file: "js/laser/ui/draw-bench.js",
+    find: "        if (typeof hit.middle === \"number\") {",
+    replace: "        if (false) {",
+    why: "the drawn rays not bent at the lens"
+  },
+  {
+    file: "sections/laser.html",
+    find: "data-laser-readout=\"thermalLens\"",
+    replace: "data-laser-readout=\"thermalLenz\"",
+    why: "the lens's readout missing from the layout"
   },
 ];
 

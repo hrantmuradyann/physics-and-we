@@ -171,10 +171,11 @@
   // flash the highest output since it was fired instead of the steady
   // numbers, which a flash does not have.
   // Every bench shows its mirrors: stable or not, the beam's narrowest
-  // radius and the light they lose (stage 10b).
+  // radius and the light they lose (stage 10b), and a bench whose pump
+  // heats its rod into a lens that lens's focal length (stage 13c).
   var READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
-    "stability", "waist", "mirrorLoss", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
-  var MIRROR_ROWS = ["stability", "waist", "mirrorLoss"];
+    "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+  var MIRROR_ROWS = ["stability", "waist", "mirrorLoss", "thermalLens"];
   var STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c"].concat(MIRROR_ROWS, ["P_out", "powerNow", "T_best", "period", "time"]);
   var ROWS = {
     diode: STEADY_ROWS,
@@ -348,15 +349,20 @@
 
     // The still numbers and the sliders' ranges of a config, and what the
     // drawing shows of its mirrors.
-    // The cavity is traced again only when its own fields change: a pump,
-    // coupler or filter move keeps it (stage 10b review).
+    // The cavity is traced again only when its own fields or the rod's
+    // thermal lens change: a coupler or filter move keeps it, and so does a
+    // pump move on a bench without a lens (stage 10b review, stage 13c).
     function numbersOf(config) {
       var d = bench.derive(config);
-      var sameCavity = cavity !== null && CAVITY_FIELDS.every(function (field) {
-        return config[field] === state.config[field];
-      });
+      var sameCavity = cavity !== null && d.thermalFocus === derived.thermalFocus &&
+        CAVITY_FIELDS.every(function (field) {
+          return config[field] === state.config[field];
+        });
       return {
         derived: d, controls: bench.controls(config), cavity: sameCavity ? cavity : cavityOf(config, d),
+        // Whether the bench shows its thermal lens's row: a bench's answer,
+        // so asked once per config, not per readout.
+        hasLens: bench.hasThermalLens({ medium: config.medium, pump: config.pump }),
         // The wavelength changes only with the medium (stage 10c1 review:
         // media.get copies the whole medium, on every slider move).
         lam: lam !== null && config.medium === state.config.medium ? lam : engine.media.get(config.medium).lam
@@ -393,6 +399,7 @@
     }
     var cavity = null;          // cavityOf(state.config, derived)
     var lam = null;             // the laser's wavelength (m), for the beam's colour (stage 10c)
+    var hasLens = false;        // bench.hasThermalLens of state.config (stage 13c)
     // A new config and its numbers, taken together. Whatever can fail (a
     // config the engine refuses, a threshold search) is worked out before,
     // so a failure leaves the old bench as it was.
@@ -402,6 +409,7 @@
       controls = numbers.controls;
       cavity = numbers.cavity;
       lam = numbers.lam;
+      hasLens = numbers.hasLens;
     }
     take(state.config, numbersOf(state.config));
 
@@ -533,6 +541,9 @@
     // The readouts this bench shows.
     function rowsShown() {
       var rows = ROWS[state.config.pump];
+      if (!hasLens) {
+        rows = without(rows, ["thermalLens"]);
+      }
       if (derived.P_out === null) {
         rows = without(rows, PULSING_HIDES);
         if (rows.indexOf("peak") === -1) rows = rows.concat(["peak"]);
@@ -586,6 +597,8 @@
         return narrowest === null ? "—" : F.si(narrowest, "m");
       }
       if (name === "mirrorLoss") return lossText(d.resonator.loss);
+      // No lens with the pump off.
+      if (name === "thermalLens") return d.thermalFocus === null ? "—" : F.si(d.thermalFocus, "m");
       if (name === "lossNow") {
         var now = switchNow();
         return now === null ? "—" : F.number(now.loss) + NO_BREAK + "×";

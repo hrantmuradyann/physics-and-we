@@ -320,20 +320,34 @@ As you asked, I went through the whole book and linked the first mention in each
 - Only link a name the first time it appears in a chapter.
 - Then run `node --test`: it says if a link breaks a rule (another website, a link in one language only, the same link twice in a chapter).
 
+### Stage 13c: the heated rod becomes a lens (done while you slept, 21 November)
+
+You asked me to go on with stage 13 without asking, so I picked the smallest extra first and made every choice myself; each is written in `docs/laser-plan.md` (the "Stage 13c scope card") for you to check.
+
+**What you will see:** on the Nd:YAG laser pumped by diodes (the page's first laser), move the pump slider up. The pump heats the middle of the crystal, and a warm crystal bends light like a weak lens. So, the harder you pump:
+- the light's hourglass between the mirrors gets narrower;
+- the traced rays bend a little in the middle of the crystal;
+- the dot on the stability diagram slides towards the edge;
+- one new line in the readouts, "Lens of the heated rod (focal length)", says how strong the lens is: about 4 m at the threshold, 1.2 m at 5 W, 30 cm at 20 W, and "—" with the pump off.
+
+**No new button or slider.** Nothing changes on the other lasers: the flashlamp ones fire single flashes (the heat depends on how often you fire, which the page does not have), the gases have no crystal, the dye flows, laser glass is made so it barely forms a lens, and the Ti:sapphire's straight cavity is only a stand-in for the real folded one.
+
+**One thing I decided not to do, and you may want:** the books say a laser can go *out* when pumped harder, because the lens pushes the mirrors past the stable edge. On this laser that only happens at 37 W, and even there the laser keeps shining, because it is then 24 times over its threshold and the unstable mirrors lose only a little. So I kept the slider at 20 W rather than show a dot in the "unstable" area with a laser still shining, which would confuse. If you want the laser to go out on screen, I can make the pump spot smaller (a stronger lens) or set up another laser where it happens: tell me.
+
 ## What is left
 
 Stage 9 (several laser frequencies at once, with a spectrum panel) was dropped at your request: it would have made everything too complex. The laser stays one frequency.
 
 Stage 10 was rewritten on 16 November from your requests (the mirrors, the focal points, the light's path, real-looking materials and diodes) and split into three parts, each finished, checked and saved on its own. The first two parts, 10a and 10b, are done (above). One thing I will ask you at the start of 10c: the diodes pump the crystal from its end (my recommendation: it matches the physics already in the simulator, and the pump light is easy to see) or from its side.
 
-**A note on "curved light":** light goes in straight lines between the mirrors, and it only turns at a mirror. What looks curved is the whole beam narrowing and widening. Inside a crystal heated by the pump it does bend a little; that is stage 13 (heat in the rod).
+**A note on "curved light":** light goes in straight lines between the mirrors, and it only turns at a mirror. What looks curved is the whole beam narrowing and widening. Inside a crystal heated by the pump it does bend a little: since stage 13c the page shows that too (above).
 
 | Stage | What it will add |
 |---|---|
 | 10c | **A bench that looks real** (next): ruby as a red rod, Nd:YAG pale lilac, Ti:sapphire pink, dye as a coloured liquid in a glass cell, the gases in glass tubes glowing in their real colours with atoms moving inside; more realistic diodes, with the pump light visibly going into the crystal and being absorbed; the laser beam in its real colour (and the invisible infrared ones in a marked false colour). |
 | 11 | ~~Lenses outside the laser~~: **dropped** at your request (20 November). The lens physics was built and then removed; the page stays as it is. |
 | 12 | ~~The "learn" section~~: **done** as your study page (20 November, below). |
-| 13 | **Extras,** one at a time, the five you kept (21 November): doubling the frequency (an infrared beam turned green), heat in the rod acting as a lens, mode-locking (very short pulses), the semiconductor diode laser, and the pump in more detail (the lamp's reflector). ~~Polarisation~~ and ~~self-focusing~~ were **dropped** at your request: they would hardly show on the page, and the book already explains both. |
+| 13 | **Extras,** one at a time, the five you kept (21 November): doubling the frequency (an infrared beam turned green), heat in the rod acting as a lens (**done**, 13c, above), mode-locking (very short pulses), the semiconductor diode laser, and the pump in more detail (the lamp's reflector). ~~Polarisation~~ and ~~self-focusing~~ were **dropped** at your request: they would hardly show on the page, and the book already explains both. |
 | 14 | A final pass over all the documentation. |
 
 ## Things to know or check before going public

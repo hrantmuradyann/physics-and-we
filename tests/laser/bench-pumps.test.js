@@ -341,11 +341,13 @@ test("derive with continuous light reports the steady inversion: y of rates.four
 });
 
 test("powerAtTwiceThreshold is the steady output at twice threshold, for four and three levels (not powerPerP for ruby)", () => {
-  // Four levels: the diode bench pumped at twice its threshold power.
-  const yag = B.derive(configFor("nd-yag", "diode"));
-  const twice = B.derive(configFor("nd-yag", "diode", { pumpPower: 2 * yag.pumpThreshold }));
+  // Four levels: the diode-pumped Nd:glass at twice its threshold power
+  // (not Nd:YAG, whose thermal lens, stage 13c, moves the threshold with
+  // the pump by 10⁻¹⁰).
+  const yag = B.derive(configFor("nd-glass", "diode"));
+  const twice = B.derive(configFor("nd-glass", "diode", { pumpPower: 2 * yag.pumpThreshold }));
   assertClose(twice.x, 2, 1e-12, "x");
-  assertClose(yag.powerAtTwiceThreshold, twice.P_out, 1e-12, "Nd:YAG");
+  assertClose(yag.powerAtTwiceThreshold, twice.P_out, 1e-12, "Nd:glass");
   assertClose(yag.powerAtTwiceThreshold, yag.powerPerP, 1e-12, "four levels: p = 1");
   // Three levels: ruby's steady photons at w = 2·w_th, without the seed.
   const ruby = B.derive(configFor("ruby", "flashlamp"));

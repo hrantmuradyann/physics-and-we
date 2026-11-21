@@ -47,6 +47,8 @@ const GROUPS = [
 
 // The numbers each kind of bench shows, in the layout's order.
 const STEADY_ROWS = ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"];
+// The diode-pumped Nd:YAG also shows its rod's thermal lens (stage 13c).
+const LENS_ROWS = ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "thermalLens", "P_out", "powerNow", "T_best", "period", "time"];
 const DISCHARGE_ROWS = ["currentThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"];
 const FLASH_ROWS = ["flashThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "peak", "powerNow", "time"];
 const PUMP_KINDS = ["diode", "laser", "flashlamp", "discharge"];
@@ -382,7 +384,7 @@ test("each kind of bench shows its own numbers, and hides the others", () => {
   const page = built("en", { reducedMotion: true });
   const { section } = page;
   const expected = {
-    "nd-yag diode": STEADY_ROWS, "nd-glass diode": STEADY_ROWS, "dye-r6g laser": STEADY_ROWS, "ti-sapphire laser": STEADY_ROWS,
+    "nd-yag diode": LENS_ROWS, "nd-glass diode": STEADY_ROWS, "dye-r6g laser": STEADY_ROWS, "ti-sapphire laser": STEADY_ROWS,
     "he-ne discharge": DISCHARGE_ROWS, "ar-ion discharge": DISCHARGE_ROWS, "co2 discharge": DISCHARGE_ROWS,
     "ruby flashlamp": FLASH_ROWS, "nd-glass flashlamp": FLASH_ROWS, "nd-yag flashlamp": FLASH_ROWS, "dye-r6g flashlamp": FLASH_ROWS
   };

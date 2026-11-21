@@ -674,7 +674,7 @@ A slab of medium of length l and index n is replaced in the beam formulas by fre
 m = \frac{A+D}{2}, \quad |m| < 1; \qquad \frac{1}{q} = \frac{D-A}{2B} - i\,\frac{\sqrt{1-m^2}}{|B|}; \qquad w^2 = \frac{\lambda\,|B|}{\pi\sqrt{1-m^2}}, \qquad R_{\text{wf}} = \frac{2B}{D-A}
 ```
 
-q is the complex beam parameter (Section 8.4), R_wf the wavefront radius of curvature. For an empty two-mirror resonator m = 2g₁g₂ − 1, and the condition |m| < 1 coincides with 7.1 — a good test for the code. In the two planes (x and y) the matrices may differ: cylindrical lens, a spherical mirror at an angle, Brewster windows.
+q is the complex beam parameter (Section 8.4), R_wf the wavefront radius of curvature. **A thin lens of power P = 1/f inside the cavity** (the thermal lens, 8.7), at reduced distances d₁, d₂ from the mirrors, gives the equivalent resonator (Kogelnik 1965): L₀ = d₁ + d₂ − d₁d₂P, g₁ = 1 − d₂P − L₀/R₁, g₂ = 1 − d₁P − L₀/R₂; then m = 2g₁g₂ − 1 again, the stability condition of 7.1 holds with these g, and the spots on the mirrors are 7.2's with |L₀| in place of L. L₀ can be zero or negative for a strong lens. Inside, the beam is one Gaussian piece on each side of the lens (two waists, or none), found by carrying q through the elements. For an empty two-mirror resonator m = 2g₁g₂ − 1, and the condition |m| < 1 coincides with 7.1 — a good test for the code. In the two planes (x and y) the matrices may differ: cylindrical lens, a spherical mirror at an angle, Brewster windows.
 
 ### 7.4 Transverse modes: bright spots and dark lines
 
@@ -882,7 +882,9 @@ More than half of the energy absorbed by ruby turns into heat (§121, item 3). T
 \Delta T(r) = \frac{Q\,(r_0^2 - r^2)}{4K},\quad Q = \frac{P_h}{A\,l}; \qquad f_{\text{th}} \approx \frac{2KA}{P_h\,(dn/dT)}
 ```
 
-This is only the main (thermo-optic) contribution; stress and end-face bulging strengthen the lens by another ~20–30%. Example: Nd:YAG rod 6 mm in diameter, K ≈ 14 W/(m·K), dn/dT ≈ 7.3×10⁻⁶ K⁻¹, P_h = 100 W → f ≈ 1 m. For end pumping with spot radius w_p: f ≈ πKw_p²/(P_h·dn/dT). In the simulator the thermal lens is inserted into the cavity round-trip matrix (Section 7.3). As pump power rises the resonator can leave the stability region, and the laser goes out precisely when it is "pumped harder" — a nice counter-intuitive effect.
+This is only the main (thermo-optic) contribution; stress and end-face bulging strengthen the lens by another ~20–30%. Example: Nd:YAG rod 6 mm in diameter, K ≈ 14 W/(m·K), dn/dT ≈ 7.3×10⁻⁶ K⁻¹, P_h = 100 W → f = 1.08 m. For end pumping with spot radius w_p: f ≈ πKw_p²/(P_h·dn/dT).
+
+**What the simulator uses (stage 13c).** Only on a steadily pumped medium whose K and dn/dT it knows (Nd:YAG; `media.js`'s `thermal`): the end-pumped formula with πw_p² = the bench's pumped area A, f = K·A/(P_h·dn/dT), and the heat P_h = (1 − η·λ_p/λ_l)·P_abs (the quantum defect, plus the absorbed photons that never reach the upper level). The lens is thin, at the rod's middle, and follows the pump at once (the rod's thermal time is not modelled). It is inserted into the round-trip matrix (Section 7.3, the equivalent resonator). As pump power rises the resonator can leave the stability region, and then the laser goes out precisely when it is "pumped harder" — but only if the unstable pair's walk-off loss (ln M per pass, 7.7) beats the gain. On the simulator's diode-pumped Nd:YAG bench (L = 30 cm, flat + 1 m mirrors, A = 1 mm²) the pair reaches the edge at 36.6 W absorbed, where the laser is already 24 times over threshold and M stays below 1.2, so the laser does not go out; the page's slider stops at 20 W (f = 0.30 m).
 
 ### 8.8 Focusing on a target: field and radiation pressure
 

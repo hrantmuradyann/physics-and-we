@@ -174,7 +174,7 @@ test("the readouts show derive()'s numbers for the bench, formatted", () => {
   // Only the numbers of a bench with steady light are shown (each bench's
   // are tested in page-choose.test.js).
   assert.deepEqual(shownRows(section),
-    ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "P_out", "powerNow", "T_best", "period", "time"]);
+    ["pumpThreshold", "x", "gth", "tau_c", "stability", "waist", "mirrorLoss", "thermalLens", "P_out", "powerNow", "T_best", "period", "time"]);
 });
 
 test("moving a slider while paused also rewrites the output now (it depends on the mirror)", () => {

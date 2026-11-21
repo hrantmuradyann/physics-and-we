@@ -23,6 +23,15 @@
    one of length L* = L − l_g + l_g/n, and g = 1 − L*·c (§7.1). Heights at
    the mirrors are real heights; an angle is the angle in air.
 
+   A LENS IN THE ROD (stage 13c: the thermal lens, docs/laser-physics.md
+   §8.7). Every function that takes the mirrors also takes `lens`, the
+   power 1/f (m⁻¹) of a thin lens at the rod's middle, which is the
+   cavity's middle: reduced distance d = ½·L* from each mirror. 0 means no
+   lens, and then every answer is worked out exactly as without one. With a
+   lens the pair is Kogelnik's equivalent resonator (§7.3): L₀ = 2d − d²P,
+   g_i = 1 − dP − L₀·c_i, and the spots on the mirrors are §7.2's with |L₀|
+   for L*. Inside, the beam is one Gaussian piece each side of the lens.
+
    THE APERTURE. The rod's radius (or the gas tube's bore) limits the
    light. It is taken at both mirrors: for a tube that fills the cavity
    that is exact (the widest beam is at a mirror), for a shorter rod it
@@ -31,16 +40,18 @@
      LaserEngine.optics.freeSpace(d)                 [[1, d], [0, 1]]
      LaserEngine.optics.slab({ l, n })               free space l/n
      LaserEngine.optics.mirror(c)                    [[1, 0], [−2c, 1]]
+     LaserEngine.optics.thinLens(P)                  [[1, 0], [−P, 1]], P = 1/f
      LaserEngine.optics.multiply([first, second, …]) the matrix of the
                                        elements in the order light meets them
      LaserEngine.optics.reducedLength({ L, l_g, n }) L* = L − l_g + l_g/n
-     LaserEngine.optics.roundTrip({ L, l_g, n, c1, c2 })   the round trip
-                                       from mirror 1, out to mirror 2 and back
-     LaserEngine.optics.resonator({ L, l_g, n, c1, c2, lam, aperture })
+     LaserEngine.optics.roundTrip({ L, l_g, n, c1, c2, lens })   the round
+                                       trip from mirror 1, out to mirror 2
+                                       and back
+     LaserEngine.optics.resonator({ L, l_g, n, c1, c2, lens, lam, aperture })
                                        everything about the pair (below)
-     LaserEngine.optics.beamRadius({ L, l_g, n, c1, c2, lam, z })   w at z
-                                       (m from mirror 1), null if no mode
-     LaserEngine.optics.traceRay({ L, l_g, n, c1, c2, aperture, y, theta, roundTrips })
+     LaserEngine.optics.beamRadius({ L, l_g, n, c1, c2, lens, lam, z })   w
+                                       at z (m from mirror 1), null if no mode
+     LaserEngine.optics.traceRay({ L, l_g, n, c1, c2, lens, aperture, y, theta, roundTrips })
                                        one ray bounced between the mirrors
      LaserEngine.optics.plateLoss(fresnel)   the diffraction loss per pass
                                        of two flat round mirrors (§7.7)
@@ -101,6 +112,12 @@
     return matrix(1, 0, 0 - 2 * c, 1);            // 0 − 0 = 0, not −0, for a flat mirror
   }
 
+  // A thin lens of power P = 1/f (m⁻¹; converging > 0).
+  function thinLens(P) {
+    check.finite(at("thinLens"), "P", P);
+    return matrix(1, 0, 0 - P, 1);
+  }
+
   // The product of matrices; list[0] is the element the light meets first.
   function times(second, first) {
     return matrix(
@@ -144,19 +161,35 @@
     return readLength(where, params);
   }
 
-  // The round trip from mirror 1: across to mirror 2 (reduced length L*),
-  // off it, back, and off mirror 1.
-  function roundTripOf(Lr, c1, c2) {
-    return times(mirror(c1), times(matrix(1, Lr, 0, 1), times(mirror(c2), matrix(1, Lr, 0, 1))));
+  // The round trip from mirror 1: across to mirror 2 (reduced length L*,
+  // through the lens at its middle when P is not 0), off it, back, and
+  // off mirror 1.
+  function roundTripOf(Lr, c1, c2, P) {
+    var pass = matrix(1, Lr, 0, 1);
+    if (P !== 0) {
+      var half = matrix(1, Lr / 2, 0, 1);
+      pass = times(half, times(matrix(1, 0, 0 - P, 1), half));
+    }
+    return times(mirror(c1), times(pass, times(mirror(c2), pass)));
   }
 
   function roundTrip(params) {
     var where = at("roundTrip");
-    check.params(where, params, ["L", "l_g", "n", "c1", "c2"]);
+    check.params(where, params, ["L", "l_g", "n", "c1", "c2", "lens"]);
     var Lr = readLength(where, params);
     var c1 = check.finite(where, "c1", params.c1);
     var c2 = check.finite(where, "c2", params.c2);
-    return roundTripOf(Lr, c1, c2);
+    var P = check.finite(where, "lens", params.lens);
+    return roundTripOf(Lr, c1, c2, P);
+  }
+
+  // Kogelnik's equivalent resonator of a pair with a thin lens of power P
+  // half way between them (§7.3): L₀ = 2d − d²P with d = L*/2, and
+  // g_i = 1 − dP − L₀·c_i. With P = 0: L₀ = L*, g_i = 1 − L*·c_i.
+  function equivalentOf(Lr, c1, c2, P) {
+    var d = Lr / 2;
+    var L0 = 2 * d - d * d * P;
+    return { L0: L0, g1: 1 - d * P - L0 * c1, g2: 1 - d * P - L0 * c2 };
   }
 
   /* ---------- the losses (§7.7) ---------- */
@@ -206,7 +239,11 @@
   // (Kogelnik & Li's Fig. 22: the |g| = 0.99 curve lies under the flat
   // mirrors' curve and meets it at small N). Outside the stable region the
   // same with |Y|, so the loss runs on across every edge.
+  // (With a lens, `fresnel` is a²/(λ|L₀|), Infinity for L₀ = 0, where the
+  // spot is a point unless Y = 0 too: that 0·∞ alone is taken as the flat
+  // mirrors' loss. Any other NaN is passed on, for the caller to see.)
   function mirrorShare(fit, fresnel, flat) {
+    if (fresnel === Infinity && fit === 0) return flat;
     var clip = Math.exp(-2 * Math.PI * fresnel * Math.sqrt(Math.abs(fit)));
     return Math.min(clip, flat);
   }
@@ -262,11 +299,79 @@
     return zr + l_g - l_g / n;
   }
 
+  /* ---------- the mode with a lens in the cavity (stage 13c) ---------- */
+
+  // A Gaussian beam is written by q = x + i·y (reduced metres): x is the
+  // distance past its waist, y > 0 its Rayleigh range, and its radius is
+  // w² = (λ/π)(y² + x²)/y. Free space adds to x; a lens of power P makes
+  // 1/q′ = 1/q − P.
+  function throughLens(x, y, P) {
+    var size = x * x + y * y;
+    var re = x / size - P;                 // 1/q = (x − i·y)/(x² + y²)
+    var im = y / size;
+    var after = re * re + im * im;
+    return { x: re / after, y: im / after };
+  }
+
+  function radiusOf(x, y, lam) {
+    return Math.sqrt(lam * (y * y + x * x) / (Math.PI * y));
+  }
+
+  // The mode of a pair with a lens of power P at its middle, or null when
+  // it has none (not strictly stable). pieces[0] is q on leaving mirror 1
+  // (§7.3: 1/q = (D − A)/(2B) − i·√(1 − m²)/|B|, the round trip's own beam),
+  // pieces[1] q on leaving the lens towards mirror 2; each { from, x, y },
+  // from its reduced distance from mirror 1. narrowest = the beam's
+  // narrowest place between the mirrors, { at (reduced), w, zR }: a waist
+  // inside a piece, else the lens or a mirror.
+  function lensMode(Lr, c1, c2, P, lam) {
+    var eq = equivalentOf(Lr, c1, c2, P);
+    var product = eq.g1 * eq.g2;
+    if (!(product > 0 && product < 1)) return null;
+    var M = roundTripOf(Lr, c1, c2, P);
+    var m = (M.A + M.D) / 2;
+    var root = 1 - m * m;
+    if (!(root > 0) || M.B === 0) return null;
+    var a = (M.D - M.A) / (2 * M.B);
+    var b = Math.sqrt(root) / Math.abs(M.B);
+    var first = { from: 0, x: a / (a * a + b * b), y: b / (a * a + b * b) };
+    var d = Lr / 2;
+    var lensed = throughLens(first.x + d, first.y, P);
+    var second = { from: d, x: lensed.x, y: lensed.y };
+    var pieces = [first, second];
+
+    // The candidates: each piece's ends, and its waist if it lies inside.
+    var candidates = [];
+    pieces.forEach(function (piece) {
+      var end = piece.from + d;
+      candidates.push({ at: piece.from, piece: piece });
+      var waist = piece.from - piece.x;
+      if (waist > piece.from && waist < end) candidates.push({ at: waist, piece: piece });
+      candidates.push({ at: end, piece: piece });
+    });
+    var narrowest = null;
+    candidates.forEach(function (candidate) {
+      var piece = candidate.piece;
+      var w = radiusOf(piece.x + candidate.at - piece.from, piece.y, lam);
+      if (narrowest === null || w < narrowest.w) {
+        narrowest = { at: candidate.at, w: w, zR: piece.y };
+      }
+    });
+    return { pieces: pieces, narrowest: narrowest, half: d };
+  }
+
+  // w at the reduced distance zr from mirror 1 (0..L*) in a lensMode.
+  function lensRadius(mode, zr, lam) {
+    var piece = zr <= mode.half ? mode.pieces[0] : mode.pieces[1];
+    return radiusOf(piece.x + zr - piece.from, piece.y, lam);
+  }
+
   /* ---------- the whole pair ---------- */
 
-  // resonator({ L, l_g, n, c1, c2, lam, aperture }) ->
+  // resonator({ L, l_g, n, c1, c2, lens, lam, aperture }) ->
   //   reducedLength  L*, m
-  //   g1, g2, m      §7.1's g-parameters and (A + D)/2 = 2g₁g₂ − 1
+  //   g1, g2, m      §7.1's g-parameters and (A + D)/2 = 2g₁g₂ − 1 (with
+  //                  a lens, the equivalent resonator's, §7.3)
   //   stable         true strictly inside 0 < g₁g₂ < 1, and at the confocal
   //                  point g₁ = g₂ = 0; false on an edge and beyond
   //   w0, waistAt, zR, w1, w2   the Gaussian mode (m; waistAt is the real
@@ -275,6 +380,12 @@
   //                  mirror the waist can lie outside the cavity (waistAt
   //                  < 0 or > L): a virtual waist, which the beam inside
   //                  only points back to; beamRadius covers 0 to L only.
+  //                  With a lens: w0 and waistAt are the beam's narrowest
+  //                  place between the mirrors (a waist inside one of the
+  //                  two pieces, else the lens or a mirror), zR that
+  //                  piece's Rayleigh range, w1 and w2 the spots carried
+  //                  from the round trip's beam; the confocal point is
+  //                  not counted as stable.
   //   focus1, focus2 each mirror's focal length R/2, m: positive in front
   //                  (concave, real), negative behind (convex, virtual),
   //                  null for a flat mirror
@@ -286,21 +397,26 @@
   //                  cavity's γ: −½·ln(1 − loss)
   function resonator(params) {
     var where = at("resonator");
-    check.params(where, params, ["L", "l_g", "n", "c1", "c2", "lam", "aperture"]);
+    check.params(where, params, ["L", "l_g", "n", "c1", "c2", "lens", "lam", "aperture"]);
     var Lr = readLength(where, params);
     var c1 = check.finite(where, "c1", params.c1);
     var c2 = check.finite(where, "c2", params.c2);
+    var P = check.finite(where, "lens", params.lens);
     var lam = check.positive(where, "lam", params.lam);
     var aperture = check.positive(where, "aperture", params.aperture);
-
-    var g1 = 1 - Lr * c1;
-    var g2 = 1 - Lr * c2;
+    // The pair's g-parameters and its mode: the empty cavity's (§7.1–7.2),
+    // or with a lens the equivalent resonator's and the beam carried
+    // through the lens (§7.3).
+    var pair = P === 0 ? emptyPair(params, Lr, c1, c2, lam) : lensPair(params, Lr, c1, c2, P, lam);
+    var g1 = pair.g1;
+    var g2 = pair.g2;
     var m = 2 * g1 * g2 - 1;
-    var mode = gaussianMode(Lr, g1, g2, lam);
     var fresnel = aperture * aperture / (lam * Lr);
     var flat = vainshtein(fresnel);
-    var loss1 = mirrorShare(spotFit(g1, g2), fresnel, flat);
-    var loss2 = mirrorShare(spotFit(g2, g1), fresnel, flat);
+    // The clip uses the spots' length: L*, or |L₀| with a lens.
+    var clipFresnel = aperture * aperture / (lam * pair.spotLength);
+    var loss1 = mirrorShare(spotFit(g1, g2), clipFresnel, flat);
+    var loss2 = mirrorShare(spotFit(g2, g1), clipFresnel, flat);
     var magnification = null;
     var walkOff = 0;                       // ln M: the unstable pair's loss per pass
     if (Math.abs(m) > 1) {
@@ -315,12 +431,12 @@
       g1: g1,
       g2: g2,
       m: m,
-      stable: mode !== null,
-      w0: mode === null ? null : mode.w0,
-      waistAt: mode === null ? null : realAt(mode.z1, params.L, params.l_g, params.n),
-      zR: mode === null ? null : mode.zR,
-      w1: mode === null ? null : mode.w1,
-      w2: mode === null ? null : mode.w2,
+      stable: pair.stable,
+      w0: pair.w0,
+      waistAt: pair.waistAt,
+      zR: pair.zR,
+      w1: pair.w1,
+      w2: pair.w2,
       focus1: c1 === 0 ? null : 1 / (2 * c1),
       focus2: c2 === 0 ? null : 1 / (2 * c2),
       fresnel: fresnel,
@@ -332,24 +448,68 @@
     };
   }
 
-  // beamRadius({ L, l_g, n, c1, c2, lam, z }) -> w (m) at z, the real
+  // The empty pair (the rod counted l/n): g = 1 − L*·c and §7.2's mode.
+  function emptyPair(params, Lr, c1, c2, lam) {
+    var g1 = 1 - Lr * c1;
+    var g2 = 1 - Lr * c2;
+    var mode = gaussianMode(Lr, g1, g2, lam);
+    return {
+      g1: g1,
+      g2: g2,
+      spotLength: Lr,
+      stable: mode !== null,
+      w0: mode === null ? null : mode.w0,
+      waistAt: mode === null ? null : realAt(mode.z1, params.L, params.l_g, params.n),
+      zR: mode === null ? null : mode.zR,
+      w1: mode === null ? null : mode.w1,
+      w2: mode === null ? null : mode.w2
+    };
+  }
+
+  // The pair with a lens of power P ≠ 0 at its middle: the equivalent
+  // resonator's g's, the spots' length |L₀| (§7.3), and the beam's
+  // narrowest place between the mirrors.
+  function lensPair(params, Lr, c1, c2, P, lam) {
+    var eq = equivalentOf(Lr, c1, c2, P);
+    var mode = lensMode(Lr, c1, c2, P, lam);
+    var narrowest = mode === null ? null : mode.narrowest;
+    return {
+      g1: eq.g1,
+      g2: eq.g2,
+      spotLength: Math.abs(eq.L0),
+      stable: mode !== null,
+      w0: mode === null ? null : narrowest.w,
+      waistAt: mode === null ? null : realAt(narrowest.at, params.L, params.l_g, params.n),
+      zR: mode === null ? null : narrowest.zR,
+      w1: mode === null ? null : lensRadius(mode, 0, lam),
+      w2: mode === null ? null : lensRadius(mode, Lr, lam)
+    };
+  }
+
+  // beamRadius({ L, l_g, n, c1, c2, lens, lam, z }) -> w (m) at z, the real
   // distance from mirror 1 (0 to L): w0·√(1 + (ζ/zR)²) with ζ the reduced
   // distance from the waist. null when the pair has no Gaussian mode.
   function beamRadius(params) {
     var where = at("beamRadius");
-    check.params(where, params, ["L", "l_g", "n", "c1", "c2", "lam", "z"]);
+    check.params(where, params, ["L", "l_g", "n", "c1", "c2", "lens", "lam", "z"]);
     var Lr = readLength(where, params);
     var c1 = check.finite(where, "c1", params.c1);
     var c2 = check.finite(where, "c2", params.c2);
+    var P = check.finite(where, "lens", params.lens);
     var lam = check.positive(where, "lam", params.lam);
     var z = check.between(where, "z", params.z, 0, params.L);
+    if (P !== 0) {
+      var withLens = lensMode(Lr, c1, c2, P, lam);
+      if (withLens === null) return null;
+      return lensRadius(withLens, reducedAt(z, params.L, params.l_g, params.n), lam);
+    }
     var mode = gaussianMode(Lr, 1 - Lr * c1, 1 - Lr * c2, lam);
     if (mode === null) return null;
     var zeta = (reducedAt(z, params.L, params.l_g, params.n) - mode.z1) / mode.zR;
     return mode.w0 * Math.sqrt(1 + zeta * zeta);
   }
 
-  // traceRay({ L, l_g, n, c1, c2, aperture, y, theta, roundTrips }) ->
+  // traceRay({ L, l_g, n, c1, c2, lens, aperture, y, theta, roundTrips }) ->
   //   { hits: [{ mirror, y, theta }, …], escaped }
   // A ray leaves mirror 1 at height y (m) and angle theta (rad, in air),
   // going towards mirror 2. Each hit is where it meets a mirror (1 or 2):
@@ -358,12 +518,17 @@
   // last hit, with the angle it came in at (it misses the mirror and goes
   // on), and escaped is { mirror, roundTrip } (counting from 1); else
   // escaped is null after `roundTrips` round trips (2·roundTrips hits).
+  // With a lens (P ≠ 0) each hit also has `middle`: the ray's height where
+  // it crossed the lens on its way to that mirror. The aperture is checked
+  // at the mirrors only, as everywhere in this file (see THE APERTURE), so
+  // a ray may cross the lens a little wider than the rod.
   function traceRay(params) {
     var where = at("traceRay");
-    check.params(where, params, ["L", "l_g", "n", "c1", "c2", "aperture", "y", "theta", "roundTrips"]);
+    check.params(where, params, ["L", "l_g", "n", "c1", "c2", "lens", "aperture", "y", "theta", "roundTrips"]);
     var Lr = readLength(where, params);
     var c1 = check.finite(where, "c1", params.c1);
     var c2 = check.finite(where, "c2", params.c2);
+    var P = check.finite(where, "lens", params.lens);
     var aperture = check.positive(where, "aperture", params.aperture);
     var y = check.finite(where, "y", params.y);
     var theta = check.finite(where, "theta", params.theta);
@@ -379,23 +544,39 @@
     var curvatures = [c2, c1];             // the mirror each pass ends on: 2, then 1
     for (var trip = 1; trip <= roundTrips; trip++) {
       for (var k = 0; k < 2; k++) {
-        y = y + Lr * theta;
+        var middle = null;
+        if (P === 0) {
+          y = y + Lr * theta;
+        } else {
+          y = y + (Lr / 2) * theta;
+          middle = y;
+          theta = theta - P * y;
+          y = y + (Lr / 2) * theta;
+        }
         var mirrorNumber = k === 0 ? 2 : 1;
         if (Math.abs(y) > aperture) {
-          hits.push({ mirror: mirrorNumber, y: y, theta: theta });
+          hits.push(hitOf(mirrorNumber, y, theta, middle));
           return { hits: hits, escaped: { mirror: mirrorNumber, roundTrip: trip } };
         }
         theta = theta - 2 * curvatures[k] * y;
-        hits.push({ mirror: mirrorNumber, y: y, theta: theta });
+        hits.push(hitOf(mirrorNumber, y, theta, middle));
       }
     }
     return { hits: hits, escaped: null };
+  }
+
+  // One hit of traceRay: `middle` only with a lens.
+  function hitOf(mirrorNumber, y, theta, middle) {
+    var hit = { mirror: mirrorNumber, y: y, theta: theta };
+    if (middle !== null) hit.middle = middle;
+    return hit;
   }
 
   E.optics = Object.freeze({
     freeSpace: freeSpace,
     slab: slab,
     mirror: mirror,
+    thinLens: thinLens,
     multiply: multiply,
     reducedLength: reducedLength,
     roundTrip: roundTrip,

@@ -321,7 +321,7 @@ const PAGE_CONTROLS = ["Rc1", "Rc2", "pump", "coupler", "absorberT0", "slowMotio
 // 10b) and the filter's.
 const PAGE_Q_CONTROLS = ["Rc1", "Rc2", "absorberT0"];
 const PAGE_READOUTS = ["pumpThreshold", "currentThreshold", "flashThreshold", "x", "gth", "tau_c",
-  "stability", "waist", "mirrorLoss", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
+  "stability", "waist", "mirrorLoss", "thermalLens", "lossNow", "P_out", "giant", "peak", "powerNow", "T_best", "period", "time"];
 const PAGE_CHOICES = ["medium", "pump"];
 
 test("sections/laser.html: every slider, number box, readout and button page.js needs, once each", () => {

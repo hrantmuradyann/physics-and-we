@@ -137,7 +137,10 @@ test("the readouts of the pair: stable or not, the beam's narrowest radius, the 
   assert.ok(d.resonator.w0 < 0.99 * d.resonator.w1, "the waist inside the cavity: " + d.resonator.w0 + " < " + d.resonator.w1);
   assert.equal(section.readouts.waist.textContent, F(page).si(d.resonator.w0, "m"));
   // A convex back mirror puts the waist 36 cm behind it, outside the
-  // cavity: the beam is narrowest inside on mirror 1 (the review).
+  // cavity: the beam is narrowest inside on mirror 1 (the review). With
+  // the pump off, so there is no thermal lens (stage 13c; with one, w₀ is
+  // already the narrowest place between the mirrors).
+  type(section, "pump", "0");
   section.shapes.mirror1.convex.fire("click");
   d = B(page).derive(configNow(page));
   assert.ok(d.resonator.stable && d.resonator.waistAt < 0, "a virtual waist: " + d.resonator.waistAt);
@@ -204,9 +207,21 @@ test("the bench drawing gets the cavity: its mirrors, F, the mode and the rays, 
   const traced = seen.paths.length;
   runFrames(page, 20);
   assert.equal(seen.paths.length, traced, "no tracing in a frame");
-  drag(section, "pump", 400);
   drag(section, "coupler", 400);
-  assert.equal(seen.paths.length, traced, "the pump and the coupler keep the cavity");
+  assert.equal(seen.paths.length, traced, "the coupler keeps the cavity");
+  // On this bench the pump heats the rod into a lens (stage 13c): a pump
+  // move traces the cavity again, with the lens.
+  drag(section, "pump", 900);
+  assert.equal(seen.paths.length, traced + 1, "the pump traces again");
+  runFrames(page, 1);
+  const hot = configNow(page);
+  const withLens = B(page).beamPath({ config: hot, starts: last(seen.paths).starts, roundTrips: 4, points: 40 });
+  assert.equal(JSON.stringify(last(seen.bench).light.cavity.mode), JSON.stringify(withLens.mode), "the mode with the lens");
+  assert.ok(last(seen.bench).light.cavity.rays.every((ray) => ray.hits.every((hit) => typeof hit.middle === "number")),
+    "the rays cross the lens");
+  drag(section, "pump", 400);
+  const retraced = seen.paths.length;
+  assert.ok(retraced > traced + 1, "and again on the way back");
   // How curved each face is drawn: null for the flat mirror; for a curved
   // one its radius's place on the slider's log scale, 0 at the largest
   // radius, 1 at the smallest.
@@ -215,13 +230,19 @@ test("the bench drawing gets the cavity: its mirrors, F, the mode and the rays, 
   assert.equal(cavity.curve.back, null, "the flat back mirror");
   assertClose(cavity.curve.output, share, 1e-12, "the output mirror's radius on its slider");
   drag(section, "Rc2", 400);
-  assert.equal(seen.paths.length, traced + 1, "a radius moved: traced once");
+  assert.equal(seen.paths.length, retraced + 1, "a radius moved: traced once");
   type(section, "Rc2", String(range.min));
   runFrames(page, 1);
   assertClose(last(seen.bench).light.cavity.curve.output, 1, 1e-9, "the smallest radius: the deepest face");
   type(section, "Rc2", String(range.max));
   runFrames(page, 1);
   assertClose(last(seen.bench).light.cavity.curve.output, 0, 1e-9, "the largest: the flattest");
+  // A bench without a lens keeps its cavity when the pump moves.
+  choose(section, "ti-sapphire", "laser");
+  const lensless = seen.paths.length;
+  drag(section, "pump", 900);
+  drag(section, "pump", 200);
+  assert.equal(seen.paths.length, lensless, "no lens: the pump keeps the cavity");
   // Without a mode (ruby's flat pair): rays from half the aperture's half.
   choose(section, "ruby", "flashlamp");
   const ruby = last(seen.paths);
@@ -276,4 +297,25 @@ test("a language switch keeps the mirrors as they were set", () => {
   assert.equal(again.inputs.Rc2.value, "2");
   assert.equal(again.sliders.Rc2.hidden, false);
   assert.equal(last(seen.configs).Rc2, 2);
+});
+
+test("the thermal lens's row (stage 13c): shown on the diode-pumped Nd:YAG with its focal length, \"—\" with the pump off, hidden elsewhere", () => {
+  const page = built("en", { reducedMotion: true, watch: true });
+  const { section } = page;
+  assert.equal(section.rows.thermalLens.hidden, false, "the diode bench");
+  let d = B(page).derive(configNow(page));
+  assert.ok(d.thermalFocus > 1 && d.thermalFocus < 1.5, "1.21 m at 5 W: " + d.thermalFocus);
+  assert.equal(section.readouts.thermalLens.textContent, F(page).si(d.thermalFocus, "m"));
+  type(section, "pump", "20");
+  d = B(page).derive(configNow(page));
+  assert.equal(section.readouts.thermalLens.textContent, F(page).si(d.thermalFocus, "m"), "a stronger lens at 20 W");
+  type(section, "pump", "0");
+  assert.equal(section.readouts.thermalLens.textContent, "—", "no lens with the pump off");
+  assert.equal(section.rows.thermalLens.hidden, false, "the row stays");
+  for (const [medium, pump] of [["ruby", "flashlamp"], ["nd-yag", "flashlamp"], ["nd-glass", "diode"], ["ti-sapphire", "laser"], ["he-ne", "discharge"]]) {
+    choose(section, medium, pump);
+    assert.equal(section.rows.thermalLens.hidden, true, medium + " " + pump);
+  }
+  choose(section, "nd-yag", "diode");
+  assert.equal(section.rows.thermalLens.hidden, false, "back on the diode bench");
 });
