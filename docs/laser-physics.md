@@ -436,7 +436,7 @@ The book mentions that the pulse of a laser with a bleachable filter consists of
 E(t) = \sum_{q=0}^{N-1} E_q\, e^{\,i[(\omega_0 + q\Delta\omega)t + \psi_q]}, \qquad I(t)\big|_{\psi_q = 0} = E_0^2\,\frac{\sin^2(N\Delta\omega t/2)}{\sin^2(\Delta\omega t/2)}
 ```
 
-With random phases ψ_q the intensity is noise with mean N·E₀². With equal phases it is a pulse train with period T_R = 2L_e/c, peak N²·E₀² and duration Δτ_p ≈ T_R/N ≈ 1/Δν_osc (for a Gaussian spectrum Δτ_p = 0.441/Δν). Ruby with Δν ≈ 330 GHz gives ~1 ps — exactly the book's 10⁻¹² s. This is one of the most striking scenes for the simulator: a "random phases / locked phases" switch and an N slider.
+With random phases ψ_q the intensity is noise with mean N·E₀². With equal phases it is a pulse train with period T_R = 2L_e/c, peak N²·E₀² and duration Δτ_p ≈ T_R/N ≈ 1/Δν_osc (for a Gaussian spectrum Δτ_p = 0.441/Δν). Ruby with Δν ≈ 330 GHz gives about 3 ps with equal amplitudes (the full width at half maximum of the locked pattern is 0.886·T_R/N, and N ≈ Δν/Δν_FSR) and 1.3 ps for a Gaussian spectrum: the book's 10⁻¹¹–10⁻¹² s. This is one of the most striking scenes for the simulator: a "random phases / locked phases" switch and an N slider.
 
 ## 5. Gain media
 
