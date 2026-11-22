@@ -8,7 +8,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { loadEngine } = require("./helpers.js");
-const { createBrowser, themeVariables } = require("./fake-browser.js");
+const { createBrowser, THEMES, themeVariables } = require("./fake-browser.js");
 
 const browser = createBrowser();
 browser.load("js/laser/ui/materials.js");
@@ -17,9 +17,9 @@ const engine = loadEngine();
 const NM = 1e-9;
 
 // The bench's box is one plain colour, --laser-bg (bg2 kept so the checks below stay as they are).
-const THEMES = themeVariables();
-const BACKGROUNDS = ["dark", "light"].map((theme) => ({
-  theme: theme, bg: THEMES[theme]["--laser-bg"], bg2: THEMES[theme]["--laser-bg"]
+const VARIABLES = themeVariables();
+const BACKGROUNDS = THEMES.map((theme) => ({
+  theme: theme, bg: VARIABLES[theme]["--laser-bg"], bg2: VARIABLES[theme]["--laser-bg"]
 }));
 
 function hex(color) {

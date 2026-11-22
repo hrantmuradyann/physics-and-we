@@ -158,9 +158,9 @@ Physics-and-we/
 ├── images/
 │   ├── mainphoto.jpg    → the picture on the home page
 │   ├── history*.jpg     → the photographs on the inner pages
-│   ├── logo-light.png   → the white logo, for the dark theme
-│   ├── logo-dark.png    → the navy logo, for the light and simple themes and the admin pages
-│   ├── lab-lines.svg    → the silver lines behind the labs pages
+│   ├── logo-light.png   → the white logo (unused since the dark theme went, 2026-11-22)
+│   ├── logo-dark.png    → the navy logo, in the header and on the admin pages
+│   ├── lab-lines.svg    → the silver lines that were behind the labs pages (off since 2026-11-22)
 │   ├── logo-mark.png    → the browser-tab icon
 │   └── news/            → the main photo of each news item
 │

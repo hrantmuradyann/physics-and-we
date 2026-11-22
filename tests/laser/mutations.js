@@ -4565,8 +4565,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser/ui/draw-bench.js",
-    find: "      g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);\n      g.restore();\n    }",
-    replace: "      g.fillRect(F.x + cap, F.y, F.w - 2 * cap, F.h);\n      g.restore();\n      g.shadowBlur = L.bloom * pump;\n    }",
+    find: "(1 - 2 * WHITE_CORE_EDGE) * F.h);\n      g.restore();\n    }",
+    replace: "(1 - 2 * WHITE_CORE_EDGE) * F.h);\n      g.restore();\n      g.shadowBlur = L.bloom * pump;\n    }",
     why: "the bloom left on, so every part after the lamp blooms"
   },
   {

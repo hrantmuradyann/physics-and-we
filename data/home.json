@@ -26,10 +26,6 @@
         "hy": "Դիտել լաբորատորիաները",
         "en": "Watch the Labs"
       }
-    },
-    "scrollHint": {
-      "hy": "Թերթեք՝ ավելին տեսնելու համար",
-      "en": "Scroll to explore"
     }
   },
   "_readmeStats": "THE NUMBERS THAT COUNT UP. For each one: \"number\" is the figure itself (digits only, no quotes), \"suffix\" is what follows it — \"+\" or \"%\" or nothing, and \"label\" says what the number counts. Keep the label to 1–3 words: it sits in a narrow column.",

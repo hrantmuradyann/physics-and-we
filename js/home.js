@@ -1,5 +1,6 @@
 /* ============================================================================
-   home.js — the moving constellation behind the title on the home page.
+   home.js — the photo gallery on the home page (three frames that change
+   their pictures, and the big view of one photo when it is clicked).
 
    YOU DO NOT NEED TO READ THIS FILE TO EDIT THE WEBSITE.
    The words on the home page are in  data/home.json .
@@ -7,175 +8,7 @@
 (function (global) {
   "use strict";
 
-  var reduceMotion = global.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var active = null;         // the running star animation, so we never start two at once
-  var activeGallery = null;  // the running photo rotation, same idea
-
-  // The colours of the stars, as "red, green, blue", one set per theme:
-  // blue light on the dark theme, silver on the light (cream) one.
-  //   star   the dots          link   the lines between two dots
-  //   mouse  the lines from the dots to the mouse pointer
-  var STAR_COLORS = {
-    dark:  { star: "160, 190, 255", link: "90, 130, 240",  mouse: "120, 160, 255" },
-    light: { star: "128, 136, 150", link: "140, 147, 161", mouse: "118, 126, 140" }
-  };
-
-  function startParticles(canvas) {
-    var parent = canvas.parentElement;
-    var ctx = canvas.getContext("2d");
-    var width = 0, height = 0;
-    var particles = [];
-    var frame = null;
-    var running = false;
-    var mouse = { x: null, y: null };
-    var resizeTimer = null;
-
-    function measure() {
-      // While the home page is not on screen the canvas has no size — keep
-      // the last good measurement instead of collapsing to zero.
-      if (!parent.clientWidth || !parent.clientHeight) return;
-
-      var dpr = Math.min(global.devicePixelRatio || 1, 2);
-      width = parent.clientWidth;
-      height = parent.clientHeight;
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
-      canvas.style.width = width + "px";
-      canvas.style.height = height + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      var count = Math.min(Math.floor((width * height) / 14000), 110);
-      particles = [];
-      for (var i = 0; i < count; i++) {
-        particles.push({
-          x: Math.random() * width,
-          y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4,
-          r: Math.random() * 1.6 + 0.6
-        });
-      }
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, width, height);
-
-      // Read every frame, so switching the theme recolours the stars at once.
-      var colors = STAR_COLORS[global.Theme.current] || STAR_COLORS.dark;
-
-      for (var i = 0; i < particles.length; i++) {
-        var p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0 || p.x > width) p.vx *= -1;
-        if (p.y < 0 || p.y > height) p.vy *= -1;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(" + colors.star + ", 0.75)";
-        ctx.fill();
-
-        for (var j = i + 1; j < particles.length; j++) {
-          var q = particles[j];
-          var dx = p.x - q.x, dy = p.y - q.y;
-          var distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < 130) {
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(q.x, q.y);
-            ctx.strokeStyle = "rgba(" + colors.link + ", " + (1 - distance / 130) * 0.35 + ")";
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        }
-
-        if (mouse.x !== null) {
-          var mx = p.x - mouse.x, my = p.y - mouse.y;
-          var toMouse = Math.sqrt(mx * mx + my * my);
-          if (toMouse < 170) {
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(mouse.x, mouse.y);
-            ctx.strokeStyle = "rgba(" + colors.mouse + ", " + (1 - toMouse / 170) * 0.5 + ")";
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        }
-      }
-
-      if (running && !reduceMotion) frame = requestAnimationFrame(draw);
-    }
-
-    function play() {
-      if (running) return;
-      running = true;
-      if (!width) measure();
-      draw();
-    }
-
-    function pause() {
-      running = false;
-      if (frame) cancelAnimationFrame(frame);
-      frame = null;
-    }
-
-    function onResize() {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function () {
-        var wasRunning = running;
-        pause();
-        measure();
-        if (wasRunning) play();
-      }, 180);
-    }
-
-    function onMouseMove(event) {
-      var rect = parent.getBoundingClientRect();
-      mouse.x = event.clientX - rect.left;
-      mouse.y = event.clientY - rect.top;
-    }
-
-    function onMouseLeave() {
-      mouse.x = null;
-      mouse.y = null;
-    }
-
-    // A running animation picks up the new colours by itself. A still one
-    // (for visitors who asked for less motion) is drawn once more.
-    function onThemeChanged() {
-      if (reduceMotion && width) draw();
-    }
-
-    global.addEventListener("resize", onResize);
-    global.addEventListener("theme:changed", onThemeChanged);
-    parent.addEventListener("mousemove", onMouseMove);
-    parent.addEventListener("mouseleave", onMouseLeave);
-
-    // Only animate while the hero is actually on screen — that keeps the
-    // laptop fan quiet when the visitor is reading another page.
-    var watcher = null;
-    if ("IntersectionObserver" in global) {
-      watcher = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) { measure(); play(); }
-          else pause();
-        });
-      }, { threshold: 0.01 });
-      watcher.observe(canvas);
-    } else {
-      measure();
-      play();
-    }
-
-    return function stop() {
-      pause();
-      if (watcher) watcher.disconnect();
-      global.removeEventListener("resize", onResize);
-      global.removeEventListener("theme:changed", onThemeChanged);
-      parent.removeEventListener("mousemove", onMouseMove);
-      parent.removeEventListener("mouseleave", onMouseLeave);
-    };
-  }
+  var activeGallery = null;  // the running photo rotation, so we never start two at once
 
   /* -------------------------------------------------------------------------
      The "Students & We" gallery next to "How everyday tech works": three
@@ -358,10 +191,6 @@
 
   global.addEventListener("section:ready", function (event) {
     if (event.detail.route !== "home") return;
-
-    if (active) { active(); active = null; }      // the page was rebuilt
-    var canvas = event.detail.container.querySelector(".hero__canvas");
-    if (canvas) active = startParticles(canvas);
 
     if (activeGallery) { activeGallery(); activeGallery = null; }
     activeGallery = startGalleryRotation(event.detail.container, event.detail.data);

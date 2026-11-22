@@ -1,38 +1,35 @@
 /* ============================================================================
-   simple.css — the SIMPLE theme: the look of an old scientific website.
+   simple.css — the site's plain look: an old scientific website.
 
-   Every rule here starts with  :root.theme-simple , so it does nothing in
-   the dark and the light theme. js/theme.js puts that class on <html>.
-   The theme's colours (white, black, the laser intro's red --red) are in
-   css/style.css, under :root.theme-simple; this file only takes away what
-   the colours alone cannot: the rounded corners, the shadows, the hover
-   lifts, the animations and the home page's moving stars, and sets serif
-   type with thin black rules.
+   The colours (white, black, one red --red) are in css/style.css. This file,
+   linked last, takes away what the colours alone cannot: the rounded
+   corners, the shadows, the hover lifts and the fade-ins of the blocks in
+   css/site.css, and sets serif type with thin black rules.
 
    The laser lab (.laser-lab) and its intro film (.laser-intro) keep their
-   own look in every theme, so the rules that would reach inside the lab
-   skip it with  :not(.laser-lab *) .
+   own look, so the rules that would reach inside the lab skip it with
+   :not(.laser-lab *) .
    ========================================================================== */
 
 /* ---------- Type: serif, plain weights, no squeezed letters ---------- */
-:root.theme-simple body.site {
+body.site {
   font-family: var(--font-serif);
 }
 
 /* The lab keeps its own type (its canvases read --font-main too). */
-:root.theme-simple .laser-lab,
-:root.theme-simple .laser-intro {
+.laser-lab,
+.laser-intro {
   font-family: var(--font-main);
 }
 
-:root.theme-simple :is(.hero__title, .page-head__title, .section-title, .cta__title,
+:is(.hero__title, .page-head__title, .section-title, .cta__title,
   .card__title, .step__title, .timeline__title, .post-card__title, .stat__num):not(.laser-lab *) {
   font-weight: 700;
   letter-spacing: 0;
 }
 
 /* Small headings over a title: red small capitals, not spaced-out letters. */
-:root.theme-simple .eyebrow:not(.laser-lab *) {
+.eyebrow:not(.laser-lab *) {
   letter-spacing: 0.08em;
   font-variant: small-caps;
   text-transform: lowercase;
@@ -40,23 +37,17 @@
 }
 
 /* Links in the text: red and underlined, as on an old page. */
-:root.theme-simple .link:not(.laser-lab *),
-:root.theme-simple [data-rich] a:not(.laser-lab *),
-:root.theme-simple .prose a:not(.laser-lab *) {
+.link:not(.laser-lab *),
+[data-rich] a:not(.laser-lab *),
+.prose a:not(.laser-lab *) {
   color: var(--accent);
   text-decoration: underline;
 }
 
-/* The numbers: plain black, not a colour gradient. */
-:root.theme-simple .stat__num {
-  background: none;
-  color: var(--heading);
-}
-
 /* ---------- The header: white, a black rule under it, nothing floating ---------- */
-:root.theme-simple body.site #site-header,
-:root.theme-simple body.site.home #site-header,
-:root.theme-simple body.site.home #site-header.scrolled {
+body.site #site-header,
+body.site.home #site-header,
+body.site.home #site-header.scrolled {
   background: var(--bg);
   border-bottom: 1px solid var(--heading);
   backdrop-filter: none;
@@ -64,106 +55,81 @@
   box-shadow: none;
 }
 
-:root.theme-simple body.site #site-header nav a::after {
+body.site #site-header nav a::after {
   border-radius: 0;
 }
 
-:root.theme-simple body.site #site-header nav a:hover,
-:root.theme-simple body.site #site-header nav a.current {
+body.site #site-header nav a:hover,
+body.site #site-header nav a.current {
   color: var(--accent);
 }
 
-:root.theme-simple .lang-switcher button,
-:root.theme-simple .theme-switch {
+.lang-switcher button {
   border-radius: 0;
 }
 
-:root.theme-simple .theme-switch:hover {
-  transform: none;
-}
-
-/* ---------- The home page: no moving stars, no glow, no full screen ---------- */
-:root.theme-simple .hero {
-  min-height: 0;
-  padding: 3rem 0 4rem;
-  background: var(--bg);
-  border-bottom: 1px solid var(--heading);
-}
-
-:root.theme-simple .hero::before,
-:root.theme-simple .hero__canvas,
-:root.theme-simple .hero__overlay,
-:root.theme-simple .hero__scroll {
-  display: none;
-}
-
 /* The page as it is, at once: no fading in while scrolling. */
-:root.theme-simple .reveal {
+.reveal {
   opacity: 1;
   transform: none;
   transition: none;
 }
 
 /* ---------- Page heads, bands, the invitation: flat, ruled ---------- */
-:root.theme-simple .page-head:not(.laser-lab *) {
+.page-head:not(.laser-lab *) {
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
 
-:root.theme-simple .cta {
+.cta {
   background: var(--bg);
   border-top: 1px solid var(--heading);
 }
 
-:root.theme-simple .cta::before {
+.cta::before {
   display: none;
 }
 
-/* The silver lines behind the labs: not on plain paper. */
-:root.theme-simple .line-art {
-  background-image: none;
-}
-
 /* ---------- Buttons: square, flat red or black on white ---------- */
-:root.theme-simple .btn:not(.laser-lab *) {
+.btn:not(.laser-lab *) {
   border-radius: 2px;
   box-shadow: none;
 }
 
-:root.theme-simple .btn:not(.laser-lab *):hover {
+.btn:not(.laser-lab *):hover {
   transform: none;
   box-shadow: none;
 }
 
-:root.theme-simple .btn--primary:not(.laser-lab *):hover {
+.btn--primary:not(.laser-lab *):hover {
   background: var(--heading);
 }
 
-:root.theme-simple .btn--ghost:not(.laser-lab *):hover {
+.btn--ghost:not(.laser-lab *):hover {
   color: var(--accent);
 }
 
 /* ---------- Boxes: square corners, thin rules, no lifting ---------- */
-:root.theme-simple :is(.card, .stat, .post-card, .faq__item, .photo, .story-year__media,
+:is(.card, .stat, .post-card, .faq__item, .photo, .story-year__media,
   .showcase__gallery-frame, .post__media, .card__icon):not(.laser-lab *) {
   border-radius: 0;
   box-shadow: none;
 }
 
-:root.theme-simple :is(.card, .stat, .post-card):not(.laser-lab *):hover {
+:is(.card, .stat, .post-card):not(.laser-lab *):hover {
   transform: none;
   box-shadow: none;
 }
 
-:root.theme-simple .card__icon:not(.laser-lab *) {
+.card__icon:not(.laser-lab *) {
   border: 1px solid var(--line);
 }
 
-:root.theme-simple .post-card:hover .post-card__media img {
+.post-card:hover .post-card__media img {
   transform: none;
 }
 
 /* ---------- The footer: a black rule above it ---------- */
-:root.theme-simple body.site footer {
+body.site footer {
   border-top: 1px solid var(--heading);
 }

@@ -48,14 +48,10 @@
 
   /* ---------- Header ---------- */
 
-  // The white logo for the dark theme, the navy one for the light and the
-  // simple (white) theme.
+  // The navy logo: the site is white.
   function logoFile() {
-    return global.Theme.current === "dark" ? "images/logo-light.png" : "images/logo-dark.png";
+    return "images/logo-dark.png";
   }
-
-  // A new theme needs the other logo and the other icon on the button.
-  global.addEventListener("theme:changed", function () { renderHeader(); });
 
   function renderHeader() {
     var host = document.getElementById("site-header");
@@ -108,28 +104,9 @@
       switcher.appendChild(button);
     });
 
-    // The theme button. It shows the theme you would switch TO: a sun
-    // while the site is dark (to light), a page while it is light (to
-    // simple), a moon while it is simple (back to dark).
-    var BUTTON = {
-      light: { icon: "sun", word: "themeLight" },
-      simple: { icon: "page", word: "themeSimple" },
-      dark: { icon: "moon", word: "themeDark" }
-    };
-    var going = BUTTON[global.Theme.next()];
-    var themeButton = document.createElement("button");
-    themeButton.type = "button";
-    themeButton.className = "theme-switch";
-    themeButton.innerHTML = Content.icon(going.icon);
-    var themeLabel = Content.inLang((site.ui || {})[going.word], lang);
-    themeButton.setAttribute("aria-label", themeLabel);
-    themeButton.title = themeLabel;
-    themeButton.addEventListener("click", function () { global.Theme.toggle(); });
-
     var tools = document.createElement("div");
     tools.className = "header-tools";
     tools.appendChild(switcher);
-    tools.appendChild(themeButton);
 
     host.appendChild(logo);
     host.appendChild(nav);

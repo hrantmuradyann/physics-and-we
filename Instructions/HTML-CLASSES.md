@@ -49,30 +49,28 @@ A class in the markup is only a name that CSS uses to find the element.
 | [index.html](index.html) | The "shell": loads the CSS and JS and contains three empty places — `#site-header`, `#app`, `#site-footer`. No content. |
 | [sections/](sections/) | One file per page — the structure of the blocks only, no text. |
 | [data/](data/) | The text in both languages (hy / en). |
-| [css/style.css](css/style.css) | Reset, variables (the colours of both themes), header, footer. Shared by the site and the admin panel. |
-| [css/site.css](css/site.css) | The look of every public page, in both themes. |
-| [css/home.css](css/home.css) | Only the opening screen of the home page (`.hero`). |
-| [css/labs.css](css/labs.css) | The labs pages: one lab, and the silver lines (`.line-art`). |
+| [css/style.css](css/style.css) | Reset, the colour variables, header, footer. Shared by the site and the admin panel. |
+| [css/site.css](css/site.css) | The look of every public page. |
+| [css/home.css](css/home.css) | Only the opening block of the home page (`.hero`). |
+| [css/simple.css](css/simple.css) | Linked last: the site's plain look (serif type, square corners, no shadows, lifts or fade-ins). |
+| [css/labs.css](css/labs.css) | The labs pages: one lab, and the `.line-art` wrapper. |
 | [css/laser.css](css/laser.css) | The laser lab (`?view=laser`) and the banner on the Labs page that leads to it. |
 | [css/admin.css](css/admin.css) | Only the admin panel `/admin/` (always light). |
 
 One important point: almost all of `site.css` is written as `body.site .something`.
 The `site` class sits on `<body class="site home">` in [index.html](index.html#L34).
-That is why the site's themes apply only to the public pages, and the admin panel
-keeps its own look.
+That is why the site's look applies only to the public pages, and the admin panel
+keeps its own.
 
-**Three themes.** The public site is dark by default; the button in the header
-switches it to a light, creamy-white theme, then to a **simple** one (the look
-of an old scientific website: white paper, black serif type, thin black rules,
-one red), then back to dark; the choice is remembered.
-Nothing in the CSS names a colour directly: it uses the variables in
-[section 22](#22-css-variables-colours-and-sizes), and [js/theme.js](js/theme.js)
-swaps their values by adding the class `theme-light` or `theme-simple` to `<html>`.
-A new block that uses those variables works in every theme without any extra CSS.
-The simple theme also takes away rounded corners, shadows, hover lifts, the
-fade-ins and the home page's moving stars: that is in [css/simple.css](css/simple.css),
-every rule starting with `:root.theme-simple`. If a new block has its own
-shadow, rounded corners or animation, add a line for it there too.
+**One look.** The public site looks like an old scientific website: white
+paper, black serif type, thin black rules and one red. (Until 2026-11-22 it
+also had a dark and a light theme with a button in the header; the owner kept
+only this look.) Nothing in the CSS names a colour directly: it uses the
+variables in [section 22](#22-css-variables-colours-and-sizes), so a colour is
+changed in one place. [css/simple.css](css/simple.css), linked last, takes
+away the rounded corners, shadows, hover lifts and fade-ins that
+[css/site.css](css/site.css) still describes for its blocks. If a new block
+has its own shadow, rounded corners or animation, add a line for it there too.
 
 ---
 
@@ -109,7 +107,7 @@ shadow, rounded corners or animation, add a line for it there too.
 
 ### `site` (on `<body>`)
 **What it is:** a marker meaning "this is a public page of the site, not the admin panel".
-**How it looks:** switches on the site's theme — on the dark one an almost black background `#070b1a` and light grey text `#e8ecf6`; on the light one cream `#f1ebdf` with dark ink text.
+**How it looks:** a white background `#ffffff` and near-black text `#1a1a1a`, in a serif type.
 **CSS:** [css/site.css:23](css/site.css#L23)
 
 ```css
@@ -166,8 +164,7 @@ body.site.home #site-header { background: transparent; }     /* home page */
 ```
 
 ### `.line-art`
-**What it is:** a wrapper around a whole page, written by hand as the first and last thing in the fragment. It puts faint silver lines behind that page.
-**How it looks:** waves, orbits, field lines and a bending ray (the picture [images/lab-lines.svg](images/lab-lines.svg)) behind all the bands of the page, which turn see-through so the lines show. On the dark theme the lines are dimmed; on the light theme they are shown as they are. On a computer they stay still while the page scrolls over them; on a phone they sit at the top of the page. Cards and the lab's panel keep a solid colour, so the lines never run through words.
+**What it is:** a wrapper around a whole page, written by hand as the first and last thing in the fragment. It used to put faint silver lines behind that page; since 2026-11-22 they are off (one commented rule in [css/labs.css](css/labs.css) brings back [images/lab-lines.svg](images/lab-lines.svg)). Inside it the bands are see-through and cards keep a solid colour.
 **Where:** the Labs page ([sections/labs.html](sections/labs.html)), the page of one lab ([sections/lab.html](sections/lab.html)) and the laser lab ([sections/laser.html](sections/laser.html)).
 **CSS:** [css/labs.css](css/labs.css)
 
@@ -177,9 +174,8 @@ body.site.home #site-header { background: transparent; }     /* home page */
 </div>
 ```
 
-### `.theme-switch` and `.header-tools`
-**What it is:** the round sun / moon button in the header, and the box that holds it next to the language buttons. Both are built by [js/main.js](js/main.js) — you never write them.
-**How it looks:** a small circle with a sun while the site is dark (click → light), a moon while it is light (click → dark). It turns a little on hover.
+### `.header-tools`
+**What it is:** the box on the right of the header that holds the language buttons. Built by [js/main.js](js/main.js) — you never write it. (It also held the theme button until 2026-11-22.)
 **CSS:** [css/site.css](css/site.css)
 
 ### `.page__error`
@@ -201,7 +197,7 @@ But the classes in them are the same as everywhere else.
 | `.logo` | The site name on the left. Larger than ordinary text (1.3rem) and bold (700). | [css/style.css:99](css/style.css#L99) |
 | `nav a` | A menu item. White, slightly transparent (0.9), fully white on hover. | [css/style.css:110](css/style.css#L110) |
 | `nav a.current` | The item for the current page: fully white and bold. | [css/style.css:123](css/style.css#L123) |
-| `nav a::after` | Not a class but a pseudo-element: a 2 px underline with a blue-to-violet gradient (terracotta on the light theme). On hover it **slides in from left to right** over 0.28 s. | [css/site.css:96](css/site.css#L96) |
+| `nav a::after` | Not a class but a pseudo-element: a 2 px red underline (`--accent`). On hover it **slides in from left to right** over 0.28 s. | [css/site.css:96](css/site.css#L96) |
 | `.lang-switcher` | The two language buttons on the right, in a row with a 0.4rem gap. | [css/style.css:129](css/style.css#L129) |
 | `.lang-switcher button` | A transparent button with a border in the text colour, 6 px rounding, slightly transparent (0.75). | [css/style.css:134](css/style.css#L134) |
 | `.active-lang` | The active language: white background, dark blue text, bold — it looks like a pressed button. | [css/style.css:150](css/style.css#L150) |
@@ -279,7 +275,7 @@ But the classes in them are the same as everywhere else.
 **CSS:** [css/site.css:170](css/site.css#L170)
 
 ### `.btn--primary`
-**How it looks:** a blue-to-violet gradient (135°, from `#2f80ed` to `#6f5cff`; on the light theme terracotta to burnt orange, `#c0603a` to `#963b1c`), white text, a soft glow-shadow underneath (blue on dark, rust on light, `--button-glow`). On hover it **lifts 3 px** and the shadow deepens.
+**How it looks:** flat red (`--accent`, the gradient in css/site.css runs from red to the same red), white text, square corners, no shadow; on hover it turns black (css/simple.css).
 **CSS:** [css/site.css:184](css/site.css#L184)
 
 ```css
@@ -437,15 +433,14 @@ A page is built from horizontal bands. Alternating `.band` / `.band--alt` gives 
 | Class | How it looks | CSS |
 |---|---|---|
 | `.stat` | A tile with centred text, a thin border, 16 px rounding and an almost transparent white background (2 %). On hover it lifts 4 px and the border turns blue. | [css/site.css:368](css/site.css#L368) |
-| `.stat__num` | The number itself. Very large (2.1–3.1rem) and extra bold. The main trick: the text is painted with a **gradient** from white to light blue `#9db8ff` — the text itself is transparent and the background is clipped to the letters (`background-clip: text`). The value counts up from zero, driven by [js/anim.js](js/anim.js#L46) when the block comes into view. | [css/site.css:382](css/site.css#L382) |
+| `.stat__num` | The number itself. Very large (2.1–3.1rem) and extra bold. Solid, in the heading colour (it used to be gradient-filled text, which reads as machine-made, so it was made plain). The value counts up from zero, driven by [js/anim.js](js/anim.js#L46) when the block comes into view. | [css/site.css:382](css/site.css#L382) |
 | `.stat__label` | The caption under the number: grey, 0.92rem, 0.6rem of space above. | [css/site.css:393](css/site.css#L393) |
 
 ```css
 .stat__num {
   font-size: clamp(2.1rem, 4vw, 3.1rem);
-  background: linear-gradient(135deg, #ffffff, #9db8ff);
-  background-clip: text;
-  color: transparent;      /* the gradient shows through the letters */
+  font-weight: 800;
+  color: var(--heading);   /* solid black */
 }
 ```
 
@@ -468,7 +463,7 @@ A page is built from horizontal bands. Alternating `.band` / `.band--alt` gives 
 |---|---|---|
 | `.steps` | A grid of columns no narrower than 230 px, with a 1.6rem gap. This is also where the counter is reset: `counter-reset: step`. | [css/site.css:403](css/site.css#L403) |
 | `.step` | One step. 3.2rem of padding at the top, which is where the numbered circle sits. Each step increases the counter by 1. | [css/site.css:410](css/site.css#L410) |
-| `.step::before` | The numbered circle: 2.4rem, perfectly round, a blue-violet gradient (terracotta on the light theme), with the white bold digit centred inside. | [css/site.css:414](css/site.css#L414) |
+| `.step::before` | The numbered circle: 2.4rem, perfectly round, red, with the white bold digit centred inside. | [css/site.css:414](css/site.css#L414) |
 | `.step::after` | A thin horizontal line running from the circle to the right, towards the next step. Hidden on the last step, and hidden on all of them on a narrow screen. | [css/site.css:430](css/site.css#L430) |
 | `.step__title` | The white heading of the step, 1.1rem, bold. | [css/site.css:446](css/site.css#L446) |
 | `.step__text` | The grey description, 0.95rem. | [css/site.css:453](css/site.css#L453) |
@@ -589,23 +584,18 @@ CTA = call to action. The last block on most pages.
 
 ---
 
-## 17. The opening screen of the home page `.hero`
+## 17. The opening block of the home page `.hero`
 
-All of this lives in its own file, [css/home.css](css/home.css), and is used only on the home page.
+All of this lives in its own file, [css/home.css](css/home.css), and is used only on the home page. (Until 2026-11-22 it filled the screen, with moving stars drawn by js/home.js, glows and a "scroll down" hint; the owner chose the plain look.)
 
 | Class | How it looks | CSS |
 |---|---|---|
-| `.hero` | A screen **as tall as the whole monitor** (`min-height: 100vh`) with the content vertically centred. The background is two coloured patches (blue at the top right, violet at the bottom left) over a vertical gradient. | [css/home.css:8](css/home.css#L8) |
-| `.hero::before` | One more blue patch, 60vw across, which smoothly **drifts and grows** over 18 seconds (the `drift` animation) so the screen is never completely still. | [css/home.css:21](css/home.css#L21) |
-| `.hero__canvas` | A `<canvas>` filling the block, on which [js/home.js](js/home.js) draws a moving constellation of dots and lines. | [css/home.css:40](css/home.css#L40) |
-| `.hero__overlay` | A transparent layer over the constellation: a radial gradient that darkens the edges of the screen so the text in the middle stays readable. | [css/home.css:49](css/home.css#L49) |
-| `.hero__content` | The text block above everything else (`z-index: 2`), with 6rem of padding at the top so it does not run under the header. Used together with `.container`. | [css/home.css:57](css/home.css#L57) |
-| `.hero .eyebrow` | The same section label, but with even wider letter spacing (0.35em) and 1.3rem of space below. | [css/home.css:63](css/home.css#L63) |
-| `.hero__title` | The largest text on the site: from 2.6rem up to **5.2rem**, white, extra bold, with lines almost touching (1.03) and a width of up to 16 characters. | [css/home.css:69](css/home.css#L69) |
-| `.hero__subtitle` | The subtitle, 1.05–1.3rem, grey, up to 48 characters wide. | [css/home.css:78](css/home.css#L78) |
-| `.hero__actions` | The row of two buttons, 1rem gap, wrapping on a phone. | [css/home.css:86](css/home.css#L86) |
-| `.hero__scroll` | The "scroll down" hint at the bottom centre: small capital letters. Hidden below 720 px. | [css/home.css:94](css/home.css#L94) |
-| `.hero__scroll-line` | A 1 px vertical line under the hint that **pulses** — squeezing and stretching vertically every 2 s. | [css/home.css:111](css/home.css#L111) |
+| `.hero` | A plain white block with 3rem of space above and 4rem below, and a thin black rule under it. | [css/home.css](css/home.css) |
+| `.hero__content` | The text block, with 6rem of padding at the top so it does not run under the header. Used together with `.container`. | [css/home.css](css/home.css) |
+| `.hero .eyebrow` | The section label, with 1.3rem of space below. | [css/home.css](css/home.css) |
+| `.hero__title` | The largest text on the site: from 2.6rem up to **5.2rem**, black, bold, with lines almost touching (1.03) and a width of up to 16 characters. | [css/home.css](css/home.css) |
+| `.hero__subtitle` | The subtitle, 1.05–1.3rem, grey, up to 48 characters wide. | [css/home.css](css/home.css) |
+| `.hero__actions` | The row of two buttons, 1rem gap, wrapping on a phone. | [css/home.css](css/home.css) |
 
 ---
 
@@ -821,7 +811,7 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
 | `.laser-note` | A small note in the accent colour under the buttons. It starts `hidden`; `js/laser/page.js` shows it only while the computer cannot keep up with the chosen slow motion. Do not give it a `display` rule, or `hidden` stops working. | [css/laser.css](css/laser.css) |
 | `.laser-learn` | The theory section at the bottom, where the "dig deeper" button scrolls to. | [css/laser.css](css/laser.css) |
 | `.laser-chapters`, `.laser-chapter`, `.laser-chapter__title` | The list of chapters; one chapter, a rounded panel with a solid colour under it (so the silver lines do not run through the words); its heading. The text inside is a `.prose`. | [css/laser.css](css/laser.css) |
-| `.lab-feature` | The big banner on the Labs page that leads to the laser lab. It is also a `.card .card--link`, so it answers the mouse like the other cards (border, shadow, the arrow moving); it is larger, has a blue-to-violet stripe down its left edge (terracotta on the light theme), and sits above the grid of the other labs. It is the one item of the list `featured.items` in `data/labs.json`: deleting that item removes the whole banner. Where it leads is written in the layout. | [css/laser.css](css/laser.css) |
+| `.lab-feature` | The big banner on the Labs page that leads to the laser lab. It is also a `.card .card--link`, so it answers the mouse like the other cards (border, shadow, the arrow moving); it is larger, has a blue-to-violet stripe down its left edge (red now: `--accent`), and sits above the grid of the other labs. It is the one item of the list `featured.items` in `data/labs.json`: deleting that item removes the whole banner. Where it leads is written in the layout. | [css/laser.css](css/laser.css) |
 | `.lab-feature__title` | The banner's heading: larger than a card title (1.5–2.1rem), extra bold. | [css/laser.css](css/laser.css) |
 | `.lab-feature__text` | The banner's sentence: muted, 1.02rem, at most 62 characters wide. | [css/laser.css](css/laser.css) |
 
@@ -863,7 +853,7 @@ If the visitor has asked their system to "reduce motion", all of this is switche
 ## 20. Admin panel classes `/admin/`
 
 For [admin/index.html](admin/index.html) and [admin/login.html](admin/login.html).
-The theme here is **light**: a white background and dark blue headings. The public site does not load these styles.
+The admin panel is always **light**: a white background and dark blue headings. The public site does not load these styles.
 
 > These pages cannot be reached without logging in: [functions/admin/_middleware.js](functions/admin/_middleware.js)
 > checks the session **on the server**, before the file is handed over at all. The only exception
@@ -990,7 +980,7 @@ If there is no text in the JSON for an element, the script **hides it by itself*
 
 All the colours are gathered in one place — [css/style.css:19](css/style.css#L19). Change them here and they change across the whole site.
 
-The public site has **three themes**. Every colour variable is written three times: once in `:root` (the dark theme, the default), once more in `:root.theme-light` (the light, creamy-white theme) and once in `:root.theme-simple` (white, black and the red `--red`, #d40000, which the laser intro's beam uses too). [js/theme.js](js/theme.js) adds the class `theme-light` or `theme-simple` to `<html>` when the visitor picks one. So when you change a colour, change it in the theme you mean — or in all three.
+The public site has **one set of colours**, in `:root`: white paper, black ink and one red, `--red` (#d40000, which the laser intro's beam uses too). `--accent`, `--accent-2` and `--accent-soft` are all that red, so every gradient in css/site.css comes out flat red, and the glows and shadows are `transparent`. (Until 2026-11-22 there were also a dark and a light theme.)
 
 ```css
 :root {
@@ -1003,53 +993,32 @@ The public site has **three themes**. Every colour variable is written three tim
   --color-text:       #1c1c1c;
   --color-text-light: #666666;
 
-  /* The public site — DARK theme values */
-  --bg:          #070b1a;   /* the darkest: hero, footer */
-  --bg-2:        #0b1228;   /* .band--alt */
-  --bg-3:        #0a1024;   /* .band */
-  --heading:     #ffffff;   /* titles */
-  --text:        #e8ecf6;   /* the main text */
-  --muted:       #9aa6c4;   /* muted: .lead, .card__text */
-  --line:        rgba(255,255,255,.08);  /* every thin border */
-  --frame-line:  rgba(255,255,255,.12);  /* the border round a photo */
-  --accent:      #2f80ed;   /* blue */
-  --accent-2:    #6f5cff;   /* violet (the second stop of the gradients) */
-  --accent-soft: #7ea8ff;   /* light blue: .eyebrow, .card__meta */
-  --icon, --icon-bg         /* card icons and their tile */
-  --card-bg                 /* the background of a card */
-  --faint-bg                /* a barely-there fill: captions, empty frames */
-  --shadow                  /* the colour of every big shadow */
-  --glow-1, --glow-2        /* the soft lights in page heads, hero, .cta */
-  --vignette                /* the darkening round the home hero */
-  --header-bg               /* the header bar */
-  --button-glow, --button-glow-hover  /* the light under .btn--primary */
-  --accent-ring             /* the halo round a .timeline dot */
-  --hover-line, --hover-tint  /* a card's border under the mouse, an open FAQ */
-  --ghost-bg, --ghost-border, --ghost-bg-hover, --ghost-border-hover  /* .btn--ghost */
+  /* The public site */
+  --bg, --bg-2, --bg-3: #ffffff;   /* white paper: hero, bands, footer */
+  --heading:     #000000;   /* titles */
+  --text:        #1a1a1a;   /* the main text */
+  --muted:       #4d4d4d;   /* muted: .lead, .card__text */
+  --line:        rgba(0,0,0,.22);  /* every thin border */
+  --frame-line:  rgba(0,0,0,.3);   /* the border round a photo */
+  --accent, --accent-2, --accent-soft, --icon: var(--red);  /* buttons, links, .eyebrow, icons */
+  --card-bg, --faint-bg     /* white */
+  --shadow, --glow-1, --glow-2, --vignette, --button-glow, --accent-ring  /* transparent */
+  --header-bg               /* the header bar: white */
+  --hover-line              /* a card's border under the mouse, an open FAQ: red */
+  --ghost-bg, --ghost-border, --ghost-bg-hover, --ghost-border-hover  /* .btn--ghost: white, black, red */
   --canvas-line, --canvas-grid, --canvas-faint, --canvas-glow  /* the interactive labs' drawings */
+  --laser-...               /* the laser lab's own colours, see css/laser.css */
 
-  --font-main:  "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-main:  "Segoe UI", Roboto, Helvetica, Arial, sans-serif;  /* the laser lab */
+  --font-serif: Georgia, "Times New Roman", Times, serif;          /* the site's text */
+  --red:        #d40000;         /* the one red: 5.5:1 on white */
   --max-width:  1100px;          /* the width of .container */
   --radius:     16px;
   --radius-sm:  10px;
 }
-
-/* The public site — LIGHT theme values, same names */
-:root.theme-light {
-  --bg:          #f1ebdf;   /* a slightly deeper cream: hero, footer */
-  --bg-2:        #fdfbf7;   /* near-white paper: .band--alt */
-  --bg-3:        #f6f1e7;   /* cream: .band */
-  --heading:     #1c1f24;   /* charcoal ink */
-  --text:        #33373d;
-  --muted:       #62666d;
-  --accent:      #c0603a;   /* terracotta: the first stop of the gradients, sliders */
-  --accent-2:    #963b1c;   /* burnt orange: the second stop (violet looks muddy on cream) */
-  --accent-soft: #a1461f;   /* terracotta for small text: .eyebrow, links */
-  /* ... and the rest, see css/style.css */
-}
 ```
 
-Two things keep their colour in both themes on purpose: white text on the gradient `.btn--primary` and on the step numbers, and the dark full-screen photo viewer.
+A few things keep their own colour on purpose: white text on the red `.btn--primary` and on the step numbers, the white logo tiles of partners, the dark full-screen photo viewer, and the laser lab.
 
 One more variable is set on `body.site`: `--header-h: 4.6rem`, the height of the header. The top padding of the inner pages depends on it.
 
@@ -1065,7 +1034,6 @@ There are not many media queries in the project, because the grids adapt by them
 
 **Below 720 px** — [css/home.css:125](css/home.css#L125)
 * `.hero__content` — the top padding grows to 7rem.
-* `.hero__scroll` — the "scroll down" hint is hidden.
 
 **Below 640 px** — [css/site.css:804](css/site.css#L804), [css/home.css:137](css/home.css#L137), [css/style.css:193](css/style.css#L193)
 * The header stops being pinned to the top (`position: static`) — on a phone the menu wraps onto several lines and would cover half the screen.

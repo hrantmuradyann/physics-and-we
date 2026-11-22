@@ -10,7 +10,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { deepFreeze } = require("./helpers.js");
-const { fakeContext, themeVariables } = require("./fake-browser.js");
+const { fakeContext, THEMES, themeVariables } = require("./fake-browser.js");
 
 // Every width from a small phone to a wide window, plus 327 px: a 375 px
 // phone minus the page's side padding.
@@ -31,13 +31,13 @@ function palette(UI, theme) {
 }
 
 // A view as loop.js makes it, on a recording context.
-//   options: { theme: "dark" | "light", t: seconds the loop has run }
+//   options: { theme: a name in THEMES (fake-browser.js), t: seconds the loop has run }
 function makeView(UI, size, w, options) {
   const opts = options || {};
   const recorder = fakeContext();
   const view = {
     g: recorder.context, w: w, h: heightFor(size, w), dpr: 1,
-    colors: deepFreeze(palette(UI, opts.theme || "dark")), font: "Test Sans", t: opts.t || 0, dt: 0
+    colors: deepFreeze(palette(UI, opts.theme || "site")), font: "Test Sans", t: opts.t || 0, dt: 0
   };
   return { recorder: recorder, view: view };
 }
@@ -79,8 +79,8 @@ function commonDrawingTests(name, UI, size, cases, options) {
     });
   }
 
-  test(name + ": colours only from the theme, in both themes", () => {
-    for (const theme of ["dark", "light"]) {
+  test(name + ": colours only from the theme", () => {
+    for (const theme of THEMES) {
       const allowed = Object.values(palette(UI, theme));
       for (const drawCase of cases) {
         const { recorder, view } = makeView(UI, size, 800, { theme: theme });
