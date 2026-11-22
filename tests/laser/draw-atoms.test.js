@@ -16,7 +16,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { loadEngine } = require("./helpers.js");
-const { createBrowser } = require("./fake-browser.js");
+const { createBrowser, THEMES } = require("./fake-browser.js");
 const { makeView, commonDrawingTests } = require("./draw-helpers.js");
 
 const browser = createBrowser();
@@ -240,7 +240,7 @@ test("draw: each level's name and role, the scheme in the title, the wavelengths
 
 test("draw: the laser step and its photons in the beam's own colour, the pump's in the pump light's, readable on the theme", () => {
   const M = UI.materials;
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     const { recorder, view } = makeView(UI, A.SIZE, 800, { theme: theme });
     A.draw(view, busy("ruby", 2), WORDS, { name: "Ruby", medium: "ruby", lam: 694.3e-9, pumpKind: "flashlamp", light: 1, pump: 1 });
     const used = recorder.sets.filter((s) => s.name === "strokeStyle" || s.name === "fillStyle").map((s) => s.value);

@@ -1,11 +1,10 @@
 /* ============================================================================
    site.css — how every public page looks.
 
-   The site has two themes, dark and light (the visitor picks one with the
-   sun / moon button in the header). This file never names a colour itself:
-   it uses the variables in css/style.css — var(--heading), var(--bg-3), ...
-   — which hold the dark colours by default and the cream ones when <html>
-   has the class "theme-light". So a block written once works in both.
+   This file never names a colour itself: it uses the variables in
+   css/style.css — var(--heading), var(--bg-3), ... — so the colours are
+   changed in one place. css/simple.css, linked after it, gives the site its
+   plain look (serif type, square corners, no shadows, lifts or fade-ins).
 
    Every page is built from the same few blocks, so a new page
    automatically looks like the rest.
@@ -145,40 +144,6 @@ body.site .lang-switcher button.active-lang {
   background-color: var(--heading);
   border-color: var(--heading);
   color: var(--bg);
-}
-
-/* The sun / moon button. It shows the theme you would switch TO.
-   Built by js/main.js; the switching itself is js/theme.js. */
-.theme-switch {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: 1px solid currentColor;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-  opacity: 0.75;
-  transition: opacity 0.2s ease, transform 0.3s ease;
-}
-
-.theme-switch:hover {
-  opacity: 1;
-  transform: rotate(20deg);
-}
-
-.theme-switch svg {
-  width: 1.05rem;
-  height: 1.05rem;
-}
-
-/* For the instant the theme is switched (js/theme.js), nothing fades, so
-   every colour changes at the same moment. */
-.theme-switching *,
-.theme-switching *::before,
-.theme-switching *::after {
-  transition: none !important;
 }
 
 /* ============================================================================
@@ -503,10 +468,7 @@ body.site .lang-switcher button.active-lang {
   font-size: clamp(2.1rem, 4vw, 3.1rem);
   font-weight: 800;
   line-height: 1;
-  background: linear-gradient(135deg, var(--heading), var(--icon));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--heading);   /* solid: gradient-filled text reads as machine-made */
 }
 
 .stat__label {

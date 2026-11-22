@@ -47,21 +47,9 @@
    ========================================================================== */
 .line-art {
   background-color: var(--bg-3);
-  /* On the dark theme a see-through layer of the page colour lies over the
-     lines (the first gradient), so they stay quiet on the dark background. */
-  background-image:
-    linear-gradient(rgba(10, 16, 36, 0.55), rgba(10, 16, 36, 0.55)),
-    url("../images/lab-lines.svg");
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
-  /* The lines stay still while the page scrolls over them. */
-  background-attachment: fixed;
-}
-
-/* The light theme shows the lines as they are. */
-:root.theme-light .line-art {
-  background-image: url("../images/lab-lines.svg");
+  /* Since 2026-11-22 (one plain look) the lines are not drawn; the wrapper
+     and images/lab-lines.svg stay, so they can come back in one rule:
+     background-image: url("../images/lab-lines.svg"); */
 }
 
 /* The stripes of the page let the lines show through. */
@@ -81,15 +69,6 @@
   background-color: var(--bg-3);
 }
 
-/* Phones ignore "fixed", and "cover" would then stretch the picture over the
-   whole length of the page. So there it simply sits at the top. */
-@media (max-width: 860px) {
-  .line-art {
-    background-attachment: scroll;
-    background-position: center top;
-    background-size: 1100px auto;
-  }
-}
 
 /* ============================================================================
    HEADING

@@ -251,19 +251,23 @@ test("sections/laser.html: no styles, scripts, <header> or <footer>; one plain b
   assert.match(html.trim(), /^<div class="laser-lab">[\s\S]*<\/div>$/, "wrapped in <div class=\"laser-lab\">");
 });
 
-// The site's colours the light theme changes but nothing inside the laser
-// lab uses: the site header's bar, the home hero's vignette, and the small
+// The site's colours nothing inside the laser lab uses: the site header's bar, the home hero's vignette, and the small
 // labs' canvas colours (js/labs.js).
 const OUTSIDE_THE_LAB = ["--header-bg", "--vignette", "--canvas-line", "--canvas-grid", "--canvas-faint", "--canvas-glow"];
 
-test(".laser-lab sets every site colour the theme changes to the lab's own fixed one, so the lab looks the same in both themes", () => {
+test(".laser-lab sets every site colour to the lab's own fixed one, so the lab keeps its own look", () => {
   const block = (css, selector) => {
     const start = css.search(new RegExp("^" + selector.replace(/\./g, "\\.") + "\\s*\\{", "m"));
     assert.ok(start >= 0, selector);
     return css.slice(start, css.indexOf("\n}", start));
   };
   const names = (text) => Array.from(text.matchAll(/^\s+(--[a-z0-9-]+)\s*:/gm), (m) => m[1]);
-  const themed = names(block(read("css/style.css"), ":root.theme-light"));
+  // The site's colours: every variable in :root but the lab's own, the
+  // admin page's, the fonts, the one red they are made of and the sizes.
+  const notColours = ["--red", "--max-width", "--radius", "--radius-sm"];
+  const themed = names(block(read("css/style.css"), ":root"))
+    .filter((name) => !/^--(laser|color|font)-/.test(name) && !notColours.includes(name));
+  assert.ok(themed.includes("--bg") && themed.includes("--accent") && themed.length >= 30, themed.join(" "));
   const lab = block(read("css/laser.css"), ".laser-lab");
   const labNames = names(lab);
   for (const name of themed) {

@@ -14,7 +14,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { deepFreeze, assertClose, loadEngine } = require("./helpers.js");
-const { createBrowser, fakeContext, themeVariables } = require("./fake-browser.js");
+const { createBrowser, fakeContext, THEMES, themeVariables } = require("./fake-browser.js");
 
 function load() {
   const browser = createBrowser();
@@ -170,7 +170,7 @@ function drawAt(w, labels, theme, light, t, still) {
   const recorder = fakeContext();
   const view = {
     g: recorder.context, w: w, h: heightFor(w), dpr: 1,
-    colors: deepFreeze(palette(theme || "dark")), font: "Test Sans", t: t === undefined ? 0 : t, dt: 0,
+    colors: deepFreeze(palette(theme || "site")), font: "Test Sans", t: t === undefined ? 0 : t, dt: 0,
     still: still === true
   };
   bench.draw(view, labels || LABELS, light === undefined ? undefined : deepFreeze(light));
@@ -388,7 +388,7 @@ test("layout: labels inside the canvas, readable, and never on top of each other
 });
 
 test("draw: every colour it uses is a theme colour, in both themes", () => {
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     // Since stage 10c a bench's medium and beam have their own colours
     // (materials.js), each tested for contrast in materials.test.js.
     const allowed = Object.values(palette(theme)).concat(physical(theme));
@@ -407,7 +407,7 @@ test("draw: every colour it uses is a theme colour, in both themes", () => {
 
 test("draw: clears the canvas first and leaves the context as it found it", () => {
   for (const light of LIGHTS) {
-    const { recorder, view } = drawAt(600, LABELS, "dark", light);
+    const { recorder, view } = drawAt(600, LABELS, "site", light);
     assert.deepEqual(recorder.calls[0], { name: "clearRect", args: [0, 0, view.w, view.h] });
     const saves = recorder.calls.filter((c) => c.name === "save").length;
     const restores = recorder.calls.filter((c) => c.name === "restore").length;
@@ -432,7 +432,7 @@ test("draw: everything it draws is inside the canvas, at every width", () => {
   for (const w of WIDTHS) {
     for (const light of LIGHTS.concat([{ beam: 4, pump: 1, transmission: 0.3 }])) {
       // At a moment the photons and the atoms are on their way (stage 10c2).
-      const { recorder, view } = drawAt(w, LABELS, "dark", light, 0.9);
+      const { recorder, view } = drawAt(w, LABELS, "site", light, 0.9);
       for (const call of recorder.calls) {
         if (!["moveTo", "lineTo", "fillRect", "strokeRect", "quadraticCurveTo", "ellipse", "arc", "fillText"].includes(call.name)) continue;
         let points = [call.args.slice(0, 2)];
@@ -464,7 +464,7 @@ test("draw: everything it draws is inside the canvas, at every width", () => {
 test("draw: writes the five labels where the layout puts them, squeezed into their slots", () => {
   const written5 = Object.assign({}, LABELS, { transmission: "Transmission 5.00" + NB + "%" });
   for (const [w, light] of [[327, LASING], [600, LASING], [1100, LASING]].concat(KINDS.map((kind) => [600, lit(kind)]))) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", light);
+    const { recorder, view } = drawAt(w, LABELS, "site", light);
     const L = bench.layout(view.w, view.h);
     let align = null;
     let font = null;
@@ -488,7 +488,7 @@ test("draw: writes the five labels where the layout puts them, squeezed into the
 
 test("draw: an empty label is left out, not written as an empty string", () => {
   function written(labels, light) {
-    const { recorder } = drawAt(600, deepFreeze(labels), "dark", light);
+    const { recorder } = drawAt(600, deepFreeze(labels), "site", light);
     return recorder.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]).sort();
   }
   const labels = Object.assign({}, LABELS, { pump: "", transmission: "" });
@@ -586,11 +586,11 @@ test("draw: no light, no rays; with light, a ray from face to face at every heig
   assert.equal(raysLeaving(still.recorder, L600, still.view).length, 0);
   // No light and no pump is the still picture (with no transmission to
   // write, the transmission label is left out of both).
-  assert.deepEqual(drawAt(600, LABELS, "dark", { beam: 0, pump: 0 }).recorder.calls,
+  assert.deepEqual(drawAt(600, LABELS, "site", { beam: 0, pump: 0 }).recorder.calls,
     still.recorder.calls, "no light: the still picture");
 
   for (const w of WIDTHS) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", LASING);
+    const { recorder, view } = drawAt(w, LABELS, "site", LASING);
     const L = bench.layout(view.w, view.h);
     const rays = raysInside(recorder, L);
     assert.deepEqual(rays.map((ray) => ray.y1), Array.from(L.rays), "w = " + w + ": one ray at each height");
@@ -602,7 +602,7 @@ test("draw: no light, no rays; with light, a ray from face to face at every heig
 });
 
 test("draw: arrowheads point right on every second ray and left on the others", () => {
-  const { recorder, view } = drawAt(900, LABELS, "dark", LASING);
+  const { recorder, view } = drawAt(900, LABELS, "site", LASING);
   const L = bench.layout(view.w, view.h);
   // An arrowhead is a filled triangle: moveTo(tip), lineTo, lineTo, closePath, fill.
   const heads = [];
@@ -636,7 +636,7 @@ test("draw: arrowheads point right on every second ray and left on the others", 
 test("draw: as many rays leave as the output mirror lets through, the ones nearest the axis", () => {
   for (const w of [327, 600, 900, 1300]) {
     for (const transmission of [0.005, 0.05, 0.1, 0.2, 0.3]) {
-      const { recorder, view } = drawAt(w, LABELS, "dark", { beam: 1, pump: 0.25, transmission: transmission });
+      const { recorder, view } = drawAt(w, LABELS, "site", { beam: 1, pump: 0.25, transmission: transmission });
       const L = bench.layout(view.w, view.h);
       const leaving = raysLeaving(recorder, L, view);
       const expected = bench.raysOut(L.rays.length, transmission);
@@ -663,7 +663,7 @@ test("rayAlpha: the square root of the light, at most 1, 0 for no light", () => 
 test("draw: the rays' strength follows the light; spontaneous emission is not a beam", () => {
   // The alpha the rays between the mirrors are drawn with.
   function strength(light) {
-    const { recorder, view } = drawAt(600, LABELS, "dark", light);
+    const { recorder, view } = drawAt(600, LABELS, "site", light);
     const rays = raysInside(recorder, bench.layout(view.w, view.h));
     return rays.length ? rays[0].alpha : 0;
   }
@@ -678,7 +678,7 @@ test("draw: the rays' strength follows the light; spontaneous emission is not a 
   assert.ok(strength({ beam: 1e-8, transmission: 0.05 }) < 0.01, "spontaneous emission: no visible beam");
   assert.ok(strength({ beam: 0.01, transmission: 0.05 }) >= 0.1, "1 % of the scale already shows");
   // The rays that leave are as strong as the ones inside.
-  const { recorder, view } = drawAt(600, LABELS, "dark", { beam: 0.25, transmission: 0.3 });
+  const { recorder, view } = drawAt(600, LABELS, "site", { beam: 0.25, transmission: 0.3 });
   const L = bench.layout(view.w, view.h);
   assert.equal(raysLeaving(recorder, L, view)[0].alpha, raysInside(recorder, L)[0].alpha);
 });
@@ -687,7 +687,7 @@ test("draw: a flashlamp's light goes up into the rod, stronger with more pump, n
   // The upright lines between the lamp and the rod.
   function pumpLines(light) {
     if (light) light = Object.assign({ pumpKind: "flashlamp" }, light);
-    const { recorder, view } = drawAt(600, LABELS, "dark", light);
+    const { recorder, view } = drawAt(600, LABELS, "site", light);
     const L = bench.layout(view.w, view.h);
     return strokedLines(recorder).filter((line) => line.x1 === line.x2 &&
       line.y1 <= L.lamp.y && line.y1 > L.rod.y + L.rod.h && line.y2 >= L.rod.y + L.rod.h && line.y2 < L.lamp.y &&
@@ -833,7 +833,7 @@ test("layout: the flashlamp, the gas tube and the pump laser, inside the canvas 
 test("draw: each pump draws its own parts, and a missing or unknown kind is the diodes", () => {
   const w = 900;
   const draws = {};
-  for (const kind of KINDS) draws[kind] = drawAt(w, LABELS, "dark", lit(kind));
+  for (const kind of KINDS) draws[kind] = drawAt(w, LABELS, "site", lit(kind));
   const L = bench.layout(w, heightFor(w));
   const filled = (kind) => rects(draws[kind].recorder, "fillRect");
   const outlined = (kind) => rects(draws[kind].recorder, "strokeRect");
@@ -882,20 +882,20 @@ test("draw: each pump draws its own parts, and a missing or unknown kind is the 
   assert.deepEqual(posts(draws.discharge.recorder, L), mirrorPosts.concat(Array.from(L.tubePosts)), "discharge");
   // No kind, or one the drawing does not know: the diodes.
   const diode = JSON.stringify(draws.diode.recorder.log);
-  assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", { beam: 1, pump: 0.25, transmission: 0.05 }).recorder.log), diode);
-  assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", lit("steam engine")).recorder.log), diode);
+  assert.equal(JSON.stringify(drawAt(w, LABELS, "site", { beam: 1, pump: 0.25, transmission: 0.05 }).recorder.log), diode);
+  assert.equal(JSON.stringify(drawAt(w, LABELS, "site", lit("steam engine")).recorder.log), diode);
 });
 
 test("draw: a pump below PUMP_OFF is drawn off, for every kind (a flash's long tail goes dark)", () => {
   const w = 900;
   assert.equal(bench.PUMP_OFF, 0.01);
   for (const kind of KINDS) {
-    const off = JSON.stringify(drawAt(w, LABELS, "dark", lit(kind, 0)).recorder.log);
+    const off = JSON.stringify(drawAt(w, LABELS, "site", lit(kind, 0)).recorder.log);
     // 30 s after ruby's flash peak (at 10⁴) its pump is 2×10⁻³ of full.
     for (const pump of [1e-6, 2e-3, 0.0099]) {
-      assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", lit(kind, pump)).recorder.log), off, kind + " at " + pump);
+      assert.equal(JSON.stringify(drawAt(w, LABELS, "site", lit(kind, pump)).recorder.log), off, kind + " at " + pump);
     }
-    assert.notEqual(JSON.stringify(drawAt(w, LABELS, "dark", lit(kind, bench.PUMP_OFF)).recorder.log), off, kind + " at PUMP_OFF");
+    assert.notEqual(JSON.stringify(drawAt(w, LABELS, "site", lit(kind, bench.PUMP_OFF)).recorder.log), off, kind + " at PUMP_OFF");
   }
 });
 
@@ -916,7 +916,7 @@ test("draw: the rays' arrowheads sit in the open gaps between the mirrors and th
   for (const w of WIDTHS) {
     const L = bench.layout(w, heightFor(w));
     for (const kind of KINDS) {
-      const { recorder } = drawAt(w, LABELS, "dark", lit(kind, 0.5));
+      const { recorder } = drawAt(w, LABELS, "site", lit(kind, 0.5));
       const M = kind === "discharge" ? L.tube : L.rod;
       const leftGap = (bench.faceX(L, "back", L.axis.y) + M.x) / 2;
       const rightGap = (M.x + M.w + bench.faceX(L, "output", L.axis.y)) / 2;
@@ -944,13 +944,13 @@ test("draw: the flashlamp glows as strongly as the flash and lights the rod; dar
   const F = L.flashTube;
   const gas = [F.x + L.flashCap, F.y, F.w - 2 * L.flashCap, F.h].join(",");
   function glow(pump) {
-    const { recorder } = drawAt(w, LABELS, "dark", lit("flashlamp", pump));
+    const { recorder } = drawAt(w, LABELS, "site", lit("flashlamp", pump));
     const fill = filledWithAlpha(recorder).find((f) => f.key === gas);
     return fill ? fill.alpha : 0;
   }
   // Its light: upright lines from the tube up to the rod, as the diodes'.
   function light(pump) {
-    const { recorder } = drawAt(w, LABELS, "dark", lit("flashlamp", pump));
+    const { recorder } = drawAt(w, LABELS, "site", lit("flashlamp", pump));
     return strokedLines(recorder).filter((line) => line.x1 === line.x2 &&
       line.y1 <= F.y && line.y1 > L.rod.y + L.rod.h && line.y2 >= L.rod.y + L.rod.h && line.y2 < F.y &&
       line.x1 >= F.x && line.x1 <= F.x + F.w);
@@ -1002,8 +1002,8 @@ function painted(recorder) {
 // for the streaks and the burning gas, which must show on the lab's
 // near-white), and the streaks among it (stroked lines).
 function flashLight(w, light, t, theme) {
-  const { recorder } = drawAt(w, LABELS, theme || "dark", light, t);
-  const colors = palette(theme || "dark");
+  const { recorder } = drawAt(w, LABELS, theme || "site", light, t);
+  const colors = palette(theme || "site");
   const flashes = [colors.flash, UI.materials.readable(colors.flash, colors.bg)];
   const all = painted(recorder);
   const lit = all.filter((p) => flashes.includes(p.color));
@@ -1032,7 +1032,7 @@ test("draw: a lit flashlamp lights the whole bench, a halo round its tube, broad
   }
   const { all, lit: light } = flashLight(w, lit("flashlamp", 1));
   // First of all, the whole bench lit, faintly, under every part.
-  assert.deepEqual({ call: all[0].call, args: all[0].args, color: all[0].color }, { call: "fillRect", args: [0, 0, w, heightFor(w)], color: palette("dark").flash });
+  assert.deepEqual({ call: all[0].call, args: all[0].args, color: all[0].color }, { call: "fillRect", args: [0, 0, w, heightFor(w)], color: palette("site").flash });
   assert.equal(all[0].alpha, 0.1);
   // A halo: 6 rings round the tube's middle, each wider than the last by
   // haloStep, faint, all inside the canvas.
@@ -1060,7 +1060,7 @@ test("draw: a lit flashlamp lights the whole bench, a halo round its tube, broad
   assert.ok(rod, "the rod lit");
   assert.equal(rod.alpha, 0.3);
   // The rod is lit over its own glass, which is drawn first.
-  const glass = all.findIndex((p) => p.call === "fillRect" && p.args.join(",") === rectKey(R) && p.color === palette("dark").accent);
+  const glass = all.findIndex((p) => p.call === "fillRect" && p.args.join(",") === rectKey(R) && p.color === palette("site").accent);
   assert.ok(glass !== -1 && glass < all.indexOf(rod));
 });
 
@@ -1115,7 +1115,7 @@ test("draw: the streaks flicker round the tube in screen time; the same moment d
     }
   }
   const w = 900;
-  const at = (t) => JSON.stringify(drawAt(w, LABELS, "dark", lit("flashlamp", 0.8), t).recorder.log);
+  const at = (t) => JSON.stringify(drawAt(w, LABELS, "site", lit("flashlamp", 0.8), t).recorder.log);
   // The streaks themselves, not only the pump photons (stage 10c2), change.
   const streaksAt = (t) => JSON.stringify(flashLight(w, lit("flashlamp", 0.8), t).streaks);
   assert.notEqual(streaksAt(0.3), streaksAt(0), "it flickers");
@@ -1130,16 +1130,16 @@ test("draw: the streaks flicker round the tube in screen time; the same moment d
 
 test("draw: for a visitor who asked for less motion the streaks stand still, still as strong as the flash", () => {
   const w = 900;
-  const still = (t, pump) => JSON.stringify(drawAt(w, LABELS, "dark", lit("flashlamp", pump), t, true).recorder.log);
+  const still = (t, pump) => JSON.stringify(drawAt(w, LABELS, "site", lit("flashlamp", pump), t, true).recorder.log);
   for (const t of [0.3, 1.7, 1000.25]) assert.equal(still(t, 0.8), still(0, 0.8), "t = " + t);
   // The picture of the moment t = 0: the streaks keep their different lengths.
-  assert.equal(still(0.3, 0.8), JSON.stringify(drawAt(w, LABELS, "dark", lit("flashlamp", 0.8), 0).recorder.log));
+  assert.equal(still(0.3, 0.8), JSON.stringify(drawAt(w, LABELS, "site", lit("flashlamp", 0.8), 0).recorder.log));
   // The flash itself still rises and falls: that is the physics, not decoration.
   assert.notEqual(still(0.3, 0.3), still(0.3, 0.8));
 });
 
 test("draw: only the lamp's gas blooms; the bloom is set back before anything else is drawn", () => {
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     for (const pump of [0.1, 0.6, 1]) {
       const w = 900;
       const L = bench.layout(w, heightFor(w));
@@ -1162,7 +1162,7 @@ test("draw: the gas tube is the medium: the rays run inside it, its gas glows wi
   const L = bench.layout(w, heightFor(w));
   const bore = rectKey(L.bore);
   function drawn(pump) {
-    return drawAt(w, LABELS, "dark", lit("discharge", pump));
+    return drawAt(w, LABELS, "site", lit("discharge", pump));
   }
   // The rays still run from mirror face to mirror face, through the tube.
   assert.equal(raysInside(drawn(0.5).recorder, L).length, L.rays.length);
@@ -1195,7 +1195,7 @@ test("draw: the pump laser is end-pumped: its beam along the bench to the perisc
   const L = bench.layout(w, heightFor(w));
   const S = L.periscope;
   function beam(pump) {
-    const lines = strokedLines(drawAt(w, LABELS, "dark", lit("laser", pump)).recorder);
+    const lines = strokedLines(drawAt(w, LABELS, "site", lit("laser", pump)).recorder);
     const along = lines.find((l) => l.y1 === S.low && l.y2 === S.low && l.x1 === L.pumpLaser.x && l.x2 === S.x);
     const up = lines.find((l) => l.x1 === S.x && l.x2 === S.x && l.y1 === S.low && l.y2 === S.high);
     const into = lines.find((l) => l.y1 === S.high && l.y2 === S.high && l.x1 === S.x && l.x2 === L.lens.x - L.lens.rx);
@@ -1210,7 +1210,7 @@ test("draw: the pump laser is end-pumped: its beam along the bench to the perisc
   assert.equal(beam(5).along.alpha, 1, "alpha never above 1");
   // From the lens, the cone into the rod, as the diodes' light: no beam up
   // from under the rod any more.
-  const { recorder } = drawAt(w, LABELS, "dark", lit("laser", 0.5));
+  const { recorder } = drawAt(w, LABELS, "site", lit("laser", 0.5));
   assert.ok(recorder.log.some((e) => e.call === "moveTo" && Math.round(L.lens.x) === e.args[0]), "the cone from the lens");
   const rodBottom = L.rod.y + L.rod.h;
   assert.ok(!strokedLines(recorder).some((l) => l.x1 === l.x2 && l.y2 > rodBottom - 1 && l.y2 < rodBottom + 10 && l.y1 > rodBottom + 10 && l.x1 > L.rod.x && l.x1 < L.rod.x + L.rod.w),
@@ -1274,19 +1274,19 @@ test("layout: the switch's name on the top row beside the transmission, which ke
 test("draw: a filter is a plate in the gap, shaded by its unbleached share", () => {
   const w = 900;
   const L = bench.layout(w, heightFor(w));
-  const darkest = (open) => Math.max(...filledWithAlpha(drawAt(w, LABELS, "dark", filtered(open)).recorder)
+  const darkest = (open) => Math.max(...filledWithAlpha(drawAt(w, LABELS, "site", filtered(open)).recorder)
     .filter((f) => f.key === rectKey(L.filter)).map((f) => f.alpha));
   assert.ok(darkest(0) > darkest(0.5) && darkest(0.5) > darkest(1), "lighter as it bleaches");
   assert.ok(darkest(1) > 0, "a bleached filter is still there");
   assertClose(darkest(0), 0.75, 1e-12, "dark: 0.15 + 0.6");
   assertClose(darkest(1), 0.15, 1e-12, "bleached");
-  const { recorder } = drawAt(w, LABELS, "dark", filtered(0));
+  const { recorder } = drawAt(w, LABELS, "site", filtered(0));
   assert.ok(rects(recorder, "strokeRect").includes(rectKey(L.filter)), "outlined");
   const standing = posts(recorder, L);
   assert.ok(standing.includes(L.filter.x + L.filter.w / 2), "on a post");
   assert.ok(standing.includes(L.backMirror.x + L.backMirror.w / 2), "the back mirror's post");
   // Without the filter: no plate, no post for it.
-  const none = drawAt(w, LABELS, "dark", lit("flashlamp", 0.5)).recorder;
+  const none = drawAt(w, LABELS, "site", lit("flashlamp", 0.5)).recorder;
   assert.ok(!rects(none, "fillRect").includes(rectKey(L.filter)), "no plate");
   assert.ok(!posts(none, L).includes(L.filter.x + L.filter.w / 2), "no post");
   // The rays still run from the back mirror's face to the output mirror's.
@@ -1300,16 +1300,16 @@ test("draw: the filter as a real one: Cr:YAG a brown disc, ruby's dye a blue cel
   const w = 900;
   const L = bench.layout(w, heightFor(w));
   const of = (absorber, open) => Object.assign(filtered(open), { qSwitch: { kind: "absorber", open, absorber } });
-  const plate = (absorber, open) => filledWithAlpha(drawAt(w, LABELS, "dark", of(absorber, open)).recorder)
+  const plate = (absorber, open) => filledWithAlpha(drawAt(w, LABELS, "site", of(absorber, open)).recorder)
     .filter((f) => f.key === rectKey(L.filter));
   for (const id of ["cr-yag", "cryptocyanine"]) {
     assert.ok(plate(id, 0).some((f) => f.color === M.ABSORBERS[id].body && Math.abs(f.alpha - 0.75) < 1e-12), id + ": its colour, dark");
     assert.ok(plate(id, 1).some((f) => f.color === M.ABSORBERS[id].body && Math.abs(f.alpha - 0.15) < 1e-12), id + ": bleached");
   }
-  const filled = rects(drawAt(w, LABELS, "dark", of("cr-yag", 0)).recorder, "fillRect");
+  const filled = rects(drawAt(w, LABELS, "site", of("cr-yag", 0)).recorder, "fillRect");
   assert.ok(filled.includes([L.filter.x - 2, L.filter.y - 5, L.filter.w + 4, 5].join(",")), "the holder's top clamp");
   assert.ok(filled.includes([L.filter.x - 2, L.filter.y + L.filter.h, L.filter.w + 4, 5].join(",")), "and its bottom one");
-  const cellLog = filledWithAlpha(drawAt(w, LABELS, "dark", of("cryptocyanine", 0)).recorder);
+  const cellLog = filledWithAlpha(drawAt(w, LABELS, "site", of("cryptocyanine", 0)).recorder);
   const cell = cellLog.map((f) => f.key);
   const wallKey = [L.filter.x, L.filter.y, 1.5, L.filter.h].join(",");
   assert.ok(cell.includes(wallKey), "the dye cell's glass wall");
@@ -1328,7 +1328,7 @@ test("draw: the filter as a real one: Cr:YAG a brown disc, ruby's dye a blue cel
 test("draw: the left arrowheads move between the filter and the rod", () => {
   for (const w of WIDTHS) {
     const L = bench.layout(w, heightFor(w));
-    const { recorder } = drawAt(w, LABELS, "dark", filtered(1));
+    const { recorder } = drawAt(w, LABELS, "site", filtered(1));
     const right = L.filter.x + L.filter.w;
     const leftGap = (right + L.rod.x) / 2;
     L.rays.forEach((y, i) => {
@@ -1346,7 +1346,7 @@ test("draw: the filter's name, beside the transmission on the top row", () => {
   const w = 600;
   const L = bench.layout(w, heightFor(w));
   function writes(light, labels) {
-    const { recorder } = drawAt(w, labels || LABELS, "dark", light);
+    const { recorder } = drawAt(w, labels || LABELS, "site", light);
     return recorder.calls.filter((c) => c.name === "fillText").map((c) => c.args);
   }
   const T = "Transmission 5.00" + NB + "%";
@@ -1369,15 +1369,15 @@ test("draw: the filter's name, beside the transmission on the top row", () => {
 
 test("draw: a switch the drawing does not know, or one on a gas tube, draws no switch", () => {
   const w = 900;
-  const plain = JSON.stringify(drawAt(w, LABELS, "dark", lit("flashlamp", 0.5)).recorder.log);
+  const plain = JSON.stringify(drawAt(w, LABELS, "site", lit("flashlamp", 0.5)).recorder.log);
   // The engine's cell and prism are not drawn: the page offers only the filter.
   for (const kind of ["shutter", "cell", "prism"]) {
     const unknown = Object.assign(lit("flashlamp", 0.5), { qSwitch: { kind: kind, open: 0 } });
-    assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", unknown).recorder.log), plain, kind);
+    assert.equal(JSON.stringify(drawAt(w, LABELS, "site", unknown).recorder.log), plain, kind);
   }
-  const gas = JSON.stringify(drawAt(w, LABELS, "dark", lit("discharge", 0.5)).recorder.log);
+  const gas = JSON.stringify(drawAt(w, LABELS, "site", lit("discharge", 0.5)).recorder.log);
   const gasFilter = Object.assign(lit("discharge", 0.5), { qSwitch: { kind: "absorber", open: 0 } });
-  assert.equal(JSON.stringify(drawAt(w, LABELS, "dark", gasFilter).recorder.log), gas, "the tube fills the cavity: no room");
+  assert.equal(JSON.stringify(drawAt(w, LABELS, "site", gasFilter).recorder.log), gas, "the tube fills the cavity: no room");
   assert.deepEqual(Array.from(bench.Q_KINDS), Q_KINDS);
   assert.ok(Object.isFrozen(bench.Q_KINDS));
 });
@@ -1404,7 +1404,7 @@ test("the aperture is drawn as the rod's half-height, or the bore's on a dischar
   // edge on a rod bench, the bore's on a discharge.
   const full = Object.assign({}, HENE, { mode: [0, 0.15, 0.3].map((z) => ({ z: z, w: HENE.aperture })) });
   for (const [kind, edge] of [["diode", "rod"], ["discharge", "bore"]]) {
-    const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(full, { pumpKind: kind }));
+    const { recorder, view } = drawAt(800, LABELS, "site", withCavity(full, { pumpKind: kind }));
     const L = bench.layout(800, view.h);
     const top = edge === "rod" ? L.rod.y : L.bore.y;
     assert.ok(recorder.calls.some((c) => c.name === "moveTo" && Math.abs(c.args[1] - top) < 1e-9), kind + ": the outline on the " + edge + "'s edge");
@@ -1433,7 +1433,7 @@ test("the mirrors' faces follow their shapes, always standing out of the glass t
   assert.deepEqual(Array.from(bench.SHAPES), ["flat", "concave", "convex"]);
   // The drawn faces: from rim to rim, with the control point that makes
   // the curve pass faceX on the axis (2·middle − rim).
-  const curves = (light) => drawAt(800, LABELS, "dark", light).recorder.calls.filter((c) => c.name === "quadraticCurveTo");
+  const curves = (light) => drawAt(800, LABELS, "site", light).recorder.calls.filter((c) => c.name === "quadraticCurveTo");
   const flatConcave = curves(withCavity(HENE));
   assert.ok(flatConcave.some((c) => c.args[0] === backInner && c.args[2] === backInner), "the flat back mirror's face is straight");
   assert.ok(flatConcave.some((c) => Math.abs(c.args[0] - (outInner + L.sag)) < 1e-9 && Math.abs(c.args[2] - (outInner - L.sag)) < 1e-9),
@@ -1457,7 +1457,7 @@ test("a curved face is drawn deeper the smaller its radius: cavity.curve 0 (the 
   const outInner = L.outputMirror.x;
   const faces = (curve) => {
     const cavity = Object.assign({}, UNSTABLE, { curve: curve });
-    return drawAt(800, LABELS, "dark", withCavity(cavity)).recorder.calls.filter((c) => c.name === "quadraticCurveTo");
+    return drawAt(800, LABELS, "site", withCavity(cavity)).recorder.calls.filter((c) => c.name === "quadraticCurveTo");
   };
   // Concave back mirror: its rims at sag; convex output: its middle at sag.
   const rimAt = (calls, sag) => calls.some((c) => Math.abs(c.args[2] - (backInner + sag)) < 1e-9);
@@ -1480,7 +1480,7 @@ test("a curved face is drawn deeper the smaller its radius: cavity.curve 0 (the 
 
 test("the traced rays: straight from mirror face to mirror face, at the heights the engine traced, fainter each round trip", () => {
   for (const w of [327, 800, 1400]) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(HENE));
+    const { recorder, view } = drawAt(w, LABELS, "site", withCavity(HENE));
     const L = bench.layout(w, view.h);
     const { perY } = scalesOf(L, HENE);
     const lines = strokedLines(recorder);
@@ -1504,7 +1504,7 @@ test("the traced rays: straight from mirror face to mirror face, at the heights 
     }
   }
   // A dark laser still shows the path, faintly (0.3).
-  const dark = strokedLines(drawAt(800, LABELS, "dark", withCavity(HENE, { beam: 0 })).recorder);
+  const dark = strokedLines(drawAt(800, LABELS, "site", withCavity(HENE, { beam: 0 })).recorder);
   const L = bench.layout(800, heightFor(800));
   const first = dark.find((l) => Math.abs(l.x1 - bench.faceX(L, "back", 0, "flat")) < 1e-9 && l.x2 > l.x1 + 100);
   assert.ok(first, "a path from the back mirror");
@@ -1513,9 +1513,9 @@ test("the traced rays: straight from mirror face to mirror face, at the heights 
 
 test("the doubling crystal (stage 13b): a block past the output mirror; past it the leaving light in λ/2's colour, as strong as its own light", () => {
   const nd = { pumpKind: "diode", medium: "nd-yag", lam: 1064e-9, pumpLam: 808e-9, beam: 1 };
-  const green = UI.materials.readable(UI.materials.beam(532e-9).color, palette("dark").bg);
+  const green = UI.materials.readable(UI.materials.beam(532e-9).color, palette("site").bg);
   for (const w of [280, 327, 800, 1400]) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(HENE, Object.assign({ doubler: { share: 0.3, green: 0.5 } }, nd)));
+    const { recorder, view } = drawAt(w, LABELS, "site", withCavity(HENE, Object.assign({ doubler: { share: 0.3, green: 0.5 } }, nd)));
     const L = bench.layout(w, view.h);
     const C = L.doubler;
     const outLeft = L.outputMirror.x + L.outputMirror.w;
@@ -1533,14 +1533,14 @@ test("the doubling crystal (stage 13b): a block past the output mirror; past it 
     assert.equal(before.length, greens.length, "the laser's light up to the crystal");
   }
   // Without the crystal: no block, the light straight to the edge, never green.
-  const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE, nd));
+  const { recorder, view } = drawAt(800, LABELS, "site", withCavity(HENE, nd));
   const L = bench.layout(800, view.h);
   assert.ok(!recorder.calls.some((c) => c.name === "strokeRect" && Math.abs(c.args[0] - L.doubler.x) < 1e-9), "no crystal");
   assert.ok(!strokedLines(recorder).some((l) => l.strokeStyle === green), "no green light");
   // Weak green: the arrowheads stay, in the stronger (infrared) light.
   {
-    const weak = drawAt(800, LABELS, "dark", withCavity(HENE, Object.assign({ doubler: { share: 1e-7, green: 1e-6 } }, nd))).recorder;
-    const red = UI.materials.readable(UI.materials.INFRARED, palette("dark").bg);
+    const weak = drawAt(800, LABELS, "site", withCavity(HENE, Object.assign({ doubler: { share: 1e-7, green: 1e-6 } }, nd))).recorder;
+    const red = UI.materials.readable(UI.materials.INFRARED, palette("site").bg);
     const heads = [];
     let state = { fillStyle: null, globalAlpha: 1 };
     for (const entry of weak.log) {
@@ -1557,10 +1557,10 @@ test("the doubling crystal (stage 13b): a block past the output mirror; past it 
     assert.ok(L.doubler.x + L.doubler.w < w - 7, "w " + w + ": room for the arrowhead beside it");
   }
   // Without the cavity's numbers no crystal: the old rays do not pass through it.
-  const old = drawAt(800, LABELS, "dark", Object.assign({ doubler: { share: 0.5, green: 1 } }, nd)).recorder;
+  const old = drawAt(800, LABELS, "site", Object.assign({ doubler: { share: 0.5, green: 1 } }, nd)).recorder;
   assert.ok(!old.calls.some((c) => c.name === "strokeRect" && Math.abs(c.args[0] - L.doubler.x) < 1e-9), "no crystal without a cavity");
   // A crystal in a dark laser: drawn, no light.
-  const dark = drawAt(800, LABELS, "dark", withCavity(HENE, Object.assign({}, nd, { beam: 0, doubler: { share: 0, green: 0 } }))).recorder;
+  const dark = drawAt(800, LABELS, "site", withCavity(HENE, Object.assign({}, nd, { beam: 0, doubler: { share: 0, green: 0 } }))).recorder;
   assert.ok(dark.calls.some((c) => c.name === "strokeRect" && Math.abs(c.args[0] - L.doubler.x) < 1e-9), "the crystal stays");
 });
 
@@ -1573,7 +1573,7 @@ const LENSED = deepFreeze(Object.assign({}, HENE, {
 
 test("the traced rays through a thermal lens: bent at the cavity's middle, at the height the engine traced there", () => {
   for (const w of [327, 800, 1400]) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(LENSED));
+    const { recorder, view } = drawAt(w, LABELS, "site", withCavity(LENSED));
     const L = bench.layout(w, view.h);
     const { perX, perY } = scalesOf(L, LENSED);
     const lines = strokedLines(recorder);
@@ -1599,7 +1599,7 @@ test("the traced rays through a thermal lens: bent at the cavity's middle, at th
 });
 
 test("the beam's shape: the mode's width along the cavity, as an hourglass; a band without a mode; nothing when dark", () => {
-  const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE));
+  const { recorder, view } = drawAt(800, LABELS, "site", withCavity(HENE));
   const L = bench.layout(800, view.h);
   const { perX, perY } = scalesOf(L, HENE);
   const calls = recorder.calls;
@@ -1616,10 +1616,10 @@ test("the beam's shape: the mode's width along the cavity, as an hourglass; a ba
   const back = calls[start + HENE.mode.length];
   assertClose(back.args[1], L.axis.y + HENE.mode[HENE.mode.length - 1].w * perY, 1e-12, "and back along the bottom");
   // No mode (unstable): a band half the aperture wide.
-  const band = drawAt(800, LABELS, "dark", withCavity(UNSTABLE)).recorder.calls;
+  const band = drawAt(800, LABELS, "site", withCavity(UNSTABLE)).recorder.calls;
   assert.ok(band.some((c) => c.name === "moveTo" && Math.abs(c.args[1] - (L.axis.y - L.boreHalf / 2)) < 1e-9), "a band");
   // Dark: no shaded beam, no light leaving.
-  const dark = drawAt(800, LABELS, "dark", withCavity(HENE, { beam: 0 }));
+  const dark = drawAt(800, LABELS, "site", withCavity(HENE, { beam: 0 }));
   // (The outline is the one path of more than three lineTo's in a row.)
   const outlines = (calls) => calls.filter((c, i) => c.name === "moveTo" &&
     calls.slice(i + 1, i + 5).every((next) => next.name === "lineTo")).length;
@@ -1630,7 +1630,7 @@ test("the beam's shape: the mode's width along the cavity, as an hourglass; a ba
 
 test("the light leaving: round(rays × transmission) of the rays across the beam at the output mirror", () => {
   for (const T of [0.05, 0.3, 1]) {
-    const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE, { transmission: T }));
+    const { recorder, view } = drawAt(800, LABELS, "site", withCavity(HENE, { transmission: T }));
     const L = bench.layout(800, view.h);
     const { perY } = scalesOf(L, HENE);
     const spot = HENE.mode[HENE.mode.length - 1].w * perY;
@@ -1644,7 +1644,7 @@ test("the light leaving: round(rays × transmission) of the rays across the beam
 
 test("a ray that walks out goes on past the mirror's edge, straight, for a short run (6 % of the width), never off the picture", () => {
   for (const w of [327, 800, 1400]) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(UNSTABLE));
+    const { recorder, view } = drawAt(w, LABELS, "site", withCavity(UNSTABLE));
     const L = bench.layout(w, view.h);
     const { perX, perY } = scalesOf(L, UNSTABLE);
     const last = UNSTABLE.rays[0].hits[3];               // past the aperture at mirror 1
@@ -1665,7 +1665,7 @@ test("a ray that walks out goes on past the mirror's edge, straight, for a short
 });
 
 test("F₁, F₂: R/2 from each curved mirror on the drawing's axis scale; solid in front, hollow and dashed behind; off the picture, an arrow at its edge", () => {
-  const { recorder, view } = drawAt(800, LABELS, "dark", withCavity(HENE));
+  const { recorder, view } = drawAt(800, LABELS, "site", withCavity(HENE));
   const L = bench.layout(800, view.h);
   const { perX } = scalesOf(L, HENE);
   // The concave output mirror's F, 22.5 cm in front of it.
@@ -1683,7 +1683,7 @@ test("F₁, F₂: R/2 from each curved mirror on the drawing's axis scale; solid
 
   // A virtual F behind a convex mirror, on the picture: hollow and dashed.
   const near = withCavity(Object.assign({}, UNSTABLE, { focus: { back: null, output: -0.05 } }));
-  const drawn = drawAt(800, LABELS, "dark", near).recorder.calls;
+  const drawn = drawAt(800, LABELS, "site", near).recorder.calls;
   const arc = drawn.find((c) => c.name === "arc" && c.args[1] === L.axis.y);
   assertClose(arc.args[0], L.axis.x2 + 0.05 * scalesOf(L, UNSTABLE).perX, 1e-12, "behind the mirror");
   const k = drawn.indexOf(arc);
@@ -1697,7 +1697,7 @@ test("F₁, F₂: R/2 from each curved mirror on the drawing's axis scale; solid
   // discharge, before the rod otherwise (the review: in the margin they
   // ran over the mirror's post).
   for (const [kind, room] of [["discharge", L.focusRoom.discharge], ["flashlamp", L.focusRoom.rod]]) {
-    const far = drawAt(800, LABELS, "dark", withCavity(UNSTABLE, { pumpKind: kind }));
+    const far = drawAt(800, LABELS, "site", withCavity(UNSTABLE, { pumpKind: kind }));
     const texts = far.recorder.calls.filter((c) => c.name === "fillText" && /^F. /.test(c.args[0]));
     assert.deepEqual(texts.map((t) => t.args[0]), ["F₁ 2.50" + NB + "m", "F₂ 2.50" + NB + "m"], kind);
     assert.equal(texts[0].args[2], L.focusRows[0], "the back mirror's on the first row");
@@ -1721,13 +1721,13 @@ test("F₁, F₂: R/2 from each curved mirror on the drawing's axis scale; solid
     assert.equal(calls.filter((c) => c.name === "arc" && c.args[1] === L.axis.y).length, 0, "no dot on the picture");
   }
   // Without a word for F, only the distance.
-  const bare = drawAt(800, Object.assign({}, LABELS, { focus: "" }), "dark", withCavity(UNSTABLE)).recorder.calls;
+  const bare = drawAt(800, Object.assign({}, LABELS, { focus: "" }), "site", withCavity(UNSTABLE)).recorder.calls;
   assert.ok(bare.some((c) => c.name === "fillText" && c.args[0] === "2.50" + NB + "m"));
 });
 
 test("'Widths × k': how many times wider than the lengths the widths are drawn, bottom left", () => {
   for (const w of [327, 800]) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(HENE));
+    const { recorder, view } = drawAt(w, LABELS, "site", withCavity(HENE));
     const L = bench.layout(w, view.h);
     const { perX, perY } = scalesOf(L, HENE);
     const text = recorder.calls.find((c) => c.name === "fillText" && /^Widths × /.test(c.args[0]));
@@ -1738,12 +1738,12 @@ test("'Widths × k': how many times wider than the lengths the widths are drawn,
     assert.ok(L.labels.widths.x + L.labels.widths.maxWidth < L.labels.pump.x - L.labels.pump.maxWidth / 2, "beside the pump's name");
   }
   // Without the cavity's numbers, not written (the scale means nothing).
-  assert.ok(!drawAt(800, LABELS, "dark", LASING).recorder.calls.some((c) => c.name === "fillText" && /^Widths/.test(c.args[0])));
+  assert.ok(!drawAt(800, LABELS, "site", LASING).recorder.calls.some((c) => c.name === "fillText" && /^Widths/.test(c.args[0])));
 });
 
 test("the traced rays are clipped to a band a quarter of a mirror above and below the mirrors, inside save/restore", () => {
   for (const w of [327, 800, 1400]) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", withCavity(UNSTABLE));
+    const { recorder, view } = drawAt(w, LABELS, "site", withCavity(UNSTABLE));
     const L = bench.layout(w, view.h);
     const clips = recorder.calls.filter((c) => c.name === "clip");
     assert.equal(clips.length, 1, "w " + w);
@@ -1760,13 +1760,13 @@ test("the traced rays are clipped to a band a quarter of a mirror above and belo
     assert.ok(saves - restores >= 2, "inside its own save, within the drawing's");
   }
   // Without a cavity: no clip.
-  assert.equal(drawAt(800, LABELS, "dark", LIGHTS[0]).recorder.calls.filter((c) => c.name === "clip").length, 0);
+  assert.equal(drawAt(800, LABELS, "site", LIGHTS[0]).recorder.calls.filter((c) => c.name === "clip").length, 0);
 });
 
 /* ---------- stage 10c: each medium's look and its beam's colour ---------- */
 
 test("a crystal rod in its own colour: a highlight along its top, a polished end face at each end, an edge readable on the theme", () => {
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     const { recorder, view } = drawAt(800, LABELS, theme, ofBench({ medium: "ruby", pump: "flashlamp", lam: 694.3e-9 }, { pump: 0 }));
     const L = bench.layout(800, view.h);
     const M = UI.materials;
@@ -1785,22 +1785,22 @@ test("a crystal rod in its own colour: a highlight along its top, a polished end
     const edges = recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
     assert.ok(edges.includes(M.readable(body, view.colors.bg)), theme + ": the edge readable");
   }
-  // A pale rod on the cream theme: its edge darkened to be seen.
-  const pale = drawAt(800, LABELS, "light", ofBench({ medium: "nd-yag", pump: "diode", lam: 1064e-9 }));
+  // A pale rod on the near-white lab: its edge darkened to be seen.
+  const pale = drawAt(800, LABELS, "site", ofBench({ medium: "nd-yag", pump: "diode", lam: 1064e-9 }));
   const lilac = UI.materials.MEDIA["nd-yag"].body;
   const readableEdge = UI.materials.readable(lilac, pale.view.colors.bg);
-  assert.notEqual(readableEdge, lilac, "lilac is too pale on cream as it is");
+  assert.notEqual(readableEdge, lilac, "lilac is too pale on the near-white as it is");
   const strokes = pale.recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
   assert.ok(strokes.includes(readableEdge) && !strokes.includes(lilac), "the edge darkened");
   // Nd:YAG lilac, Ti:sapphire pink: each its own.
   for (const id of ["nd-yag", "nd-glass", "ti-sapphire"]) {
-    const { recorder } = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "laser", lam: 1e-6 }));
+    const { recorder } = drawAt(800, LABELS, "site", ofBench({ medium: id, pump: "laser", lam: 1e-6 }));
     assert.ok(recorder.log.some((e) => e.set === "fillStyle" && e.value === UI.materials.MEDIA[id].body), id);
   }
 });
 
 test("the dye in a glass cell, with a pipe in and a pipe out under it", () => {
-  const { recorder, view } = drawAt(800, LABELS, "dark", ofBench({ medium: "dye-r6g", pump: "laser", lam: 600e-9 }));
+  const { recorder, view } = drawAt(800, LABELS, "site", ofBench({ medium: "dye-r6g", pump: "laser", lam: 600e-9 }));
   const L = bench.layout(800, view.h);
   const M = UI.materials;
   const fills = recorder.log.filter((e) => e.set === "fillStyle").map((e) => e.value);
@@ -1829,13 +1829,13 @@ test("the dye in a glass cell, with a pipe in and a pipe out under it", () => {
 test("a gas glows in its own colour, inside glass; with the current off it does not glow", () => {
   const M = UI.materials;
   for (const id of ["he-ne", "ar-ion", "co2"]) {
-    const on = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "discharge", lam: 600e-9 })).recorder;
+    const on = drawAt(800, LABELS, "site", ofBench({ medium: id, pump: "discharge", lam: 600e-9 })).recorder;
     const glow = on.log.findIndex((e) => e.set === "fillStyle" && e.value === M.MEDIA[id].body);
     assert.ok(glow > 0, id + ": its glow");
     const L = bench.layout(800, heightFor(800));
     const bore = on.log.slice(glow).find((e) => e.call === "fillRect");
     assert.deepEqual(bore.args, [L.bore.x, L.bore.y, L.bore.w, L.bore.h], id + ": in the bore");
-    const off = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "discharge", lam: 600e-9 }, { pump: 0 })).recorder;
+    const off = drawAt(800, LABELS, "site", ofBench({ medium: id, pump: "discharge", lam: 600e-9 }, { pump: 0 })).recorder;
     assert.ok(!off.calls.some((c) => c.name === "fillRect" && c.args.join(",") === [L.bore.x, L.bore.y, L.bore.w, L.bore.h].join(",")),
       id + ": the bore dark without a current");
     assert.ok(!off.log.some((e) => e.set === "fillStyle" && e.value === M.MEDIA[id].body), id + ": nothing in the glow's colour without a current");
@@ -1845,7 +1845,7 @@ test("a gas glows in its own colour, inside glass; with the current off it does 
 
 test("the beam in its wavelength's colour, readable on the theme: every ray, the hourglass, the light leaving", () => {
   const M = UI.materials;
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     for (const [id, lam] of [["he-ne", 632.8e-9], ["ar-ion", 514.5e-9], ["ruby", 694.3e-9]]) {
       const pump = id === "ruby" ? "flashlamp" : "discharge";
       for (const cavity of [undefined, HENE]) {
@@ -1863,7 +1863,7 @@ test("the beam in its wavelength's colour, readable on the theme: every ray, the
 test("an invisible beam: the false colour, and its wavelength written with 'infrared, invisible' at the bottom right", () => {
   const M = UI.materials;
   for (const [id, lam, text] of [["nd-yag", 1064e-9, "1.06" + NB + "µm"], ["co2", 10.6e-6, "10.6" + NB + "µm"]]) {
-    const { recorder, view } = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: id === "co2" ? "discharge" : "diode", lam: lam }));
+    const { recorder, view } = drawAt(800, LABELS, "site", ofBench({ medium: id, pump: id === "co2" ? "discharge" : "diode", lam: lam }));
     const L = bench.layout(800, view.h);
     const styles = recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
     assert.ok(styles.includes(M.readable(M.INFRARED, view.colors.bg)), id + ": the false colour");
@@ -1875,16 +1875,16 @@ test("an invisible beam: the false colour, and its wavelength written with 'infr
   // A visible beam, the two-level atom, or no word: no note.
   for (const light of [ofBench({ medium: "he-ne", pump: "discharge", lam: 632.8e-9 }),
     ofBench({ medium: "two-level", pump: "laser", lam: 1064e-9 })]) {
-    const { recorder } = drawAt(800, LABELS, "dark", light);
+    const { recorder } = drawAt(800, LABELS, "site", light);
     assert.ok(!recorder.calls.some((c) => c.name === "fillText" && /invisible/.test(c.args[0])), light.medium);
   }
-  const bare = drawAt(800, Object.assign({}, LABELS, { infrared: "" }), "dark", ofBench({ medium: "nd-yag", pump: "diode", lam: 1064e-9 }));
+  const bare = drawAt(800, Object.assign({}, LABELS, { infrared: "" }), "site", ofBench({ medium: "nd-yag", pump: "diode", lam: 1064e-9 }));
   assert.ok(!bare.recorder.calls.some((c) => c.name === "fillText" && /µm/.test(c.args[0])));
 });
 
 test("the two-level atom, or a light without a medium, keeps the theme's colours (the mirrors and the flash's readable light excepted)", () => {
   for (const light of [ofBench({ medium: "two-level", pump: "flashlamp", lam: 694.3e-9 }), LASING]) {
-    for (const theme of ["dark", "light"]) {
+    for (const theme of THEMES) {
       const { recorder, view } = drawAt(800, LABELS, theme, light);
       const allowed = Object.values(view.colors).concat(mirrorColours(view.colors),
         [UI.materials.readable(view.colors.flash, view.colors.bg)]);
@@ -1897,20 +1897,20 @@ test("the two-level atom, or a light without a medium, keeps the theme's colours
 
 test("the glass of a gas tube and of a dye cell is outlined so it shows on the theme, never in the raw pale glass", () => {
   const M = UI.materials;
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     for (const light of [ofBench({ medium: "he-ne", pump: "discharge", lam: 632.8e-9 }), ofBench({ medium: "dye-r6g", pump: "laser", lam: 600e-9 })]) {
       const { recorder, view } = drawAt(800, LABELS, theme, light);
       const strokes = recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
       const outline = M.readable(M.GLASS, view.colors.bg);
       assert.ok(strokes.includes(outline), theme + " " + light.medium + ": the outline");
       assert.ok(M.contrast(outline, view.colors.bg) >= 3, theme + ": it shows");
-      if (theme === "light") assert.ok(!strokes.includes(M.GLASS), light.medium + ": not the pale glass itself");
+      assert.ok(!strokes.includes(M.GLASS), light.medium + ": not the pale glass itself");
     }
   }
 });
 
 test("a crystal's shade along its bottom is darker on both themes, not more of its colour", () => {
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     const { recorder, view } = drawAt(800, LABELS, theme, ofBench({ medium: "ruby", pump: "flashlamp", lam: 694.3e-9 }, { pump: 0 }));
     const L = bench.layout(800, view.h);
     const at = recorder.log.findIndex((e) => e.set === "fillStyle" && e.value === UI.materials.SHADE);
@@ -1923,7 +1923,7 @@ test("a crystal's shade along its bottom is darker on both themes, not more of i
 test("a coloured ray runs over a thin casing in the background's colour, so it shows over a medium of its own hue", () => {
   for (const cavity of [undefined, HENE]) {
     const light = ofBench({ medium: "he-ne", pump: "discharge", lam: 632.8e-9 }, cavity ? { cavity: cavity } : {});
-    const { recorder, view } = drawAt(800, LABELS, "dark", light);
+    const { recorder, view } = drawAt(800, LABELS, "site", light);
     const colour = UI.materials.readable(UI.materials.beam(632.8e-9).color, view.colors.bg);
     const lines = strokedLines(recorder);
     const rays = lines.filter((l) => l.strokeStyle === colour);
@@ -1936,13 +1936,13 @@ test("a coloured ray runs over a thin casing in the background's colour, so it s
     for (const c of casings) assert.ok(c.lineWidth > rays[0].lineWidth, "wider than the ray");
   }
   // The theme's own beam (no medium) has none.
-  const plain = drawAt(800, LABELS, "dark", LASING);
+  const plain = drawAt(800, LABELS, "site", LASING);
   assert.ok(!strokedLines(plain.recorder).some((l) => l.strokeStyle === plain.view.colors.bg));
 });
 
 test("a medium id that is a name on every object ('constructor') is no medium: the theme's colours", () => {
   for (const id of ["constructor", "toString", "__proto__"]) {
-    const { recorder, view } = drawAt(800, LABELS, "dark", ofBench({ medium: id, pump: "laser", lam: 1064e-9 }));
+    const { recorder, view } = drawAt(800, LABELS, "site", ofBench({ medium: id, pump: "laser", lam: 1064e-9 }));
     const allowed = Object.values(view.colors).concat(mirrorColours(view.colors));
     for (const set of recorder.sets.filter((e) => /Style$/.test(e.name))) assert.ok(allowed.includes(set.value), id + ": " + set.value);
     assert.ok(!recorder.calls.some((c) => c.name === "fillText" && /invisible/.test(c.args[0])), id);
@@ -1950,7 +1950,7 @@ test("a medium id that is a name on every object ('constructor') is no medium: t
 });
 
 test("ultraviolet light is called ultraviolet, not infrared", () => {
-  const { recorder } = drawAt(800, LABELS, "dark", ofBench({ medium: "ruby", pump: "flashlamp", lam: 347.15e-9 }));
+  const { recorder } = drawAt(800, LABELS, "site", ofBench({ medium: "ruby", pump: "flashlamp", lam: 347.15e-9 }));
   const note = recorder.calls.find((c) => c.name === "fillText" && /invisible$/.test(c.args[0]));
   assert.ok(note && /ultraviolet, invisible$/.test(note.args[0]), note && note.args[0]);
 });
@@ -2005,7 +2005,7 @@ test("layout: the end-pumped diodes, inside the canvas at every width: the modul
 });
 
 test("the diodes: a module with fins, a fibre to the lens, the lens on the axis; no light with the pump off", () => {
-  const { recorder, view } = drawAt(900, LABELS, "dark", endPumped({ pump: 0 }));
+  const { recorder, view } = drawAt(900, LABELS, "site", endPumped({ pump: 0 }));
   const L = bench.layout(900, view.h);
   const M = L.diodeModule;
   assert.ok(rects(recorder, "strokeRect").includes(rectKey(M)), "the module");
@@ -2023,14 +2023,14 @@ test("the diodes: a module with fins, a fibre to the lens, the lens on the axis;
   assert.deepEqual(lens.args.slice(0, 4), [L.lens.x, L.axis.y, L.lens.rx, L.lens.ry]);
   // Off: no cone, no photons.
   assert.equal(dots(recorder).filter((d) => d.r === 2.2 || d.r === 3.2).length, 0);
-  const dark = drawAt(900, LABELS, "dark", endPumped({ pump: 0, beam: 0 }));
+  const dark = drawAt(900, LABELS, "site", endPumped({ pump: 0, beam: 0 }));
   const pumpColour = UI.materials.readable(UI.materials.PUMP_INFRARED, dark.view.colors.bg);
   assert.ok(!dark.recorder.log.some((e) => e.set === "fillStyle" && e.value === pumpColour), "no cone with the pump off");
 });
 
 test("the diodes' cone: through the back mirror into the rod, fading as it is absorbed, stronger with more pump, in 808 nm's false colour", () => {
   function cone(light, theme) {
-    const { recorder, view } = drawAt(900, LABELS, theme || "dark", light);
+    const { recorder, view } = drawAt(900, LABELS, theme || "site", light);
     const colour = light.medium ? UI.materials.readable(UI.materials.PUMP_INFRARED, view.colors.bg) : view.colors.glow;
     // The slices: four-cornered paths filled in the pump's colour.
     const slices = [];
@@ -2063,7 +2063,7 @@ test("the diodes' cone: through the back mirror into the rod, fading as it is ab
   assert.ok(cone(endPumped({ pump: 1 })).slices[0].alpha > slices[0].alpha);
   // Without a medium: the theme's glow.
   assert.ok(cone({ beam: 1, pump: 0.5, transmission: 0.05, pumpKind: "diode" }).slices.length >= 10);
-  assert.ok(cone(endPumped({ pump: 0.5 }), "light").slices.length >= 10, "on the cream theme too");
+  assert.ok(cone(endPumped({ pump: 0.5 }), "site").slices.length >= 10, "on the near-white too");
   // A pump laser's cone, the same way, green (stage 10c2: end-pumped).
   const green = (theme) => {
     const { recorder, view } = drawAt(900, LABELS, theme, ofBench({ medium: "ti-sapphire", pump: "laser", lam: 800e-9 }, { pumpLam: 532e-9 }));
@@ -2076,7 +2076,7 @@ test("the diodes' cone: through the back mirror into the rod, fading as it is ab
     }
     return count;
   };
-  assert.ok(green("dark") >= 10 && green("light") >= 10, "the pump laser's green cone");
+  assert.ok(green("site") >= 10 && green("site") >= 10, "the pump laser's green cone");
 });
 
 test("pump photons: as many as the pump is strong, travelling into the medium and absorbed inside it, each lighting an atom", () => {
@@ -2088,7 +2088,7 @@ test("pump photons: as many as the pump is strong, travelling into the medium an
   ]) {
     for (const pump of [0.05, 0.5, 1]) {
       for (const t of [0, 0.37, 1.9, 12.25]) {
-        const { recorder, view } = drawAt(900, LABELS, "dark", Object.assign({}, light, { pump: pump }), t);
+        const { recorder, view } = drawAt(900, LABELS, "site", Object.assign({}, light, { pump: pump }), t);
         const L = bench.layout(900, view.h);
         const moving = dots(recorder).filter((d) => d.r === 2.2);
         const sparks = dots(recorder).filter((d) => d.r === 3.2);
@@ -2115,25 +2115,25 @@ test("pump photons: as many as the pump is strong, travelling into the medium an
       }
     }
     // They move with screen time, and stand still for less motion.
-    const at0 = JSON.stringify(dots(drawAt(900, LABELS, "dark", light, 0).recorder));
-    assert.notEqual(JSON.stringify(dots(drawAt(900, LABELS, "dark", light, 0.3).recorder)), at0, name + ": moving");
-    assert.equal(JSON.stringify(dots(drawAt(900, LABELS, "dark", light, 0.3, true).recorder)), at0, name + ": still");
+    const at0 = JSON.stringify(dots(drawAt(900, LABELS, "site", light, 0).recorder));
+    assert.notEqual(JSON.stringify(dots(drawAt(900, LABELS, "site", light, 0.3).recorder)), at0, name + ": moving");
+    assert.equal(JSON.stringify(dots(drawAt(900, LABELS, "site", light, 0.3, true).recorder)), at0, name + ": still");
     // Off: none.
-    assert.equal(dots(drawAt(900, LABELS, "dark", Object.assign({}, light, { pump: 0 }), 0.3).recorder).length, 0, name + ": off");
+    assert.equal(dots(drawAt(900, LABELS, "site", Object.assign({}, light, { pump: 0 }), 0.3).recorder).length, 0, name + ": off");
   }
   // Absorbed at their own depths, spread through the front of the rod: over
   // a whole round, the sparks' mean depth is near d (an exponential's mean).
   const L = bench.layout(900, heightFor(900));
   const depths = [];
   for (let t = 0; t < 1 / 0.6; t += 0.01) {
-    for (const s of dots(drawAt(900, LABELS, "dark", endPumped({ pump: 1 }), t).recorder).filter((d) => d.r === 3.2)) depths.push(s.x - L.rod.x);
+    for (const s of dots(drawAt(900, LABELS, "site", endPumped({ pump: 1 }), t).recorder).filter((d) => d.r === 3.2)) depths.push(s.x - L.rod.x);
   }
   const mean = depths.reduce((a, b) => a + b, 0) / depths.length;
   assert.ok(mean > 0.6 * L.pumpDepth && mean < 1.4 * L.pumpDepth, "mean depth " + mean + " against d = " + L.pumpDepth);
 });
 
 test("the pump laser's beam in its own colour: 532 nm green, readable on the theme", () => {
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     const { recorder, view } = drawAt(900, LABELS, theme, ofBench({ medium: "dye-r6g", pump: "laser", lam: 600e-9 }, { pumpLam: 532e-9 }));
     const L = bench.layout(900, view.h);
     const green = UI.materials.readable(UI.materials.beam(532e-9).color, view.colors.bg);
@@ -2147,7 +2147,7 @@ test("the gas's atoms drift in the bore, as many lit as the current is strong; s
   for (const id of ["he-ne", "ar-ion", "co2"]) {
     for (const pump of [0, 0.3, 1]) {
       for (const t of [0, 0.8, 30]) {
-        const { recorder, view } = drawAt(900, LABELS, "dark", ofBench({ medium: id, pump: "discharge", lam: 600e-9 }, { pump: pump }), t);
+        const { recorder, view } = drawAt(900, LABELS, "site", ofBench({ medium: id, pump: "discharge", lam: 600e-9 }, { pump: pump }), t);
         const L = bench.layout(900, view.h);
         const atoms = dots(recorder).filter((d) => d.r === 1.8 || d.r === 2.6);
         assert.equal(atoms.length, N, id);
@@ -2163,18 +2163,18 @@ test("the gas's atoms drift in the bore, as many lit as the current is strong; s
     }
     const light = ofBench({ medium: id, pump: "discharge", lam: 600e-9 });
     // Drifting along the bore: their x changes (not only their wobble).
-    const xs = (t, still) => dots(drawAt(900, LABELS, "dark", light, t, still).recorder).filter((d) => d.r === 1.8 || d.r === 2.6).map((d) => d.x);
+    const xs = (t, still) => dots(drawAt(900, LABELS, "site", light, t, still).recorder).filter((d) => d.r === 1.8 || d.r === 2.6).map((d) => d.x);
     const moved = xs(0.5).map((x, k) => Math.abs(x - xs(0)[k]));
     assert.ok(Math.min(...moved) > 0.5, id + ": every atom drifts along the bore");
     assert.equal(JSON.stringify(xs(0.5, true)), JSON.stringify(xs(0)), id + ": still");
-    const at0 = JSON.stringify(dots(drawAt(900, LABELS, "dark", light, 0).recorder));
-    assert.equal(JSON.stringify(dots(drawAt(900, LABELS, "dark", light, 0.5, true).recorder)), at0, id + ": still");
+    const at0 = JSON.stringify(dots(drawAt(900, LABELS, "site", light, 0).recorder));
+    assert.equal(JSON.stringify(dots(drawAt(900, LABELS, "site", light, 0.5, true).recorder)), at0, id + ": still");
   }
 });
 
 test("the note names every invisible light, the pump's first, then the laser's", () => {
   function note(light) {
-    const c = drawAt(900, LABELS, "dark", light).recorder.calls.find((x) => x.name === "fillText" && /invisible$/.test(x.args[0]));
+    const c = drawAt(900, LABELS, "site", light).recorder.calls.find((x) => x.name === "fillText" && /invisible$/.test(x.args[0]));
     return c ? c.args[0] : null;
   }
   assert.equal(note(endPumped()), "808" + NB + "nm, 1.06" + NB + "µm · infrared, invisible");
@@ -2189,7 +2189,7 @@ test("the note names every invisible light, the pump's first, then the laser's",
 
 test("every pump photon and gas atom sits on a ring of the background's colour, drawn over the laser's rays", () => {
   for (const light of [endPumped({ pump: 1 }), ofBench({ medium: "ar-ion", pump: "discharge", lam: 514.5e-9 }, { pump: 0.6 })]) {
-    for (const theme of ["dark", "light"]) {
+    for (const theme of THEMES) {
       const { recorder, view } = drawAt(900, LABELS, theme, light, 0.4);
       const all = dots(recorder);
       const small = all.filter((d) => [1.8, 2.2, 2.6, 3.2].includes(d.r));
@@ -2240,7 +2240,7 @@ test("draw: the end-pumped diodes' filter beyond the rod, out of the pump's way;
   const L = bench.layout(w, heightFor(w));
   const light = endPumped({ pump: 1, qSwitch: { kind: "absorber", open: 0 } });
   for (const t of [0, 0.4, 1.1]) {
-    const { recorder } = drawAt(w, LABELS, "dark", light, t);
+    const { recorder } = drawAt(w, LABELS, "site", light, t);
     const plates = rects(recorder, "strokeRect");
     assert.ok(plates.includes(rectKey(L.filterBeyond)) && !plates.includes(rectKey(L.filter)), "the plate beyond the rod");
     const standing = posts(recorder, L);
@@ -2256,10 +2256,10 @@ test("draw: the end-pumped diodes' filter beyond the rod, out of the pump's way;
   }
   // An end-pumped pump laser has it beyond the rod too; a flashlamp bench
   // keeps it before the rod.
-  assert.ok(rects(drawAt(w, LABELS, "dark", filtered(0, "laser")).recorder, "strokeRect").includes(rectKey(L.filterBeyond)), "laser");
-  assert.ok(rects(drawAt(w, LABELS, "dark", filtered(0, "flashlamp")).recorder, "strokeRect").includes(rectKey(L.filter)), "flashlamp");
+  assert.ok(rects(drawAt(w, LABELS, "site", filtered(0, "laser")).recorder, "strokeRect").includes(rectKey(L.filterBeyond)), "laser");
+  assert.ok(rects(drawAt(w, LABELS, "site", filtered(0, "flashlamp")).recorder, "strokeRect").includes(rectKey(L.filter)), "flashlamp");
   // Parallel rays: the right arrowheads between the rod and the filter.
-  const { recorder } = drawAt(w, LABELS, "dark", { beam: 1, pump: 0.5, transmission: 0.05, pumpKind: "diode", qSwitch: { kind: "absorber", open: 1 } });
+  const { recorder } = drawAt(w, LABELS, "site", { beam: 1, pump: 0.5, transmission: 0.05, pumpKind: "diode", qSwitch: { kind: "absorber", open: 1 } });
   const rightGap = (L.rod.x + L.rod.w + L.filterBeyond.x) / 2;
   assert.ok(recorder.log.some((e) => e.call === "moveTo" && Math.abs(e.args[0] - (rightGap + 4)) < 1e-9 && e.args[1] === L.rays[0]),
     "an arrowhead in the gap before the filter");
@@ -2270,7 +2270,7 @@ test("draw: a dark filter holds the light back: beyond it the light is dimmed as
   const w = 900;
   const L = bench.layout(w, heightFor(w));
   function dimming(light) {
-    const { recorder, view } = drawAt(w, LABELS, "dark", light);
+    const { recorder, view } = drawAt(w, LABELS, "site", light);
     return { list: filledWithAlpha(recorder).filter((f) => f.alpha > 0), recorder: recorder, view: view };
   }
   for (const [light, F, from, to] of [
@@ -2298,13 +2298,13 @@ test("draw: a dark filter holds the light back: beyond it the light is dimmed as
     assert.ok(lastRay < at && at < plate, light.pumpKind + ": rays, then the dimming, then the plate");
   }
   // Bleached: nothing dimmed.
-  const { recorder } = drawAt(w, LABELS, "dark", filtered(1));
+  const { recorder } = drawAt(w, LABELS, "site", filtered(1));
   const key = [L.backMirror.x + L.backMirror.w, L.filter.y, L.filter.x - L.backMirror.x - L.backMirror.w, L.filter.h].join(",");
   assert.ok(!recorder.calls.some((c) => c.name === "fillRect" && c.args.join(",") === key), "a bleached filter holds nothing back");
 });
 
 test("the invisible pump and the invisible laser are told apart: their colours differ on both themes", () => {
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     const bg = palette(theme).bg;
     const a = UI.materials.readable(UI.materials.INFRARED, bg);
     const b = UI.materials.readable(UI.materials.PUMP_INFRARED, bg);
@@ -2320,7 +2320,7 @@ test("pump photons spread evenly over a round at any pump: a steady pump looks s
   let travelling = 0;
   let samples = 0;
   for (let t = 0; t < 1 / 0.6; t += 0.02) {
-    const moving = dots(drawAt(900, LABELS, "dark", endPumped({ pump: 0.25 }), t).recorder).filter((d) => d.r === 2.2);
+    const moving = dots(drawAt(900, LABELS, "site", endPumped({ pump: 0.25 }), t).recorder).filter((d) => d.r === 2.2);
     travelling = Math.max(travelling, moving.length);
     samples += moving.length === 0 ? 1 : 0;
   }
@@ -2332,7 +2332,7 @@ test("sparks and lit atoms are white over a coloured medium on both themes (on c
   for (const light of [endPumped({ pump: 1 }), ofBench({ medium: "he-ne", pump: "discharge", lam: 632.8e-9 }, { pump: 1 })]) {
     const all = [];
     for (let t = 0; t < 1 / 0.6; t += 0.05) {
-      for (const d of dots(drawAt(900, LABELS, "light", light, t).recorder)) all.push(d);
+      for (const d of dots(drawAt(900, LABELS, "site", light, t).recorder)) all.push(d);
     }
     const sparks = all.filter((d) => d.r === 3.2 || d.r === 2.6);
     assert.ok(sparks.length > 0, light.medium);
@@ -2355,7 +2355,7 @@ test("a mirror's mount has a hole for the light: its plate never crosses the ray
   // The drawn plates (colors.muted, MOUNT_PLATE wide, at each mirror's
   // outer edge) stop at the hole.
   for (const kind of ["diode", "flashlamp", "discharge"]) {
-    const { recorder, view } = drawAt(800, LABELS, "dark", lit(kind, 1));
+    const { recorder, view } = drawAt(800, LABELS, "site", lit(kind, 1));
     const L = bench.layout(800, view.h);
     const hole = bench.mountHole(L);
     const plates = recorder.calls.filter((c) => c.name === "fillRect" && c.args[2] === 3 &&
@@ -2375,7 +2375,7 @@ test("a lit xenon lamp burns white-hot in its middle, inside its readable blue-w
   const F = L.flashTube;
   const M = UI.materials;
   function core(pump) {
-    const { recorder } = drawAt(w, LABELS, "dark", lit("flashlamp", pump));
+    const { recorder } = drawAt(w, LABELS, "site", lit("flashlamp", pump));
     return painted(recorder).filter((p) => p.call === "fillRect" && p.color === M.HIGHLIGHT &&
       p.args[0] === F.x + L.flashCap && p.args[2] === F.w - 2 * L.flashCap);
   }
@@ -2391,7 +2391,7 @@ test("a lit xenon lamp burns white-hot in its middle, inside its readable blue-w
 
 test("a lit flash shows on the lab's near-white: its streaks and its burning gas are readable, the raw blue-white only a glow", () => {
   const M = UI.materials;
-  for (const theme of ["dark", "light"]) {
+  for (const theme of THEMES) {
     const colors = palette(theme);
     const shown = M.readable(colors.flash, colors.bg);
     assert.ok(M.contrast(shown, colors.bg) >= 3, theme + ": it shows");

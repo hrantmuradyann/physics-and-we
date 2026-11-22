@@ -206,14 +206,16 @@ test("a visitor who asked for less motion gets a paused loop that still draws on
   usual.loop.destroy();
 });
 
-// The lab's own colours are the same in both themes, so the test changes
-// the variable itself: what matters is that theme:changed reads them again.
+// The site has one colour set since 2026-11-22 and nothing fires
+// theme:changed now, but the loop still listens for it (a theme can come
+// back); the test changes the variable itself: what matters is that
+// theme:changed reads them again.
 test("theme switch: the colours are read again; a paused loop draws once with them", () => {
   const s = setup();
   s.loop.pause();
   s.browser.setOnScreen(s.canvas, true);
   const before = draws(s.events).length;
-  s.browser.setCssVariables(Object.assign({}, themeVariables().light, { "--laser-accent": "#c0603a" }));
+  s.browser.setCssVariables(Object.assign({}, themeVariables().site, { "--laser-accent": "#c0603a" }));
   s.browser.window.dispatchEvent(new s.browser.window.CustomEvent("theme:changed", { detail: { theme: "light" } }));
   const drawn = draws(s.events);
   assert.equal(drawn.length, before + 1);
@@ -222,7 +224,7 @@ test("theme switch: the colours are read again; a paused loop draws once with th
   // A running loop does not draw at once; its next frame uses the new colours.
   s.loop.play();
   s.events.length = 0;
-  s.browser.setCssVariables(themeVariables().dark);
+  s.browser.setCssVariables(themeVariables().site);
   s.browser.window.dispatchEvent(new s.browser.window.CustomEvent("theme:changed", { detail: { theme: "dark" } }));
   assert.equal(draws(s.events).length, 0);
   s.browser.runFrame(100);
@@ -234,7 +236,7 @@ test("the palette: every colour from its CSS variable, without the spaces; the f
   const s = setup();
   s.browser.setOnScreen(s.canvas, true);
   const view = draws(s.events)[0];
-  const dark = themeVariables().dark;
+  const dark = themeVariables().site;
   const PALETTE = s.UI.loop.PALETTE;
   assert.deepEqual(Object.keys(view.colors).sort(), Object.keys(PALETTE).sort());
   for (const name of Object.keys(PALETTE)) {
@@ -435,7 +437,7 @@ test("create refuses what it cannot draw, naming itself", () => {
   create({ canvases: [good] }).destroy();
 });
 
-test("every PALETTE colour is a --laser-* colour, set once in :root: the lab looks the same in both themes", () => {
+test("every PALETTE colour is a --laser-* colour, set in :root: the lab keeps its own look", () => {
   const browser = createBrowser();
   browser.load("js/laser/ui/loop.js");
   const PALETTE = browser.window.LaserUI.loop.PALETTE;
@@ -444,9 +446,7 @@ test("every PALETTE colour is a --laser-* colour, set once in :root: the lab loo
   for (const name of Object.keys(PALETTE)) {
     const variable = PALETTE[name];
     assert.match(variable, /^--laser-/, name + ": " + variable + " changes with the theme");
-    assert.ok(themes.dark[variable], name + ": " + variable + " is not in :root");
-    assert.equal(themes.lightOnly[variable], undefined, name + ": " + variable +
-      " is set again in :root.theme-light, so the lab would change with the theme");
+    assert.ok(themes.site[variable], name + ": " + variable + " is not in :root");
   }
 });
 
