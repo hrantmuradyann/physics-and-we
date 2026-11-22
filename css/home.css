@@ -28,12 +28,12 @@
 }
 
 .hero__title {
-  font-size: clamp(2.6rem, 6.6vw, 5.2rem);
+  font-size: clamp(2rem, 4.6vw, 3.3rem);
   line-height: 1.03;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--heading);
-  max-width: 16ch;
+  max-width: 24ch;
 }
 
 .hero__subtitle {

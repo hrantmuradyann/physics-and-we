@@ -105,7 +105,7 @@
      a little darker than pure #ff0000 (4.0:1 on white), so small red text
      reads well, 5.5:1 on white, and white text on it too. */
   --red: #d40000;
-  --font-serif: Georgia, "Times New Roman", Times, serif;   /* the site's type (css/simple.css) */
+  --font-serif: "Times New Roman", Times, serif;   /* the site's type (css/simple.css): plain Times, the owner found Georgia too fancy */
   --max-width: 1100px;
   --radius: 16px;
   --radius-sm: 10px;
