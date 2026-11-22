@@ -26,48 +26,51 @@
   --color-text: #1c1c1c;
   --color-text-light: #666666;
 
-  /* The public site has two themes, dark and light. These are the DARK
-     colours, the default. The light ones, under the same names, are in the
-     next block. js/theme.js switches between them. */
-  --bg: #070b1a;                              /* the darkest: hero, footer */
-  --bg-2: #0b1228;                            /* .band--alt */
-  --bg-3: #0a1024;                            /* .band */
-  --heading: #ffffff;                         /* titles */
-  --text: #e8ecf6;                            /* the main text */
-  --muted: #9aa6c4;                           /* quieter text: .lead, .card__text */
-  --line: rgba(255, 255, 255, 0.08);          /* every thin border */
-  --frame-line: rgba(255, 255, 255, 0.12);    /* the border round a photo */
-  --accent: #2f80ed;                          /* blue */
-  --accent-2: #6f5cff;                        /* violet */
-  --accent-soft: #7ea8ff;                     /* blue for small text: .eyebrow, links */
-  --icon: #9db8ff;                            /* card icons */
-  --icon-bg: linear-gradient(135deg, rgba(47, 128, 237, 0.28), rgba(111, 92, 255, 0.22));
-  --card-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-  --faint-bg: rgba(255, 255, 255, 0.03);      /* a barely-there fill: captions, empty frames */
-  --shadow: rgba(0, 0, 0, 0.9);               /* the colour of every big shadow */
-  --glow-1: rgba(47, 128, 237, 0.22);         /* the soft lights in page heads: blue */
-  --glow-2: rgba(111, 92, 255, 0.18);         /* the second soft light: violet */
-  --vignette: rgba(4, 7, 16, 0.65);           /* the darkening round the home hero */
-  --header-bg: rgba(8, 11, 26, 0.82);
-  --button-glow: rgba(47, 128, 237, 0.7);     /* the light under .btn--primary */
-  --button-glow-hover: rgba(47, 128, 237, 0.85);
-  --accent-ring: rgba(47, 128, 237, 0.18);    /* the halo round a .timeline dot */
-  --hover-line: rgba(47, 128, 237, 0.45);     /* the border of a card under the mouse, an open FAQ */
-  --hover-tint: rgba(47, 128, 237, 0.06);     /* the fill of an open FAQ */
-  --ghost-bg: rgba(255, 255, 255, 0.04);      /* .btn--ghost */
-  --ghost-border: rgba(255, 255, 255, 0.28);
-  --ghost-bg-hover: rgba(255, 255, 255, 0.12);
-  --ghost-border-hover: rgba(255, 255, 255, 0.5);
+  /* The public site's one look: an old scientific website. White paper,
+     black ink, thin black rules, one red (--red, below) for links, buttons
+     and small headings; no glows, no gradients, no shadows. Its serif type,
+     square corners and plain home page are in css/simple.css. (Until
+     2026-11-22 there were also a dark and a light theme; the owner kept
+     only this one.) The names stay so css/site.css reads the same. */
+  --bg: #ffffff;
+  --bg-2: #ffffff;
+  --bg-3: #ffffff;
+  --heading: #000000;                         /* titles */
+  --text: #1a1a1a;                            /* the main text */
+  --muted: #4d4d4d;                           /* quieter text: .lead, .card__text */
+  --line: rgba(0, 0, 0, 0.22);                /* every thin border */
+  --frame-line: rgba(0, 0, 0, 0.3);           /* the border round a photo */
+  --accent: var(--red);                       /* buttons, the menu's underline */
+  --accent-2: var(--red);                     /* the same: every gradient is flat red */
+  --accent-soft: var(--red);                  /* small text: .eyebrow, links */
+  --icon: var(--red);                         /* card icons */
+  --icon-bg: transparent;
+  --card-bg: #ffffff;
+  --faint-bg: #ffffff;                        /* captions, empty frames */
+  --shadow: transparent;                      /* no shadows */
+  --glow-1: transparent;                      /* no soft lights */
+  --glow-2: transparent;
+  --vignette: transparent;
+  --header-bg: #ffffff;
+  --button-glow: transparent;
+  --button-glow-hover: transparent;
+  --accent-ring: transparent;                 /* the halo round a .timeline dot */
+  --hover-line: var(--red);                   /* a card under the mouse, an open FAQ */
+  --hover-tint: transparent;
+  --ghost-bg: #ffffff;                        /* .btn--ghost */
+  --ghost-border: #000000;
+  --ghost-bg-hover: #ffffff;
+  --ghost-border-hover: var(--red);
   /* The drawings of the interactive labs (read by js/labs.js) */
-  --canvas-line: rgba(255, 255, 255, 0.10);
-  --canvas-grid: rgba(255, 255, 255, 0.05);
-  --canvas-faint: rgba(255, 255, 255, 0.22);
-  --canvas-glow: rgba(47, 128, 237, 0.75);
+  --canvas-line: rgba(0, 0, 0, 0.30);
+  --canvas-grid: rgba(0, 0, 0, 0.10);
+  --canvas-faint: rgba(0, 0, 0, 0.30);
+  --canvas-glow: rgba(212, 0, 0, 0.30);
 
   /* THE LASER LAB (sections/laser.html, css/laser.css, js/laser/ui/).
-     One look in BOTH themes, so these are set only here, never in
-     :root.theme-light: a plain near-white background (the laser light's own
-     colour reads true on it), charcoal text, graphite controls, so the only colour is the laser's.
+     Its own look, not the site's: a plain near-white background (the
+     laser light's own colour reads true on it), charcoal text, graphite
+     controls, so the only colour is the laser's.
      .laser-lab in css/laser.css maps the site's names (--bg, --text,
      --accent, ...) onto these, and js/laser/ui/loop.js draws with them. */
   --laser-bg: #fafafa;                        /* the one background colour */
@@ -98,98 +101,14 @@
   --laser-canvas-lamp: #6f7883;               /* a flashlamp's glass edge and metal caps: steel */
 
   --font-main: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  /* One red for the simple theme and the laser intro's beam (js/laser-intro.js):
+  /* The site's one red, also the laser intro's beam (js/laser-intro.js):
      a little darker than pure #ff0000 (4.0:1 on white), so small red text
      reads well, 5.5:1 on white, and white text on it too. */
   --red: #d40000;
-  --font-serif: Georgia, "Times New Roman", Times, serif;   /* the simple theme's type (css/simple.css) */
+  --font-serif: Georgia, "Times New Roman", Times, serif;   /* the site's type (css/simple.css) */
   --max-width: 1100px;
   --radius: 16px;
   --radius-sm: 10px;
-}
-
-/* The LIGHT theme: creamy white, charcoal ink, silver lines and terracotta.
-   Same names as above. Every gradient (menu underline, buttons, step
-   numbers, switches) runs from a lighter to a darker terracotta here, not
-   blue to violet, and the small coloured text (links, .eyebrow, the slider
-   values) is terracotta too. There is no blue on this theme. */
-:root.theme-light {
-  --bg: #f1ebdf;
-  --bg-2: #fdfbf7;
-  --bg-3: #f6f1e7;
-  --heading: #1c1f24;                         /* charcoal, not navy */
-  --text: #33373d;
-  --muted: #62666d;
-  --line: rgba(28, 31, 36, 0.12);
-  --frame-line: rgba(28, 31, 36, 0.14);
-  /* --accent also colours the lab sliders. Keep it at least this dark: with
-     a lighter colour, Chrome draws the empty part of a slider almost black. */
-  --accent: #c0603a;                          /* terracotta */
-  --accent-2: #963b1c;                        /* burnt orange */
-  --accent-soft: #a1461f;                     /* terracotta for small text: links, .eyebrow */
-  --icon: #a1461f;
-  --icon-bg: linear-gradient(135deg, rgba(192, 96, 58, 0.14), rgba(150, 59, 28, 0.08));
-  --card-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(253, 251, 247, 0.75));
-  --faint-bg: rgba(255, 255, 255, 0.5);
-  --shadow: rgba(28, 31, 36, 0.28);
-  --glow-1: rgba(192, 96, 58, 0.07);
-  --glow-2: rgba(150, 156, 166, 0.10);        /* the second soft light: silver */
-  --vignette: rgba(241, 235, 223, 0.7);
-  --header-bg: rgba(246, 241, 231, 0.88);
-  --button-glow: rgba(150, 59, 28, 0.35);
-  --button-glow-hover: rgba(150, 59, 28, 0.5);
-  --accent-ring: rgba(192, 96, 58, 0.22);
-  --hover-line: rgba(161, 70, 31, 0.3);
-  --hover-tint: rgba(192, 96, 58, 0.06);
-  --ghost-bg: rgba(255, 255, 255, 0.6);
-  --ghost-border: rgba(28, 31, 36, 0.22);
-  --ghost-bg-hover: #ffffff;
-  --ghost-border-hover: rgba(28, 31, 36, 0.4);
-  --canvas-line: rgba(28, 31, 36, 0.30);
-  --canvas-grid: rgba(28, 31, 36, 0.10);
-  --canvas-faint: rgba(28, 31, 36, 0.30);
-  --canvas-glow: rgba(150, 59, 28, 0.30);
-}
-
-/* The SIMPLE theme: the look of an old scientific website. White paper,
-   black ink, thin black rules, one red (the red of the laser beam in the
-   laser intro, --red) for links, buttons and small headings; no glows,
-   no gradients, no shadows. Same names as above; its serif type, square
-   corners and the home page without effects are in css/simple.css. */
-:root.theme-simple {
-  --bg: #ffffff;
-  --bg-2: #ffffff;
-  --bg-3: #ffffff;
-  --heading: #000000;
-  --text: #1a1a1a;
-  --muted: #4d4d4d;
-  --line: rgba(0, 0, 0, 0.22);
-  --frame-line: rgba(0, 0, 0, 0.3);
-  --accent: var(--red);                       /* the laser intro's red */
-  --accent-2: var(--red);                     /* the same: every gradient becomes flat red */
-  --accent-soft: var(--red);
-  --icon: var(--red);
-  --icon-bg: transparent;
-  --card-bg: #ffffff;
-  --faint-bg: #ffffff;
-  --shadow: transparent;
-  --glow-1: transparent;
-  --glow-2: transparent;
-  --vignette: transparent;
-  --header-bg: #ffffff;
-  --button-glow: transparent;
-  --button-glow-hover: transparent;
-  --accent-ring: transparent;
-  --hover-line: var(--red);
-  --hover-tint: transparent;
-  --ghost-bg: #ffffff;
-  --ghost-border: #000000;
-  --ghost-bg-hover: #ffffff;
-  --ghost-border-hover: var(--red);
-  --canvas-line: rgba(0, 0, 0, 0.30);
-  --canvas-grid: rgba(0, 0, 0, 0.10);
-  --canvas-faint: rgba(0, 0, 0, 0.30);
-  --canvas-glow: rgba(212, 0, 0, 0.30);
 }
 
 html,

@@ -33,10 +33,10 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { ROOT } = require("./helpers.js");
 
-/* ---------- the CSS variables of the two themes ---------- */
+/* ---------- the CSS variables of the site's colours ---------- */
 
 // The text between the braces of the first rule whose selector is exactly
-// `selector` (":root" or ":root.theme-light"), comments removed.
+// `selector` (":root"), comments removed.
 function ruleBody(css, selector) {
   const bare = css.replace(/\/\*[\s\S]*?\*\//g, "");
   const pattern = /([^{}]+)\{([^{}]*)\}/g;
@@ -56,14 +56,17 @@ function variablesIn(body) {
   return found;
 }
 
-// The variables of both themes, read from the project's css/style.css.
-// The light theme only overrides some of them; `light` here is the full
-// set the browser sees (the dark values with the light ones on top).
+// The site's colour sets by name. One since 2026-11-22 (the owner kept
+// only the plain look; there were a dark and a light theme). The drawing
+// tests run once per name here, so a new theme is tested by adding its
+// name and its rule to themeVariables().
+const THEMES = ["site"];
+
+// The variables of each set in THEMES, read from the project's
+// css/style.css: { site: { "--bg": "#ffffff", ... } }.
 function themeVariables() {
   const css = fs.readFileSync(path.join(ROOT, "css", "style.css"), "utf8");
-  const dark = variablesIn(ruleBody(css, ":root"));
-  const lightOnly = variablesIn(ruleBody(css, ":root.theme-light"));
-  return { dark: dark, lightOnly: lightOnly, light: Object.assign({}, dark, lightOnly) };
+  return { site: variablesIn(ruleBody(css, ":root")) };
 }
 
 /* ---------- elements ---------- */
@@ -222,7 +225,7 @@ function createBrowser(options) {
   let nextFrameId = 1;
   const intersectionObservers = [];
   const resizeObservers = [];
-  let css = Object.assign({}, opts.cssVariables || themeVariables().dark);
+  let css = Object.assign({}, opts.cssVariables || themeVariables().site);
 
   function observerClass(list) {
     return class FakeObserver {
@@ -356,6 +359,7 @@ function createBrowser(options) {
 }
 
 module.exports = {
+  THEMES,
   themeVariables,
   fakeElement,
   fakeContext,

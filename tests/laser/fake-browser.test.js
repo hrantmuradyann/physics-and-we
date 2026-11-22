@@ -10,19 +10,16 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  themeVariables, fakeElement, fakeContext, fakeCanvas, fakeContainer, createBrowser
+  THEMES, themeVariables, fakeElement, fakeContext, fakeCanvas, fakeContainer, createBrowser
 } = require("./fake-browser.js");
 
-test("theme variables: both themes come from css/style.css", () => {
+test("theme variables: the site's colours come from css/style.css's :root", () => {
   const themes = themeVariables();
-  assert.equal(themes.dark["--accent"], "#2f80ed");
-  assert.equal(themes.lightOnly["--accent"], "#c0603a");
-  assert.equal(themes.light["--accent"], "#c0603a");
-  // Not overridden by the light theme: the light set keeps the dark value.
-  assert.equal(themes.lightOnly["--font-main"], undefined);
-  assert.equal(themes.light["--font-main"], themes.dark["--font-main"]);
+  assert.deepEqual(Object.keys(themes), THEMES);
+  assert.equal(themes.site["--accent"], "var(--red)");
+  assert.equal(themes.site["--laser-bg"], "#fafafa");
   // A value with commas and brackets is read whole.
-  assert.equal(themes.dark["--canvas-line"], "rgba(255, 255, 255, 0.10)");
+  assert.equal(themes.site["--canvas-line"], "rgba(0, 0, 0, 0.30)");
 });
 
 test("frames run only when the test says so, once each", () => {
@@ -128,9 +125,9 @@ test("window listeners are counted; adding the same one twice keeps one", () => 
 test("getComputedStyle reads the CSS variables, with the leading space a browser keeps", () => {
   const browser = createBrowser();
   const style = browser.window.getComputedStyle(browser.window.document.documentElement);
-  assert.equal(style.getPropertyValue("--accent"), " #2f80ed");
+  assert.equal(style.getPropertyValue("--accent"), " var(--red)");
   assert.equal(style.getPropertyValue("--no-such-variable"), "");
-  browser.setCssVariables(themeVariables().light);
+  browser.setCssVariables(Object.assign({}, themeVariables().site, { "--accent": "#c0603a" }));
   assert.equal(style.getPropertyValue("--accent"), " #c0603a");
 });
 

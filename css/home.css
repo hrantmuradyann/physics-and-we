@@ -1,5 +1,8 @@
 /* ============================================================================
-   home.css — only the big opening screen of the home page (the "hero").
+   home.css — only the opening block of the home page (the "hero"): the
+   title, a line under it and two buttons, on plain white. (Until
+   2026-11-22 it filled the screen, with moving stars, glows and a scroll
+   hint; the owner chose the plain look.)
 
    Everything else on the home page (cards, numbers, picture, invitation)
    uses the shared blocks in  css/site.css .
@@ -7,51 +10,9 @@
 
 .hero {
   position: relative;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  background:
-    radial-gradient(1200px 600px at 72% 18%, var(--glow-1), transparent 60%),
-    radial-gradient(900px 520px at 18% 82%, var(--glow-2), transparent 60%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-3) 100%);
-}
-
-/* A slow drifting glow, so the screen is never completely still */
-.hero::before {
-  content: "";
-  position: absolute;
-  width: 60vw;
-  height: 60vw;
-  top: -20%;
-  right: -10%;
-  background: radial-gradient(circle, var(--glow-1), transparent 65%);
-  filter: blur(20px);
-  animation: drift 18s ease-in-out infinite alternate;
-  pointer-events: none;
-}
-
-@keyframes drift {
-  0%   { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(-8%, 6%) scale(1.15); }
-}
-
-/* The moving constellation is drawn by js/home.js */
-.hero__canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  z-index: 1;
-}
-
-.hero__overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: radial-gradient(circle at 50% 42%, transparent 38%, var(--vignette) 100%);
+  padding: 3rem 0 4rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--heading);
 }
 
 .hero__content {
@@ -90,64 +51,17 @@
   flex-wrap: wrap;
 }
 
-/* The "scroll down" hint at the bottom of the screen */
-.hero__scroll {
-  position: absolute;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.7rem;
-  color: var(--muted);
-  font-size: 0.68rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  text-align: center;
-}
-
-.hero__scroll-line {
-  margin-bottom: -4rem;
-  width: 1px;
-  height: 48px;
-  background: linear-gradient(var(--accent), transparent);
-  transform-origin: top;
-  animation: scrollpulse 2s ease-in-out infinite;
-}
-
-@keyframes scrollpulse {
-  0%, 100% { transform: scaleY(0.35); opacity: 0.35; }
-  50%      { transform: scaleY(1);    opacity: 1; }
-}
-
 @media (max-width: 720px) {
   .hero__content {
     padding-top: 7rem;
   }
-
-  .hero__scroll {
-    display: none;
-  }
 }
 
 /* On a phone the header sits above the hero instead of over it, so the hero
-   no longer needs the whole screen height or the extra top padding. */
+   no longer needs the extra top padding. */
 @media (max-width: 640px) {
-  .hero {
-    min-height: 82vh;
-  }
-
   .hero__content {
     padding-top: 2rem;
     padding-bottom: 2rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero::before,
-  .hero__scroll-line {
-    animation: none !important;
   }
 }
