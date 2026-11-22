@@ -225,7 +225,7 @@ But the classes in them are the same as everywhere else.
 
 ### `.section-title`
 **What it is:** the heading of a block inside a page (`<h2>`).
-**How it looks:** large white bold text. The size is fluid — from 1.8rem on a phone to 2.7rem on a big screen. It is limited to 24 characters wide (`max-width: 24ch`), so a long heading wraps into a neat column instead of stretching across the whole screen.
+**How it looks:** large black bold text. The size is fluid — from 1.6rem on a phone to 2.2rem on a big screen. It is limited to 34 characters wide (`max-width: 34ch`), so a long heading wraps into a neat column instead of stretching across the whole screen.
 **CSS:** [css/site.css:128](css/site.css#L128)
 
 ```css
@@ -235,7 +235,7 @@ But the classes in them are the same as everywhere else.
   color: #fff;
   line-height: 1.14;
   margin: 0.7rem 0 2.4rem;
-  max-width: 24ch;
+  max-width: 34ch;
 }
 ```
 
@@ -579,7 +579,7 @@ CTA = call to action. The last block on most pages.
 | `.cta` | A section with centred text and large 4–7rem padding. The background: a blue glowing patch at the top centre plus a gradient down to the darkest colour at the bottom. | [css/site.css:629](css/site.css#L629) |
 | `.cta::before` | An enormous round violet patch (50vw × 50vw) that **pulses slowly** — the `pulseGlow` animation over 7 s: opacity 0.5 → 1, scale 1 → 1.12. It does not block clicks (`pointer-events: none`). | [css/site.css:637](css/site.css#L637) |
 | `.cta__inner` | The content sitting above the glow (`z-index: 2`), at most 720 px wide. Used together with `.container`. | [css/site.css:658](css/site.css#L658) |
-| `.cta__title` | A large white heading, 1.9–3rem, extra bold. | [css/site.css:664](css/site.css#L664) |
+| `.cta__title` | A large black heading, 1.6–2.3rem, bold. | [css/site.css:664](css/site.css#L664) |
 | `.cta__text` | Grey text at 1.1rem with 2rem of space below — the `.btn--lg` button sits underneath it. | [css/site.css:672](css/site.css#L672) |
 
 ---
@@ -593,7 +593,7 @@ All of this lives in its own file, [css/home.css](css/home.css), and is used onl
 | `.hero` | A plain white block with 3rem of space above and 4rem below, and a thin black rule under it. | [css/home.css](css/home.css) |
 | `.hero__content` | The text block, with 6rem of padding at the top so it does not run under the header. Used together with `.container`. | [css/home.css](css/home.css) |
 | `.hero .eyebrow` | The section label, with 1.3rem of space below. | [css/home.css](css/home.css) |
-| `.hero__title` | The largest text on the site: from 2.6rem up to **5.2rem**, black, bold, with lines almost touching (1.03) and a width of up to 16 characters. | [css/home.css](css/home.css) |
+| `.hero__title` | The largest text on the site: from 2rem up to **3.3rem**, black, bold, with lines almost touching (1.03) and a width of up to 24 characters. | [css/home.css](css/home.css) |
 | `.hero__subtitle` | The subtitle, 1.05–1.3rem, grey, up to 48 characters wide. | [css/home.css](css/home.css) |
 | `.hero__actions` | The row of two buttons, 1rem gap, wrapping on a phone. | [css/home.css](css/home.css) |
 
@@ -1010,7 +1010,7 @@ The public site has **one set of colours**, in `:root`: white paper, black ink a
   --laser-...               /* the laser lab's own colours, see css/laser.css */
 
   --font-main:  "Segoe UI", Roboto, Helvetica, Arial, sans-serif;  /* the laser lab */
-  --font-serif: Georgia, "Times New Roman", Times, serif;          /* the site's text */
+  --font-serif: "Times New Roman", Times, serif;   /* the site's text: plain Times */
   --red:        #d40000;         /* the one red: 5.5:1 on white */
   --max-width:  1100px;          /* the width of .container */
   --radius:     16px;
