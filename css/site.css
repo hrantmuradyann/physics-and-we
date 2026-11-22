@@ -3,8 +3,8 @@
 
    This file never names a colour itself: it uses the variables in
    css/style.css — var(--heading), var(--bg-3), ... — so the colours are
-   changed in one place. css/simple.css, linked after it, gives the site its
-   plain look (serif type, square corners, no shadows, lifts or fade-ins).
+   changed in one place. css/design.css, linked after it, gives the site its
+   look (the logo's typeface, small corners, no shadows, lifts or fade-ins).
 
    Every page is built from the same few blocks, so a new page
    automatically looks like the rest.
@@ -432,19 +432,6 @@ body.site .lang-switcher button.active-lang {
   transition: gap 0.25s ease;
 }
 
-/* The little arrow after "Learn more" is drawn by CSS, not typed in the HTML */
-.card__arrow::after {
-  content: "→";
-  transition: transform 0.25s ease;
-}
-
-.card--link:hover .card__arrow {
-  gap: 0.7rem;
-}
-
-.card--link:hover .card__arrow::after {
-  transform: translateX(3px);
-}
 
 /* ============================================================================
    BIG NUMBERS
@@ -1127,13 +1114,6 @@ body.gallery-lightbox-open {
   transition: gap 0.25s ease;
 }
 
-.post-card__more::after {
-  content: "→";
-  transition: transform 0.25s ease;
-}
-
-.post-card:hover .post-card__more { gap: 0.7rem; }
-.post-card:hover .post-card__more::after { transform: translateX(3px); }
 
 .news-empty {
   color: var(--muted);
@@ -1408,7 +1388,7 @@ body.site footer {
 
 .study-toc {
   margin-bottom: clamp(3rem, 6vw, 4.5rem);
-  scroll-margin-top: 5rem;             /* the menu bar stays at the top */
+  scroll-margin-top: 1rem;             /* plus html.site's scroll-padding-top: the menu bar stays at the top */
 }
 
 .study-toc__list,
@@ -1442,7 +1422,7 @@ body.site footer {
 }
 
 .study-chapter {
-  scroll-margin-top: 5rem;
+  scroll-margin-top: 1rem;
 }
 
 .study-chapter + .study-chapter,
@@ -1458,7 +1438,7 @@ body.site footer {
 
 .study-section {
   margin-top: clamp(2.2rem, 4vw, 3rem);
-  scroll-margin-top: 5rem;
+  scroll-margin-top: 1rem;
 }
 
 .study-section__title {
