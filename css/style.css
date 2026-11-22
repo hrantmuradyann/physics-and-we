@@ -26,27 +26,27 @@
   --color-text: #1c1c1c;
   --color-text-light: #666666;
 
-  /* The public site's one look: an old scientific website. White paper,
-     black ink, thin black rules, one red (--red, below) for links, buttons
-     and small headings; no glows, no gradients, no shadows. Its serif type,
-     square corners and plain home page are in css/simple.css. (Until
-     2026-11-22 there were also a dark and a light theme; the owner kept
-     only this one.) The names stay so css/site.css reads the same. */
+  /* The public site's colours: the logo's magnet (css/design.css).
+     Navy, the logo's own #304a6b, for text and structure (the south pole);
+     one red, --red below, for what you can press (the north pole); white
+     paper with a pale steel for bands. No glows, gradients or shadows.
+     (Until 2026-11-22 there were also a dark and a light theme.) The names
+     stay so css/site.css reads the same. */
   --bg: #ffffff;
-  --bg-2: #ffffff;
+  --bg-2: #f1f4f8;                            /* pale steel: page heads, .band--alt, footer */
   --bg-3: #ffffff;
-  --heading: #000000;                         /* titles */
-  --text: #1a1a1a;                            /* the main text */
-  --muted: #4d4d4d;                           /* quieter text: .lead, .card__text */
-  --line: rgba(0, 0, 0, 0.22);                /* every thin border */
-  --frame-line: rgba(0, 0, 0, 0.3);           /* the border round a photo */
-  --accent: var(--red);                       /* buttons, the menu's underline */
+  --heading: #304a6b;                         /* the logo's navy: titles */
+  --text: #22344c;                            /* the main text: a deeper navy, 12:1 on white */
+  --muted: #536479;                           /* quieter text: .lead, .card__text; 5.9:1 */
+  --line: #d5dde7;                            /* every thin border */
+  --frame-line: #c2cddb;                      /* the border round a photo */
+  --accent: var(--red);                       /* buttons, links, the menu's underline */
   --accent-2: var(--red);                     /* the same: every gradient is flat red */
-  --accent-soft: var(--red);                  /* small text: .eyebrow, links */
-  --icon: var(--red);                         /* card icons */
-  --icon-bg: transparent;
+  --accent-soft: #304a6b;                     /* small coloured text: dates, labels */
+  --icon: #304a6b;                            /* card icons */
+  --icon-bg: #f1f4f8;
   --card-bg: #ffffff;
-  --faint-bg: #ffffff;                        /* captions, empty frames */
+  --faint-bg: #f1f4f8;                        /* captions, empty frames, a ghost button under the mouse */
   --shadow: transparent;                      /* no shadows */
   --glow-1: transparent;                      /* no soft lights */
   --glow-2: transparent;
@@ -55,12 +55,12 @@
   --button-glow: transparent;
   --button-glow-hover: transparent;
   --accent-ring: transparent;                 /* the halo round a .timeline dot */
-  --hover-line: var(--red);                   /* a card under the mouse, an open FAQ */
+  --hover-line: #304a6b;                      /* a card under the mouse, an open FAQ */
   --hover-tint: transparent;
   --ghost-bg: #ffffff;                        /* .btn--ghost */
-  --ghost-border: #000000;
-  --ghost-bg-hover: #ffffff;
-  --ghost-border-hover: var(--red);
+  --ghost-border: #304a6b;
+  --ghost-bg-hover: #f1f4f8;
+  --ghost-border-hover: #304a6b;
   /* The drawings of the interactive labs (read by js/labs.js) */
   --canvas-line: rgba(0, 0, 0, 0.30);
   --canvas-grid: rgba(0, 0, 0, 0.10);
@@ -101,11 +101,11 @@
   --laser-canvas-lamp: #6f7883;               /* a flashlamp's glass edge and metal caps: steel */
 
   --font-main: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  /* The site's one red, also the laser intro's beam (js/laser-intro.js):
+  /* The site's one red (the magnet's north pole), also the laser intro's beam (js/laser-intro.js):
      a little darker than pure #ff0000 (4.0:1 on white), so small red text
      reads well, 5.5:1 on white, and white text on it too. */
   --red: #d40000;
-  --font-serif: "Times New Roman", Times, serif;   /* the site's type (css/simple.css): plain Times, the owner found Georgia too fancy */
+  --font-site: "Noto Sans", Arial, sans-serif;   /* the site's type, the logo's own (css/design.css, vendor/fonts) */
   --max-width: 1100px;
   --radius: 16px;
   --radius-sm: 10px;
