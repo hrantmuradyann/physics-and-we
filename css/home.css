@@ -1,8 +1,8 @@
 /* ============================================================================
    home.css — only the opening block of the home page (the "hero"): the
-   title, a line under it and two buttons, on plain white. (Until
-   2026-11-22 it filled the screen, with moving stars, glows and a scroll
-   hint; the owner chose the plain look.)
+   title, a line under it and two buttons, beside the logo's magnet with
+   its field lines (images/hero-magnet.svg). (Until 2026-11-22 it filled
+   the screen, with moving stars, glows and a scroll hint.)
 
    Everything else on the home page (cards, numbers, picture, invitation)
    uses the shared blocks in  css/site.css .
@@ -10,30 +10,56 @@
 
 .hero {
   position: relative;
-  padding: 3rem 0 4rem;
+  padding: 2rem 0 3rem;
   background: var(--bg);
-  border-bottom: 1px solid var(--heading);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
 }
 
 .hero__content {
   position: relative;
-  z-index: 2;
-  padding-top: 6rem;
+  padding-top: 2.5rem;
+}
+
+/* The title, and the magnet right beside it. */
+.hero__head {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+}
+
+/* The title keeps its width (up to 15em, about two lines); the magnet
+   takes the room that is left, so it shrinks before a word would break. */
+.hero__head .hero__title {
+  flex: 0 0 auto;
+  max-width: 15em;
+}
+
+/* The field lines fade out at the picture's edges, so it needs no frame. */
+.hero__magnet {
+  flex: 0 1 440px;
+  min-width: 100px;
+  display: block;
+  width: 440px;
+  height: auto;
+  margin-left: auto;              /* to the right edge of the page's column */
+  /* Its faint field reaches above and below the title instead of pushing
+     the lines around it apart. */
+  margin-block: clamp(-7rem, -7vw, -1.2rem);
 }
 
 .hero .eyebrow {
-  letter-spacing: 0.35em;
-  font-size: 0.8rem;
-  margin-bottom: 1.3rem;
+  margin-bottom: 1rem;
 }
 
 .hero__title {
-  font-size: clamp(2rem, 4.6vw, 3.3rem);
-  line-height: 1.03;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.7rem, 4vw, 3rem);
+  line-height: 1.15;
+  font-weight: 600;
+  /* A very long word (the Armenian title joins two words with ՝ and no
+     space) wraps inside its room instead of running into the magnet. */
+  overflow-wrap: break-word;
   color: var(--heading);
-  max-width: 24ch;
 }
 
 .hero__subtitle {
@@ -51,17 +77,14 @@
   flex-wrap: wrap;
 }
 
-@media (max-width: 720px) {
-  .hero__content {
-    padding-top: 7rem;
-  }
-}
-
-/* On a phone the header sits above the hero instead of over it, so the hero
-   no longer needs the extra top padding. */
 @media (max-width: 640px) {
   .hero__content {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
+    padding-top: 1.5rem;
+  }
+
+  /* A phone is too narrow for 15em of title: both give way. */
+  .hero__head .hero__title {
+    flex-shrink: 1;
+    min-width: 0;
   }
 }

@@ -52,7 +52,7 @@ A class in the markup is only a name that CSS uses to find the element.
 | [css/style.css](css/style.css) | Reset, the colour variables, header, footer. Shared by the site and the admin panel. |
 | [css/site.css](css/site.css) | The look of every public page. |
 | [css/home.css](css/home.css) | Only the opening block of the home page (`.hero`). |
-| [css/simple.css](css/simple.css) | Linked last: the site's plain look (serif type, square corners, no shadows, lifts or fade-ins). |
+| [css/design.css](css/design.css) | Linked last: the site's look (the typeface Noto Sans, the two-row header, small corners, no shadows, lifts or fade-ins). |
 | [css/labs.css](css/labs.css) | The labs pages: one lab, and the `.line-art` wrapper. |
 | [css/laser.css](css/laser.css) | The laser lab (`?view=laser`) and the banner on the Labs page that leads to it. |
 | [css/admin.css](css/admin.css) | Only the admin panel `/admin/` (always light). |
@@ -62,13 +62,18 @@ The `site` class sits on `<body class="site home">` in [index.html](index.html#L
 That is why the site's look applies only to the public pages, and the admin panel
 keeps its own.
 
-**One look.** The public site looks like an old scientific website: white
-paper, black serif type, thin black rules and one red. (Until 2026-11-22 it
-also had a dark and a light theme with a button in the header; the owner kept
-only this look.) Nothing in the CSS names a colour directly: it uses the
-variables in [section 22](#22-css-variables-colours-and-sizes), so a colour is
-changed in one place. [css/simple.css](css/simple.css), linked last, takes
-away the rounded corners, shadows, hover lifts and fade-ins that
+**One look: the logo's magnet.** The logo is a horseshoe magnet with an S and
+an N pole, its letters set in Noto Sans. The site takes its look from it: one
+typeface, Noto Sans (stored in [vendor/fonts](vendor/fonts)), headings in the
+logo's semi-bold; the logo's navy for text and structure; one red, only for
+what you can press (the north pole); white paper with a pale steel for the
+page heads and the footer. The home page shows the magnet itself beside the
+title, with its field lines. (Until 2026-11-22 the site also had a dark and a
+light theme with a button in the header.) Nothing in the CSS names a colour
+directly: it uses the variables in
+[section 22](#22-css-variables-colours-and-sizes), so a colour is changed in
+one place. [css/design.css](css/design.css), linked last, takes away the
+rounded corners, shadows, hover lifts and fade-ins that
 [css/site.css](css/site.css) still describes for its blocks. If a new block
 has its own shadow, rounded corners or animation, add a line for it there too.
 
@@ -192,7 +197,7 @@ But the classes in them are the same as everywhere else.
 
 | Class | How it looks | CSS |
 |---|---|---|
-| `#site-header` | A bar pinned to the top of the screen (`position: fixed`), a semi-transparent dark blue background `rgba(8,11,26,.82)` plus a blur of whatever is behind it (`backdrop-filter: blur(14px)`), and a thin line underneath. | [css/site.css:57](css/site.css#L57) |
+| `#site-header` | (Since 2026-11-22, in css/design.css: two rows, the logo and the language buttons, then the menu, on white with a thin rule under it, `position: sticky`, so it takes its own room and never covers the page.) Before: a bar pinned to the top of the screen (`position: fixed`), a semi-transparent dark blue background `rgba(8,11,26,.82)` plus a blur of whatever is behind it (`backdrop-filter: blur(14px)`), and a thin line underneath. | [css/site.css:57](css/site.css#L57) |
 | `#site-header.scrolled` | Added by the script once the page has been scrolled. On the home page the header goes from transparent to frosted, shrinks slightly in height and gains a shadow. | [css/site.css:81](css/site.css#L81) |
 | `.logo` | The site name on the left. Larger than ordinary text (1.3rem) and bold (700). | [css/style.css:99](css/style.css#L99) |
 | `nav a` | A menu item. White, slightly transparent (0.9), fully white on hover. | [css/style.css:110](css/style.css#L110) |
@@ -275,7 +280,7 @@ But the classes in them are the same as everywhere else.
 **CSS:** [css/site.css:170](css/site.css#L170)
 
 ### `.btn--primary`
-**How it looks:** flat red (`--accent`, the gradient in css/site.css runs from red to the same red), white text, square corners, no shadow; on hover it turns black (css/simple.css).
+**How it looks:** flat red (`--accent`, the gradient in css/site.css runs from red to the same red), white text, 4 px corners, no shadow; on hover it turns navy (css/design.css).
 **CSS:** [css/site.css:184](css/site.css#L184)
 
 ```css
@@ -591,9 +596,11 @@ All of this lives in its own file, [css/home.css](css/home.css), and is used onl
 | Class | How it looks | CSS |
 |---|---|---|
 | `.hero` | A plain white block with 3rem of space above and 4rem below, and a thin black rule under it. | [css/home.css](css/home.css) |
-| `.hero__content` | The text block, with 6rem of padding at the top so it does not run under the header. Used together with `.container`. | [css/home.css](css/home.css) |
-| `.hero .eyebrow` | The section label, with 1.3rem of space below. | [css/home.css](css/home.css) |
-| `.hero__title` | The largest text on the site: from 2rem up to **3.3rem**, black, bold, with lines almost touching (1.03) and a width of up to 24 characters. | [css/home.css](css/home.css) |
+| `.hero__content` | The text block, 2.5rem below the header. Used together with `.container`. | [css/home.css](css/home.css) |
+| `.hero .eyebrow` | The section label, with 1rem of space below. | [css/home.css](css/home.css) |
+| `.hero__head` | A row: the title, and the magnet right beside it. The title keeps its width (up to 15em, about two lines) and the magnet gets the room that is left, so a long word never breaks. | [css/home.css](css/home.css) |
+| `.hero__title` | The largest text on the site: from 1.7rem up to **3rem**, navy, semi-bold. | [css/home.css](css/home.css) |
+| `.hero__magnet` | The logo's magnet with its field lines ([images/hero-magnet.svg](images/hero-magnet.svg), made by [docs/hero-magnet.py](docs/hero-magnet.py)), its right half red. Up to 440 px wide; its faint field reaches over the space above and below the title. A picture without words (`alt=""`). | [css/home.css](css/home.css) |
 | `.hero__subtitle` | The subtitle, 1.05–1.3rem, grey, up to 48 characters wide. | [css/home.css](css/home.css) |
 | `.hero__actions` | The row of two buttons, 1rem gap, wrapping on a phone. | [css/home.css](css/home.css) |
 
@@ -982,7 +989,7 @@ If there is no text in the JSON for an element, the script **hides it by itself*
 
 All the colours are gathered in one place — [css/style.css:19](css/style.css#L19). Change them here and they change across the whole site.
 
-The public site has **one set of colours**, in `:root`: white paper, black ink and one red, `--red` (#d40000, which the laser intro's beam uses too). `--accent`, `--accent-2` and `--accent-soft` are all that red, so every gradient in css/site.css comes out flat red, and the glows and shadows are `transparent`. (Until 2026-11-22 there were also a dark and a light theme.)
+The public site has **one set of colours**, in `:root`, taken from the logo's magnet: the logo's navy `#304a6b` for titles and structure (the south pole), a deeper navy for text, white paper with a pale steel `#f1f4f8` for page heads and the footer, and one red, `--red` (#d40000, which the laser intro's beam uses too), only for what you can press (the north pole). `--accent` and `--accent-2` are both that red, so every gradient in css/site.css comes out flat, and the glows and shadows are `transparent`. (Until 2026-11-22 there were also a dark and a light theme.)
 
 ```css
 :root {
@@ -996,23 +1003,26 @@ The public site has **one set of colours**, in `:root`: white paper, black ink a
   --color-text-light: #666666;
 
   /* The public site */
-  --bg, --bg-2, --bg-3: #ffffff;   /* white paper: hero, bands, footer */
-  --heading:     #000000;   /* titles */
-  --text:        #1a1a1a;   /* the main text */
-  --muted:       #4d4d4d;   /* muted: .lead, .card__text */
-  --line:        rgba(0,0,0,.22);  /* every thin border */
-  --frame-line:  rgba(0,0,0,.3);   /* the border round a photo */
-  --accent, --accent-2, --accent-soft, --icon: var(--red);  /* buttons, links, .eyebrow, icons */
-  --card-bg, --faint-bg     /* white */
+  --bg, --bg-3: #ffffff;    /* white paper */
+  --bg-2:        #f1f4f8;   /* pale steel: page heads, .band--alt, the closing band, footer */
+  --heading:     #304a6b;   /* the logo's navy: titles */
+  --text:        #22344c;   /* the main text: a deeper navy */
+  --muted:       #536479;   /* muted: .lead, .card__text */
+  --line:        #d5dde7;   /* every thin border */
+  --frame-line:  #c2cddb;   /* the border round a photo */
+  --accent, --accent-2: var(--red);   /* buttons, links, the menu's underline */
+  --accent-soft, --icon: #304a6b;     /* small coloured text, card icons */
+  --card-bg                 /* white */
+  --faint-bg                /* pale steel */
   --shadow, --glow-1, --glow-2, --vignette, --button-glow, --accent-ring  /* transparent */
   --header-bg               /* the header bar: white */
-  --hover-line              /* a card's border under the mouse, an open FAQ: red */
-  --ghost-bg, --ghost-border, --ghost-bg-hover, --ghost-border-hover  /* .btn--ghost: white, black, red */
+  --hover-line              /* a card's border under the mouse, an open FAQ: navy */
+  --ghost-bg, --ghost-border, --ghost-bg-hover, --ghost-border-hover  /* .btn--ghost: white and navy */
   --canvas-line, --canvas-grid, --canvas-faint, --canvas-glow  /* the interactive labs' drawings */
   --laser-...               /* the laser lab's own colours, see css/laser.css */
 
   --font-main:  "Segoe UI", Roboto, Helvetica, Arial, sans-serif;  /* the laser lab */
-  --font-serif: "Times New Roman", Times, serif;   /* the site's text: plain Times */
+  --font-site:  "Noto Sans", Arial, sans-serif;   /* the site's text: the logo's typeface */
   --red:        #d40000;         /* the one red: 5.5:1 on white */
   --max-width:  1100px;          /* the width of .container */
   --radius:     16px;
@@ -1035,7 +1045,6 @@ There are not many media queries in the project, because the grids adapt by them
 * `.step::after` — the connecting lines between steps disappear.
 
 **Below 720 px** — [css/home.css:125](css/home.css#L125)
-* `.hero__content` — the top padding grows to 7rem.
 
 **Below 640 px** — [css/site.css:804](css/site.css#L804), [css/home.css:137](css/home.css#L137), [css/style.css:193](css/style.css#L193)
 * The header stops being pinned to the top (`position: static`) — on a phone the menu wraps onto several lines and would cover half the screen.

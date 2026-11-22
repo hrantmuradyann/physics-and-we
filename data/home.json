@@ -63,52 +63,6 @@
       }
     }
   ],
-  "features": {
-    "eyebrow": {
-      "hy": "Ի՞նչ ենք անում",
-      "en": "What We Do"
-    },
-    "title": {
-      "hy": "Ծրագրեր, որոնք ֆիզիկան դարձնում են հասկանալի",
-      "en": "Programs that make physics click"
-    },
-    "_readmeItems": "\"link\" is a full web address (https://...). It opens in a new tab when the card is clicked.",
-    "items": [
-      {
-        "link": "https://www.facebook.com/Physics.and.We/",
-        "title": {
-          "hy": "stex klini mer govazdy1*",
-          "en": "stex klini mer govazdy1"
-        },
-        "text": {
-          "hy": "*Մեկ նախադասություն այս ծրագրի մասին։*",
-          "en": ""
-        }
-      },
-      {
-        "link": "https://www.facebook.com/Physics.and.We/",
-        "title": {
-          "hy": "stex klini mer govazdy2*",
-          "en": "stex klini mer govazdy2"
-        },
-        "text": {
-          "hy": "*Մեկ նախադասություն այս ծրագրի մասին։*",
-          "en": ""
-        }
-      },
-      {
-        "link": "https://www.facebook.com/Physics.and.We/",
-        "title": {
-          "hy": "stex klini mer govazdy3",
-          "en": "stex klini mer govazdy3"
-        },
-        "text": {
-          "hy": "*Մեկ նախադասություն այս ծրագրի մասին։*",
-          "en": ""
-        }
-      }
-    ]
-  },
   "showcase": {
     "_readmeGallery": "THE PHOTO GALLERY. \"heading\" is the big centered title above all three frames. Each of the three \"groups\" is one frame: \"label\" is the small caption above that frame, and \"images\" is its own list of photos — it shows the first one, then cycles through the rest once every 10 seconds. Add, remove, or reorder file paths inside any group's \"images\" list freely; a group with only one photo just shows that photo without rotating.",
     "gallery": {
