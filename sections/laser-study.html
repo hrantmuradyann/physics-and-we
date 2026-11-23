@@ -57,13 +57,23 @@
     <div class="study__chapters" data-list="chapters">
       <template>
         <article class="study-chapter" data-study-chapter>
-          <h2 class="section-title study-chapter__title"><span class="study-num" data-study-number></span> <span data-text="title"></span></h2>
+          <!-- The chapter's title, and at its right the RUS switch. Every
+               switch (one per chapter, one per section) turns the whole book
+               into Russian and back; they all show the same state
+               (js/laser-study.js). -->
+          <div class="study-chapter__head">
+            <h2 class="section-title study-chapter__title"><span class="study-num" data-study-number></span> <span data-text="title"></span></h2>
+            <button type="button" class="study-lang" role="switch" aria-checked="false" data-study-russian><span class="study-lang__word">RUS</span><span class="study-lang__track" aria-hidden="true"><span class="study-lang__knob"></span></span></button>
+          </div>
           <div class="prose study-chapter__intro" data-rich="intro"></div>
 
           <div class="study-chapter__sections" data-list="sections">
             <template>
               <section class="study-section" data-study-section>
-                <h3 class="study-section__title"><span class="study-num" data-study-number></span> <span data-text="title"></span></h3>
+                <div class="study-section__head">
+                  <h3 class="study-section__title"><span class="study-num" data-study-number></span> <span data-text="title"></span></h3>
+                  <button type="button" class="study-lang" role="switch" aria-checked="false" data-study-russian><span class="study-lang__word">RUS</span><span class="study-lang__track" aria-hidden="true"><span class="study-lang__knob"></span></span></button>
+                </div>
                 <div class="prose" data-rich="text"></div>
 
                 <!-- A picture: shown when "image" names a file, else a box

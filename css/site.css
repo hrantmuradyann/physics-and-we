@@ -1436,6 +1436,73 @@ body.site footer {
   margin-top: 1.2rem;
 }
 
+/* A chapter's or a section's title, and the RUS switch at its top right. */
+.study-chapter__head,
+.study-section__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.study-chapter__head .study-lang {
+  margin-top: 0.9rem;               /* level with the title (.section-title's top margin) */
+}
+
+/* The RUS switch: the word, then a track whose knob slides right and turns
+   red while the book is in Russian. */
+.study-lang {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--heading);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.study-lang__track {
+  position: relative;
+  width: 2.4rem;
+  height: 1.35rem;
+  border: 1px solid var(--muted);
+  border-radius: 1rem;
+  background-color: var(--bg-2);
+}
+
+.study-lang__knob {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  background-color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.study-lang[aria-checked="true"] .study-lang__track {
+  border-color: var(--red);
+  background-color: var(--red);
+}
+
+.study-lang[aria-checked="true"] .study-lang__knob {
+  transform: translateX(1.05rem);
+  background-color: var(--bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .study-lang__knob {
+    transition: none;
+  }
+}
+
 .study-section {
   margin-top: clamp(2.2rem, 4vw, 3rem);
   scroll-margin-top: 1rem;
