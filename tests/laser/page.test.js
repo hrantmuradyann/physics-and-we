@@ -105,11 +105,21 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     const atomTexts = texts(section.recorders.atoms);
     assert.ok(atomTexts.includes(WORDS.atoms.words.title[lang]), "atoms: the title");
     assert.ok(atomTexts.includes(WORDS.media["nd-yag"][lang] + " · " + WORDS.atoms.words.four[lang]), "atoms: Nd:YAG, four levels");
-    for (const name of ["ground", "lower", "upper", "band", "heat", "noteFour"]) {
-      assert.ok(atomTexts.includes(WORDS.atoms.words[name][lang]), "atoms: " + name);
+    assert.ok(atomTexts.includes(WORDS.atoms.words.pump[lang]), "atoms: the pump");
+    for (const [name, energy] of [["ground", "0"], ["lower", "0.260"], ["upper", "1.43"], ["band", "1.53"]]) {
+      assert.ok(atomTexts.includes(WORDS.atoms.words[name][lang] + " · " + energy + NB + "eV"), "atoms: " + name);
     }
+    // The text under the levels may be wrapped: read it as one.
+    const allText = atomTexts.join(" ");
+    assert.ok(allText.includes(WORDS.atoms.words.noteFour[lang]), "atoms: the note");
+    assert.ok(atomTexts.some((text) => text.endsWith(" · " + WORDS.atoms.words.heat[lang] + " 0.260" + NB + "eV")), "atoms: the lower level's heat");
     assert.ok(atomTexts.includes("1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m"), "atoms: the laser step's wavelength, written as the bench writes it");
-    assert.ok(atomTexts.includes(WORDS.atoms.words.pump[lang] + " 808" + NB + "×" + NB + "10⁻⁹" + NB + "m"), "atoms: the pump's");
+    assert.ok(atomTexts.includes("1.17" + NB + "eV"), "atoms: the laser photon's energy, from the engine");
+    assert.ok(atomTexts.includes("808" + NB + "×" + NB + "10⁻⁹" + NB + "m"), "atoms: the pump's wavelength");
+    assert.ok(atomTexts.includes("+1.53" + NB + "eV"), "atoms: the pump photon's energy");
+    // The upper level's lifetime is the engine's 230 µs.
+    assert.ok(atomTexts.some((text) => text.endsWith(WORDS.atoms.words.stays[lang].replace("{t}", "230" + NB + "×" + NB + "10⁻⁶" + NB + "s"))), "atoms: the upper level's lifetime");
+    assert.ok(allText.includes("76" + NB + "%"), "atoms: the budget's share");
   }
 });
 

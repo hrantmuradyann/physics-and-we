@@ -886,6 +886,11 @@
         lam: lam,
         pumpLam: state.config.pumpLam,
         pumpKind: state.config.pump,
+        // The photons' energies (eV) and the upper laser level's lifetime,
+        // from the engine: the picture is to scale (draw-atoms.js).
+        laserEV: engine.units.eVFromLam(lam),
+        pumpEV: state.config.pumpLam ? engine.units.eVFromLam(state.config.pumpLam) : null,
+        tau: engine.media.get(state.config.medium).tau,
         light: UI.bench.rayAlpha(beamNow()),
         pump: glowNow()
       });

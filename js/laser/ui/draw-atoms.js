@@ -23,7 +23,12 @@
        three levels: the laser step ends on the ground level itself;
        two levels: the pump light knocks atoms down as often as it lifts
        them.
-   What is not to scale: the heights of the levels, and the 8 atoms.
+   The heights of the levels ARE to scale (stage 14, the owner's wish):
+   each level's energy in eV is written beside it, with how long an atom
+   stays on the laser levels, and under the levels how much of the pump's
+   energy leaves as laser light. He-Ne and Ar⁺, whose laser levels sit far
+   above the ground, have the axis broken just above the ground. Not to
+   scale: the 8 atoms.
 
      var model = LaserUI.atoms.create({ random });
          random       a function like Math.random (the tests pass their own)
@@ -50,14 +55,17 @@
          words    WORDS: the title, each scheme's name and note, the
                   levels' roles and the arrows' names; a missing word is
                   left out
-         picture  { name, medium, lam, pumpLam, pumpKind, light, pump }:
+         picture  { name, medium, lam, pumpLam, pumpKind, laserEV, pumpEV,
+                  tau, light, pump }:
                   the medium's name for the title, the laser's and the
                   pump's wavelengths (m), the pump's kind (bench's KINDS),
+                  the laser's and the pump light's photons in eV, the
+                  upper laser level's lifetime (s),
                   and how strong the light and the pump are now (0 to 1:
                   the arrows of the pump and of the laser step glow with
                   them); the colours of the light are LaserUI.materials',
                   for a medium that has a look there, else the theme's
-     LaserUI.atoms.layout(w, h, partner)
+     LaserUI.atoms.layout(w, h, partner, textLines)
      LaserUI.atoms.SIZE, WORDS, SCHEMES, ATOMS, LIMITS
 
    Tests: tests/laser/draw-atoms.test.js
@@ -67,9 +75,9 @@
 
   var UI = root.LaserUI = root.LaserUI || {};
 
-  var SIZE = Object.freeze({ aspect: 1.5, minHeight: 260, maxHeight: 360 });
+  var SIZE = Object.freeze({ aspect: 1.3, minHeight: 330, maxHeight: 460 });
   var WORDS = Object.freeze(["title", "two", "three", "four", "ground", "lower", "upper", "band",
-    "pump", "electrons", "heat", "transfer", "noteTwo", "noteThree", "noteFour"]);
+    "pump", "electrons", "heat", "lost", "transfer", "stays", "budget", "noteTwo", "noteThree", "noteFour"]);
 
   var ATOMS = 8;             // atoms in the row
   var LIFT = 6;              // atoms the pump lifts a second, at most
@@ -85,36 +93,79 @@
   });
   var NB = " ";
 
-  // Each medium's levels: y is the height in the picture (0 = ground,
-  // 1 = the top; not to scale), term its spectroscopic name. `band` is a
-  // broad pump band; `bands` pairs of levels with a band of vibrational
-  // sublevels between them; `partner` the gas that is pumped and hands its
-  // energy over in a collision.
+  // Each medium's levels: eV is the energy above the ground level, term
+  // its spectroscopic name; y, the height in the picture (0 = ground, 1 =
+  // the top), is worked out from eV by heightsOf below, so the picture is
+  // to scale. `band` is a broad pump band; `bands` pairs of levels with a
+  // band of vibrational sublevels between them; `partner` the gas that is
+  // pumped and hands its energy over in a collision; `lowerStays` how long
+  // an atom stays on the lower laser level, an order of magnitude (s; the
+  // measurements scatter widely: Nd:YAG's from 115 ps to 11 ns).
+  // The energies: Nd³⁺ ⁴I₁₁/₂ ≈ 2111 cm⁻¹, ⁴F₃/₂ 11 502 cm⁻¹, ⁴F₅/₂ at the
+  // 808 nm pump; ruby's ²E 14 400 cm⁻¹ (694.3 nm), its green band ⁴F₂
+  // ≈ 18 000 cm⁻¹; neon's 2p₄ 18.70 eV and 3s₂ 20.66 eV, helium's 2¹S
+  // 20.62 eV; argon from the neutral atom: the ion's 4s 33.03 eV and 4p
+  // 35.44 eV (15.76 eV to ionize, 19.68 eV more to excite; 514.5 nm
+  // between them); CO₂'s 10⁰0 1388 cm⁻¹ and 00⁰1 2349 cm⁻¹, N₂'s v = 1
+  // 2331 cm⁻¹; the dye's and Ti:sapphire's bands from their pump (532 nm),
+  // their laser line and the middle of their absorption and emission
+  // peaks (R6G about 2.29 eV, Ti:sapphire about 2.03 eV: estimates).
+  // The upper laser level's lifetime comes from the engine (picture.tau).
+  // Each scheme's upper − lower equals its laser photon to 2 %
+  // (draw-atoms.test.js).
   function freezeAll(object) {
     Object.keys(object).forEach(function (key) {
       if (object[key] && typeof object[key] === "object") freezeAll(object[key]);
     });
     return Object.freeze(object);
   }
+
+  // The heights of a scheme's levels from their energies: to scale from
+  // the ground up, unless the lower laser level sits high above the ground
+  // (He-Ne, Ar⁺: over 0.6 of the top), where the axis is broken (`broken`)
+  // just above the ground, so the laser step can still be seen: the levels
+  // above the break fill 0.3 to 1. A scheme without energies (the
+  // two-level atom) keeps the heights it gives.
+  function heightsOf(scheme) {
+    var levels = scheme.levels;
+    var ids = Object.keys(levels);
+    if (!ids.every(function (id) { return typeof levels[id].eV === "number"; })) return scheme;
+    var top = 0;
+    ids.forEach(function (id) { top = Math.max(top, levels[id].eV); });
+    if (scheme.partner) top = Math.max(top, scheme.partner.eV);
+    var low = levels.lower ? levels.lower.eV : 0;
+    var broken = low > 0.6 * top;
+    var base = broken ? low - 0.6 * (top - low) : 0;
+    function height(eV) {
+      if (eV === 0) return 0;
+      return broken ? 0.3 + 0.7 * (eV - base) / (top - base) : eV / top;
+    }
+    ids.forEach(function (id) { levels[id].y = height(levels[id].eV); });
+    if (scheme.partner) scheme.partner.y = height(scheme.partner.eV);
+    scheme.broken = broken;
+    return scheme;
+  }
+
   // Nd³⁺ is the same atom in glass and in YAG.
   function neodymium() {
     return {
       kind: "four",
       levels: {
-        ground: { y: 0, term: "⁴I₉/₂" },
-        lower: { y: 0.22, term: "⁴I₁₁/₂" },
-        upper: { y: 0.68, term: "⁴F₃/₂" },
-        band: { y: 0.88, term: "⁴F₅/₂", wide: true }
-      }
+        ground: { eV: 0, term: "⁴I₉/₂" },
+        lower: { eV: 0.26, term: "⁴I₁₁/₂" },
+        upper: { eV: 1.43, term: "⁴F₃/₂" },
+        band: { eV: 1.53, term: "⁴F₅/₂", wide: true }
+      },
+      lowerStays: 1e-10
     };
   }
-  var SCHEMES = freezeAll({
+  var SCHEMES = {
     "ruby": {
       kind: "three",
       levels: {
-        ground: { y: 0, term: "⁴A₂" },
-        upper: { y: 0.6, term: "²E" },
-        band: { y: 0.86, term: "⁴F₂", wide: true }
+        ground: { eV: 0, term: "⁴A₂" },
+        upper: { eV: 1.79, term: "²E" },
+        band: { eV: 2.23, term: "⁴F₂", wide: true }
       }
     },
     "nd-glass": neodymium(),
@@ -122,49 +173,55 @@
     "he-ne": {
       kind: "four",
       levels: {
-        ground: { y: 0, term: "2p⁶" },
-        lower: { y: 0.5, term: "2p₄" },
-        upper: { y: 0.84, term: "3s₂" }
+        ground: { eV: 0, term: "2p⁶" },
+        lower: { eV: 18.70, term: "2p₄" },
+        upper: { eV: 20.66, term: "3s₂" }
       },
-      partner: { name: "He", term: "2¹S" }
+      partner: { name: "He", term: "2¹S", eV: 20.62 },
+      lowerStays: 1e-8,
+      lost: true
     },
     "ar-ion": {
       kind: "four",
       levels: {
-        ground: { y: 0, term: "Ar⁺" },
-        lower: { y: 0.42, term: "4s" },
-        upper: { y: 0.72, term: "4p" },
-        band: { y: 0.9, term: "", wide: true }
-      }
+        ground: { eV: 0, term: "Ar" },
+        lower: { eV: 33.03, term: "Ar⁺ 4s" },
+        upper: { eV: 35.44, term: "Ar⁺ 4p" }
+      },
+      lowerStays: 1e-9,
+      lost: true
     },
     "co2": {
       kind: "four",
       levels: {
-        ground: { y: 0, term: "00⁰0" },
-        lower: { y: 0.4, term: "10⁰0" },
-        upper: { y: 0.8, term: "00⁰1" }
+        ground: { eV: 0, term: "00⁰0" },
+        lower: { eV: 0.172, term: "10⁰0" },
+        upper: { eV: 0.291, term: "00⁰1" }
       },
-      partner: { name: "N₂", term: "v = 1" }
+      partner: { name: "N₂", term: "v = 1", eV: 0.289 },
+      lowerStays: 1e-6
     },
     "dye-r6g": {
       kind: "four",
       levels: {
-        ground: { y: 0, term: "S₀" },
-        lower: { y: 0.24, term: "" },
-        upper: { y: 0.62, term: "S₁" },
-        band: { y: 0.88, term: "" }
+        ground: { eV: 0, term: "S₀" },
+        lower: { eV: 0.22, term: "" },
+        upper: { eV: 2.29, term: "S₁" },
+        band: { eV: 2.33, term: "" }
       },
-      bands: [["ground", "lower"], ["upper", "band"]]
+      bands: [["ground", "lower"], ["upper", "band"]],
+      lowerStays: 1e-12
     },
     "ti-sapphire": {
       kind: "four",
       levels: {
-        ground: { y: 0, term: "²T₂" },
-        lower: { y: 0.24, term: "" },
-        upper: { y: 0.62, term: "²E" },
-        band: { y: 0.88, term: "" }
+        ground: { eV: 0, term: "²T₂" },
+        lower: { eV: 0.48, term: "" },
+        upper: { eV: 2.03, term: "²E" },
+        band: { eV: 2.33, term: "" }
       },
-      bands: [["ground", "lower"], ["upper", "band"]]
+      bands: [["ground", "lower"], ["upper", "band"]],
+      lowerStays: 1e-12
     },
     "two-level": {
       kind: "two",
@@ -173,7 +230,9 @@
         upper: { y: 0.7, term: "E₂" }
       }
     }
-  });
+  };
+  Object.keys(SCHEMES).forEach(function (id) { heightsOf(SCHEMES[id]); });
+  freezeAll(SCHEMES);
 
   function clamp(value, low, high) {
     return Math.min(high, Math.max(low, value));
@@ -393,24 +452,35 @@
 
   /* ---------- the picture ---------- */
 
-  function layout(w, h, partner) {
+  // The text under the levels: the energy budget and the note, wrapped;
+  // at most this many lines in all.
+  var TEXT_LINES = 5;
+
+  // textLines: how many lines the text under the levels takes (4 if not
+  // given); the levels get the rest of the height.
+  function layout(w, h, partner, textLines) {
+    var lineCount = typeof textLines === "number" ? clamp(textLines, 0, TEXT_LINES) : 4;
     var pad = 10;
-    var fontSize = clamp(Math.round(0.045 * h), 11, 14);
+    var fontSize = clamp(Math.round(0.04 * h), 11, 14);
+    var lineHeight = 1.25 * fontSize;
     var titleY = pad + fontSize;
-    var noteY = h - pad - 0.2 * fontSize;
-    var top = titleY + 1.8 * fontSize;
-    var bottom = noteY - 2.2 * fontSize;
+    var top = titleY + 2.2 * fontSize;
+    var textTop = h - pad - lineCount * lineHeight + 0.9 * fontSize;    // the first text line's baseline
+    var bottom = textTop - 3.4 * fontSize;                              // room for the ground level's labels
     var partnerWidth = partner ? clamp(0.13 * w, 40, 90) : 0;
-    var termWidth = clamp(3.6 * fontSize, 40, 60);
-    var roleWidth = clamp(0.27 * w, 70, 210);
+    var termWidth = clamp(4.2 * fontSize, 46, 64);
+    // The words beside the levels need more of a phone's width.
+    var roleWidth = clamp((w < 500 ? 0.42 : 0.34) * w, 90, 240);
     var left = pad + partnerWidth + termWidth;
     var right = w - pad - roleWidth;
     var span = right - left;
     return {
       pad: pad,
       fontSize: fontSize,
+      small: Math.round(0.88 * fontSize),
+      lineHeight: lineHeight,
       titleY: titleY,
-      noteY: noteY,
+      textTop: textTop,
       top: top,
       bottom: bottom,
       partner: partner ? { left: pad, right: pad + partnerWidth, x: pad + partnerWidth / 2 } : null,
@@ -424,7 +494,7 @@
       dropX: left + 0.93 * span,
       roleX: right + 8,
       roleWidth: roleWidth - 8 - 2,
-      bandHalf: 0.045 * (bottom - top)
+      bandHalf: 0.03 * (bottom - top)
     };
   }
 
@@ -526,6 +596,65 @@
     return UI.format.si(lam, "m");
   }
 
+  // "1.43 eV": an energy in eV.
+  function energyText(eV) {
+    if (typeof eV !== "number" || !isFinite(eV)) return "";
+    // Three significant digits, like every number on the page: 0.260 eV,
+    // 1.43 eV, 33.0 eV.
+    return (eV === 0 ? "0" : eV.toPrecision(3)) + NB + "eV";
+  }
+
+  // "230 × 10⁻⁶ s" for a lifetime the engine gives; "~10⁻¹⁰ s" for an
+  // order of magnitude.
+  function staysText(template, seconds, rough) {
+    if (!template || typeof seconds !== "number" || !(seconds > 0)) return "";
+    var time = rough ? "~" + UI.format.unit(Math.round(Math.log10(seconds)), "s") : UI.format.si(seconds, "s");
+    return template.replace("{t}", time);
+  }
+
+  // A text in lines of at most `width` px, by words, at most `most` lines
+  // (the last takes the rest and is squeezed). The width of a character is
+  // taken as half the font size: measureText is not used, so the lines are
+  // the same in every browser and in the tests.
+  function wrap(text, width, fontSize, most) {
+    if (!text) return [];
+    var perLine = Math.max(8, Math.floor(width / (0.5 * fontSize)));
+    var words = text.split(" ");
+    var lines = [];
+    var current = "";
+    for (var i = 0; i < words.length; i++) {
+      var next = current ? current + " " + words[i] : words[i];
+      if (current && next.length > perLine && lines.length < most - 1) {
+        lines.push(current);
+        current = words[i];
+      } else {
+        current = next;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  }
+
+  // Blocks of text in one column, each wanting its first line at `at` (a
+  // baseline), moved apart just enough that none overlaps the next, and
+  // kept between `low` and `high` (the highest and lowest baselines a
+  // line may have). Each block: { at, lines: [{ text, colour, small }] }.
+  function spread(blocks, lineHeight, low, high) {
+    var sorted = blocks.slice().sort(function (a, b) { return a.at - b.at; });
+    var gap = 0.3 * lineHeight;
+    function size(block) { return (block.lines.length - 1) * lineHeight; }
+    for (var i = 0; i < sorted.length; i++) {
+      var want = Math.max(sorted[i].at, low);
+      if (i > 0) want = Math.max(want, sorted[i - 1].first + size(sorted[i - 1]) + lineHeight + gap);
+      sorted[i].first = want;
+    }
+    for (var j = sorted.length - 1; j >= 0; j--) {
+      var limit = j === sorted.length - 1 ? high : sorted[j + 1].first - lineHeight - gap;
+      if (sorted[j].first + size(sorted[j]) > limit) sorted[j].first = Math.max(low, limit - size(sorted[j]));
+    }
+    return sorted;
+  }
+
   // The colours of the light: the laser's and the pump's, physical for a
   // medium with a look in LaserUI.materials, else the theme's.
   function lightColours(colors, picture) {
@@ -572,6 +701,7 @@
     var scheme = model ? model.scheme : null;
     var L = layout(view.w, view.h, !!(scheme && scheme.partner));
     var fs = L.fontSize;
+    var inner = view.w - 2 * L.pad;
 
     function word(name) {
       return typeof named[name] === "string" ? named[name] : "";
@@ -586,7 +716,6 @@
     g.textBaseline = "alphabetic";
 
     /* the title, and the medium with its scheme on the right */
-    var inner = view.w - 2 * L.pad;
     g.fillStyle = c.text;
     g.textAlign = "left";
     text(word("title"), L.pad, L.titleY, 0.56 * inner);
@@ -609,6 +738,35 @@
     var Y = {};
     Object.keys(levels).forEach(function (id) { Y[id] = levelY(L, levels[id].y); });
     var head = clamp(0.7 * fs, 7, 10);
+
+    /* the energies: the pump's photon (or what the pump hands over), the
+       laser's photon, and how long an atom stays on the laser levels */
+    var energies = typeof levels.upper.eV === "number";
+    var topId = levels.band ? "band" : "upper";
+    var pumpEV = null;
+    if (energies) {
+      if (scheme.partner) pumpEV = scheme.partner.eV;
+      else if ((shown.pumpKind === "diode" || shown.pumpKind === "laser") && typeof shown.pumpEV === "number") pumpEV = shown.pumpEV;
+      else pumpEV = levels[topId].eV;
+    }
+    var laserEV = typeof shown.laserEV === "number" ? shown.laserEV
+      : energies ? levels.upper.eV - (levels.lower ? levels.lower.eV : 0) : null;
+
+    /* the text under the levels (the budget and the note), wrapped first:
+       the levels get the height it leaves */
+    var lines = [];
+    if (energies && pumpEV > 0 && laserEV > 0 && word("budget")) {
+      var budget = word("budget")
+        .replace("{in}", energyText(pumpEV))
+        .replace("{out}", energyText(laserEV))
+        .replace("{share}", Math.round(100 * laserEV / pumpEV) + NB + "%")
+        .replace("{rest}", energyText(pumpEV - laserEV));
+      lines = lines.concat(wrap(budget, inner, fs, 3).map(function (entry) { return { text: entry, colour: c.text }; }));
+    }
+    var note = word("note" + scheme.kind.charAt(0).toUpperCase() + scheme.kind.slice(1));
+    lines = lines.concat(wrap(note, inner, fs, TEXT_LINES - lines.length).map(function (entry) { return { text: entry, colour: c.muted }; }));
+    L = layout(view.w, view.h, !!scheme.partner, Math.min(lines.length, TEXT_LINES));
+    Object.keys(levels).forEach(function (id) { Y[id] = levelY(L, levels[id].y); });
 
     /* the bands of sublevels (dye, Ti:sapphire) and a broad pump band */
     g.fillStyle = c.faint;
@@ -633,29 +791,94 @@
       g.globalAlpha = 1;
     });
 
-    /* the levels: a line each, its name on the left, its role on the right */
+    /* the levels: a line each, its name on the left (moved apart where
+       two levels nearly touch: Nd³⁺'s band and upper level) */
+    var terms = [];
     Object.keys(levels).forEach(function (id) {
       var y = Y[id];
       g.strokeStyle = c.heading;
       g.lineWidth = 2;
       line(g, L.left, y, L.right, y);
-      g.fillStyle = c.heading;
-      g.textAlign = "right";
       // With a partner gas the collision's arrow runs along the upper
       // level into the line, so that level's name goes under its line.
       var termY = L.partner && id === "upper" ? y + 1.3 * fs : y + 0.35 * fs;
-      text(levels[id].term, L.left - 6, termY, L.left - 6 - (L.partner ? L.partner.right + 4 : L.pad));
-      g.fillStyle = c.muted;
-      g.textAlign = "left";
-      text(word(id), L.roleX, y + 0.35 * fs, L.roleWidth);
+      if (levels[id].term) terms.push({ at: termY, lines: [{ text: levels[id].term }] });
+    });
+    g.fillStyle = c.heading;
+    g.textAlign = "right";
+    spread(terms, 1.1 * fs, L.titleY + 1.6 * fs, L.textTop - 1.4 * fs).forEach(function (block) {
+      text(block.lines[0].text, L.left - 6, block.first, L.left - 6 - (L.partner ? L.partner.right + 4 : L.pad));
     });
 
+    /* the right-hand column: each level's role, energy and stay; the laser
+       photon; the heat (or light) the lower level gives off */
+    var blocks = [];
+    Object.keys(levels).forEach(function (id) {
+      // Its role and energy on one line, at the level; how long an atom
+      // stays there under it.
+      var role = word(id);
+      var energy = energyText(levels[id].eV);
+      var lines = [{ text: role && energy ? role + " · " + energy : role || energy, colour: c.muted }];
+      var stay = "";
+      if (id === "upper") stay = staysText(word("stays"), shown.tau, false);
+      if (id === "lower") {
+        // and what it gives off as it empties to the ground
+        stay = staysText(word("stays"), scheme.lowerStays, true);
+        var dropWord = word(scheme.lost ? "lost" : "heat");
+        var drop = energy ? (dropWord ? dropWord + " " : "") + energy : dropWord;
+        if (drop) stay = stay ? stay + " · " + drop : drop;
+      }
+      if (stay) lines.push({ text: stay, colour: c.muted, small: true });
+      blocks.push({ at: Y[id] + 0.35 * fs, lines: lines });
+    });
+    var laserEnd = levels.lower ? Y.lower : Y.ground;
+    var laserLines = [];
+    if (energies) laserLines.push({ text: energyText(laserEV), colour: colours.laser });
+    var lamText = wavelengthText(shown.lam);
+    if (lamText) laserLines.push({ text: lamText, colour: colours.laser, small: energies });
+    if (laserLines.length) blocks.push({ at: (Y.upper + laserEnd) / 2 + 0.35 * fs, lines: laserLines });
+    var small = L.small + "px " + view.font;
+    var normal = fs + "px " + view.font;
+    g.textAlign = "left";
+    spread(blocks, L.lineHeight, L.titleY + 1.6 * fs, L.textTop - 1.4 * fs).forEach(function (block) {
+      block.lines.forEach(function (entry, k) {
+        g.font = entry.small ? small : normal;
+        g.fillStyle = entry.colour;
+        text(entry.text, L.roleX, block.first + k * L.lineHeight, L.roleWidth);
+      });
+    });
+    g.font = normal;
+
     /* the pump */
-    var pumpWord = shown.pumpKind === "discharge" ? word("electrons") : word("pump");
+    var pumpLines = [shown.pumpKind === "discharge" ? word("electrons") : word("pump")];
+    if (energies) pumpLines.push("+" + energyText(pumpEV));
     if (shown.pumpKind !== "discharge" && shown.pumpKind !== "flashlamp") {
       var pumpLam = scheme.kind === "two" ? shown.lam : shown.pumpLam;
-      var lamText = wavelengthText(pumpLam);
-      if (lamText) pumpWord = pumpWord ? pumpWord + " " + lamText : lamText;
+      pumpLines.push(wavelengthText(pumpLam));
+    }
+    pumpLines = pumpLines.filter(function (entry) { return entry; });
+    function pumpWords(x, middle, width) {
+      var first = middle - (pumpLines.length - 1) * L.lineHeight / 2 + 0.35 * fs;
+      pumpLines.forEach(function (entry, k) {
+        g.font = k === 2 ? small : normal;
+        text(entry, x, first + k * L.lineHeight, width);
+      });
+      g.font = normal;
+    }
+    // A broken axis (He-Ne, Ar⁺): two strokes across an upward arrow just
+    // above the ground, where the energies below the levels are left out.
+    function breakMark(x) {
+      if (!scheme.broken) return;
+      var yBreak = levelY(L, 0.15);
+      g.save();
+      g.globalAlpha = 1;
+      g.fillStyle = c.bg;
+      g.fillRect(x - 6, yBreak - 4, 12, 8);
+      g.strokeStyle = c.heading;
+      g.lineWidth = 1.5;
+      line(g, x - 6, yBreak - 1, x + 6, yBreak - 5);
+      line(g, x - 6, yBreak + 5, x + 6, yBreak + 1);
+      g.restore();
     }
     g.strokeStyle = colours.pump;
     g.fillStyle = colours.pump;
@@ -665,22 +888,27 @@
       // The partner gas: its ground and its level, the pump up it, and a
       // collision that hands the energy over to the upper laser level.
       var P = L.partner;
+      var yPartner = typeof scheme.partner.y === "number" ? levelY(L, scheme.partner.y) : Y.upper;
       g.globalAlpha = 1;
       g.strokeStyle = c.heading;
       g.lineWidth = 2;
       line(g, P.left + 4, Y.ground, P.right - 4, Y.ground);
-      line(g, P.left + 4, Y.upper, P.right - 4, Y.upper);
+      line(g, P.left + 4, yPartner, P.right - 4, yPartner);
       g.fillStyle = c.heading;
       g.textAlign = "center";
-      text(scheme.partner.name + " " + scheme.partner.term, P.x, Y.upper - 0.5 * fs, P.right - P.left);
+      text(scheme.partner.name + " " + scheme.partner.term, P.x, yPartner - 0.5 * fs, P.right - P.left);
       g.strokeStyle = colours.pump;
       g.fillStyle = colours.pump;
       g.lineWidth = 2.5;
       g.globalAlpha = 0.35 + 0.65 * pumping;
-      arrow(g, P.x, Y.ground, Y.upper + 2, head);
+      arrow(g, P.x, Y.ground, yPartner + 2, head);
+      breakMark(P.x);
+      g.strokeStyle = colours.pump;
+      g.fillStyle = colours.pump;
+      g.globalAlpha = 0.35 + 0.65 * pumping;
       g.setLineDash([4, 3]);
       g.lineWidth = 1.5;
-      line(g, P.right - 2, Y.upper, L.left - 0.8 * head, Y.upper);
+      line(g, P.right - 2, yPartner, L.left - 0.8 * head, Y.upper);
       g.setLineDash([]);
       g.beginPath();
       g.moveTo(L.left, Y.upper);
@@ -693,14 +921,15 @@
       g.textAlign = "left";
       text(word("transfer"), P.right + 2, Y.upper - 0.9 * fs, L.left - P.right - 4);
       g.fillStyle = colours.pump;
-      text(pumpWord, P.x + 6, levelY(L, freeGap(levels, levels.upper.y)) + 0.35 * fs, L.left - P.x - 10);
+      pumpWords(P.x + 6, levelY(L, freeGap(levels, levels.upper.y)), L.left - P.x - 10);
     } else {
-      var pumpTop = levels.band ? Y.band : Y.upper;
+      var pumpTop = Y[topId];
       arrow(g, L.pumpX, Y.ground, pumpTop + 2, head);
+      breakMark(L.pumpX);
       g.globalAlpha = 1;
+      g.fillStyle = colours.pump;
       g.textAlign = "right";
-      var pumpWordY = levelY(L, freeGap(levels, levels.band ? levels.band.y : levels.upper.y)) + 0.35 * fs;
-      text(pumpWord, L.pumpX - 6, pumpWordY, L.pumpX - 6 - L.pad);
+      pumpWords(L.pumpX - 6, levelY(L, freeGap(levels, levels[topId].y)), L.pumpX - 6 - L.pad);
     }
     g.globalAlpha = 1;
 
@@ -708,24 +937,16 @@
     g.strokeStyle = c.muted;
     g.fillStyle = c.muted;
     g.lineWidth = 1.5;
-    if (levels.band) wavyArrow(g, L.heatX, Y.band + 3, Y.upper - 2, head * 0.8);
+    if (levels.band) wavyArrow(g, L.heatX, Y.band + 3, Y.upper - 2, Math.min(head * 0.8, Math.max(2, Y.upper - Y.band - 5)));
     if (levels.lower) wavyArrow(g, L.dropX, Y.lower + 3, Y.ground - 2, head * 0.8);
-    var heatWord = word("heat");
-    if (heatWord && levels.lower) {
-      g.textAlign = "left";
-      text(heatWord, L.roleX, (Y.lower + Y.ground) / 2 + 0.35 * fs, L.roleWidth);
-    }
 
     /* the laser step */
-    var laserEnd = levels.lower ? Y.lower : Y.ground;
     g.strokeStyle = colours.laser;
     g.fillStyle = colours.laser;
     g.lineWidth = 3;
     g.globalAlpha = 0.35 + 0.65 * light;
     arrow(g, L.laserX, Y.upper + 2, laserEnd - 2, head);
     g.globalAlpha = 1;
-    g.textAlign = "left";
-    text(wavelengthText(shown.lam), L.roleX, (Y.upper + laserEnd) / 2 + 0.35 * fs, L.roleWidth);
 
     /* the atoms and their photons, inside the levels' box */
     var radius = atomRadius(L);
@@ -767,11 +988,12 @@
     });
     g.restore();
 
-    /* the note: what this scheme teaches */
-    var note = word("note" + scheme.kind.charAt(0).toUpperCase() + scheme.kind.slice(1));
-    g.fillStyle = c.muted;
+    /* under the levels: the energy budget, then what this scheme teaches */
     g.textAlign = "left";
-    text(note, L.pad, L.noteY, inner);
+    lines.slice(0, TEXT_LINES).forEach(function (entry, k) {
+      g.fillStyle = entry.colour;
+      text(entry.text, L.pad, L.textTop + k * L.lineHeight, inner);
+    });
 
     g.restore();
   }
