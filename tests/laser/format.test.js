@@ -26,25 +26,25 @@ test("loads as LaserUI.format, frozen, adding only LaserUI", () => {
 
 test("si: an SI prefix and three significant digits", () => {
   const cases = [
-    [3.1909e-8, "s", undefined, "31.9" + NB + "ns"],
-    [2.41e6, "Hz", 2, "2.4" + NB + "MHz"],
+    [3.1909e-8, "s", undefined, "31.9" + NB + "×" + NB + "10⁻⁹" + NB + "s"],
+    [2.41e6, "Hz", 2, "2.4" + NB + "×" + NB + "10⁶" + NB + "Hz"],
     [1.7151, "W", undefined, "1.72" + NB + "W"],
-    [0.0015, "W", undefined, "1.50" + NB + "mW"],
-    [-0.0015, "W", undefined, "−1.50" + NB + "mW"],
-    [1.1208e-5, "s", undefined, "11.2" + NB + "µs"],
-    [7.4e-9, "W", undefined, "7.40" + NB + "nW"],
-    [999.96, "W", undefined, "1.00" + NB + "kW"],
+    [0.0015, "W", undefined, "1.50" + NB + "×" + NB + "10⁻³" + NB + "W"],
+    [-0.0015, "W", undefined, "−1.50" + NB + "×" + NB + "10⁻³" + NB + "W"],
+    [1.1208e-5, "s", undefined, "11.2" + NB + "×" + NB + "10⁻⁶" + NB + "s"],
+    [7.4e-9, "W", undefined, "7.40" + NB + "×" + NB + "10⁻⁹" + NB + "W"],
+    [999.96, "W", undefined, "1.00" + NB + "×" + NB + "10³" + NB + "W"],
     [999.4, "W", undefined, "999" + NB + "W"],
-    [0.99996e-6, "s", undefined, "1.00" + NB + "µs"],
-    [123456, "Hz", undefined, "123" + NB + "kHz"],
-    [2.5e12, "Hz", undefined, "2.50" + NB + "THz"],
+    [0.99996e-6, "s", undefined, "1.00" + NB + "×" + NB + "10⁻⁶" + NB + "s"],
+    [123456, "Hz", undefined, "123" + NB + "×" + NB + "10³" + NB + "Hz"],
+    [2.5e12, "Hz", undefined, "2.50" + NB + "×" + NB + "10¹²" + NB + "Hz"],
     [0, "W", undefined, "0" + NB + "W"],
-    [9.996e-16, "W", undefined, "1.00" + NB + "fW"],
+    [9.996e-16, "W", undefined, "1.00" + NB + "×" + NB + "10⁻¹⁵" + NB + "W"],
     // Below the smallest prefix (the page meets 10⁻¹⁷⁰ W with the pump off).
-    [5e-16, "W", undefined, "<" + NB + "1" + NB + "fW"],
-    [8e-170, "W", undefined, "<" + NB + "1" + NB + "fW"],
-    [-8e-170, "W", undefined, ">" + NB + "−1" + NB + "fW"],
-    [5e-324, "s", undefined, "<" + NB + "1" + NB + "fs"]
+    [5e-16, "W", undefined, "<" + NB + "10⁻¹⁵" + NB + "W"],
+    [8e-170, "W", undefined, "<" + NB + "10⁻¹⁵" + NB + "W"],
+    [-8e-170, "W", undefined, ">" + NB + "−10⁻¹⁵" + NB + "W"],
+    [5e-324, "s", undefined, "<" + NB + "10⁻¹⁵" + NB + "s"]
   ];
   for (const [value, unit, digits, expected] of cases) {
     assert.equal(F.si(value, unit, digits), expected, value + " " + unit);

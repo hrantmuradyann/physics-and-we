@@ -30,7 +30,8 @@ const NB = " ";
 const WORDS = {
   title: "Inside one atom", two: "two levels", three: "three levels", four: "four levels",
   ground: "ground level", lower: "lower laser level", upper: "upper laser level", band: "pump band",
-  pump: "pump", electrons: "electrons", heat: "heat", transfer: "collision",
+  pump: "pump", electrons: "electrons", heat: "heat", lost: "heat, other light", transfer: "collision",
+  stays: "stays {t}", budget: "Of {in}, {out} ({share}) is light; {rest} is lost.",
   noteTwo: "note two", noteThree: "note three", noteFour: "note four"
 };
 
@@ -88,13 +89,57 @@ test("loads as LaserUI.atoms, frozen; every medium the bench runs has a scheme, 
     assert.equal(Boolean(levels.lower), scheme.kind === "four", id + ": a lower laser level for four levels only");
     if (levels.lower) assert.ok(levels.lower.y > 0 && levels.lower.y < levels.upper.y, id);
     if (levels.band) assert.ok(levels.band.y > levels.upper.y && levels.band.y <= 1, id + ": the band above the upper level");
-    // Pumped straight from the ground: the two-level atom, and a gas that
-    // gets its energy from a partner; every other has a band to pump into.
-    assert.equal(Boolean(levels.band), scheme.kind !== "two" && !scheme.partner, id);
+    // Pumped straight from the ground: the two-level atom, a gas that gets
+    // its energy from a partner, and argon, whose electrons ionize and
+    // excite it in one go; every other has a band to pump into.
+    assert.equal(Boolean(levels.band), scheme.kind !== "two" && !scheme.partner && id !== "ar-ion", id);
   }
   assert.equal(A.SCHEMES["he-ne"].partner.name, "He");
+  assert.equal(A.SCHEMES["two-level"].levels.upper.eV, undefined, "the two-level atom has no energies");
   assert.equal(A.SCHEMES["co2"].partner.name, "N₂");
 });
+
+test("the levels' energies: each laser step is the engine's photon, each pump band its pump's, and the heights are to scale", () => {
+  const B = engine.bench;
+  for (const id of Object.keys(A.SCHEMES)) {
+    const scheme = A.SCHEMES[id];
+    const levels = scheme.levels;
+    if (scheme.kind === "two") continue;
+    for (const level of Object.keys(levels)) assert.equal(typeof levels[level].eV, "number", id + " " + level);
+    const step = levels.upper.eV - (levels.lower ? levels.lower.eV : 0);
+    const photon = engine.units.eVFromLam(engine.media.get(id).lam);
+    assert.ok(Math.abs(step / photon - 1) < 0.02, id + ": the laser step " + step + " eV, the photon " + photon + " eV");
+    // A pump of light (diodes, a pump laser) lifts the atom to the band: its
+    // photon carries the band's energy.
+    for (const pump of B.pumpsFor(id)) {
+      const config = B.configFor({ medium: id, pump: pump });
+      if (pump !== "diode" && pump !== "laser") continue;
+      const lifted = engine.units.eVFromLam(config.pumpLam);
+      assert.ok(Math.abs(levels.band.eV / lifted - 1) < 0.02, id + " " + pump + ": band " + levels.band.eV + " eV, pump photon " + lifted + " eV");
+    }
+    if (scheme.partner) {
+      assert.ok(Math.abs(scheme.partner.eV / levels.upper.eV - 1) < 0.02, id + ": the partner hands over about the upper level's energy");
+    }
+    // The heights: to scale from the ground, or, for a broken axis, to
+    // scale above the break; only He-Ne and argon are broken.
+    assert.equal(Boolean(scheme.broken), id === "he-ne" || id === "ar-ion", id);
+    const ids = Object.keys(levels).filter((level) => level !== "ground");
+    if (!scheme.broken) {
+      for (const level of ids) assertNear(levels[level].y, levels[level].eV / Math.max(...ids.map((x) => levels[x].eV), scheme.partner ? scheme.partner.eV : 0), id + " " + level);
+    } else {
+      // Above the break the gaps keep their proportions.
+      const gap = (a, b) => levels[a].y - levels[b].y;
+      const energy = (a, b) => levels[a].eV - levels[b].eV;
+      assertNear(gap("upper", "lower") / energy("upper", "lower"), (1 - levels.lower.y) / (Math.max(levels.upper.eV, scheme.partner ? scheme.partner.eV : 0) - levels.lower.eV), id);
+      assert.ok(levels.lower.y >= 0.3 && levels.lower.y < levels.upper.y, id);
+    }
+    if (levels.lower) assert.ok(scheme.lowerStays > 0 && scheme.lowerStays < engine.media.get(id).tau, id + ": the lower level empties faster than the upper one");
+  }
+});
+
+function assertNear(actual, expected, message) {
+  assert.ok(Math.abs(actual - expected) < 1e-9, message + ": " + actual + " against " + expected);
+}
 
 test("create and step refuse what they cannot use, naming themselves", () => {
   assert.throws(() => A.create({}), /^Error: LaserUI\.atoms\.create: /);
@@ -215,17 +260,28 @@ commonDrawingTests("atoms", UI, A.SIZE, CASES);
 
 test("draw: each level's name and role, the scheme in the title, the wavelengths, the scheme's note", () => {
   const { recorder, view } = makeView(UI, A.SIZE, 800);
-  A.draw(view, busy("nd-yag", 1), WORDS, { name: "Nd:YAG", medium: "nd-yag", lam: 1064e-9, pumpLam: 808e-9, pumpKind: "diode", light: 1, pump: 1 });
+  A.draw(view, busy("nd-yag", 1), WORDS, { name: "Nd:YAG", medium: "nd-yag", lam: 1064e-9, pumpLam: 808e-9, pumpKind: "diode",
+    laserEV: 1.1653, pumpEV: 1.5345, tau: 230e-6, light: 1, pump: 1 });
   const words = texts(recorder);
+  const eV = (text) => text + NB + "eV";
   for (const expected of ["Inside one atom", "Nd:YAG · four levels", "⁴I₉/₂", "⁴I₁₁/₂", "⁴F₃/₂", "⁴F₅/₂",
-    "ground level", "lower laser level", "upper laser level", "pump band", "heat", "1.06" + NB + "µm", "pump 808" + NB + "nm", "note four"]) {
+    // each level's role and energy, and how long an atom stays on the
+    // laser levels
+    "ground level · " + eV("0"), "lower laser level · " + eV("0.260"), "upper laser level · " + eV("1.43"), "pump band · " + eV("1.53"),
+    "stays ~10⁻¹⁰" + NB + "s · heat " + eV("0.260"), "stays 230" + NB + "×" + NB + "10⁻⁶" + NB + "s",
+    // the photons: the laser's energy and wavelength, the pump's
+    eV("1.17"), "1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m", "pump", "+" + eV("1.53"), "808" + NB + "×" + NB + "10⁻⁹" + NB + "m",
+    // the budget, the note
+    "Of " + eV("1.53") + ", " + eV("1.17") + " (76" + NB + "%) is light; " + eV("0.369") + " is lost.", "note four"]) {
     assert.ok(words.includes(expected), expected + " in " + JSON.stringify(words));
   }
   // Ruby: three levels, its note; a flashlamp's pump has no wavelength.
   const ruby = makeView(UI, A.SIZE, 800);
   A.draw(ruby.view, busy("ruby", 1), WORDS, { name: "Ruby", medium: "ruby", lam: 694.3e-9, pumpKind: "flashlamp", light: 1, pump: 1 });
   const rubyWords = texts(ruby.recorder);
-  for (const expected of ["Ruby · three levels", "²E", "⁴A₂", "694" + NB + "nm", "pump", "note three"]) {
+  // A flashlamp's light has no one wavelength: the pump gives what lifts
+  // the atom into the band.
+  for (const expected of ["Ruby · three levels", "²E", "⁴A₂", "694" + NB + "×" + NB + "10⁻⁹" + NB + "m", "pump", "+" + "2.23" + NB + "eV", "note three"]) {
     assert.ok(rubyWords.includes(expected), expected + " in " + JSON.stringify(rubyWords));
   }
   assert.ok(!rubyWords.includes("lower laser level"));
@@ -233,7 +289,7 @@ test("draw: each level's name and role, the scheme in the title, the wavelengths
   const co2 = makeView(UI, A.SIZE, 800);
   A.draw(co2.view, busy("co2", 1), WORDS, { name: "CO₂", medium: "co2", lam: 10.6e-6, pumpKind: "discharge", light: 1, pump: 1 });
   const co2Words = texts(co2.recorder);
-  for (const expected of ["N₂ v = 1", "collision", "electrons", "10.6" + NB + "µm"]) {
+  for (const expected of ["N₂ v = 1", "collision", "electrons", "+0.289" + NB + "eV", "10.6" + NB + "×" + NB + "10⁻⁶" + NB + "m"]) {
     assert.ok(co2Words.includes(expected), expected + " in " + JSON.stringify(co2Words));
   }
 });

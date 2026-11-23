@@ -169,13 +169,13 @@
 
 
   "atoms": {
-    "_readme": "Inside one atom of the chosen gain medium: its energy levels, drawn by js/laser/ui/draw-atoms.js. 'title' is written top left; the medium's name and its scheme ('two', 'three', 'four') top right; the levels' roles on the right of each level; the note at the bottom says what the scheme teaches. Keep them short: a phone squeezes them.",
+    "_readme": "Inside one atom of the chosen gain medium: its energy levels, drawn by js/laser/ui/draw-atoms.js. 'title' is written top left; the medium's name and its scheme ('two', 'three', 'four') top right; the levels' roles on the right of each level; under the levels, 'budget' (its {in}, {out}, {share} and {rest} are filled in with the pump's energy, the laser photon's, its share and the rest) and the note that says what the scheme teaches; 'stays' writes how long an atom stays on a level ({t}); 'heat' or 'lost' names what the lower level gives off. Keep them short: a phone squeezes them.",
     "alt": {
-      "hy": "Ընտրված ակտիվ միջավայրի մեկ ատոմի էներգիական մակարդակները և ատոմների մի շարք, որոնք ցույց են տալիս, թե ինչ է կատարվում լազերում․ մղումը ատոմները բարձրացնում է վերին մակարդակներ, իսկ վերին լազերային մակարդակից իջնող ատոմը լույս է արձակում։ Պատկերը փոխվում է միջավայրի հետ՝ երեք կամ չորս մակարդակ, օգնական գազ (հելիում, ազոտ) կամ ընդամենը երկու մակարդակ։",
-      "en": "The energy levels of one atom of the chosen gain medium, with a row of atoms acting out the laser: the pump lifts atoms to the higher levels, and an atom stepping down from the upper laser level gives out light. The picture changes with the medium: three or four levels, a helper gas (helium, nitrogen), or only two levels."
+      "hy": "Ընտրված ակտիվ միջավայրի մեկ ատոմի էներգիական մակարդակները՝ մասշտաբով և իրենց էներգիաներով (էլեկտրոնվոլտ) և ատոմների մի շարք, որոնք ցույց են տալիս, թե ինչ է կատարվում լազերում․ մղումը ատոմները բարձրացնում է վերին մակարդակներ, իսկ վերին լազերային մակարդակից իջնող ատոմը լույս է արձակում։ Պատկերը փոխվում է միջավայրի հետ՝ երեք կամ չորս մակարդակ, օգնական գազ (հելիում, ազոտ) կամ ընդամենը երկու մակարդակ։",
+      "en": "The energy levels of one atom of the chosen gain medium, to scale and with their energies in electronvolts, with a row of atoms acting out the laser: the pump lifts atoms to the higher levels, and an atom stepping down from the upper laser level gives out light. The picture changes with the medium: three or four levels, a helper gas (helium, nitrogen), or only two levels."
     },
     "words": {
-      "title": { "hy": "Մեկ ատոմի ներսում (մասշտաբը պահպանված չէ)", "en": "Inside one atom (not to scale)" },
+      "title": { "hy": "Մեկ ատոմի ներսում․ էներգիաները՝ մասշտաբով", "en": "Inside one atom: energies to scale" },
       "two": { "hy": "երկու մակարդակ", "en": "two levels" },
       "three": { "hy": "երեք մակարդակ", "en": "three levels" },
       "four": { "hy": "չորս մակարդակ", "en": "four levels" },
@@ -186,7 +186,10 @@
       "pump": { "hy": "մղում", "en": "pump" },
       "electrons": { "hy": "էլեկտրոններ", "en": "electrons" },
       "heat": { "hy": "ջերմություն", "en": "heat" },
+      "lost": { "hy": "ջերմություն, այլ լույս", "en": "heat, other light" },
       "transfer": { "hy": "բախում", "en": "collision" },
+      "stays": { "hy": "մնում է {t}", "en": "stays {t}" },
+      "budget": { "hy": "Մղման տված {in}-ից {out}-ը ({share}) դուրս է գալիս որպես լազերային լույս, իսկ մնացած {rest}-ը կորչում է որպես ջերմություն կամ այլ լույս։", "en": "Of the {in} the pump gives an atom, {out} ({share}) leaves as laser light; the rest, {rest}, is lost as heat or other light." },
       "noteTwo": { "hy": "Մղումը ատոմներն իջեցնում է այնքան, որքան բարձրացնում․ կեսից ավելին վեր չեն ելնում, լազեր չկա։", "en": "The pump knocks atoms down as often as it lifts them: never over half up, so no laser." },
       "noteThree": { "hy": "Անցումն ավարտվում է հիմնական մակարդակում․ ատոմների կեսից ավելին պետք է վերևում լինի։", "en": "The laser step ends on the ground level: over half the atoms must be up first." },
       "noteFour": { "hy": "Ստորին մակարդակը միանգամից դատարկվում է․ նույնիսկ թույլ մղումն է բավական։", "en": "The lower level empties at once, so even a weak pump is enough." }

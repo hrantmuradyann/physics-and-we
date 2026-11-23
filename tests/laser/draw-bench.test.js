@@ -1862,7 +1862,7 @@ test("the beam in its wavelength's colour, readable on the theme: every ray, the
 
 test("an invisible beam: the false colour, and its wavelength written with 'infrared, invisible' at the bottom right", () => {
   const M = UI.materials;
-  for (const [id, lam, text] of [["nd-yag", 1064e-9, "1.06" + NB + "µm"], ["co2", 10.6e-6, "10.6" + NB + "µm"]]) {
+  for (const [id, lam, text] of [["nd-yag", 1064e-9, "1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m"], ["co2", 10.6e-6, "10.6" + NB + "×" + NB + "10⁻⁶" + NB + "m"]]) {
     const { recorder, view } = drawAt(800, LABELS, "site", ofBench({ medium: id, pump: id === "co2" ? "discharge" : "diode", lam: lam }));
     const L = bench.layout(800, view.h);
     const styles = recorder.log.filter((e) => e.set === "strokeStyle").map((e) => e.value);
@@ -2177,14 +2177,14 @@ test("the note names every invisible light, the pump's first, then the laser's",
     const c = drawAt(900, LABELS, "site", light).recorder.calls.find((x) => x.name === "fillText" && /invisible$/.test(x.args[0]));
     return c ? c.args[0] : null;
   }
-  assert.equal(note(endPumped()), "808" + NB + "nm, 1.06" + NB + "µm · infrared, invisible");
-  assert.equal(note(endPumped({ pump: 0 })), "808" + NB + "nm, 1.06" + NB + "µm · infrared, invisible", "the diodes are there, lit or not");
-  assert.equal(note(ofBench({ medium: "ti-sapphire", pump: "laser", lam: 800e-9 }, { pumpLam: 532e-9 })), "800" + NB + "nm · infrared, invisible", "a green pump can be seen");
+  assert.equal(note(endPumped()), "808" + NB + "×" + NB + "10⁻⁹" + NB + "m, 1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m · infrared, invisible");
+  assert.equal(note(endPumped({ pump: 0 })), "808" + NB + "×" + NB + "10⁻⁹" + NB + "m, 1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m · infrared, invisible", "the diodes are there, lit or not");
+  assert.equal(note(ofBench({ medium: "ti-sapphire", pump: "laser", lam: 800e-9 }, { pumpLam: 532e-9 })), "800" + NB + "×" + NB + "10⁻⁹" + NB + "m · infrared, invisible", "a green pump can be seen");
   assert.equal(note(ofBench({ medium: "dye-r6g", pump: "laser", lam: 600e-9 }, { pumpLam: 532e-9 })), null, "all of it visible");
   // A flashlamp's light is white: its pumpLam (the band the rod absorbs) is not drawn.
-  assert.equal(note(ofBench({ medium: "nd-yag", pump: "flashlamp", lam: 1064e-9 }, { pumpLam: 808e-9 })), "1.06" + NB + "µm · infrared, invisible");
+  assert.equal(note(ofBench({ medium: "nd-yag", pump: "flashlamp", lam: 1064e-9 }, { pumpLam: 808e-9 })), "1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m · infrared, invisible");
   // An ultraviolet pump, and an infrared laser: each with its own word.
-  assert.equal(note(endPumped({ pumpLam: 355e-9 })), "355" + NB + "nm · ultraviolet, invisible; 1.06" + NB + "µm · infrared, invisible");
+  assert.equal(note(endPumped({ pumpLam: 355e-9 })), "355" + NB + "×" + NB + "10⁻⁹" + NB + "m · ultraviolet, invisible; 1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m · infrared, invisible");
 });
 
 test("every pump photon and gas atom sits on a ring of the background's colour, drawn over the laser's rays", () => {
