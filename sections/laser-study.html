@@ -57,7 +57,13 @@
     <div class="study__chapters" data-list="chapters">
       <template>
         <article class="study-chapter" data-study-chapter>
-          <h2 class="section-title study-chapter__title"><span class="study-num" data-study-number></span> <span data-text="title"></span></h2>
+          <!-- The chapter's title, and at its right the button that shows
+               this one chapter in Russian and back (js/laser-study.js writes
+               its word: "Русский", or the site's language). -->
+          <div class="study-chapter__head">
+            <h2 class="section-title study-chapter__title"><span class="study-num" data-study-number></span> <span data-text="title"></span></h2>
+            <button type="button" class="btn btn--ghost study-chapter__lang" data-study-russian></button>
+          </div>
           <div class="prose study-chapter__intro" data-rich="intro"></div>
 
           <div class="study-chapter__sections" data-list="sections">

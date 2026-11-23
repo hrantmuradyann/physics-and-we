@@ -97,12 +97,14 @@
   "ui": {
     "_readme": "Short words reused across many pages. Change here = changes everywhere.",
     "learnMore": { "hy": "Իմանալ ավելին", "en": "Learn more" },
-    "moreSimply": { "hy": "Ավելի պարզ", "en": "More simply" },
+    "moreSimply": { "hy": "Ավելի պարզ", "en": "More simply", "ru": "Проще" },
     "hideLinks": { "hy": "Թաքցնել հղումները", "en": "Hide links" },
     "showLinks": { "hy": "Ցույց տալ հղումները", "en": "Show links" },
-    "digDeeper": { "hy": "Խորանալ", "en": "Dig deeper" },
-    "toContents": { "hy": "Բովանդակություն", "en": "Contents" },
-    "pictureToCome": { "hy": "Ապագա նկարը․", "en": "Picture to come:" },
+    "digDeeper": { "hy": "Խորանալ", "en": "Dig deeper", "ru": "Подробнее" },
+    "toContents": { "hy": "Բովանդակություն", "en": "Contents", "ru": "Содержание" },
+    "pictureToCome": { "hy": "Ապագա նկարը․", "en": "Picture to come:", "ru": "Будущий рисунок:" },
+    "readRussian": { "hy": "Русский", "en": "Русский" },
+    "readSiteLanguage": { "hy": "Հայերեն", "en": "English" },
     "loading": { "hy": "Բեռնվում է…", "en": "Loading…" },
     "loadError": {
       "hy": "Բովանդակությունը չհաջողվեց բեռնել։ Թարմացրե՛ք էջը։",
