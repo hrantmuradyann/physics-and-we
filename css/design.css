@@ -90,6 +90,12 @@ body.site {
   text-underline-offset: 0.18em;
 }
 
+/* A link on a bold word (**[diffraction](…)**) keeps the normal weight, so it
+   looks like every other link: bold red reads as a darker red. */
+[data-rich] strong a:not(.laser-lab *) {
+  font-weight: 400;
+}
+
 /* Titles break into lines of even length, not a long line and one word. */
 :is(.hero__title, .page-head__title, .section-title, .cta__title):not(.laser-lab *) {
   text-wrap: balance;

@@ -709,13 +709,11 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
     <div class="container container--laser">
       <a class="lab__back" …>← All labs</a>
       … eyebrow, title, lead …
-      <p class="laser-status">This lab is still being built …</p>
     </div>
   </div>
   <section class="band band--laser">
     <div class="container container--laser">
       <div class="laser-stage">
-        <div class="laser-stage__more"><button class="btn btn--primary" data-laser-action="learn">Dig deeper …</button></div>
         <div class="laser-stage__bench laser-bench">
           <canvas class="laser-bench__canvas" data-laser-canvas="bench" role="img"></canvas>
           <div class="laser-under" data-laser-under hidden>   <!-- right under the drawing -->
@@ -793,10 +791,8 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
 |---|---|---|
 | `.container--laser` | The laser page's own container: up to 1480 px wide (the other labs' is 960 px), because its blocks stand in three columns. | [css/laser.css](css/laser.css) |
 | `.laser-head` | The title block of the laser page. It is a `.page-head` (the same big title as every inner page); this class only spaces the back link above the eyebrow. | [css/laser.css](css/laser.css) |
-| `.laser-status` | The small note under the lead that says the lab is still being built: muted text in a lightly filled box with a thin border and rounded corners. Delete its words in `data/laser.json` and it disappears. | [css/laser.css](css/laser.css) |
 | `.band--laser` | The stripe the bench sits in. Less padding on top than an ordinary `.band`, so the bench is on the first screen. | [css/laser.css](css/laser.css) |
 | `.laser-stage` | The grid of the page's main blocks. Wide screens (1100 px and up): three columns, with the bench over the first two, the controls and the photon picture under it, and the chart with the numbers down the third. From 760 px: two columns (controls beside photons; the chart beside its numbers). Narrower: one column, in the order the blocks are written. | [css/laser.css](css/laser.css) |
-| `.laser-stage__more` | The row with the "dig deeper" button, centred over the bench. | [css/laser.css](css/laser.css) |
 | `.laser-stage__bench`, `__controls`, `__photons`, `__side` | Where each block goes in the grid. `__side` holds the big chart, the mirrors' stability diagram and the panel of numbers. | [css/laser.css](css/laser.css) |
 | `.laser-side__chart`, `__stability`, `__numbers` | The three blocks of the side column. On a wide screen (1100 px and up) they stand one under the other beside the bench: the chart, the stability diagram right under it (to watch while the laser runs), the numbers. From 760 px the chart and the diagram stand on the left with the numbers beside them. | [css/laser.css](css/laser.css) |
 | `.laser-mirror` | One mirror's name and its three shape buttons, on one line (wrapping on a narrow panel). | [css/laser.css](css/laser.css) |
@@ -822,7 +818,8 @@ The page follows a drawing by the site's owner, described in `docs/laser-plan.md
 | `.laser-chapters`, `.laser-chapter`, `.laser-chapter__title` | The list of chapters; one chapter, a rounded panel with a solid colour under it (so the silver lines do not run through the words); its heading. The text inside is a `.prose`. | [css/laser.css](css/laser.css) |
 | `.lab-feature` | The big banner on the Labs page that leads to the laser lab. It is also a `.card .card--link`, so it answers the mouse like the other cards (border, shadow, the arrow moving); it is larger, has a blue-to-violet stripe down its left edge (red now: `--accent`), and sits above the grid of the other labs. It is the one item of the list `featured.items` in `data/labs.json`: deleting that item removes the whole banner. Where it leads is written in the layout. | [css/laser.css](css/laser.css) |
 | `.lab-feature__title` | The banner's heading: larger than a card title (1.5–2.1rem), extra bold. | [css/laser.css](css/laser.css) |
-| `.lab-feature__text` | The banner's sentence: muted, 1.02rem, at most 62 characters wide. | [css/laser.css](css/laser.css) |
+| `.lab-feature__art` | The little red laser drawn on the banner's right (`images/laser-banner.svg`), beside the title; hidden on a phone. | [css/laser.css](css/laser.css) |
+| `.study-links` | The laser book's "Hide links" button, pinned to the screen's bottom right corner. | [css/site.css](css/site.css) |
 
 ---
 

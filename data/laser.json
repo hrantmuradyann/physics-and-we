@@ -7,10 +7,6 @@
     "lead": {
       "hy": "Լազերը կազմված է մի քանի մասից՝ միջավայր, որն ուժեղացնում է լույսը, մղում, որը նրան էներգիա է տալիս, և երկու հայելի, որոնք լույսը հետ ու առաջ են ուղարկում։ Այստեղ դուք կհավաքեք լազերը այդ մասերից և կտեսնեք, թե երբ և ինչու է այն սկսում լույս արձակել։",
       "en": "A laser is made of a few parts: a medium that amplifies light, a pump that gives it energy, and two mirrors that send the light back and forth. Here you will put a laser together from these parts and see when, and why, it starts to shine."
-    },
-    "status": {
-      "hy": "Լաբորատորիան դեռ կառուցվում է։ Սահիչների վերևում ընտրեք ակտիվ միջավայրը և մղումը, իսկ գծագրի տակ բռնկեք լամպը և միացրեք կամ անջատեք բարորակության մոդուլյատորը։ CaF₂:Dy-ն, կիսահաղորդչային լազերը և մյուս մասերը կավելանան հաջորդ քայլերում։",
-      "en": "This lab is still being built. Choose a gain medium and a pump above the sliders; under the drawing, fire the flashlamp and turn the Q-switch on or off. CaF₂:Dy, the semiconductor laser and more parts come next."
     }
   },
 
@@ -278,9 +274,8 @@
   },
 
   "learn": {
-    "_readme": "The way to the study page (route 'laser-study', its words in data/laser-study.json). 'button' is the button above the bench, 'title', 'lead' and 'link' the last section of this page.",
+    "_readme": "The way to the study page (route 'laser-study', its words in data/laser-study.json). 'title', 'lead' and 'link' are the last section of this page (the button above the bench was removed on 2026-11-23, the owner's choice, so the bench and the chart beside it start at the same height).",
     "route": "laser-study",
-    "button": { "hy": "Խորանալ լազերի ֆիզիկայի մեջ", "en": "Dig deeper into the physics of the laser" },
     "title": { "hy": "Ինչպես է աշխատում լազերը", "en": "How a laser works" },
     "lead": {
       "hy": "Լազերի ֆիզիկան՝ պարզից մինչև բանաձևեր, իր առանձին էջում է։",

@@ -612,6 +612,8 @@ test("sections/labs.html: one banner links to the laser page, from a list that c
   const banner = listTemplates(html).filter((t) => t.list === "featured.items");
   assert.equal(banner.length, 1, "the banner is the template of data-list=\"featured.items\"");
   assert.match(banner[0].html, /data-goto="laser"/);
+  // The owner's choice (2026-11-23): the banner says only "Laser", then its button.
+  assert.deepEqual(attributeValues(banner[0].html, "data-text"), ["title"], "the banner's only words are its title");
   assert.equal(outsideTemplates(html).includes('data-goto="laser"'), false, "no banner outside the list");
 });
 
@@ -639,8 +641,7 @@ test("sections/labs.html: every word the page and its lists ask for is in data/l
 
 /* ---------- the lab's "Learn more" links (stage 12c) ---------- */
 
-// Skipped on the "laser" branch: the study materials are hidden there until they are ready.
-test.skip("sections/laser.html: every 'Learn more' opens the laser book at a section that exists", () => {
+test("sections/laser.html: every 'Learn more' opens the laser book at a section that exists", () => {
   const html = read("sections/laser.html").replace(/<!--[\s\S]*?-->/g, "");
   const more = readJSON("data/laser.json").more;
   const book = readJSON("data/laser-study.json");

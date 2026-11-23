@@ -39,10 +39,9 @@ const BENCHES = [
 // The medium dropdown's groups (the owner's choice, stage 12c): what the
 // medium is, then the year it first lased.
 const GROUPS = [
-  ["solid", ["ruby", "nd-glass", "caf2-dy", "nd-yag", "ti-sapphire"]],
+  ["solid", ["ruby", "nd-glass", "nd-yag", "ti-sapphire"]],
   ["gas", ["he-ne", "ar-ion", "co2"]],
-  ["liquid", ["dye-r6g"]],
-  ["semiconductor", ["diode"]]
+  ["liquid", ["dye-r6g"]]
 ];
 
 // The numbers each kind of bench shows, in the layout's order.
@@ -80,13 +79,14 @@ test("the words of the dropdowns, the pump sliders, Fire and the new readouts ar
 
 /* ---------- the dropdowns ---------- */
 
-test("the medium dropdown: the media in their groups, named in the visitor's language; those not built yet are 'coming later'; no two-level atom", () => {
+test("the medium dropdown: the media in their groups, named in the visitor's language; only those the bench runs: no two-level atom, no CaF₂:Dy or diode laser (13f dropped)", () => {
   for (const lang of ["hy", "en"]) {
     const page = built(lang, { reducedMotion: true });
     const B = engine(page.browser).bench;
     const ids = Array.from(engine(page.browser).media.list());
-    // Every medium of the engine is in a group, except the two-level atom.
-    assert.deepEqual(GROUPS.flatMap(([, media]) => media).sort(), ids.filter((id) => id !== "two-level").sort());
+    // Every medium of the engine is in a group, except the two-level atom
+    // and the two the bench cannot run (owner, 2026-11-21: no "coming later").
+    assert.deepEqual(GROUPS.flatMap(([, media]) => media).sort(), ids.filter((id) => !["two-level", "caf2-dy", "diode"].includes(id)).sort());
     assert.deepEqual(groupsOf(page.section.choose.medium),
       GROUPS.map(([group, media]) => ({ label: WORDS.choose.groups[group][lang], values: media })), lang);
     const expected = GROUPS.flatMap(([, media]) => media).map((id) => {
@@ -98,7 +98,7 @@ test("the medium dropdown: the media in their groups, named in the visitor's lan
       };
     });
     assert.deepEqual(optionsOf(page.section.choose.medium), expected, lang);
-    assert.deepEqual(expected.filter((option) => option.disabled).map((option) => option.value), ["caf2-dy", "diode"]);
+    assert.deepEqual(expected.filter((option) => option.disabled).map((option) => option.value), [], "nothing greyed out");
     assert.equal(page.section.choose.medium.value, "nd-yag", "the default bench");
   }
 });

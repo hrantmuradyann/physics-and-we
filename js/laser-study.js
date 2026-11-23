@@ -3,10 +3,11 @@
 
    The words are data/laser-study.json, the layout sections/laser-study.html,
    both filled in by js/content.js like every page. This file only does the
-   three things the binder cannot:
+   four things the binder cannot:
 
-   1. A section with no "dig deeper" text loses its empty <details> (the
-      binder removes the missing text, not the box around it), and its
+   1. A section with no "more simply" or "dig deeper" text loses that empty
+      <details> (the binder removes the missing text, not the box around
+      it), and its
       picture box shows either the picture or, until there is one, what the
       picture should show.
    2. The formulas. In the JSON a formula is written in LaTeX between dollar
@@ -31,6 +32,13 @@
       Opened with an id (?view=laser-study&id=section-ruby, the lab's
       "Learn more" links), it goes to that section, and again once the
       formulas, which make the text taller, are typeset.
+
+   4. The "Hide links" button, pinned to the corner of the screen. It makes
+      the links in the text ([data-rich] a) look and act like plain words
+      (data-study-plain="true" on the page; css/site.css), and takes them
+      out of the keyboard's way; the contents keep their links. Pressed
+      again, it brings them back. The choice outlives a language switch and
+      is kept for the next visit (localStorage, if the browser allows it).
 
    Adds one global, LaserStudy, with pieces() for the tests.
    ========================================================================= */
@@ -161,7 +169,7 @@
     document.head.appendChild(script);
   }
 
-  /* ---------- Empty dig-deeper boxes, and the pictures ---------- */
+  /* ---------- Empty "more simply" and dig-deeper boxes, and the pictures ---------- */
 
   function first(element, selector) {
     return element.querySelectorAll(selector)[0] || null;
@@ -171,9 +179,12 @@
     if (element && element.parentNode) element.parentNode.removeChild(element);
   }
 
+  // The "more simply" box and the dig-deeper box, each without its text.
   function dropEmptyDeeper(container) {
-    Array.prototype.forEach.call(container.querySelectorAll("[data-study-deeper]"), function (box) {
-      if (box.querySelectorAll("[data-rich]").length === 0) remove(box);
+    ["[data-study-simpler]", "[data-study-deeper]"].forEach(function (selector) {
+      Array.prototype.forEach.call(container.querySelectorAll(selector), function (box) {
+        if (box.querySelectorAll("[data-rich]").length === 0) remove(box);
+      });
     });
   }
 
@@ -185,6 +196,8 @@
       var todo = first(figure, "[data-study-todo]");
       if (image && image.getAttribute("src")) {
         remove(todo);
+        // Its section puts the picture to the right of the text (css/site.css).
+        if (figure.parentNode) figure.parentNode.setAttribute("data-study-pictured", "");
         return;
       }
       remove(image);
@@ -251,6 +264,19 @@
     Array.prototype.forEach.call(container.querySelectorAll("[data-study-top]"), function (link) {
       link.setAttribute("href", "#contents");
     });
+    // A link in the text to a chapter or section ([the ruby laser](#section-ruby))
+    // opens it in a new tab, as every link in the site's text does (content.js),
+    // so it gets the whole address: ?view=laser-study&id=section-ruby, which
+    // the router opens and this file scrolls to (view:shown). The contents and
+    // the "Contents ↑" links stay in the tab and scroll (followLink).
+    each(container, "[data-rich]", function (rich) {
+      linksIn(rich, []).forEach(function (link) {
+        var href = link.getAttribute("href") || "";
+        if (!targets[href]) return;
+        link.setAttribute("href", "?view=" + ROUTE + "&id=" + href.slice(1));
+        link.setAttribute("target", "_blank");
+      });
+    });
   }
 
   // The link a click landed in (the click may land on a word inside it).
@@ -290,6 +316,85 @@
     if (target) target.scrollIntoView({ behavior: "auto", block: "start" });
   }
 
+  /* ---------- Hiding the text's links ---------- */
+
+  var STORE_KEY = "study-links-hidden";
+  var plain = null;           // the text's links hidden; null until read from the storage
+
+  function storage() {
+    try {
+      return global.localStorage || null;
+    } catch (err) {
+      return null;              // storage blocked (private browsing, some settings)
+    }
+  }
+
+  function readPlain() {
+    var store = storage();
+    try {
+      return !!store && store.getItem(STORE_KEY) === "true";
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function keepPlain() {
+    var store = storage();
+    try {
+      if (store) store.setItem(STORE_KEY, plain ? "true" : "false");
+    } catch (err) {
+      // Not kept for the next visit; the button still works now.
+    }
+  }
+
+  // Every <a> inside the node, at any depth.
+  function linksIn(node, out) {
+    (node.childNodes || []).forEach(function (child) {
+      if (child.nodeType !== 1) return;
+      if (child.tagName === "A") out.push(child);
+      linksIn(child, out);
+    });
+    return out;
+  }
+
+  function each(container, selector, fn) {
+    Array.prototype.forEach.call(container.querySelectorAll(selector), fn);
+  }
+
+  // Shows the choice on one build: the page's mark for the CSS, the links'
+  // place in the keyboard's order, and the button's word.
+  function showPlain(container) {
+    container.setAttribute("data-study-plain", plain ? "true" : "false");
+    each(container, "[data-rich]", function (rich) {
+      linksIn(rich, []).forEach(function (link) {
+        link.setAttribute("tabindex", plain ? "-1" : "0");
+      });
+    });
+    each(container, "[data-study-links]", function (button) {
+      button.setAttribute("aria-pressed", plain ? "true" : "false");
+    });
+    each(container, "[data-study-links-hide]", function (word) { word.hidden = plain; });
+    each(container, "[data-study-links-show]", function (word) { word.hidden = !plain; });
+  }
+
+  function buttonOf(node) {
+    while (node) {
+      if (node.nodeType === 1 && node.getAttribute("data-study-links") !== null) return node;
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  // True if the click was on the newest build's button.
+  function toggleLinks(event) {
+    var button = buttonOf(event.target);
+    if (!button || !inBook(button)) return false;
+    plain = !plain;
+    keepPlain();
+    showPlain(latest);
+    return true;
+  }
+
   /* ---------- Hooks ---------- */
 
   global.addEventListener("section:ready", function (event) {
@@ -299,6 +404,8 @@
     dropEmptyDeeper(latest);
     settleFigures(latest);
     numberBook(latest, event.detail.data);
+    if (plain === null) plain = readPlain();
+    showPlain(latest);
     typeset(latest);                   // does nothing until KaTeX is here
   });
 
@@ -323,7 +430,11 @@
     loadKatex();
   });
 
-  global.document.addEventListener("click", followLink);
+  // One listener for every click in the book: the "Hide links" button, or a link.
+  global.document.addEventListener("click", function (event) {
+    if (toggleLinks(event)) return;
+    followLink(event);
+  });
 
   global.LaserStudy = { pieces: pieces };
 })(this);
