@@ -7,7 +7,6 @@
    THE BLOCKS
      .container--laser  the page's own, wider container
      .laser-head      the title block of the laser page (also a .page-head)
-     .laser-status    the small "still being built" note under the lead
      .band--laser     the stripe the bench sits in
      .laser-stage     the grid of the page's main blocks:
                         __more      the button that leads to the theory
@@ -62,19 +61,6 @@
 /* "← All labs" above the eyebrow (.lab__back is in css/labs.css). */
 .laser-head .lab__back {
   margin-bottom: 1.4rem;
-}
-
-.laser-status {
-  display: inline-block;
-  margin-top: 0.4rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--line);
-  /* Not a round pill: in Armenian, and on a phone, it wraps to several lines. */
-  border-radius: var(--radius-sm);
-  background: var(--faint-bg);
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.5;
 }
 
 /* ============================================================================
@@ -322,11 +308,6 @@
   align-items: start;
 }
 
-.laser-stage__more {
-  display: flex;
-  justify-content: center;
-}
-
 /* The cartoon inside the medium, and the atom's levels under it. */
 .laser-stage__photons {
   display: grid;
@@ -346,13 +327,11 @@
   .laser-stage {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
     grid-template-areas:
-      "more     more"
       "bench    bench"
       "controls photons"
       "side     side";
   }
 
-  .laser-stage__more { grid-area: more; }
   .laser-stage__bench { grid-area: bench; }
   .laser-stage__controls { grid-area: controls; }
   .laser-stage__photons { grid-area: photons; }
@@ -375,7 +354,6 @@
   .laser-stage {
     grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr) minmax(0, 1.2fr);
     grid-template-areas:
-      "more     more    side"
       "bench    bench   side"
       "controls photons side";
   }
@@ -862,6 +840,24 @@
   background: linear-gradient(180deg, var(--accent), var(--accent-2));
 }
 
+/* The little red laser on the banner's right (images/laser-banner.svg),
+   beside the title; it goes on a phone, where there is no room. */
+.lab-feature__art {
+  position: absolute;
+  right: 1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 9rem;
+  height: auto;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .lab-feature__art {
+    display: none;
+  }
+}
+
 .lab-feature__title {
   font-size: clamp(1.5rem, 3vw, 2.1rem);
   font-weight: 800;
@@ -869,13 +865,6 @@
   line-height: 1.15;
   letter-spacing: -0.01em;
   margin: 0.6rem 0 0.8rem;
-}
-
-.lab-feature__text {
-  color: var(--muted);
-  font-size: 1.02rem;
-  line-height: 1.7;
-  max-width: 62ch;
 }
 
 /* ============================================================================

@@ -1453,12 +1453,51 @@ body.site footer {
   margin: 1.6rem 0 0;
 }
 
+/* A section with its picture: the text on the left, the picture on the
+   right at the text's top; the heading and the two buttons span both.
+   On a phone the picture stays under the text. (A section still waiting
+   for its picture keeps the box that says what it will show under the
+   text: laser-study.js marks only a section whose picture is here.) */
+@media (min-width: 720px) {
+  .study-section[data-study-pictured] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 15rem);
+    column-gap: 1.8rem;
+    align-items: start;
+  }
+
+  .study-section[data-study-pictured] > * {
+    grid-column: 1 / -1;
+  }
+
+  .study-section[data-study-pictured] > .prose {
+    grid-column: 1;
+  }
+
+  .study-section[data-study-pictured] > .study-figure {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 1.2rem;
+  }
+}
+
 .study-figure__image {
   display: block;
   max-width: 100%;
   height: auto;
   margin: 0 auto;
   border-radius: 12px;
+}
+
+/* The further pictures of one figure, stacked under the first. */
+.study-figure__more {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.study-figure__more[data-empty] {
+  display: none;
 }
 
 .study-figure__caption {
@@ -1481,8 +1520,26 @@ body.site footer {
   font-size: 0.95rem;
 }
 
-.study-deeper {
+/* The "More simply" and "Dig deeper" buttons stand in one row; the box that
+   is open takes the whole width, so its text is as wide as the section's.
+   Opening "More simply" puts "Dig deeper" under its text: the next step. */
+.study-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.8rem;
   margin-top: 1.8rem;
+}
+
+.study-deeper[open] {
+  flex-basis: 100%;
+}
+
+/* In a flex row a box is at least as wide as its widest formula, which
+   widened the whole page on a phone; min-width 0 lets the formula scroll
+   sideways inside the box again, as it did before the row. */
+.study-more > .study-deeper {
+  min-width: 0;
 }
 
 .study-deeper > summary {
@@ -1508,6 +1565,36 @@ body.site footer {
   border-left: 3px solid var(--accent-soft);
   background: var(--card-bg);
   border-radius: 0 14px 14px 0;
+}
+
+/* The simple retelling is edged in navy, the maths in red: two kinds of box. */
+.study-deeper--simpler .study-deeper__body {
+  border-left-color: var(--heading);
+}
+
+/* "Hide links": pinned to the screen's bottom right corner while the book
+   scrolls (it is in the book's view, so it goes when another page shows). */
+.study-links {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  background-color: var(--bg);
+}
+
+/* The text's links hidden: plain words, in the text's colour and weight,
+   that do nothing when clicked. */
+#view-laser-study[data-study-plain="true"] [data-rich] a {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  pointer-events: none;
+  cursor: auto;
+}
+
+/* It has no heading, so its text starts at the top of the box. */
+.study-deeper__body > .prose:first-child {
+  margin-top: 0;
 }
 
 .study-deeper__title {

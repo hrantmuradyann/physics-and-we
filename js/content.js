@@ -141,7 +141,11 @@
             // do, so the reader keeps this page (the laser book's Wikipedia
             // links). rel: the other site gets no hold on this tab.
             var outside = /^(https?:|\/\/)/i.test(href) ? ' target="_blank" rel="noopener noreferrer"' : "";
-            return '<a href="' + href + '" class="link"' + outside + ">" + label + "</a>";
+            // A link inside the site opens in a new tab too (the owner's
+            // choice, 2026-11-23: every link in the text does), except a mail
+            // link, which opens the mail program, not a page.
+            var inside = !outside && !/^mailto:/i.test(href) ? ' target="_blank"' : "";
+            return '<a href="' + href + '" class="link"' + outside + inside + ">" + label + "</a>";
           })
           .replace(/\n/g, "<br>");
         return "<p>" + html + "</p>";

@@ -35,7 +35,7 @@
     <h2 class="section-title reveal" data-text="simulations.title"></h2>
     <p class="lead lab-intro reveal" data-text="simulations.lead"></p>
 
-    <!-- The big lab: a banner to the laser page (?view=laser, built by
+    <!-- The laser: a banner to the laser page (?view=laser, built by
          js/laser/page.js). Where it leads is written here (data-goto);
          only its words come from the JSON ("featured" → "items"). It is a
          list of one, so deleting that item removes the whole banner
@@ -43,9 +43,8 @@
     <div data-list="featured.items">
       <template>
         <a class="card card--link lab-feature reveal" href="?view=laser" data-goto="laser">
-          <p class="eyebrow" data-text="eyebrow"></p>
           <h3 class="lab-feature__title" data-text="title"></h3>
-          <p class="lab-feature__text" data-text="text"></p>
+          <img class="lab-feature__art" src="images/laser-banner.svg" alt="" aria-hidden="true">
           <span class="card__arrow">
             <span data-ui="openLab"></span>
           </span>
