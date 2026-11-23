@@ -1,6 +1,6 @@
 ---
 name: "unslop-science"
-description: "Unslop physics and math writing: papers, abstracts, derivations, LaTeX source, popular-science explainers. Keeps math, numbers and citations exact; audits, then rewrites in full."
+description: "Unslop physics and math writing: papers, abstracts, derivations, LaTeX source, popular-science explainers and textbook pages. Keeps math, numbers and citations exact; checks facts against sources, adds verified Wikipedia links per language, translates parallel texts; audits, then rewrites in full."
 ---
 
 # Unslop (science)
@@ -17,11 +17,13 @@ This is an editing tool, not a way to beat AI detectors. Never add errors or qui
 - **"audit only":** the audit and nothing else.
 - **"minimal":** rewrite only sentences that contain tells; keep the rest word for word.
 - **"write clean":** when drafting new text, follow these rules while writing. No audit.
+- **"links":** add Wikipedia links to a text for learners (Step 6b). Can be combined with any mode.
+- **"translate":** make or check a version in another language of a text that is already clean (Step 6c).
 
 ## Step 1: Identify the genre
 
 - **A. Research writing:** paper, abstract, thesis chapter, report, derivation, solution writeup, LaTeX source.
-- **B. Popular science:** explainers, website text, talks and articles for non-specialists.
+- **B. Popular science:** explainers, website text, talks and articles for non-specialists, textbook and course pages for students.
 
 Apply the shared rules, then the section for the genre. A text can mix both (a paper's introduction vs. a project website); judge each part.
 
@@ -93,7 +95,17 @@ These are normal scientific conventions, **not** slop: "we" (author-we and reade
 24. **Wonder closers.** "The next time you see a rainbow, remember…", "The universe still holds many secrets", "The possibilities are endless."
 25. **Sloppy physics.** Mixing up energy and power, heat and temperature, wavelength and frequency, mass and weight; "light speeds up", "energy is created". Fix each error and list it in the audit as a physics correction. If you're not sure it's an error, flag it instead.
 
+26. **Aphorisms and quotable lines.** A sentence built to be remembered instead of to inform: "A lamp's light is a crowd; a laser's light is a column.", "Light makes light.", "The mirrors do the rest." Readers spot these at once as AI. Replace with the mechanism in a plain sentence, or cut.
+27. **Paired metaphors and mirrored sentences.** Two clauses or two sentences built the same way to contrast ("The lamp scatters; the laser aims.", "One photon goes in; two come out."). One such pair in a page can stay if it states a fact; a pattern of them goes.
+28. **"That is why" chains.** "That is why…", "This is why…", "That's what makes…", "And that is exactly…" opening sentence after sentence, each restating the last. Say the cause once, in the sentence that gives it.
+29. **Scare quotes and coined names.** Ordinary words in quotation marks ("the 'magic' of inversion", a "light factory") or catchy names the field doesn't use. Use the standard term and define it.
+30. **Closing one-liners.** A paragraph or section ending on a short punchy summary that repeats the paragraph ("Simple, but powerful.", "That is the whole secret."). Cut it; the paragraph should end on its last fact.
+
+Model the register on how **Wikipedia, a good textbook and a good forum answer** explain the same thing: define the term, state the mechanism (what causes what), give the numbers with units, give one example, stop. When in doubt, read the topic's Wikipedia article and match its plainness (not its wording).
+
 Popular science should keep: concrete numbers (a ruby laser emits at 694.3 nm), cause and effect, one worked example, and direct "you" address.
+
+**A "more simply" version** (a retelling for a reader with no background, when the text has one): everyday words, no formulas, no symbols, no links; shorter than the full text; the same facts, not new ones; this is the one place where a single analogy may carry the idea. It must still be physically right: test the analogy against the mechanism and drop it if it teaches something false.
 
 ## Step 4: Diagnose
 
@@ -113,6 +125,13 @@ When the rewrite needs a fact the text doesn't have, find it and write it in:
 2. **Public facts: search.** Physical constants, material properties, wavelengths, historical dates, established results. Prefer NIST/CODATA, original papers, review articles and standard textbooks, and open the page to confirm.
 3. **Only the author knows it:** unpublished results, their interpretation, their motivation. Don't guess. Cut or soften the sentence and list it under "Needs your input".
 
+**Check against more than one source.** For every fact you add or change, and for every number you are not sure of, find two independent sources (a standard reference and an original paper, or two textbooks) and open them. Then:
+- they agree: write the value;
+- they disagree a little: write the commonly quoted value, or a range ("10–50 ms, depending on the concentration");
+- they disagree a lot (Nd:YAG's lower-level lifetime is reported from 115 ps to 11 ns): write an order of magnitude with "~" and say in the text or the notes that the measurements scatter. Never pick one value and present it as exact;
+- you had to estimate (a level's energy taken midway between two measured peaks): say "about" in the text and mark it as an estimate where the author will see it (a code comment, the notes, "Needs your input").
+Keep the derived numbers consistent: if the text gives a photon energy, it must equal hc/λ of the wavelength it gives; a sum must add up.
+
 Citations you add must be verified to exist: find the paper's page or a resolving DOI. In LaTeX with BibTeX, insert `\cite{key}` in the text and give the BibTeX entry under "Added facts" for the author to paste into their `.bib`. Never cite from memory, never invent data. Every added fact goes in "Added facts" with its link. With no search tool available, skip 2 and flag instead.
 
 ## Step 6: Rewrite
@@ -127,6 +146,29 @@ Citations you add must be verified to exist: find the paper's page or a resolvin
 
 Don't overcorrect. Don't strip legitimate hedges, don't turn every passive into active, don't make every sentence short.
 
+## Step 6b: Wikipedia links (texts for learners)
+
+When the user asks for links, or the text is a course or textbook page that already uses them:
+
+- Link the **first mention in a chapter** (or article) of a person, place, material, device or technical term a reader may not know. Once per chapter; not every repeat, and not common words.
+- **Check every link opens** and lands on an article about the same thing (not a disambiguation page, not a redirect to something broader). Fix or drop the ones that fail.
+- **Per language.** Each language version links to its own Wikipedia (hy.wikipedia.org for Armenian, ru.wikipedia.org for Russian) where that article exists, else to the English one. Find the article through the English page's interlanguage links (the MediaWiki API: `action=query&prop=langlinks&titles=<Title>&lllang=ru`), never by guessing the title, and then check the target is the same concept: an interlanguage link can point to a narrower or different article (en "Optical amplifier" → ru "EDFA"); in that case keep the English link.
+- The same number of links in each language for the same passage, in the same places.
+- No bare addresses in the text; the link words are ordinary words, without digits. In Markdown-style links write `(` and `)` in an address as `%28` and `%29`, since a `)` ends the link.
+- Only Wikipedia (and Wikimedia Commons for pictures) unless the user names other sites.
+
+## Step 6c: Translating and other languages
+
+The audit and the tells above are written for English. For a text in another language, say so, apply the same tells where they carry over (staged contrasts, aphorisms, hype, vague magnitudes are the same in every language), and ask before rewriting a language the user did not mention. If the user says not to touch a language, don't, not even a typo; report what you would change instead.
+
+When making or checking a version in another language of a text:
+- **Keep the parallel exact:** the same formulas character for character, in the same order; the same numbers and units; the same internal links and their targets; the same bold phrases; the same paragraphs. Only the words between them change. A decimal comma is fine in the prose of languages that use it, never inside a formula.
+- **Terms:** check each technical term in at least two sources in the target language (the target-language Wikipedia article's title and a textbook or glossary). Use the established term, not a word-for-word calque.
+- **Names:** spell people and places as the target-language Wikipedia does (Майман, not Мейман; Пёрселл, not Парселл).
+- **Write the "more simply" version fresh** in natural target-language words rather than translating it word for word.
+- Translate the meaning, keep the register: if the source was rewritten to avoid tells, the translation must not bring them back.
+- Run the check script of Step 7 between the two language versions: math and references must match exactly; only prose numbers may differ (decimal commas, numbers written as words).
+
 ## Step 7: Self-audit
 
 - Re-scan the rewrite against the strong tells. Fix anything left over or newly introduced.
@@ -134,6 +176,8 @@ Don't overcorrect. Don't strip legitimate hedges, don't turn every passive into 
 - Every number, symbol, equation and citation in the original is still there, unchanged. If you can run code, check it with the script below. Otherwise compare by eye.
 - No new claims except those listed under "Added facts".
 - Physics check: every sentence you touched is still correct.
+- Links: every one you added opens and is about the right thing; each language version has the same count.
+- No sentence written to be quoted: re-read the last line of each paragraph.
 
 ```python
 # usage: python3 check.py original.tex rewrite.tex
@@ -174,11 +218,14 @@ New items the check reports are fine only if they are listed under "Added facts"
 
 **Needs your input**
 - <what is missing, and where>
+
+**Sources disagree / estimates**
+- <value>: <the spread found, and what was written>
 ```
 
 Leave out empty sections. For a `.tex` or other file, edit a copy in the same format and put the audit and lists in the reply.
 
-For a full paper, work section by section (abstract and introduction carry the most slop; methods the least), but still deliver the whole rewrite. The skill is for English; for text in another language, say so and ask before editing.
+For a full paper, work section by section (abstract and introduction carry the most slop; methods the least), but still deliver the whole rewrite. For text in another language, follow Step 6c.
 
 ## Examples
 
@@ -197,3 +244,21 @@ Needs your input: "showcasing the pivotal role of topology" was cut. To make tha
 > A laser makes light by stimulated emission. Energy pumped into the gain medium puts more atoms in an excited state than in the lower state. A passing photon can then make an excited atom emit a second photon with the same wavelength, direction and phase. Mirrors at both ends send the light back and forth through the medium so this repeats, and the beam that leaks out through the partly transparent mirror is narrow and nearly a single wavelength. The first laser, built by Theodore Maiman in 1960, used a ruby crystal and emitted red light at 694.3 nm.
 
 Added facts: Maiman, 1960, ruby, 694.3 nm, each with its source link.
+
+**Before (textbook page)**
+> A lamp's light is a crowd; a laser's light is a column. That is why a laser can cut steel. The trick? Stimulated emission: light makes light. And that is exactly what the mirrors are for.
+
+**After**
+> A lamp's atoms emit independently, in all directions and at many wavelengths. In a laser, most of the light comes from stimulated emission: a photon passing an excited atom makes it emit a copy with the same wavelength, direction and phase. The mirrors send the light back through the medium many times, so the copies build up into a narrow beam. Focused to a spot about 0.1 mm wide, a few kilowatts of such a beam melt steel.
+
+Needs your input: "a few kilowatts" and "0.1 mm" are typical of industrial cutting lasers; check they match the lasers the page discusses.
+## This project: the laser book (Physics and We)
+
+The Theory page's laser book is `data/laser-study.json`; its rules are checked by `tests/laser/study.test.js` (run `node --test` after any change) and described in its `_readme` and in `CLAUDE.md`. On top of the steps above:
+
+- **Languages:** `en`, `hy` and `ru` for every chapter's words. The owner's rewrites so far were English only; don't change the Armenian unless asked. All three keep the same formulas, `#chapter-…`/`#section-…` links, bold and paragraphs.
+- **Formulas:** every formula, symbol and number with a unit is LaTeX, `$…$` or `$$…$$`, never a bare sign in the prose (×, =, Greek letters). Units have no prefixes: a power of ten times the SI unit, the number and unit in braces, `{694.3\times10^{-9}\ \text{m}}` (the owner's choice, 2026-11-23).
+- **Wikipedia links:** first mention in a chapter, en → en.wikipedia.org, hy → hy.wikipedia.org where it exists, ru → ru.wikipedia.org where it exists, else the English one; only these hosts and commons.wikimedia.org; the same count per paragraph in each language.
+- **"More simply"** (`simpler.text`): every section has one; no `$`, no link, shorter than `text`.
+- **The owner's taste:** they called the earlier English "AI-sounding" for exactly the tells 26–30 (the crowd/column line, "That is why" chains, closing one-liners). Write like Wikipedia or a textbook: mechanism, numbers, one example.
+- Physics numbers should agree with the laser lab's engine (`js/laser/engine/media.js`) and `docs/laser-physics.md`; if they differ, say which and why.
