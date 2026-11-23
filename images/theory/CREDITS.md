@@ -24,5 +24,14 @@ for it. Public-domain pictures need no credit; they are listed for the record.
 | 7.1.png | [Schematic diagram of the human eye en-edit.png](https://commons.wikimedia.org/wiki/File:Schematic_diagram_of_the_human_eye_en-edit.png) | Rhcastilhos, Soerfm | CC BY-SA 3.0 |
 | 7.3.jpg | [Young scientist and their tutor wearing laser safety goggles.JPG](https://commons.wikimedia.org/wiki/File:Young_scientist_and_their_tutor_wearing_laser_safety_goggles.JPG) | Thctamm | CC BY-SA 3.0 |
 
-The pictures 1.1–2.4, 3.1–3.4, 4.1, 5.2, 6.1–6.3 and 7.2-1 to 7.2-5 were added by the site's owner; check their rights
+The pictures 1.1–2.4, 3.1–3.3, 4.1, 5.2, 6.1–6.3 and 7.2-1 to 7.2-5 were added by the site's owner; check their rights
 before the site goes public.
+
+3.4.gif (ruby's three levels) and 3.4-2.gif (neodymium's four) are the laser
+lab's own "inside one atom" picture (js/laser/ui/draw-atoms.js), drawn without
+its words, so they need no credit. They were made in a browser on the lab's
+page: a 360 × 300 view at twice the scale, fillText switched off, the colours
+of the lab with a white background, the atoms run 4 s and then 8 s recorded
+at 15 frames a second, cropped to the levels, and joined with ffmpeg
+(palettegen, 64 colours, no dither). Make them again the same way if the
+drawing changes.
