@@ -116,7 +116,7 @@
     while (decimals < MAX_DECIMALS && clean(step / scale * powerOfTen(decimals)) < 1) decimals += 1;
     var texts = [];
     for (var j = 0; j < values.length; j++) texts.push(written(values[j], scale, decimals));
-    return { texts: texts, unit: prefix.symbol + unit, power: prefix.power, decimals: decimals };
+    return { texts: texts, unit: UI.format.unit(prefix.power, unit), power: prefix.power, decimals: decimals };
   }
 
   function valueText(value, axisLabels, extra) {

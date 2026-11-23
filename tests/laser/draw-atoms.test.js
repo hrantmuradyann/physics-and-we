@@ -218,14 +218,14 @@ test("draw: each level's name and role, the scheme in the title, the wavelengths
   A.draw(view, busy("nd-yag", 1), WORDS, { name: "Nd:YAG", medium: "nd-yag", lam: 1064e-9, pumpLam: 808e-9, pumpKind: "diode", light: 1, pump: 1 });
   const words = texts(recorder);
   for (const expected of ["Inside one atom", "Nd:YAG · four levels", "⁴I₉/₂", "⁴I₁₁/₂", "⁴F₃/₂", "⁴F₅/₂",
-    "ground level", "lower laser level", "upper laser level", "pump band", "heat", "1.06" + NB + "µm", "pump 808" + NB + "nm", "note four"]) {
+    "ground level", "lower laser level", "upper laser level", "pump band", "heat", "1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m", "pump 808" + NB + "×" + NB + "10⁻⁹" + NB + "m", "note four"]) {
     assert.ok(words.includes(expected), expected + " in " + JSON.stringify(words));
   }
   // Ruby: three levels, its note; a flashlamp's pump has no wavelength.
   const ruby = makeView(UI, A.SIZE, 800);
   A.draw(ruby.view, busy("ruby", 1), WORDS, { name: "Ruby", medium: "ruby", lam: 694.3e-9, pumpKind: "flashlamp", light: 1, pump: 1 });
   const rubyWords = texts(ruby.recorder);
-  for (const expected of ["Ruby · three levels", "²E", "⁴A₂", "694" + NB + "nm", "pump", "note three"]) {
+  for (const expected of ["Ruby · three levels", "²E", "⁴A₂", "694" + NB + "×" + NB + "10⁻⁹" + NB + "m", "pump", "note three"]) {
     assert.ok(rubyWords.includes(expected), expected + " in " + JSON.stringify(rubyWords));
   }
   assert.ok(!rubyWords.includes("lower laser level"));
@@ -233,7 +233,7 @@ test("draw: each level's name and role, the scheme in the title, the wavelengths
   const co2 = makeView(UI, A.SIZE, 800);
   A.draw(co2.view, busy("co2", 1), WORDS, { name: "CO₂", medium: "co2", lam: 10.6e-6, pumpKind: "discharge", light: 1, pump: 1 });
   const co2Words = texts(co2.recorder);
-  for (const expected of ["N₂ v = 1", "collision", "electrons", "10.6" + NB + "µm"]) {
+  for (const expected of ["N₂ v = 1", "collision", "electrons", "10.6" + NB + "×" + NB + "10⁻⁶" + NB + "m"]) {
     assert.ok(co2Words.includes(expected), expected + " in " + JSON.stringify(co2Words));
   }
 });

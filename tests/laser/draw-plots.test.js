@@ -171,29 +171,29 @@ test("the grid: a line and a label at every tick of both axes, the unit written 
     });
     assert.ok(labelled >= 3, "most time ticks are labelled: " + labelled);
     assert.deepEqual(Array.from(S.timeLabels.texts), ["2.0", "2.1", "2.2", "2.3", "2.4", "2.5"]);
-    assert.equal(texts(recorder).filter((c) => c.args[0] === "ms").length, 1, "the time unit once");
+    assert.equal(texts(recorder).filter((c) => c.args[0] === "10⁻³\u00a0s").length, 1, "the time unit once");
     if (chart.unit) assert.equal(texts(recorder).filter((c) => c.args[0] === "W").length, 1, "the value unit once");
     assert.ok(texts(recorder).some((c) => c.args[0] === chart.title));
   }
 });
 
-test("a small power is written with its prefix: the ticks in milliwatts under 'mW', the tag too", () => {
+test("a small power is written with its power of ten: the ticks in milliwatts under '10⁻³ W', the tag too", () => {
   const chart = powerChart({
     points: [{ t: 2.2e-3, P: 0.0031, y: 1 }, { t: 2.5e-3, P: 0.00512, y: 1 }], floor: 0.0074, lines: []
   });
   const { recorder } = drawChart(chart);
   const written = texts(recorder).map((c) => c.args[0]);
-  assert.ok(written.includes("mW"), "the unit with its prefix");
+  assert.ok(written.includes("10⁻³\u00a0W"), "the unit with its power of ten");
   assert.ok(!written.includes("W"));
   for (const label of ["0", "2", "4", "6", "8"]) assert.ok(written.includes(label), "tick " + label);
-  assert.ok(written.includes("5.12"), "the tag in mW, two decimals finer than the ticks");
+  assert.ok(written.includes("5.12"), "the tag in 10⁻³ W, two decimals finer than the ticks");
 });
 
 test("a time label at the very edge of the plot is left out, not cut off", () => {
   const chart = powerChart();
   const { recorder, view } = drawChart(chart);
   const { L, P } = geometry(chart, view);
-  for (const call of texts(recorder).filter((c) => Math.abs(c.args[2] - L.timeY) < 1e-9 && c.args[0] !== "ms")) {
+  for (const call of texts(recorder).filter((c) => Math.abs(c.args[2] - L.timeY) < 1e-9 && c.args[0] !== "10⁻³\u00a0s")) {
     assert.ok(call.args[1] >= P.left + 1.6 * L.fontSize - 1e-9 && call.args[1] <= P.right - 1.2 * L.fontSize + 1e-9,
       "label " + call.args[0] + " at " + call.args[1]);
   }

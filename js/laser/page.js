@@ -1142,13 +1142,13 @@
       return "W";
     }
     // What a number box shows: the value times `factor`, in `unit`. A
-    // current that never reaches 1 A is shown in mA.
+    // current that never reaches 1 A is shown in 10⁻³ A.
     function shownOf(name) {
       if (name === "coupler") return { unit: "%", factor: 100 };
       if (name === "slowMotion") return { unit: "×", factor: 1 };
       if (name === "absorberT0") return { unit: "%", factor: 100 };
       if (name === "Rc1" || name === "Rc2") return { unit: "m", factor: 1 };
-      if (pumpUnit() === "A" && controls.pump.max < 1) return { unit: "mA", factor: 1000 };
+      if (pumpUnit() === "A" && controls.pump.max < 1) return { unit: F.unit(-3, "A"), factor: 1000 };
       return { unit: pumpUnit(), factor: 1 };
     }
     // A value as a sentence: for screen readers on the slider, and under

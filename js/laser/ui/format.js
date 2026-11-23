@@ -1,8 +1,12 @@
 /* ============================================================================
    format.js — numbers for people, and sliders.
 
-     LaserUI.format.si(3.19e-8, "s")       -> "31.9 ns"   (SI prefix)
-     LaserUI.format.si(2.41e6, "Hz", 2)    -> "2.4 MHz"   (2 significant digits)
+     LaserUI.format.si(3.19e-8, "s")       -> "31.9 × 10⁻⁹ s" (a power of ten
+                                              in steps of 3, no prefix letter:
+                                              the owner's choice, 2026-11-23)
+     LaserUI.format.si(2.41e6, "Hz", 2)    -> "2.4 × 10⁶ Hz"  (2 significant digits)
+     LaserUI.format.si(5.2, "W")           -> "5.20 W"
+     LaserUI.format.unit(-6, "W")          -> "10⁻⁶ W"     (a chart axis's unit)
      LaserUI.format.number(0.71293)        -> "0.713"     (no prefix: m⁻¹, %, ×)
      LaserUI.format.prefix(0.0074)         -> { power: -3, symbol: "m" }
      LaserUI.format.plain(13.1826)         -> "13.2"      (for a number box)
@@ -11,8 +15,8 @@
        range: { min, max, log }; a log range moves by the same factor for
        each step of the slider (needed when it spans 10³ to 10⁶).
 
-   A number and its unit are joined by a no-break space, so a readout never
-   wraps between "31.9" and "ns"; a negative number gets a real minus sign.
+   A number, its power of ten and its unit are joined by no-break spaces, so
+   a readout never wraps inside "31.9 × 10⁻⁹ s"; a negative number gets a real minus sign.
    Anything that is not a finite number shows as "—".
 
    Tests: tests/laser/format.test.js
@@ -25,6 +29,23 @@
   var NO_BREAK = " ";
   var MINUS = "−";
   var DASH = "—";
+  var TIMES = "×";
+  var SUPERSCRIPT = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵",
+    "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻" };
+
+  // tenTo(-9) -> "10⁻⁹"
+  function tenTo(power) {
+    var text = String(power);
+    var out = "10";
+    for (var i = 0; i < text.length; i++) out += SUPERSCRIPT[text.charAt(i)];
+    return out;
+  }
+
+  // unit(-6, "W") -> "10⁻⁶ W"; unit(0, "W") -> "W".
+  function unitOf(power, unit) {
+    if (!power) return unit;
+    return tenTo(power) + (unit ? NO_BREAK + unit : "");
+  }
 
   // From femto to tera. A larger value is written with tera; one below
   // 1 f is written "< 1 f…" (see si).
@@ -111,11 +132,16 @@
     // of stage 7a the page met 10⁻¹⁷⁰ W with the pump off): "< 1 fW".
     if (rounded < 1e-15) {
       var bound = value < 0 ? ">" + NO_BREAK + MINUS : "<" + NO_BREAK;
-      return bound + "1" + NO_BREAK + PREFIXES[0].symbol + unit;
+      return bound + tenTo(PREFIXES[0].power) + NO_BREAK + unit;
     }
-    var chosen = prefixOf(rounded);
-    var scaled = rounded / Number("1e" + chosen.power);
-    return signOf(value) + significant(scaled, places) + NO_BREAK + chosen.symbol + unit;
+    // A power of ten in steps of three, as the prefixes were (so the number
+    // before it runs from 1 to 999), with no top: 7.5 × 10³² W, not a
+    // string of 21 digits before 10¹².
+    var power = 3 * Math.floor(Math.floor(Math.log10(rounded) + 1e-12) / 3);
+    var scaled = rounded / Number("1e" + power);
+    var text = signOf(value) + significant(scaled, places);
+    if (power === 0) return text + NO_BREAK + unit;
+    return text + NO_BREAK + TIMES + NO_BREAK + tenTo(power) + NO_BREAK + unit;
   }
 
   /* ---------- sliders ---------- */
@@ -162,6 +188,7 @@
     si: si,
     number: number,
     prefix: prefix,
+    unit: unitOf,
     plain: plain,
     fromSlider: fromSlider,
     toSlider: toSlider

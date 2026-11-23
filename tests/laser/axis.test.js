@@ -114,19 +114,19 @@ test("labels: one prefix for the whole axis, the decimals the step needs, the sa
   const small = A.fromZero(0.0074, 4);                     // 7.4 mW
   const milli = A.labels(small.values, small.step, "W");
   assert.deepEqual(list(milli.texts), ["0", "2", "4", "6", "8"]);
-  assert.equal(milli.unit, "mW");
+  assert.equal(milli.unit, "10⁻³\u00a0W");
 
   const time = A.ticks(1.234e-3, 1.734e-3, 5);
   const ms = A.labels(time.values, time.step, "s");
   assert.deepEqual(list(ms.texts), ["1.3", "1.4", "1.5", "1.6", "1.7"]);
-  assert.equal(ms.unit, "ms");
+  assert.equal(ms.unit, "10⁻³\u00a0s");
 
   // Late in a run the labels still tell neighbours apart.
   const late = A.ticks(0.1234561, 0.1234611, 5);
   const lateLabels = A.labels(late.values, late.step, "s");
   assert.equal(new Set(lateLabels.texts).size, lateLabels.texts.length, lateLabels.texts.join(" "));
   assert.equal(lateLabels.texts[0], "123.457");
-  assert.equal(lateLabels.unit, "ms");
+  assert.equal(lateLabels.unit, "10⁻³\u00a0s");
 });
 
 test("labels: a number without a unit gets no prefix; negative values use the minus sign", () => {

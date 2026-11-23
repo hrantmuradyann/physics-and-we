@@ -250,10 +250,10 @@ test("the slow motion runs from 10³ to 10⁹", () => {
   const { section } = page;
   slide(section, "slowMotion", 0);
   assert.equal(section.inputs.slowMotion.value, "1000");
-  assert.equal(section.hint.textContent, "1" + NB + "s = 1.00" + NB + "ms");
+  assert.equal(section.hint.textContent, "1" + NB + "s = 1.00" + NB + "×" + NB + "10⁻³" + NB + "s");
   slide(section, "slowMotion", 1000);
   assert.equal(section.inputs.slowMotion.value, "1000000000");
-  assert.equal(section.hint.textContent, "1" + NB + "s = 1.00" + NB + "ns");
+  assert.equal(section.hint.textContent, "1" + NB + "s = 1.00" + NB + "×" + NB + "10⁻⁹" + NB + "s");
   type(section, "slowMotion", "5e9");
   assert.equal(section.inputs.slowMotion.value, "1000000000", "held at its end");
 });
@@ -267,9 +267,9 @@ test("the pump slider sets its bench's field, in its unit: W of light, J of flas
     ["dye-r6g", "laser", "pumpPower", "2", "W", "200", "3", 3],
     ["ruby", "flashlamp", "flashEnergy", "1000", "J", "333", "1500", 1500],
     ["ar-ion", "discharge", "current", "30", "A", "750", "35", 35],
-    // Under 1 A the current is shown and typed in mA.
-    ["he-ne", "discharge", "current", "5", "mA", "333", "7.5", 0.0075],
-    ["co2", "discharge", "current", "20", "mA", "333", "45", 0.045]
+    // Under 1 A the current is shown and typed in 10⁻³ A.
+    ["he-ne", "discharge", "current", "5", "10⁻³" + NB + "A", "333", "7.5", 0.0075],
+    ["co2", "discharge", "current", "20", "10⁻³" + NB + "A", "333", "45", 0.045]
   ];
   for (const [medium, pump, field, box, unit, slider, typed, value] of cases) {
     const label = medium + " " + pump;
@@ -283,9 +283,9 @@ test("the pump slider sets its bench's field, in its unit: W of light, J of flas
     assert.equal(section.inputs.pump.value, typed, label);
   }
   // What a screen reader hears: the value with its unit.
-  assert.equal(section.controls.pump.getAttribute("aria-valuetext"), "45.0" + NB + "mA");
+  assert.equal(section.controls.pump.getAttribute("aria-valuetext"), "45.0" + NB + "×" + NB + "10⁻³" + NB + "A");
   choose(section, "ruby");
-  assert.equal(section.controls.pump.getAttribute("aria-valuetext"), "1.00" + NB + "kJ");
+  assert.equal(section.controls.pump.getAttribute("aria-valuetext"), "1.00" + NB + "×" + NB + "10³" + NB + "J");
   // The ends of each slider are its bench's.
   slide(section, "pump", 1000);
   assert.equal(last(seen.configs).flashEnergy, 3000);
@@ -403,7 +403,7 @@ test("the readouts of a discharge and a flashlamp", () => {
   choose(section, "he-ne");
   const heNe = B.derive(B.configFor({ medium: "he-ne", pump: "discharge" }));
   assert.equal(r.currentThreshold.textContent, F(page).si(heNe.currentThreshold, "A"));
-  assert.equal(r.currentThreshold.textContent, "365" + NB + "µA");
+  assert.equal(r.currentThreshold.textContent, "365" + NB + "×" + NB + "10⁻⁶" + NB + "A");
   assert.equal(r.x.textContent, F(page).number(heNe.x));
   assert.equal(r.P_out.textContent, F(page).si(heNe.P_out, "W"));
   // A mirror letting out 60 %: the tube never reaches threshold.
@@ -764,7 +764,7 @@ test("a language switch keeps the chosen bench: the same choice, sliders and mom
   assert.deepEqual(optionsOf(again.choose.pump), [{ value: "discharge", text: WORDS.pumps.discharge.hy, disabled: false }]);
   assert.equal(again.pumpName.textContent, WORDS.controls.pump.discharge.hy);
   assert.equal(again.inputs.pump.value, "7.5");
-  assert.equal(again.units.pump.textContent, "mA");
+  assert.equal(again.units.pump.textContent, "10⁻³" + NB + "A");
   assert.equal(again.inputs.slowMotion.value, "1000000");
   assert.equal(again.readouts.time.textContent, time);
   assert.deepEqual(shownRows(again), DISCHARGE_ROWS);

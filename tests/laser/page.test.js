@@ -80,13 +80,13 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     // The mirrors (stage 10b): the concave output mirror's F, 50 cm in front
     // of it, off the 30 cm cavity's picture, and how much wider the widths
     // are drawn.
-    expected.push(WORDS.bench.parts.focus[lang] + "₂ 500" + NB + "mm");
+    expected.push(WORDS.bench.parts.focus[lang] + "₂ 500" + NB + "×" + NB + "10⁻³" + NB + "m");
     const widths = texts(section.recorder).find((text) => text.indexOf(WORDS.bench.parts.widths[lang] + " ") === 0);
     assert.ok(widths && /× \d+$/.test(widths), "the widths' scale: " + widths);
     expected.push(widths);
     // Nd:YAG's 1064 nm and its diodes' 808 nm cannot be seen: the drawing
     // says so (stages 10c1, 10c2).
-    expected.push("808" + NB + "nm, 1.06" + NB + "µm · " + WORDS.bench.parts.infrared[lang]);
+    expected.push("808" + NB + "×" + NB + "10⁻⁹" + NB + "m, 1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m · " + WORDS.bench.parts.infrared[lang]);
     assert.deepEqual(texts(section.recorder).sort(), expected.sort(), lang);
     // Each canvas has the height its drawing asks for.
     const sizes = { bench: UI.bench.SIZE, power: UI.plots.SIZE, photons: UI.photons.SIZE, atoms: UI.atoms.SIZE, stability: UI.stability.SIZE };
@@ -108,8 +108,8 @@ test("on screen: every picture is drawn with the page's words, and the simulatio
     for (const name of ["ground", "lower", "upper", "band", "heat", "noteFour"]) {
       assert.ok(atomTexts.includes(WORDS.atoms.words[name][lang]), "atoms: " + name);
     }
-    assert.ok(atomTexts.includes("1.06" + NB + "µm"), "atoms: the laser step's wavelength, written as the bench writes it");
-    assert.ok(atomTexts.includes(WORDS.atoms.words.pump[lang] + " 808" + NB + "nm"), "atoms: the pump's");
+    assert.ok(atomTexts.includes("1.06" + NB + "×" + NB + "10⁻⁶" + NB + "m"), "atoms: the laser step's wavelength, written as the bench writes it");
+    assert.ok(atomTexts.includes(WORDS.atoms.words.pump[lang] + " 808" + NB + "×" + NB + "10⁻⁹" + NB + "m"), "atoms: the pump's");
   }
 });
 
@@ -148,7 +148,7 @@ test("the controls start at the default bench: sliders, number boxes with their 
   assert.equal(section.units.pump.textContent, "W");
   assert.equal(section.units.coupler.textContent, "%");
   assert.equal(section.units.slowMotion.textContent, "×");
-  assert.equal(section.hint.textContent, "1" + NB + "s = 100" + NB + "µs");
+  assert.equal(section.hint.textContent, "1" + NB + "s = 100" + NB + "×" + NB + "10⁻⁶" + NB + "s");
   // What a screen reader hears on the sliders.
   assert.equal(section.controls.pump.getAttribute("aria-valuetext"), "5.00" + NB + "W");
   assert.equal(section.controls.coupler.getAttribute("aria-valuetext"), "5.00" + NB + "%");
@@ -225,7 +225,7 @@ test("a slider gives round values, which the number box shows exactly", () => {
   assert.equal(section.inputs.coupler.value, "2.102");
   slide(section, "slowMotion", 250);                  // 10^4.5 = 31 622.8, used as 31 620
   assert.equal(section.inputs.slowMotion.value, "31620");
-  assert.equal(section.hint.textContent, "1" + NB + "s = 31.6" + NB + "µs");
+  assert.equal(section.hint.textContent, "1" + NB + "s = 31.6" + NB + "×" + NB + "10⁻⁶" + NB + "s");
   // The ends of a slider are the ends of its range, exactly.
   slide(section, "coupler", 0);
   assertClose(1 - last(seen.configs).refl2, 0.005, 1e-12, "the least mirror");
@@ -258,7 +258,7 @@ test("a number typed into a box sets the bench, the slider and the readouts", ()
 
   // The slow motion is typed as its factor.
   type(section, "slowMotion", "50000");
-  assert.equal(section.hint.textContent, "1" + NB + "s = 20.0" + NB + "µs");
+  assert.equal(section.hint.textContent, "1" + NB + "s = 20.0" + NB + "×" + NB + "10⁻⁶" + NB + "s");
   assert.equal(section.controls.slowMotion.value, String(Math.round(1000 * Math.log(50) / Math.log(1e6))));
   // Paused, the pictures were drawn again.
   assert.ok(texts(section.recorder).includes(WORDS.bench.parts.transmission.en + " 12.5" + NB + "%"));
@@ -337,7 +337,7 @@ test("frames move the simulation by dt / slow motion; the first frame (dt = 0) o
   assert.equal(section.readouts.time.textContent, F.si(32 * FRAME / 1000 / 1e4, "s"));
   // The slowest: 1 s = 1 ns.
   slide(section, "slowMotion", 1000);
-  assert.equal(section.hint.textContent, "1" + NB + "s = 1.00" + NB + "ns");
+  assert.equal(section.hint.textContent, "1" + NB + "s = 1.00" + NB + "×" + NB + "10⁻⁹" + NB + "s");
 });
 
 test("the readouts are written at most 10 times a second, the derived ones at once on a change", () => {
@@ -632,7 +632,7 @@ test("pump off from the start at the strongest coupler: the output falls below 1
   runFrames(page, 12);                                // 0.2 s: the readouts written
   assert.equal(browser.pendingFrames(), 1, "still running");
   section.play.fire("click");
-  assert.equal(section.readouts.powerNow.textContent, "<" + NB + "1" + NB + "fW");
+  assert.equal(section.readouts.powerNow.textContent, "<" + NB + "10⁻¹⁵" + NB + "W");
 });
 
 /* ---------- the pointer, the theory button, the cartoon ---------- */
@@ -947,7 +947,7 @@ test("words missing from the data: the page still builds and runs, with no 'unde
   assert.equal(page.browser.window.LaserUI.loop.liveCount(), 1);
   // The bench has no names to write, only the mirror's number and the
   // distance to the output mirror's F (off the picture).
-  assert.ok(texts(page.section.recorder).every((text) => text === "5.00" + NB + "%" || text === "500" + NB + "mm"),
+  assert.ok(texts(page.section.recorder).every((text) => text === "5.00" + NB + "%" || text === "500" + NB + "×" + NB + "10⁻³" + NB + "m"),
     texts(page.section.recorder).join(" | "));
   assert.deepEqual(texts(page.section.recorders.photons), [], "no legend to write");
   for (const recorder of Object.values(page.section.recorders)) {
