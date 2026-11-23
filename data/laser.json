@@ -274,9 +274,8 @@
   },
 
   "learn": {
-    "_readme": "The way to the study page (route 'laser-study', its words in data/laser-study.json). 'button' is the button above the bench, 'title', 'lead' and 'link' the last section of this page.",
+    "_readme": "The way to the study page (route 'laser-study', its words in data/laser-study.json). 'title', 'lead' and 'link' are the last section of this page (the button above the bench was removed on 2026-11-23, the owner's choice, so the bench and the chart beside it start at the same height).",
     "route": "laser-study",
-    "button": { "hy": "Խորանալ լազերի ֆիզիկայի մեջ", "en": "Dig deeper into the physics of the laser" },
     "title": { "hy": "Ինչպես է աշխատում լազերը", "en": "How a laser works" },
     "lead": {
       "hy": "Լազերի ֆիզիկան՝ պարզից մինչև բանաձևեր, իր առանձին էջում է։",

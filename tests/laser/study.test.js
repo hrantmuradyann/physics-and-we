@@ -40,6 +40,7 @@ function richParts() {
   });
   for (const { section } of sections()) {
     parts.push({ where: section.id + " text", pair: section.text });
+    if (section.simpler) parts.push({ where: section.id + " simpler", pair: section.simpler.text });
     if (section.deeper) parts.push({ where: section.id + " deeper", pair: section.deeper.text });
   }
   return parts;
@@ -62,6 +63,7 @@ function plainTexts() {
     add(section.id + " title", section.title);
     if (section.deeper) add(section.id + " deeper.title", section.deeper.title);
     if (section.picture) for (const key of ["alt", "caption", "todo"]) add(section.id + " picture." + key, section.picture[key]);
+    if (section.picture && section.picture.more) section.picture.more.forEach((extra, i) => add(section.id + " picture.more." + i + ".alt", extra.alt));
   }
   return found;
 }
@@ -109,6 +111,23 @@ test("the book: seven chapters in the owner's order, each with numbered sections
   assert.equal(study.simulator.route, "laser", "the button opens the simulator");
 });
 
+test("every section can be told more simply, for a reader with no background: plain words, no formula, no link", () => {
+  for (const { section } of sections()) {
+    assert.ok(section.simpler, section.id + " has a 'more simply' part");
+    assert.deepEqual(Object.keys(section.simpler), ["text"], section.id + ": the simpler part is only a text");
+    for (const lang of LANGS) {
+      const text = section.simpler.text[lang];
+      assert.ok(text && text.trim().length > 200, section.id + " simpler.text." + lang);
+      // Plain words: a reader who knows no maths and no physics gets no
+      // formula, and no link that would take them out of the box.
+      assert.ok(!text.includes("$"), section.id + " simpler." + lang + ": no formula");
+      assert.ok(!/\]\(/.test(text), section.id + " simpler." + lang + ": no link");
+      // Shorter than the section it retells, so it really is the easy way in.
+      assert.ok(text.length < section.text[lang].length * 1.2, section.id + " simpler." + lang + " is not longer than the section");
+    }
+  }
+});
+
 test("a place for a picture in nearly every section: what it should show, in both languages", () => {
   let places = 0;
   for (const { section } of sections()) {
@@ -116,14 +135,26 @@ test("a place for a picture in nearly every section: what it should show, in bot
     if (!picture) continue;
     places += 1;
     assert.equal(typeof picture.image, "string", section.id + ": image is a file name, \"\" until there is one");
-    if (picture.image) {
-      // A misspelt name (the server tells Ruby.png from ruby.png) would show a
-      // broken picture where the description was. images/ is not copied by
-      // the mutation check, so look in the real repo.
-      assert.ok(!/^[a-z]+:|^\/\//i.test(picture.image), section.id + ": the picture is a file of the site, not a link");
-      assert.ok(fs.existsSync(path.join(REAL_ROOT, picture.image)), section.id + ": the picture " + picture.image + " exists (the name's capitals too)");
-      const folder = path.dirname(path.join(REAL_ROOT, picture.image));
-      assert.ok(fs.readdirSync(folder).includes(path.basename(picture.image)), section.id + ": " + picture.image + " is spelt with the file's own capitals");
+    // A misspelt name (the server tells Ruby.png from ruby.png) would show a
+    // broken picture where the description was. images/ is not copied by
+    // the mutation check, so look in the real repo.
+    const checkFile = (file, where) => {
+      assert.ok(!/^[a-z]+:|^\/\//i.test(file), where + ": the picture is a file of the site, not a link");
+      assert.ok(fs.existsSync(path.join(REAL_ROOT, file)), where + ": the picture " + file + " exists (the name's capitals too)");
+      const folder = path.dirname(path.join(REAL_ROOT, file));
+      assert.ok(fs.readdirSync(folder).includes(path.basename(file)), where + ": " + file + " is spelt with the file's own capitals");
+    };
+    if (picture.image) checkFile(picture.image, section.id);
+    // Further pictures under the first ("more"): only with a first one,
+    // each a file with what it shows in both languages.
+    if (picture.more !== undefined) {
+      assert.ok(picture.image, section.id + ": more pictures only under a first one");
+      assert.ok(Array.isArray(picture.more) && picture.more.length > 0, section.id + ": more is a list of pictures");
+      picture.more.forEach((extra, i) => {
+        assert.deepEqual(Object.keys(extra), ["image", "alt"], section.id + " more." + i + ": { image, alt }");
+        checkFile(extra.image, section.id + " more." + i);
+        for (const lang of LANGS) assert.ok(extra.alt[lang] && extra.alt[lang].trim(), section.id + " more." + i + ".alt." + lang);
+      });
     }
     for (const key of ["alt", "caption", "todo"]) {
       for (const lang of LANGS) assert.ok(picture[key] && picture[key][lang] && picture[key][lang].trim(), section.id + " picture." + key + "." + lang);
@@ -232,20 +263,22 @@ test("KaTeX is vendored: the script, the stylesheet, its fonts and the licence",
 
 /* ---------- the menu, the page, the router, the simulator ---------- */
 
-test("the menu has Study materials right after the labs; its laser poster opens the hidden laser book", () => {
+test("the menu has Theory right after the labs; its laser poster opens the hidden laser book", () => {
   const site = readJSON("data/site.json");
   const routes = site.nav.map((entry) => entry.route);
   const at = routes.indexOf("study");
   assert.equal(routes[at - 1], "labs");
   assert.ok(!site.nav[at].hidden, "in the menu");
-  assert.equal(site.nav[at].label.en, "Study materials");
+  assert.equal(site.nav[at].label.en, "Theory");
   assert.ok(site.nav[at].label.hy);
   assert.ok(site.nav[routes.indexOf("laser-study")].hidden, "the book is reached from its poster");
   assert.match(read("sections/study.html"), /<a [^>]*lab-feature[^>]*data-route="route"/);
   const posters = readJSON("data/study.json").featured.items;
   assert.equal(posters.length, 1);
   assert.equal(posters[0].route, "laser-study", "the laser poster opens the laser book");
-  for (const key of ["eyebrow", "title", "text", "open"]) for (const lang of LANGS) assert.ok(posters[0][key][lang], key + "." + lang);
+  // The poster says only "Laser" and its button word, like the Labs page's banner.
+  assert.deepEqual(Object.keys(posters[0]), ["route", "title", "open"], "the poster: a title and its button");
+  for (const key of ["title", "open"]) for (const lang of LANGS) assert.ok(posters[0][key][lang], key + "." + lang);
 });
 test("the page's layout: the simulator button, chapters of sections, a dig-deeper <details> and a picture each, the sources", () => {
   const html = read("sections/laser-study.html");
@@ -254,9 +287,19 @@ test("the page's layout: the simulator button, chapters of sections, a dig-deepe
   // Each section's dig-deeper part is a <details> whose <summary> carries the
   // shared word (a list item reads only its own keys, so it comes from "ui").
   assert.match(html, /<details[^>]*data-study-deeper[^>]*>\s*<summary[^>]*>[\s\S]*?data-ui="digDeeper"[\s\S]*?<\/summary>/);
+  // Beside it, first, the "more simply" part: the same kind of box, both in
+  // one row (.study-more), so the two buttons stand side by side.
+  assert.match(html, /<div class="study-more">\s*<details[^>]*data-study-simpler[^>]*>\s*<summary[^>]*>[\s\S]*?data-ui="moreSimply"[\s\S]*?<\/summary>[\s\S]*?data-rich="simpler\.text"[\s\S]*?<\/details>\s*<details[^>]*data-study-deeper/);
   const ui = readJSON("data/site.json").ui;
-  for (const key of ["digDeeper", "toContents", "pictureToCome"]) for (const lang of LANGS) assert.ok(ui[key][lang], "ui." + key + "." + lang);
+  for (const key of ["digDeeper", "moreSimply", "hideLinks", "showLinks", "toContents", "pictureToCome"]) for (const lang of LANGS) assert.ok(ui[key][lang], "ui." + key + "." + lang);
+  // The button that hides the text's links: one, with both its words, the
+  // second hidden until the links are; pinned to the screen by the CSS.
+  assert.match(html, /<button type="button"[^>]*data-study-links[^>]*>\s*<span data-ui="hideLinks" data-study-links-hide><\/span>\s*<span data-ui="showLinks" data-study-links-show hidden><\/span>\s*<\/button>/);
+  const css = read("css/site.css");
+  assert.match(css, /\.study-links \{[^}]*position: fixed;/, "the button stays on screen while the book scrolls");
+  assert.match(css, /#view-laser-study\[data-study-plain="true"\] \[data-rich\] a \{[^}]*pointer-events: none;/, "hidden links cannot be clicked");
   assert.match(html, /data-rich="text"/);
+  assert.match(html, /data-rich="simpler\.text"/);
   assert.match(html, /data-rich="deeper\.text"/);
   assert.match(html, /data-rich="sources\.text"/);
   // The picture: the image, its caption, and the box for until it exists.
@@ -264,6 +307,8 @@ test("the page's layout: the simulator button, chapters of sections, a dig-deepe
   // Every page is built in the background: a picture must not download
   // before the visitor scrolls to it.
   assert.match(html, /<img[^>]*loading="lazy"[^>]*data-study-image/, "the book's pictures load only when scrolled to");
+  // Further pictures under the first: a list inside the figure, lazy too.
+  assert.match(html, /data-study-image[^>]*>\s*(<!--[\s\S]*?-->\s*)?<div class="study-figure__more" data-list="picture\.more">\s*<template>\s*<img class="study-figure__image" loading="lazy" data-image="image" data-alt="alt">\s*<\/template>\s*<\/div>/);
   // Lists styled without bullets keep their list meaning for screen readers (Safari).
   assert.equal((html.match(/<ol[^>]*role="list"/g) || []).length, 2, "the contents and its sections are lists");
   // The numbers are the page's: a place in each heading, none in the JSON's titles.
@@ -302,7 +347,11 @@ test("the simulator's dig-deeper button and its last section lead to the study p
   const laser = readJSON("data/laser.json");
   assert.equal(laser.learn.route, "laser-study");
   assert.ok(!laser.learn.chapters, "the old theory chapters are gone");
-  assert.equal((html.match(/data-route="learn\.route"/g) || []).length, 2, "the button at the top and the link at the bottom");
+  // Only the link at the bottom: the button above the bench went on 2026-11-23
+  // (the owner's choice), so the bench and the chart start at the same height.
+  assert.equal((html.match(/data-route="learn\.route"/g) || []).length, 1, "the link at the bottom");
+  assert.ok(!html.includes("laser-stage__more"), "no row above the bench");
+  assert.ok(!read("css/laser.css").includes('"more '), "no grid row for it");
   assert.ok(!html.includes('data-laser-action="learn"'));
   assert.ok(!read("js/laser/page.js").includes("data-laser-learn"));
 });
@@ -579,6 +628,95 @@ test("laser-study.js: a chapter with nothing deeper loses its empty dig-deeper b
   assert.equal(dom.head.childNodes.length, 0, "and nothing is downloaded for it");
 });
 
+test("laser-study.js: the pinned button hides the text's links and shows them again; the choice is kept", () => {
+  const dom = makeDom();
+  const store = {};
+  dom.window.localStorage = {
+    getItem: (key) => (key in store ? store[key] : null),
+    setItem: (key, value) => { store[key] = String(value); }
+  };
+  const window = loadStudy(dom);
+  // A build: a link in the text, a link in the contents, and the button
+  // with its two words.
+  function build() {
+    const container = dom.element("section");
+    const rich = dom.element("div", { "data-rich": "text" });
+    const inText = dom.element("a", { href: "https://en.wikipedia.org/wiki/Ruby" });
+    rich.appendChild(inText);
+    const contents = dom.element("a", { href: "#chapter-medium" });
+    const button = dom.element("button", { "data-study-links": "" });
+    const hide = dom.element("span", { "data-study-links-hide": "" });
+    const show = dom.element("span", { "data-study-links-show": "" });
+    button.appendChild(hide);
+    button.appendChild(show);
+    container.appendChild(rich);
+    container.appendChild(contents);
+    container.appendChild(button);
+    fire(window, "section:ready", { route: "laser-study", container });
+    return { container, inText, contents, hide, show };
+  }
+
+  const first = build();
+  assert.equal(first.container.getAttribute("data-study-plain"), "false", "links shown at first");
+  assert.equal(first.hide.hidden, false, "the button says Hide links");
+  assert.equal(first.show.hidden, true);
+  assert.equal(first.inText.getAttribute("tabindex"), "0");
+
+  dom.document.click(first.hide);              // the word inside the button
+  assert.equal(first.container.getAttribute("data-study-plain"), "true", "the text's links look like plain words");
+  assert.equal(first.inText.getAttribute("tabindex"), "-1", "and the keyboard skips them");
+  assert.equal(first.contents.getAttribute("tabindex"), null, "the contents keep their links");
+  assert.equal(first.hide.hidden, true, "the button now says Show links");
+  assert.equal(first.show.hidden, false);
+  assert.equal(store["study-links-hidden"], "true", "kept for the next visit");
+
+  const again = build();                        // a language switch builds the page again
+  assert.equal(again.container.getAttribute("data-study-plain"), "true", "a new build keeps the choice");
+  assert.equal(again.show.hidden, false);
+
+  dom.document.click(first.hide);              // the old build's button does nothing
+  assert.equal(again.container.getAttribute("data-study-plain"), "true");
+
+  dom.document.click(again.show);
+  assert.equal(again.container.getAttribute("data-study-plain"), "false", "and back");
+  assert.equal(again.inText.getAttribute("tabindex"), "0");
+  assert.equal(store["study-links-hidden"], "false");
+});
+
+test("laser-study.js: without storage (private browsing) the button still works for the visit", () => {
+  const dom = makeDom();
+  Object.defineProperty(dom.window, "localStorage", { get() { throw new Error("blocked"); } });
+  const window = loadStudy(dom);
+  const container = dom.element("section");
+  const button = dom.element("button", { "data-study-links": "" });
+  container.appendChild(button);
+  fire(window, "section:ready", { route: "laser-study", container });
+  assert.equal(container.getAttribute("data-study-plain"), "false");
+  dom.document.click(button);
+  assert.equal(container.getAttribute("data-study-plain"), "true");
+  // A language switch builds the page again: the choice is kept in memory.
+  const again = dom.element("section");
+  fire(window, "section:ready", { route: "laser-study", container: again });
+  assert.equal(again.getAttribute("data-study-plain"), "true", "a new build keeps the choice without storage too");
+});
+
+test("laser-study.js: a section with nothing simpler loses its empty 'more simply' button too", () => {
+  const dom = makeDom();
+  const window = loadStudy(dom);
+  const container = dom.element("section");
+  const article = dom.element("article");
+  const full = dom.element("details", { "data-study-simpler": "" });
+  full.appendChild(dom.element("summary"));
+  full.appendChild(dom.element("div", { "data-rich": "simpler.text" }));
+  const empty = dom.element("details", { "data-study-simpler": "" });
+  empty.appendChild(dom.element("summary"));      // its text was missing, so the binder removed it
+  article.appendChild(full);
+  article.appendChild(empty);
+  container.appendChild(article);
+  fire(window, "section:ready", { route: "laser-study", container });
+  assert.deepEqual(article.childNodes.map((n) => n === full), [true], "only the one with a text stays");
+});
+
 /* ---------- the book's contents and its links ---------- */
 
 test("every link in the text leads to a chapter or a section that exists, named in words, the same in both languages", () => {
@@ -696,9 +834,11 @@ test("an outside link in the text opens in a new tab, so the reader keeps the bo
   };
   assert.equal(bind("See [Maser](https://en.wikipedia.org/wiki/Maser)."),
     '<p>See <a href="https://en.wikipedia.org/wiki/Maser" class="link" target="_blank" rel="noopener noreferrer">Maser</a>.</p>');
+  // The owner's choice (2026-11-23): a link inside the site opens in a new tab too.
   assert.equal(bind("Back to [the ruby section](#section-ruby)."),
-    '<p>Back to <a href="#section-ruby" class="link">the ruby section</a>.</p>', "a link inside the site stays in its tab");
-  assert.equal(bind("[home](?view=home)"), '<p><a href="?view=home" class="link">home</a></p>');
+    '<p>Back to <a href="#section-ruby" class="link" target="_blank">the ruby section</a>.</p>', "a link inside the site opens in a new tab too");
+  assert.equal(bind("[home](?view=home)"), '<p><a href="?view=home" class="link" target="_blank">home</a></p>');
+  assert.equal(bind("[write](mailto:a@b.am)"), '<p><a href="mailto:a@b.am" class="link">write</a></p>', "a mail link opens the mail program, no tab");
   assert.equal(bind("[Maser](//en.wikipedia.org/wiki/Maser)"),
     '<p><a href="//en.wikipedia.org/wiki/Maser" class="link" target="_blank" rel="noopener noreferrer">Maser</a></p>',
     "an address without its https: leaves the site too");
@@ -797,8 +937,12 @@ test("laser-study.js: chapters and sections are numbered in order and named by t
   assert.deepEqual(book.sectionLinks.map((a) => a.attributes.href), sectionIds.map((id) => "#section-" + id));
   dom.document.click(book.sectionLinks[1]);
   assert.equal(built[1].section.scrolledTo.length, 1, "a section's link in the contents scrolls to it");
-  dom.document.click(book.toSection);
-  assert.equal(built[1].section.scrolledTo.length, 2, "and so does one in the text");
+  // One in the text opens the section in a new tab, at its own address.
+  assert.equal(book.toSection.attributes.href, "?view=laser-study&id=section-a2");
+  assert.equal(book.toSection.attributes.target, "_blank");
+  const sent = dom.document.click(book.toSection);
+  assert.ok(!sent.prevented, "the browser opens the new tab");
+  assert.equal(built[1].section.scrolledTo.length, 1, "this tab stays where it is");
 });
 
 test("laser-study.js: opened at one section (the lab's Learn more), it goes there, and again once the formulas are set", () => {
@@ -894,8 +1038,10 @@ test("laser-study.js: a picture shows its image, or until there is one what it s
     f.appendChild(img);
     f.appendChild(caption);
     f.appendChild(box);
-    container.appendChild(f);
-    return { f, img, caption, box };
+    const section = dom.element("section", { "data-study-section": "" });
+    section.appendChild(f);
+    container.appendChild(section);
+    return { f, img, caption, box, section };
   };
   const drawn = figure("images/study/ruby.jpg", true);
   const planned = figure(null, true);
@@ -903,8 +1049,15 @@ test("laser-study.js: a picture shows its image, or until there is one what it s
   fire(window, "section:ready", { route: "laser-study", container });
   assert.deepEqual(drawn.f.childNodes, [drawn.img, drawn.caption], "the picture and its caption");
   assert.deepEqual(planned.f.childNodes, [planned.box], "the box saying what the picture will show");
-  assert.ok(!container.childNodes.includes(none.f), "no picture planned: no figure");
-  assert.ok(container.childNodes.includes(planned.f));
+  assert.ok(!none.section.childNodes.includes(none.f), "no picture planned: no figure");
+  assert.ok(planned.section.childNodes.includes(planned.f));
+  // A section with its picture puts it beside the text (css/site.css); one
+  // with only the box saying what it will show keeps it under the text.
+  assert.equal(drawn.section.getAttribute("data-study-pictured"), "");
+  assert.equal(planned.section.getAttribute("data-study-pictured"), null);
+  assert.equal(none.section.getAttribute("data-study-pictured"), null);
+  const css = read("css/site.css");
+  assert.match(css, /\.study-section\[data-study-pictured\] \{[^}]*display: grid;/, "the picture beside the text");
 });
 
 test("laser-study.js: the chapters are numbered and the contents and the ways back link to them", () => {
@@ -930,8 +1083,9 @@ test("laser-study.js: a click on a link inside the book scrolls to its chapter, 
   assert.equal(book.chapters[1].article.scrolledTo.length, 1);
   assert.equal(book.chapters[1].article.scrolledTo[0].block, "start");
   event = dom.document.click(book.word);                 // inside a "chapter 3" link in the text
-  assert.ok(event.prevented);
-  assert.equal(book.chapters[2].article.scrolledTo.length, 1);
+  assert.ok(!event.prevented, "a link in the text opens a new tab");
+  assert.equal(book.inText.attributes.href, "?view=laser-study&id=chapter-c");
+  assert.equal(book.chapters[2].article.scrolledTo.length, 0);
   event = dom.document.click(book.chapters[0].top);
   assert.ok(event.prevented);
   assert.equal(book.toc.scrolledTo.length, 1, "back to the contents");

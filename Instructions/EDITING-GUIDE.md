@@ -26,7 +26,7 @@ touch `sections` or `css`.
 | any text on the **labs** page | `data/labs.json` |
 | the words of one **interactive lab** | `data/labs/<lab>.json` |
 | the words of the **laser lab** (its banner on the labs page is `featured` in `data/labs.json`) | `data/laser.json` |
-| the **study materials** page (its posters) | `data/study.json` |
+| the **theory** page (its posters; once called study materials) | `data/study.json` |
 | the **laser book** (chapters, sections, pictures, formulas) | `data/laser-study.json` |
 | the **summer camp** page | `data/camp.json` |
 | the **research** page | `data/research.json` |

@@ -3,9 +3,10 @@
   THE LASER BOOK (?view=laser-study) — layout only.
   The words are NOT here. They are in  data/laser-study.json .
   The book has chapters, each with sections. Every section is the easy
-  version; its "Dig deeper" box (a <details>, it opens and closes by itself)
-  holds the full version with the maths. A section without "deeper" has no
-  box, and one without "picture" has no picture.
+  version; its "More simply" box (a <details>, it opens and closes by itself)
+  tells it again in everyday words, and its "Dig deeper" box holds the full
+  version with the maths. A section without "simpler" or "deeper" has no
+  such box, and one without "picture" has no picture.
   js/laser-study.js writes the numbers (3, 3.1) into [data-study-number],
   so chapters and sections can be moved in the JSON freely.
   Formulas in the JSON are LaTeX between $ … $, typeset by js/laser-study.js.
@@ -23,6 +24,14 @@
     </p>
   </div>
 </header>
+
+<!-- ░░ HIDE LINKS: a button pinned to the screen's corner while the book
+     scrolls (css/site.css .study-links); js/laser-study.js turns the text's
+     links into plain words and back, and shows the matching word. ░░ -->
+<button type="button" class="btn btn--ghost study-links" data-study-links aria-pressed="false">
+  <span data-ui="hideLinks" data-study-links-hide></span>
+  <span data-ui="showLinks" data-study-links-show hidden></span>
+</button>
 
 <section class="band">
   <div class="container container--narrow study-book">
@@ -61,17 +70,35 @@
                      saying what the picture should show ("todo"). -->
                 <figure class="study-figure" data-study-figure>
                   <img class="study-figure__image" loading="lazy" data-study-image data-image="picture.image" data-alt="picture.alt">
+                  <!-- More pictures under the first, one caption for all
+                       ("more" in the JSON: the five laser classes' labels). -->
+                  <div class="study-figure__more" data-list="picture.more">
+                    <template>
+                      <img class="study-figure__image" loading="lazy" data-image="image" data-alt="alt">
+                    </template>
+                  </div>
                   <figcaption class="study-figure__caption" data-study-caption data-text="picture.caption"></figcaption>
                   <p class="study-figure__todo" data-study-todo><strong data-ui="pictureToCome"></strong> <span data-study-todo-text data-text="picture.todo"></span></p>
                 </figure>
 
-                <details class="study-deeper" data-study-deeper>
-                  <summary class="btn btn--ghost"><span data-ui="digDeeper"></span></summary>
-                  <div class="study-deeper__body">
-                    <h4 class="study-deeper__title" data-text="deeper.title"></h4>
-                    <div class="prose" data-rich="deeper.text"></div>
-                  </div>
-                </details>
+                <!-- Two buttons in one row: "More simply" (the section again
+                     in everyday words) and "Dig deeper" (the maths). The one
+                     opened takes the whole width under them. -->
+                <div class="study-more">
+                  <details class="study-deeper study-deeper--simpler" data-study-simpler>
+                    <summary class="btn btn--ghost"><span data-ui="moreSimply"></span></summary>
+                    <div class="study-deeper__body">
+                      <div class="prose" data-rich="simpler.text"></div>
+                    </div>
+                  </details>
+                  <details class="study-deeper" data-study-deeper>
+                    <summary class="btn btn--ghost"><span data-ui="digDeeper"></span></summary>
+                    <div class="study-deeper__body">
+                      <h4 class="study-deeper__title" data-text="deeper.title"></h4>
+                      <div class="prose" data-rich="deeper.text"></div>
+                    </div>
+                  </details>
+                </div>
               </section>
             </template>
           </div>

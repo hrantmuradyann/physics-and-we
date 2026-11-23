@@ -1302,7 +1302,7 @@ const MUTATIONS = [
   },
   {
     file: "data/labs.json",
-    find: "\"title\": { \"hy\": \"Կառուցե՛ք ձեր լազերը\",",
+    find: "\"title\": { \"hy\": \"Լազեր\", \"en\": \"Laser\" }",
     replace: "\"title\": { \"hy\": \"\",",
     why: "the banner's title with no Armenian"
   },
@@ -1344,8 +1344,8 @@ const MUTATIONS = [
   },
   {
     file: "css/laser.css",
-    find: ".lab-feature__text {\n  color: var(--muted);",
-    replace: ".lab-feature__text {\n  color: crimson;",
+    find: "  font-weight: 800;\n  color: var(--heading);\n  line-height: 1.15;",
+    replace: "  font-weight: 800;\n  color: crimson;\n  line-height: 1.15;",
     why: "a colour name beyond the basic ones written in the CSS"
   },
   {
@@ -5880,13 +5880,13 @@ const MUTATIONS = [
     file: "data/site.json",
     find: "\"route\": \"study\",",
     replace: "\"route\": \"study\", \"hidden\": true,",
-    why: "Study materials missing from the menu"
+    why: "Theory missing from the menu"
   },
   {
     file: "sections/laser.html",
-    find: "<a class=\"btn btn--primary\" data-route=\"learn.route\" data-text=\"learn.button\"></a>",
-    replace: "<button class=\"btn btn--primary\" type=\"button\" data-text=\"learn.button\"></button>",
-    why: "the simulator's dig-deeper button leads nowhere"
+    find: "<a class=\"btn btn--ghost\" data-route=\"learn.route\" data-text=\"learn.link\"></a>",
+    replace: "<button class=\"btn btn--ghost\" type=\"button\" data-text=\"learn.link\"></button>",
+    why: "the simulator's link to the book leads nowhere"
   },
   {
     file: "index.html",
@@ -5914,8 +5914,8 @@ const MUTATIONS = [
   },
   {
     file: "data/laser-study.json",
-    find: "free spectral range**) is\\n\\n$$\\\\Delta\\\\nu_{\\\\text{FSR}} = \\\\frac{c}{2L_e}$$",
-    replace: "free spectral range**) is\\n\\n$$\\\\Delta\\\\nu_{\\\\text{FSR}} = \\\\frac{c}{2L_e$$",
+    find: "free spectral range](https://en.wikipedia.org/wiki/Free_spectral_range)**) is\\n\\n$$\\\\Delta\\\\nu_{\\\\text{FSR}} = \\\\frac{c}{2L_e}$$",
+    replace: "free spectral range](https://en.wikipedia.org/wiki/Free_spectral_range)**) is\\n\\n$$\\\\Delta\\\\nu_{\\\\text{FSR}} = \\\\frac{c}{2L_e$$",
     why: "a formula KaTeX cannot read"
   },
   {
@@ -5923,6 +5923,64 @@ const MUTATIONS = [
     find: "**Gain clamping.** In steady",
     replace: "*Gain clamping.* In steady",
     why: "a lone star that would show on the page"
+  },
+
+  // ---------- the laser book: "More simply" ----------
+  {
+    file: "js/laser-study.js",
+    find: "[\"[data-study-simpler]\", \"[data-study-deeper]\"]",
+    replace: "[\"[data-study-deeper]\"]",
+    why: "an empty 'more simply' box left as a button that opens nothing"
+  },
+  {
+    file: "sections/laser-study.html",
+    find: "<details class=\"study-deeper study-deeper--simpler\" data-study-simpler>",
+    replace: "<details class=\"study-deeper study-deeper--simpler\">",
+    why: "the 'more simply' box not marked for laser-study.js"
+  },
+  {
+    file: "data/site.json",
+    find: "\"moreSimply\": { \"hy\": \"Ավելի պարզ\", \"en\": \"More simply\" },",
+    replace: "\"moreSimply\": { \"hy\": \"Ավելի պարզ\" },",
+    why: "the 'more simply' button without its English word"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "That something is called the pump.\"",
+    replace: "That something is called the pump, $P$.\"",
+    why: "a formula in the simple retelling"
+  },
+  {
+    file: "data/laser-study.json",
+    find: "state is called a population inversion.\\n\\nIt never",
+    replace: "state is called a [population inversion](https://en.wikipedia.org/wiki/Population_inversion).\\n\\nIt never",
+    why: "a link that takes the beginner out of the simple box"
+  },
+
+  {
+    file: "js/laser-study.js",
+    find: "    if (plain === null) plain = readPlain();\n",
+    replace: "    plain = readPlain();\n",
+    why: "a language switch brings the hidden links back"
+  },
+  {
+    file: "css/site.css",
+    find: "  text-decoration: none;\n  pointer-events: none;\n",
+    replace: "  text-decoration: none;\n",
+    why: "hidden links still open when clicked"
+  },
+
+  {
+    file: "js/content.js",
+    find: "var inside = !outside && !/^mailto:/i.test(href) ? ' target=\"_blank\"' : \"\";",
+    replace: "var inside = \"\";",
+    why: "a link inside the site opens in the same tab"
+  },
+  {
+    file: "js/laser-study.js",
+    find: "        link.setAttribute(\"href\", \"?view=\" + ROUTE + \"&id=\" + href.slice(1));\n",
+    replace: "",
+    why: "a section link in the book opens the home page in its new tab"
   },
 
   // ---------- stage 12: the book's contents and links ----------
