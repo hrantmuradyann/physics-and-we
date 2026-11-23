@@ -1230,118 +1230,141 @@ test("every chapter has a Russian text: the same formulas, links, bold words and
   for (const { where, text } of plainTexts()) assert.ok(text && text.trim(), where);
 });
 
-test("the Russian button's words, and the shared words a Russian chapter shows", () => {
+test("the RUS switches, and the Russian words the page shows besides the chapters", () => {
   const ui = readJSON("data/site.json").ui;
-  for (const key of ["digDeeper", "moreSimply", "toContents", "pictureToCome"]) assert.match(ui[key].ru, /[а-яё]/i, "ui." + key + ".ru");
-  for (const lang of LANGS) assert.equal(ui.readRussian[lang], "Русский", "ui.readRussian." + lang);
-  assert.equal(ui.readSiteLanguage.en, "English");
-  assert.ok(ui.readSiteLanguage.hy);
+  for (const key of ["digDeeper", "moreSimply", "toContents", "pictureToCome", "hideLinks", "showLinks"]) assert.match(ui[key].ru, /[а-яё]/i, "ui." + key + ".ru");
+  for (const key of ["eyebrow", "title", "lead"]) assert.match(study.head[key].ru, /[а-яё]/i, "head." + key + ".ru");
+  assert.match(study.contents.ru, /[а-яё]/i);
+  assert.match(study.simulator.label.ru, /[а-яё]/i);
+  assert.match(study.sources.title.ru, /[а-яё]/i);
+  // The sources' list is the same; only its first paragraph is translated.
+  const list = (text) => text.split(/\n\s*\n/).slice(1).join("\n\n");
+  assert.equal(list(study.sources.text.ru), list(study.sources.text.en));
   const html = read("sections/laser-study.html");
-  // At the top right of each chapter: in one row with the chapter's title.
-  assert.match(html, /<article[^>]*data-study-chapter[^>]*>\s*(<!--[\s\S]*?-->\s*)?<div class="study-chapter__head">\s*<h2[\s\S]*?<\/h2>\s*<button type="button"[^>]*data-study-russian[^>]*><\/button>\s*<\/div>/);
-  assert.match(read("css/site.css"), /\.study-chapter__head \{[^}]*justify-content: space-between;/);
+  const SWITCH = '<button type="button" class="study-lang" role="switch" aria-checked="false" data-study-russian><span class="study-lang__word">RUS</span><span class="study-lang__track" aria-hidden="true"><span class="study-lang__knob"></span></span></button>';
+  // At the top right of each chapter and of each section: in one row with its title.
+  assert.ok(html.includes('<div class="study-chapter__head">'), "the chapter's title row");
+  assert.match(html, new RegExp('<div class="study-chapter__head">\\s*<h2[\\s\\S]*?</h2>\\s*' + SWITCH.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + '\\s*</div>'));
+  assert.match(html, new RegExp('<section[^>]*data-study-section>\\s*<div class="study-section__head">\\s*<h3[\\s\\S]*?</h3>\\s*' + SWITCH.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + '\\s*</div>'));
+  const css = read("css/site.css");
+  assert.match(css, /\.study-chapter__head,\s*\.study-section__head \{[^}]*justify-content: space-between;/);
+  assert.match(css, /\.study-lang\[aria-checked="true"\] \.study-lang__track \{[^}]*background-color: var\(--red\);/, "on: red, the colour of what can be pressed");
 });
 
-// A book of two chapters for the button: each with its title's row, the
-// button, and a text; Content.bind is a stand-in that records each call and
-// writes the chapter's text in the language asked for.
+// A book of two chapters, each with a section, every one with its switch
+// and a text; Content.bind is a stand-in that records each call and writes
+// each text in the language asked for.
 function russianBook(dom) {
   const container = dom.element("section");
-  const chapters = [0, 1].map(() => {
+  const chapters = [0, 1].map((i) => {
     const article = dom.element("article", { "data-study-chapter": "" });
     const button = dom.element("button", { "data-study-russian": "" });
     const rich = dom.element("div", { "data-rich": "text" });
-    rich.appendChild(dom.text("Gain $g$"));
+    const section = dom.element("section", { "data-study-section": "" });
+    const sectionButton = dom.element("button", { "data-study-russian": "" });
+    const sectionRich = dom.element("div", { "data-rich": "text" });
     article.appendChild(button);
     article.appendChild(rich);
+    section.appendChild(sectionButton);
+    section.appendChild(sectionRich);
+    article.appendChild(section);
     container.appendChild(article);
-    return { article, button, rich };
+    return { article, button, rich, section, sectionButton, sectionRich };
   });
   return { container, chapters };
 }
 
 const RUSSIAN_DATA = {
   chapters: [
-    { id: "history", text: { hy: "Ուժեղացում $g$", en: "Gain $g$", ru: "Усиление $g$" }, sections: [] },
-    { id: "medium", text: { hy: "Միջավայր $g$", en: "Medium $g$", ru: "Среда $g$" }, sections: [] }
+    { id: "history", text: { hy: "Ուժեղացում $g$", en: "Gain $g$", ru: "Усиление $g$" },
+      sections: [{ id: "einstein", text: { hy: "Ա", en: "Einstein $A$", ru: "Эйнштейн $A$" } }] },
+    { id: "medium", text: { hy: "Միջավայր $g$", en: "Medium $g$", ru: "Среда $g$" },
+      sections: [{ id: "ruby", text: { hy: "Ռ", en: "Ruby $R$", ru: "Рубин $R$" } }] }
   ]
 };
 
 function loadRussian(dom, lang) {
   const binds = [];
-  dom.window.Site = {
-    lang,
-    ui: {},
-    word: (key) => ({ readRussian: "Русский", readSiteLanguage: dom.window.Site.lang === "hy" ? "Հայերեն" : "English" })[key]
-  };
+  dom.window.Site = { lang, ui: {} };
   dom.window.Content = {
     bind(root, data, options) {
       binds.push({ root, data, lang: options.lang });
-      const rich = root.childNodes.find((n) => n.attributes["data-rich"] !== undefined);
-      rich.childNodes = [];
-      rich.appendChild(dom.text(data.text[options.lang]));
+      // The stand-in fills in each chapter's and section's text, as the real
+      // binder does through the lists.
+      root.querySelectorAll("[data-study-chapter]").forEach((article, i) => {
+        const chapter = data.chapters[i];
+        const fill = (rich, text) => { rich.childNodes = []; rich.appendChild(dom.text(text[options.lang])); };
+        fill(article.childNodes[1], chapter.text);
+        fill(article.childNodes[2].childNodes[1], chapter.sections[0].text);
+      });
     }
   };
   return { window: loadStudy(dom), binds };
 }
 
-test("laser-study.js: a chapter's button shows that chapter in Russian, and again in the site's language", () => {
+function builtRussianBook(dom, window, binds) {
+  const book = russianBook(dom);
+  // The router's own binding, in the site's language.
+  window.Content.bind(book.container, RUSSIAN_DATA, { lang: window.Site.lang });
+  binds.length = 0;
+  fire(window, "section:ready", { route: "laser-study", container: book.container, data: RUSSIAN_DATA });
+  return book;
+}
+
+const switches = (book) => book.chapters.flatMap((c) => [c.button, c.sectionButton]).map((b) => b.getAttribute("aria-checked"));
+
+test("laser-study.js: any RUS switch, a chapter's or a section's, turns the whole book into Russian and back", () => {
   const dom = makeDom();
   const { window, binds } = loadRussian(dom, "en");
-  const book = russianBook(dom);
-  fire(window, "section:ready", { route: "laser-study", container: book.container, data: RUSSIAN_DATA });
-  const [first, second] = book.chapters;
-  assert.equal(binds.length, 0, "built in the site's language by the router, nothing filled again");
-  assert.equal(second.button.textContent, "Русский");
-  assert.equal(second.button.getAttribute("lang"), "ru", "a screen reader reads the word in Russian");
+  const book = builtRussianBook(dom, window, binds);
+  assert.equal(binds.length, 0, "built in the site's language, nothing filled again");
+  assert.deepEqual(switches(book), ["false", "false", "false", "false"]);
+  assert.equal(book.container.getAttribute("lang"), "en");
 
-  dom.document.click(second.button);
+  dom.document.click(book.chapters[1].sectionButton);    // a section's switch
   assert.equal(binds.length, 1);
-  assert.equal(binds[0].root, second.article, "only that chapter");
-  assert.equal(binds[0].data, RUSSIAN_DATA.chapters[1]);
+  assert.equal(binds[0].root, book.container, "the whole page");
+  assert.equal(binds[0].data, RUSSIAN_DATA);
   assert.equal(binds[0].lang, "ru");
-  assert.equal(shown(second.rich), "Среда $g$");
-  assert.equal(shown(first.rich), "Gain $g$", "the other chapter stays as it was");
-  assert.equal(second.article.getAttribute("lang"), "ru");
-  assert.equal(second.button.textContent, "English", "the button now goes back");
-  assert.equal(second.button.getAttribute("lang"), "en");
+  assert.equal(shown(book.chapters[0].rich), "Усиление $g$", "the other chapter too");
+  assert.equal(shown(book.chapters[1].sectionRich), "Рубин $R$");
+  assert.deepEqual(switches(book), ["true", "true", "true", "true"], "every switch shows it");
+  assert.equal(book.container.getAttribute("lang"), "ru");
+  assert.equal(book.chapters[1].section.getAttribute("id"), "section-ruby", "the sections keep their ids");
 
-  dom.document.click(second.button);
+  dom.document.click(book.chapters[0].button);           // a chapter's switch turns it back
   assert.equal(binds[1].lang, "en");
-  assert.equal(shown(second.rich), "Medium $g$");
-  assert.equal(second.button.textContent, "Русский");
-  assert.equal(second.article.getAttribute("lang"), "en");
+  assert.equal(shown(book.chapters[1].sectionRich), "Ruby $R$");
+  assert.deepEqual(switches(book), ["false", "false", "false", "false"]);
+  assert.equal(book.container.getAttribute("lang"), "en");
 });
 
-test("laser-study.js: a chapter in Russian stays in Russian when the page is built again (a language switch)", () => {
+test("laser-study.js: a book in Russian stays in Russian when the page is built again (a language switch)", () => {
   const dom = makeDom();
   const { window, binds } = loadRussian(dom, "en");
-  const old = russianBook(dom);
-  fire(window, "section:ready", { route: "laser-study", container: old.container, data: RUSSIAN_DATA });
+  const old = builtRussianBook(dom, window, binds);
   dom.document.click(old.chapters[0].button);
   window.Site.lang = "hy";
-  const again = russianBook(dom);
-  fire(window, "section:ready", { route: "laser-study", container: again.container, data: RUSSIAN_DATA });
-  assert.equal(binds.length, 2);
-  assert.equal(binds[1].root, again.chapters[0].article);
-  assert.equal(binds[1].lang, "ru");
-  assert.equal(again.chapters[0].button.textContent, "Հայերեն", "back to the site's language, now Armenian");
-  assert.equal(again.chapters[1].button.textContent, "Русский");
-  // The old build's button does nothing any more.
+  const again = builtRussianBook(dom, window, binds);
+  assert.equal(binds.length, 1);
+  assert.equal(binds[0].root, again.container);
+  assert.equal(binds[0].lang, "ru");
+  assert.deepEqual(switches(again), ["true", "true", "true", "true"]);
+  // The old build's switch does nothing any more.
   dom.document.click(old.chapters[1].button);
-  assert.equal(binds.length, 2);
+  assert.equal(binds.length, 1);
 });
 
-test("laser-study.js: a chapter turned to Russian after the formulas were typeset gets its formulas typeset", () => {
+test("laser-study.js: the book turned to Russian after the formulas were typeset gets its formulas typeset", () => {
   const dom = makeDom();
-  const { window } = loadRussian(dom, "en");
-  const book = russianBook(dom);
-  fire(window, "section:ready", { route: "laser-study", container: book.container, data: RUSSIAN_DATA });
+  const { window, binds } = loadRussian(dom, "en");
+  const book = builtRussianBook(dom, window, binds);
   fire(window, "view:shown", { route: "laser-study" });
   window.katex = fakeKatex([]);
   dom.head.childNodes[0].onload();
   dom.head.childNodes[1].onload();
-  assert.equal(shown(book.chapters[1].rich), "Gain [g]", "as the router built it");
+  assert.equal(shown(book.chapters[1].rich), "Medium [g]");
   dom.document.click(book.chapters[1].button);
   assert.equal(shown(book.chapters[1].rich), "Среда [g]");
+  assert.equal(shown(book.chapters[0].sectionRich), "Эйнштейн [A]");
 });
