@@ -252,6 +252,7 @@ Added facts: Maiman, 1960, ruby, 694.3 nm, each with its source link.
 > A lamp's atoms emit independently, in all directions and at many wavelengths. In a laser, most of the light comes from stimulated emission: a photon passing an excited atom makes it emit a copy with the same wavelength, direction and phase. The mirrors send the light back through the medium many times, so the copies build up into a narrow beam. Focused to a spot about 0.1 mm wide, a few kilowatts of such a beam melt steel.
 
 Needs your input: "a few kilowatts" and "0.1 mm" are typical of industrial cutting lasers; check they match the lasers the page discusses.
+
 ## This project: the laser book (Physics and We)
 
 The Theory page's laser book is `data/laser-study.json`; its rules are checked by `tests/laser/study.test.js` (run `node --test` after any change) and described in its `_readme` and in `CLAUDE.md`. On top of the steps above:
