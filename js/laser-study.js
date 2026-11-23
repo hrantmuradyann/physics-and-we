@@ -43,12 +43,12 @@
    5. The RUS switch at the top right of each chapter and each section.
       The site is Armenian and English; the book also has a Russian text
       ("ru" beside "hy" and "en" in the JSON), for a reader who follows a
-      point better in Russian. Any switch fills the whole page in again in
-      Russian (Content.bind with lang "ru"), and turned off, in the site's
-      language; every switch shows the same state, and the section whose
-      switch was used stays where it was on the screen. The formulas are
-      the same in every language. The choice outlives a language switch,
-      not a new visit.
+      point better in Russian. A section's switch fills that one section in
+      again in Russian (Content.bind with lang "ru"), and turned off, in the
+      site's language; a chapter's switch does the same for the whole
+      chapter, its sections with it, and a section in it can then be turned
+      back alone. The formulas are the same in every language. The choice
+      outlives a language switch, not a new visit.
 
    Adds one global, LaserStudy, with pieces() for the tests.
    ========================================================================= */
@@ -405,43 +405,54 @@
     return true;
   }
 
-  /* ---------- The book in Russian ---------- */
+  /* ---------- Parts of the book in Russian ---------- */
 
-  // The whole book shown in Russian. Kept when the page is built again (a
-  // language switch), forgotten when the visitor leaves the site.
-  var russian = false;
+  // Which chapters and sections are shown in Russian, by their JSON id.
+  // Kept when the page is built again (a language switch), forgotten when
+  // the visitor leaves the site.
+  var russianChapters = {};
+  var russianSections = {};
   var book = null;            // the newest build's data (data/laser-study.json)
 
   function siteLang() {
     return (global.Site && global.Site.lang) || "en";
   }
 
-  // Every switch shows the same state, and the page says its language.
-  function showRussian(container) {
-    container.setAttribute("lang", russian ? "ru" : siteLang());
-    each(container, "[data-study-russian]", function (button) {
-      button.setAttribute("aria-checked", russian ? "true" : "false");
-    });
-  }
-
-  // Fills the whole page in again from its data, in Russian or in the
-  // site's language, the way the router fills a new build.
-  function fillBook(container) {
-    global.Content.bind(container, book, {
-      lang: russian ? "ru" : siteLang(),
+  // Fills one part (a chapter, or one section) in again from its data, in
+  // Russian or in the site's language. A chapter's sections are built again
+  // from their template with it. The two languages have the same pieces, so
+  // the boxes and pictures the first build dropped are dropped again.
+  function fillPart(element, data, inRussian) {
+    global.Content.bind(element, data, {
+      lang: inRussian ? "ru" : siteLang(),
       ui: (global.Site && global.Site.ui) || {}
     });
+    element.setAttribute("lang", inRussian ? "ru" : siteLang());
   }
 
-  // What every build gets once its words are in: the boxes, the pictures,
-  // the numbers and ids, the hidden links, the switches.
-  function settle(container) {
-    dropEmptyDeeper(container);
-    settleFigures(container);
-    numberBook(container, book);
-    if (plain === null) plain = readPlain();
-    showPlain(container);
-    showRussian(container);
+  // Every chapter and section of a build with its data and its state.
+  function eachPart(container, fn) {
+    var list = (book && book.chapters) || [];
+    Array.prototype.forEach.call(container.querySelectorAll("[data-study-chapter]"), function (chapter, i) {
+      var chapterData = list[i];
+      if (!chapterData) return;
+      fn({ element: chapter, data: chapterData, state: russianChapters, chapter: null });
+      var sectionsData = chapterData.sections || [];
+      Array.prototype.forEach.call(chapter.querySelectorAll("[data-study-section]"), function (section, j) {
+        if (sectionsData[j]) fn({ element: section, data: sectionsData[j], state: russianSections, chapter: chapterData });
+      });
+    });
+  }
+
+  // Each switch shows its own part's state: its section's, or its chapter's
+  // (the switch in the chapter's title row).
+  function showRussian(container) {
+    eachPart(container, function (part) {
+      var on = !!part.state[part.data.id];
+      Array.prototype.forEach.call(part.element.querySelectorAll("[data-study-russian]"), function (button) {
+        if (placeOf(button) === part.element) button.setAttribute("aria-checked", on ? "true" : "false");
+      });
+    });
   }
 
   function russianButtonOf(node) {
@@ -452,10 +463,9 @@
     return null;
   }
 
-  // The section or chapter a switch stands in, to keep it where it was on
-  // the screen: the new text is longer or shorter above and below it.
+  // The section or chapter a switch belongs to: the nearest one around it.
   function placeOf(node) {
-    while (node && node !== latest) {
+    while (node) {
       if (node.nodeType === 1 && (node.getAttribute("data-study-section") !== null ||
           node.getAttribute("data-study-chapter") !== null)) return node;
       node = node.parentNode;
@@ -463,31 +473,39 @@
     return null;
   }
 
-  function topOf(element) {
-    return element && element.getBoundingClientRect ? element.getBoundingClientRect().top : null;
-  }
-
   // True if the click was on one of the newest build's RUS switches.
   function toggleRussian(event) {
     var button = russianButtonOf(event.target);
     if (!button || !inBook(button)) return false;
-    if (!book) return true;            // a build without its data: nothing to fill in
     var place = placeOf(button);
-    var id = place ? place.getAttribute("id") : null;
-    var before = topOf(place);
-    russian = !russian;
-    fillBook(latest);
-    settle(latest);
-    build += 1;                        // a new text: its formulas are typeset again
-    typeset(latest);                   // does nothing until KaTeX is here
-    // The same section back where it was; for the keyboard (a click with no
-    // mouse, detail 0), its new switch gets the focus the old one had.
-    var again = id ? targets["#" + id] : null;
-    var after = topOf(again);
-    if (before !== null && after !== null && global.scrollBy) global.scrollBy(0, after - before);
-    var switchAgain = again ? first(again, "[data-study-russian]") : null;
-    if (!event.detail && switchAgain && switchAgain.focus) switchAgain.focus({ preventScroll: true });
+    eachPart(latest, function (part) {
+      if (part.element !== place) return;
+      var on = !part.state[part.data.id];
+      part.state[part.data.id] = on;
+      // A chapter's switch takes all its sections with it.
+      if (part.state === russianChapters) {
+        (part.data.sections || []).forEach(function (section) { russianSections[section.id] = on; });
+      }
+      fillPart(part.element, part.data, on);
+      dropEmptyDeeper(part.element);
+      settleFigures(part.element);
+      if (global.katex && styled) each(part.element, "[data-rich]", typesetElement);
+    });
+    numberBook(latest, book);            // the new text's section links
+    showPlain(latest);                   // its links hidden too, if they are
+    showRussian(latest);
     return true;
+  }
+
+  // A new build (a language switch) shows the parts in Russian that were.
+  function keepRussian(container) {
+    eachPart(container, function (part) {
+      var on = !!part.state[part.data.id];
+      // A section was built with its chapter: in Russian if the chapter is.
+      var built = part.chapter ? !!russianChapters[part.chapter.id] : false;
+      if (on !== built) fillPart(part.element, part.data, on);
+      else part.element.setAttribute("lang", on ? "ru" : siteLang());
+    });
   }
 
   /* ---------- Hooks ---------- */
@@ -497,9 +515,13 @@
     latest = event.detail.container;
     book = event.detail.data || null;
     build += 1;
-    // A language switch builds the page again: a book in Russian stays so.
-    if (russian && book) fillBook(latest);
-    settle(latest);
+    keepRussian(latest);
+    dropEmptyDeeper(latest);
+    settleFigures(latest);
+    numberBook(latest, book);
+    if (plain === null) plain = readPlain();
+    showPlain(latest);
+    showRussian(latest);
     typeset(latest);                   // does nothing until KaTeX is here
   });
 
