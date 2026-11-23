@@ -67,3 +67,6 @@ temp/
 *.log
 *.bak
 news.json.bak
+
+# Claude Code keeps a lock file here while a session runs
+.claude/scheduled_tasks.lock
