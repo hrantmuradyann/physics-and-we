@@ -6733,6 +6733,92 @@ const MUTATIONS = [
     replace: "absorberT0: 0.99,",
     why: "the diode Nd:glass's filter slider mostly dark"
   },
+
+  /* ---------- the intro tour (2026-11-24) ---------- */
+  {
+    file: "js/laser-intro-steps.js",
+    find: "    while (left >= share && bounces < 100000) {",
+    replace: "    while (left > share && bounces < 100000) {",
+    why: "counting the bounce that leaves exactly the share as below it"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "    return 2 * length / C;",
+    replace: "    return length / C;",
+    why: "one way taken for there and back"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "        if (isUp(i, up, total)) n += 1;\n        else n -= 1;",
+    replace: "        if (isUp(i, up, total)) n += 1;",
+    why: "calm atoms not swallowing photons: light grows with any atom up"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "  var MAX_GAIN = { candle: 0.03, lamp: 0.4 };",
+    replace: "  var MAX_GAIN = { candle: 0.3, lamp: 0.4 };",
+    why: "a candle strong enough to start the laser"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "    var next = light * (1 + gain / (1 + light) - LETS_OUT) + SEED * gain;",
+    replace: "    var next = light * (1 + gain / (1 + light)) + SEED * gain;",
+    why: "the mirror's loss forgotten in the round trip"
+  },
+  {
+    file: "js/laser-intro.js",
+    find: "    if (asksForLessMotion()) return;\n    open(null);",
+    replace: "    open(null);",
+    why: "the tour opening by itself for a visitor who asked for less motion"
+  },
+  {
+    file: "js/laser-intro.js",
+    find: "      make(p % 2 === 1 ? \"strong\" : \"span\", \"\", lineEl).textContent = parts[p];",
+    replace: "      make(\"span\", \"\", lineEl).textContent = parts[p];",
+    why: "a caption's key words not marked"
+  },
+  {
+    file: "js/laser-intro.js",
+    find: "    if (reading && captionAge >= readingTime(ui.caption.getAttribute(\"data-text\"))) setReading(false);",
+    replace: "    if (reading) setReading(false);",
+    why: "the picture coming back before a new caption has been read"
+  },
+  {
+    file: "js/laser-intro.js",
+    find: "    ui.next.className = \"btn btn--sm \" + (trying ? \"btn--primary\" : \"btn--ghost\");",
+    replace: "    ui.next.className = \"btn btn--sm btn--primary\";",
+    why: "the red Next showing before the step is finished"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "        p.n += 1;                       // a twin",
+    replace: "        p.n += 0;                       // a twin",
+    why: "step 7's photons never making twins"
+  },
+  {
+    file: "js/laser-intro.js",
+    find: "      else if (i === index) share = trying ? 1 : Math.min(1, time / step().watch);",
+    replace: "      else if (i === index) share = trying ? 1 : 0;",
+    why: "the progress bar not moving while a step plays"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "    var gap = Math.round(760 * Math.pow(length / 0.3, 0.3));",
+    replace: "    var gap = 760;",
+    why: "the mirrors not moving when the distance changes"
+  },
+  {
+    file: "js/laser-intro.js",
+    find: "    global.removeEventListener(\"keydown\", onKey);",
+    replace: "",
+    why: "Esc's listener left behind after closing"
+  },
+  {
+    file: "data/laser.json",
+    find: "\"stepOf\": { \"hy\": \"Քայլ {n}՝ {total}-ից\", \"en\": \"Step {n} of {total}\" },",
+    replace: "\"stepOf\": { \"hy\": \"Քայլ {n}՝ {total}-ից\", \"en\": \"\" },",
+    why: "a word of the tour missing in one language"
+  },
 ];
 
 module.exports = { MUTATIONS };

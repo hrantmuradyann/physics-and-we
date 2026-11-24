@@ -88,8 +88,15 @@ test("beam(λ): each bench's beam in its colour, or the infrared's false colour,
   assert.equal(M.beam(514.5 * NM).color, "#1cff00", "Ar⁺ 514.5 nm: green");
 });
 
+test("the intro tour's candle, its amber light and the lens: frozen colours", () => {
+  assert.ok(Object.isFrozen(M.CANDLE));
+  for (const colour of Object.values(M.CANDLE).concat([M.AMBER, M.LENS_GLASS])) assert.ok(hex(colour), colour);
+  // Ordinary light is never the laser's red: its hue is far from ruby's beam.
+  assert.notEqual(M.AMBER, M.beam(694.3 * NM).color);
+});
+
 test("readable(): every physical colour stands out on both themes' bench, the same hue", () => {
-  const colours = Object.values(M.MEDIA).map((m) => m.body).concat([M.GLASS, M.INFRARED]);
+  const colours = Object.values(M.MEDIA).map((m) => m.body).concat([M.GLASS, M.INFRARED, M.AMBER, M.CANDLE.edge, M.CANDLE.base]);
   for (let nm = 380; nm <= 780; nm += 5) colours.push(M.beam(nm * NM).color);
   for (const { theme, bg, bg2 } of BACKGROUNDS) {
     for (const colour of colours) {

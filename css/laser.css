@@ -877,63 +877,368 @@
 }
 
 /* ============================================================================
-   THE INTRO FILM (js/laser-intro.js)
-   A one-minute film over the whole screen each time the laser page opens:
-   the canvas as large as fits at 16:9, on the lab's background, and a
-   "Skip" button at the top right. The lab's own colours (--laser-*), as
-   the film sits outside .laser-lab.
+   THE INTRO TOUR (js/laser-intro.js, js/laser-intro-steps.js)
+   A step-by-step introduction over the whole screen: a top bar (the step,
+   its title, Skip), a thin progress bar (one segment per step, the
+   current one filling in the laser's red as it plays), the picture filling all the room left
+   (a canvas; js/laser-intro.js centres the 16:9 board in it on the same
+   background, so it reaches the edges), then the caption (large, each new
+   one fading in slowly while the picture above is blurred, until it can
+   be read; key words underlined in red), the "Try it" panel
+   (the step's sliders and buttons, once its watching part is over) and
+   Back / Next. The lab's own colours (--laser-*), as the tour sits outside
+   .laser-lab; the site's type (--font-site) and buttons (.btn).
    ========================================================================== */
 .laser-intro {
   position: fixed;
   inset: 0;
   z-index: 1100;          /* over the site's header (1000) */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow-y: auto;
   background-color: var(--laser-bg);
+  color: var(--laser-text);
+  font-family: var(--font-site);
 }
 
 .laser-intro[hidden] {
   display: none;
 }
 
-/* No scrolling the page behind the film. */
+/* No scrolling the page behind the tour. The page itself is taken away
+   while the tour is open: the lab's canvases leave the screen, so its
+   simulation stops (js/laser/ui/loop.js runs only while a canvas is on
+   screen), and Tab cannot reach its controls behind the overlay. */
 html.laser-intro-open,
 html.laser-intro-open body {
   overflow: hidden;
 }
 
-.laser-intro__film {
-  display: block;
-  width: min(100vw, 177.78vh);   /* 16:9, as large as the screen allows */
-  aspect-ratio: 16 / 9;
+html.laser-intro-open #site-header,
+html.laser-intro-open #app,
+html.laser-intro-open #site-footer {
+  display: none;
+}
+
+.laser-intro__panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 36rem;
+}
+
+.laser-intro__top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem clamp(1rem, 3vw, 2.5rem) 0.7rem;
+}
+
+.laser-intro__heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.laser-intro__count {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--laser-muted);
+}
+
+.laser-intro__title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.8rem);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--laser-heading);
 }
 
 /* Like the site's ghost button (.btn--ghost), in the lab's colours. */
 .laser-intro__skip {
-  position: absolute;
-  top: clamp(0.8rem, 2.5vw, 1.6rem);
-  right: clamp(0.8rem, 2.5vw, 1.6rem);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1.2rem;
+  padding: 0.5rem 1.05rem;
   border-radius: 999px;
   border: 1px solid var(--laser-ghost-border);
   background: var(--laser-ghost-bg);
   color: var(--laser-heading);
   font: inherit;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  box-shadow: 0 8px 24px -12px var(--laser-shadow);
 }
 
 .laser-intro__skip:hover {
   border-color: var(--laser-ghost-border-hover);
 }
 
-.laser-intro__skip:focus-visible {
+.laser-intro__skip:focus-visible,
+.laser-intro__range:focus-visible {
   outline: 2px solid var(--laser-accent);
   outline-offset: 3px;
+}
+
+/* One segment per step: the ones done in graphite, the current one in
+   the laser's red. */
+.laser-intro__progress {
+  display: flex;
+  gap: 6px;
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
+}
+
+.laser-intro__segment {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--laser-line);
+}
+
+/* The fill grows with the step's watching part (--p, 0 to 1, from
+   js/laser-intro.js every frame, so no transition is needed). */
+.laser-intro__fill {
+  display: block;
+  height: 100%;
+  background: var(--laser-accent);
+  transform: scaleX(var(--p, 0));
+  transform-origin: left center;
+}
+
+.laser-intro__segment.is-current .laser-intro__fill {
+  background: var(--red);
+}
+
+/* The picture takes all the room left; the canvas fills it. */
+.laser-intro__stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 15rem;
+}
+
+.laser-intro__film {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+  transition: filter 1.2s ease, opacity 1.2s ease;
+}
+
+/* While a new caption is read, the picture steps back (blurred and
+   faded) and the film stands still (js/laser-intro.js); then it comes
+   back into focus. */
+.laser-intro[data-reading="true"] .laser-intro__film {
+  filter: blur(8px);
+  opacity: 0.35;
+}
+
+.laser-intro__bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.2rem clamp(1rem, 3vw, 2.5rem) 1.2rem;
+}
+
+.laser-intro__caption {
+  width: 100%;
+  max-width: 54rem;
+  min-height: 2.9em;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.1rem, 0.75rem + 1.1vw, 1.55rem);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--laser-heading);
+}
+
+/* While the step is played with, its last caption (already read) gets
+   smaller, to leave the picture more room. */
+.laser-intro[data-trying="true"] .laser-intro__caption {
+  min-height: 0;
+  font-size: clamp(0.95rem, 0.8rem + 0.5vw, 1.1rem);
+  color: var(--laser-text);
+}
+
+/* A new caption fades in as a whole, slowly and softly: from a light blur
+   and a little lower, over 3 s (CAPTION_FADE in js/laser-intro.js). */
+.laser-intro__line {
+  display: block;
+  animation: laser-intro-soft 3s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+@keyframes laser-intro-soft {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(0.35em);
+  }
+  60% {
+    filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+/* A key word: underlined in the laser's red. */
+.laser-intro__caption strong {
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--red);
+  text-decoration-thickness: 0.12em;
+  text-underline-offset: 0.22em;
+}
+
+@keyframes laser-intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.laser-intro__try {
+  width: 100%;
+  max-width: 54rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--laser-line);
+  border-radius: 10px;
+  background: var(--laser-faint-bg);
+  animation: laser-intro-rise 1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.laser-intro__try[hidden] {
+  display: none;
+}
+
+.laser-intro__hint {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  font-weight: 500;
+  color: var(--laser-heading);
+}
+
+.laser-intro__badge {
+  flex: none;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: var(--laser-heading);
+  color: var(--laser-faint-bg);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.laser-intro__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 1.6rem;
+}
+
+.laser-intro__control--slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 0.8rem;
+  flex: 1 1 16rem;
+}
+
+.laser-intro__control--slider .laser-intro__label {
+  grid-column: 1 / -1;
+  font-size: 0.9rem;
+  color: var(--laser-muted);
+}
+
+/* The last step's "Open the laser lab": larger, in the middle. */
+.laser-intro__control--open {
+  display: flex;
+  flex: 1 1 100%;
+  justify-content: center;
+}
+
+.laser-intro__open {
+  padding: 0.85rem 2.2rem;
+  font-size: 1.15rem;
+}
+
+.laser-intro__control--choice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.laser-intro__choice {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.laser-intro__choice .btn[aria-pressed="true"] {
+  color: var(--laser-faint-bg);
+  background: var(--laser-accent);
+  border-color: var(--laser-accent);
+}
+
+.laser-intro__range {
+  width: 100%;
+  accent-color: var(--laser-accent);
+}
+
+.laser-intro__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--laser-heading);
+  white-space: nowrap;
+}
+
+.laser-intro__notes {
+  margin-top: 0.6rem;
+}
+
+.laser-intro__note {
+  margin: 0.2rem 0 0;
+  color: var(--laser-text);
+}
+
+.laser-intro__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 54rem;
+}
+
+.laser-intro__spacer {
+  flex: 1;
+}
+
+.laser-intro .btn--sm {
+  flex: 0 0 auto;           /* .btn--sm (css/labs.css) stretches in the lab's panel */
+}
+
+.laser-intro__nav .btn[hidden] {
+  display: none;
+}
+
+.laser-head__intro {
+  margin-top: 1rem;
+}
+
+/* A visitor who asked for less motion: the words are simply there. */
+@media (prefers-reduced-motion: reduce) {
+  .laser-intro__line,
+  .laser-intro__try {
+    animation: none;
+  }
+
+  .laser-intro__film {
+    transition: none;
+  }
 }

@@ -45,6 +45,12 @@
                                     or "rgb(…)"/"rgba(…)" strings
      LaserUI.materials.contrast(a, b)   the WCAG contrast ratio of two
                                     colours, 1 to 21
+     LaserUI.materials.CANDLE       the intro tour's candle (js/laser-intro-steps.js):
+                                    wax, wick, and its flame's core, edge and
+                                    blue base; its light is AMBER
+     LaserUI.materials.AMBER        ordinary light in the tour (a candle's,
+                                    a lamp's): warm, never the laser's red
+     LaserUI.materials.LENS_GLASS   the tour's lens, seen edge-on
      LaserUI.materials.MIN_CONTRAST 3.3: a bit over WCAG's 3 for graphics,
                                     so the colour still passes against the
                                     lighter top of the bench's dark box
@@ -84,6 +90,17 @@
     "cr-yag": Object.freeze({ look: "plate", body: "#6e3b1f" }),
     "cryptocyanine": Object.freeze({ look: "liquid", body: "#1d5fa8" })
   });
+  // The intro tour's candle and its light (a flame near 1900 K: yellow-white
+  // in the middle, orange at the edge, a little blue where it starts).
+  var CANDLE = Object.freeze({
+    wax: "#f3e6c8",
+    wick: "#3a2c20",
+    core: "#fff3b0",
+    edge: "#ff9a2e",
+    base: "#5a7bd8"
+  });
+  var AMBER = "#ffb238";
+  var LENS_GLASS = "#cfe6f0";
   var HIGHLIGHT = "#ffffff";
   var SHADE = "#000000";
   // The false colour of an invisible beam: a hot pink, off the spectrum
@@ -239,6 +256,9 @@
     SILVER: SILVER,
     KDP: KDP,
     ABSORBERS: ABSORBERS,
+    CANDLE: CANDLE,
+    AMBER: AMBER,
+    LENS_GLASS: LENS_GLASS,
     HIGHLIGHT: HIGHLIGHT,
     SHADE: SHADE,
     INFRARED: INFRARED,
