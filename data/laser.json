@@ -239,41 +239,202 @@
   },
 
   "intro": {
-    "_readme": "The short film that plays full screen each time the laser page opens (js/laser-intro.js). 'captions' are what a narrator would say, one per scene, in this order (the film's timing is in the script, so keep eight); 'skip' is the button at the top right; 'excited' writes {n} and {total} as the numbers of atoms; the three levels are ruby's (ground, middle, top band), not two: with two levels a pump can never put more atoms up than down. The film's title is page.eyebrow and page.title; the parts' names are bench.parts, media.ruby and pumps.flashlamp.",
-    "label": { "hy": "Ինչպես է աշխատում լազերը․ կարճ ներածություն", "en": "How a laser works: a short introduction" },
+    "_readme": "The step-by-step tour that opens full screen each time the laser page opens, and from the 'Watch the introduction' button (replay) (js/laser-intro.js; the steps are js/laser-intro-steps.js). 'steps' are the eight steps in order; each has a 'title', a 'hint' (shown over its controls, after the 'tryIt' badge), its 'captions' (written under the picture while it plays; their timing is in the script, so keep their number), 'canvas' (words drawn on the picture) and 'try' (the controls' names and readouts). {n}, {p}, {t}, ... are filled in by the script; **words** in a caption are its key words (shown bold). 'canvas.cover' (step 1) is the title card the tour opens with. Laser light is always red in the pictures and ordinary light amber; a photon an atom sends out on its own is the ruby's red but dashed, as in the lab's cartoon. Times and lengths are written as in the lab, a power of ten and no prefix (2.00 × 10⁻⁹ s, the owner's choice). Wherever 'monochromatic' or 'coherent' appears, its plain meaning follows in brackets (the owner's wish).",
+    "label": { "hy": "Ինչպես է աշխատում լազերը․ քայլ առ քայլ ներածություն", "en": "How a laser works: a step-by-step introduction" },
+    "replay": { "hy": "Դիտել ներածությունը", "en": "Watch the introduction" },
     "skip": { "hy": "Բաց թողնել", "en": "Skip" },
-    "question": { "hy": "Ինչպե՞ս է աշխատում լազերը", "en": "How does a laser work?" },
-    "captions": [
-      { "hy": "Լազերը շատ յուրահատուկ լույս է ստեղծում։ Ինչպե՞ս է դա անում։", "en": "A laser makes a very special kind of light. How does it do it?" },
-      { "hy": "Ամեն ինչ կազմված է ատոմներից։ Ատոմը կարող է էներգիա կլանել․ այն ցատկում է վերև, իսկ հետո արագ իջնում է միջին մակարդակ, որտեղ կարող է սպասել։", "en": "Everything is made of atoms. An atom can take in energy: it jumps up high, then quickly settles on a middle level, where it can wait." },
-      { "hy": "Բռնկման լամպը նորից ու նորից ատոմներ է բարձրացնում։ Նրանք կուտակվում են միջին մակարդակում, և շուտով այնտեղ ավելի շատ ատոմ կա, քան ներքևում։", "en": "The flash lamp pumps atoms up, again and again. They pile up on the middle level: soon more atoms wait there than sit below." },
-      { "hy": "Գրգռված ատոմը կարող է ինքնիրեն ներքև վերադառնալ և արձակել լույսի մեկ մասնիկ՝ ֆոտոն։", "en": "An excited atom can fall back by itself and give out one particle of light: a photon." },
-      { "hy": "Ահա գաղտնիքը․ գրգռված ատոմի կողքով անցնող ֆոտոնը ստիպում է նրան արձակել իր ճիշտ նույն երկվորյակը՝ նույն գույնի, նույն ուղղությամբ, համաքայլ։", "en": "Here is the trick: a photon passing an excited atom makes it give out an identical twin. Same colour, same direction, in step." },
-      { "hy": "Ատոմները (այստեղ՝ ռուբինի բյուրեղը) դնում ենք երկու հայելիների միջև։ Լույսը ետ ու առաջ է գնում և ամեն անցումով ուժեղանում է։", "en": "We put the atoms (here, a ruby crystal) between two mirrors. The light bounces back and forth and grows stronger on every pass." },
-      { "hy": "Հայելիներից մեկը մի քիչ լույս դուրս է թողնում։ Դա է լազերային փունջը՝ մեկ գույն, մեկ ուղղություն, բոլորը համաքայլ։", "en": "One mirror lets a little light out. That is the laser beam: one colour, one direction, all in step." },
-      { "hy": "Հիմա քո հերթն է։ Մղիր, փոխիր հայելիները և կառուցիր քո սեփական լազերը։", "en": "Now it's your turn. Pump it, change the mirrors and build your own laser." }
-    ],
-    "groundLevel": { "hy": "ցածր մակարդակ", "en": "ground level" },
-    "upperLevel": { "hy": "միջին մակարդակ․ այստեղ ատոմները սպասում են", "en": "middle level: atoms wait here" },
-    "bandLevel": { "hy": "վերին գոտի․ այստեղ ատոմները մի ակնթարթ են մնում", "en": "top band: atoms stay only a moment" },
-    "heat": { "hy": "մի քիչ ջերմություն", "en": "a little heat" },
-    "extraEnergy": { "hy": "ավելորդ էներգիա", "en": "extra energy" },
-    "lamp": { "hy": "Բռնկման լամպ (մղում)", "en": "Flashlamp (the pump)" },
-    "excited": { "hy": "Սպասող ատոմներ՝ {n}-ը {total}-ից", "en": "Atoms waiting: {n} of {total}" },
-    "byItself": { "hy": "ինքնիրեն", "en": "by itself!" },
-    "excitedAtoms": { "hy": "գրգռված ատոմներ", "en": "excited atoms" },
-    "twin": { "hy": "երկվորյակ", "en": "a twin!" },
-    "photon": { "hy": "ֆոտոն", "en": "photon" },
-    "photons": { "hy": "ֆոտոն", "en": "photons" },
-    "reflectsAll": { "hy": "անդրադարձնում է ամբողջ լույսը", "en": "reflects all the light" },
-    "letsOut": { "hy": "մի քիչ լույս է թողնում", "en": "lets a little light out" },
-    "beam": { "hy": "Լազերային փունջ", "en": "Laser beam" },
-    "chips": [
-      { "hy": "մեկ գույն", "en": "one colour" },
-      { "hy": "մեկ ուղղություն", "en": "one direction" },
-      { "hy": "համաքայլ", "en": "in step" }
-    ],
-    "last": { "hy": "Մղիր այն։ Փոխիր հայելիները։ Կառուցիր քո լազերը։", "en": "Pump it. Change the mirrors. Build your own laser." }
+    "tryIt": { "hy": "Փորձիր", "en": "Try it" },
+    "stepOf": { "hy": "Քայլ {n}՝ {total}-ից", "en": "Step {n} of {total}" },
+    "watchAgain": { "hy": "Կրկին դիտել", "en": "Watch again" },
+    "back": { "hy": "Հետ", "en": "Back" },
+    "skipStep": { "hy": "Բաց թողնել", "en": "Skip" },
+    "next": { "hy": "Հաջորդը", "en": "Next" },
+    "steps": [
+      {
+        "title": { "hy": "Երկու հայելի և մի քիչ լույս", "en": "Two mirrors and some light" },
+        "hint": { "hy": "Դանդաղեցրու կամ արագացրու լույսը և փոխիր հայելիների միջև հեռավորությունը։", "en": "Slow the light down or speed it up, and move the mirrors apart." },
+        "captions": [
+          { "hy": "Երկու հայելի դեմ առ դեմ են։ Նրանց միջև մի քիչ լույս ենք թողնում։", "en": "Two mirrors face each other. We let a little light in between them." },
+          { "hy": "Լույսն ուղիղ գնում է մի հայելուց մյուսը և անդրադառնում։ Լույսը շատ արագ է․ 0.3 մ-ն անցնում է վայրկյանի մեկ միլիարդերորդականում, ուստի այստեղ այն **միլիարդ անգամ դանդաղեցված է**։", "en": "The light runs straight from one mirror to the other and bounces back. Light is very fast: it crosses 0.3 m in one billionth of a second, so here it is **slowed down a billion times**." },
+          { "hy": "**Ոչինչ չի կորչում**, և ոչինչ չի կատարվում։ Լույսը պարզապես գնում-գալիս է։", "en": "**Nothing is lost** and nothing happens. The light just goes back and forth." }
+        ],
+        "canvas": {
+          "cover": { "hy": "Ինչպե՞ս է աշխատում լազերը", "en": "How does a laser work?" },
+          "distance": { "hy": "{m}", "en": "{m}" },
+          "slowed": { "hy": "Դանդաղեցված է {n} անգամ", "en": "Slowed down {n} times" },
+          "clock": { "hy": "Իրական ժամանակը՝ {t}", "en": "Real time: {t}" },
+          "bounces": { "hy": "Անդրադարձներ՝ {n}", "en": "Bounces: {n}" }
+        },
+        "try": {
+          "slow": { "hy": "Իրական լույսից քանի անգամ դանդաղ", "en": "How much slower than real light" },
+          "slowValue": { "hy": "{n} անգամ դանդաղ", "en": "{n} times slower" },
+          "length": { "hy": "Հայելիների միջև հեռավորությունը", "en": "Distance between the mirrors" },
+          "lengthValue": { "hy": "{m}", "en": "{m}" },
+          "again": { "hy": "Նորից լույս ուղարկել", "en": "Send light again" },
+          "roundTrip": { "hy": "Գնալ-գալը տևում է {t}․ վայրկյանում {n} շրջապտույտ։", "en": "There and back takes {t}: {n} round trips every second." }
+        }
+      },
+      {
+        "title": { "hy": "Հայելիներից մեկը լույս է թողնում", "en": "One mirror lets light through" },
+        "hint": { "hy": "Փոխիր, թե որքան լույս է թողնում աջ հայելին։", "en": "Change how much light the right mirror lets through." },
+        "captions": [
+          { "hy": "Հիմա աջ հայելին թողնում է լույսի **10%-ը** և անդրադարձնում մնացած 90%-ը։", "en": "Now the right mirror lets **10%** of the light through and reflects the other 90%." },
+          { "hy": "Ամեն անդրադարձ տանում է մնացածի տասներորդ մասը։ **7 անդրադարձից** հետո մնում է կեսից պակաս, **22-ից** հետո՝ տասներորդից պակաս։", "en": "Every bounce takes away a tenth of what is left. After **7 bounces** less than half is left. After **22**, less than a tenth." },
+          { "hy": "Մեկ շրջապտույտը տևում է վայրկյանի 2 միլիարդերորդական, ուստի լույսը վերանում է վայրկյանի մեկ տասմիլիոներորդականից էլ քիչ ժամանակում։ Որպեսզի լույսն անընդհատ դուրս գա, **ինչ-որ բան պետք է անընդհատ նոր լույս ստեղծի**։", "en": "One round trip takes 2 billionths of a second, so the light is gone in less than a tenth of a millionth of a second. To see light coming out all the time, **something has to keep making it**." }
+        ],
+        "canvas": {
+          "through": { "hy": "Թողնում է {p}%", "en": "Lets {p}% through" },
+          "halfLine": { "hy": "{n} անդրադարձից հետո մնացել է կեսից պակաս", "en": "Less than half left after {n} bounces" },
+          "tenthLine": { "hy": "{n} անդրադարձից հետո մնացել է տասներորդից պակաս", "en": "Less than a tenth left after {n} bounces" }
+        },
+        "try": {
+          "through": { "hy": "Աջ հայելին թողնում է", "en": "The right mirror lets through" },
+          "throughValue": { "hy": "{p}%", "en": "{p}%" },
+          "half": { "hy": "{n} անդրադարձից հետո մնում է կեսից պակաս։", "en": "Less than half is left after {n} bounces." },
+          "tenth": { "hy": "{n} անդրադարձից հետո մնում է տասներորդից պակաս։", "en": "Less than a tenth is left after {n} bounces." },
+          "gone": { "hy": "{n} անդրադարձից հետո մնում է 1%-ից պակաս․ դա մոտ {t} է։", "en": "Less than 1% is left after {n} bounces: about {t}." }
+        }
+      },
+      {
+        "title": { "hy": "Մոմ հայելիների միջև", "en": "A candle between the mirrors" },
+        "hint": { "hy": "Հանգցրու մոմը և նորից վառիր, կամ փոքրացրու բոցը։", "en": "Blow the candle out and light it again, or make its flame smaller." },
+        "captions": [
+          { "hy": "Հայելիների միջև մոմ դնենք, որպեսզի նոր լույսն անընդհատ գա։", "en": "Let's put a candle between the mirrors, so new light keeps coming." },
+          { "hy": "Նրա լույսի մի մասը դուրս է գալիս աջ հայելու միջով։ Բայց սա **պարզապես մոմի լույս է**․ աղոտ, բոլոր ուղղություններով գնացող, բոլոր գույներից կազմված։", "en": "Some of its light gets out through the right mirror. But it is **just candlelight**: dim, going in all directions, made of every colour." },
+          { "hy": "Եկեք ավելի մոտիկից նայենք դուրս եկող լույսին։", "en": "Let's look closer at the light that comes out." }
+        ],
+        "canvas": {
+          "candle": { "hy": "Մոմ", "en": "Candle" },
+          "out": { "hy": "Դուրս եկող լույսը՝ աղոտ և առկայծող", "en": "Light leaking out: dim and flickering" }
+        },
+        "try": {
+          "blowOut": { "hy": "Հանգցնել մոմը", "en": "Blow out the candle" },
+          "light": { "hy": "Վառել մոմը", "en": "Light the candle" },
+          "flame": { "hy": "Բոց", "en": "Flame" },
+          "flameValue": { "hy": "{p}%", "en": "{p}%" },
+          "litNote": { "hy": "Դուրս եկող լույսը թույլ է և առկայծում է բոցի հետ։ Այն երբեք փունջ չի դառնում։", "en": "The light coming out is weak and flickers with the flame. It never becomes a beam." },
+          "outNote": { "hy": "Առանց մոմի հայելիների միջև լույսը վերանում է նանովայրկյանների ընթացքում, ինչպես 2-րդ քայլում։", "en": "Without the candle the light between the mirrors is gone within nanoseconds, as in step 2." }
+        }
+      },
+      {
+        "title": { "hy": "Ավելի մոտիկից․ քաոս", "en": "A closer look: chaos" },
+        "hint": { "hy": "Փոխիր երկրորդ ալիքի գույնը և շեղումը և հետևիր դրանց գումարին։", "en": "Change the colour and the shift of the second wave and watch their sum." },
+        "captions": [
+          { "hy": "Մոտիկից մոմի լույսը տարբեր գույների և երկարությունների բազմաթիվ ալիքներ է, որոնցից յուրաքանչյուրը սկսվում է իր պահին։", "en": "Up close, candlelight is many waves of different colours and lengths, each starting at its own moment." },
+          { "hy": "Երբ ալիքները հանդիպում են, նրանք գումարվում են։ Կատարը կատարի վրա ավելի մեծ ալիք է տալիս, իսկ կատարը փոսի վրա՝ մարում։ Սա կոչվում է **ինտերֆերենցիա**։", "en": "When waves meet they add up. Crest on crest makes a bigger wave, and crest on trough cancels. This is called **interference**." },
+          { "hy": "Բայց այս ալիքները տարբեր երկարություններ ունեն և համաքայլ չեն, ուստի նրանց գումարը **խառնաշփոթ է**։ Միջինում ոչինչ չի ուժեղանում, և լույսը մնում է քաոսային։", "en": "But these waves have different lengths and are out of step, so their sum is **a jumble**. On average nothing builds up, and the light stays chaotic." },
+          { "hy": "Կարգի համար լույսին երեք բան է պետք․ լինել **մոնոքրոմատիկ** (մեկ գույն․ բոլոր ալիքները նույն երկարության), **կոհերենտ** (համաքայլ․ բոլոր ալիքների կատարները համընկնում են և մնում համընկած) և **ուղղորդված** (ամբողջը գնում է մեկ ուղղությամբ)։ Ինչպե՞ս հասնել դրան։", "en": "For order, the light would need three things: **monochromatic** (one colour: every wave the same length), **coherent** (in step: the crests of all the waves line up and stay lined up) and **directional** (all of it going one way). How can we get that?" }
+        ],
+        "canvas": {
+          "waves": { "hy": "Լույսի ալիքները (խիստ մեծացված)", "en": "The waves of the light (much enlarged)" },
+          "sum": { "hy": "Նրանց գումարը", "en": "Their sum" },
+          "inStep": { "hy": "Համաքայլ են։ Գումարը կրկնակի բարձր է", "en": "In step! The sum is twice as tall" },
+          "cancel": { "hy": "Կատարը փոսի վրա․ մարում են", "en": "Crest on trough: they cancel" },
+          "partly": { "hy": "Նույն գույնը, մասամբ ոչ համաքայլ", "en": "Same colour, partly out of step" },
+          "colours": { "hy": "Երկու գույն․ գումարն անընդհատ փոխվում է", "en": "Two colours: the sum keeps changing" },
+          "mono": { "hy": "մոնոքրոմատիկ (մեկ գույն)", "en": "monochromatic (one colour)" },
+          "coherent": { "hy": "կոհերենտ (համաքայլ)", "en": "coherent (in step)" },
+          "direction": { "hy": "ուղղորդված (մեկ ուղղությամբ)", "en": "directional (one way)" }
+        },
+        "try": {
+          "lam": { "hy": "Երկրորդ ալիքի գույնը", "en": "Colour of the second wave" },
+          "lamValue": { "hy": "{lam}", "en": "{lam}" },
+          "phase": { "hy": "Երկրորդ ալիքի շեղումը", "en": "Shift of the second wave" },
+          "phaseValue": { "hy": "{deg}°", "en": "{deg}°" },
+          "twoNote": { "hy": "Նույն գույն և առանց շեղման․ ալիքները համաքայլ են, և գումարը կրկնակի բարձր է։ Կես ալիքի շեղում․ մարում են։", "en": "Same colour and no shift: the waves are in step and the sum is twice as tall. Half a wave of shift: they cancel." }
+        }
+      },
+      {
+        "title": { "hy": "Ատոմը ինքնուրույն", "en": "An atom on its own" },
+        "hint": { "hy": "Սեղմիր ատոմի վրա՝ նրան էներգիա տալու համար, կամ գրգռիր բոլորին միանգամից։", "en": "Click an atom to give it energy, or excite them all at once." },
+        "captions": [
+          { "hy": "Լույսը գալիս է ատոմներից։ Էներգիա կլանած ատոմը ցատկում է ավելի բարձր մակարդակ։", "en": "Light comes from atoms. An atom that takes in energy jumps up to a higher level." },
+          { "hy": "Որոշ ժամանակ անց այն ինքնիրեն ետ է ընկնում և էներգիան տալիս մեկ ֆոտոնի՝ լույսի փոքրիկ բաժնի տեսքով, **պատահական ուղղությամբ և պատահական պահին**։", "en": "After a while it falls back by itself and gives the energy out as one photon, a small piece of light, **in a random direction and at a random moment**." },
+          { "hy": "Նույնիսկ եթե շատ ատոմներ միասին են ընկնում, յուրաքանչյուրն իր ֆոտոնը նետում է իր ուղղությամբ։ Սա դեռ նույն մոմի քաոսն է։", "en": "Even if many atoms fall together, each one throws its photon its own way. That is still the candle's chaos." }
+        ],
+        "canvas": {
+          "high": { "hy": "բարձր մակարդակ", "en": "high level" },
+          "low": { "hy": "ցածր մակարդակ", "en": "low level" },
+          "click": { "hy": "Սեղմիր ատոմի վրա՝ նրան էներգիա տալու համար", "en": "Click an atom to give it energy" }
+        },
+        "try": {
+          "all": { "hy": "Գրգռել բոլորին", "en": "Excite them all" },
+          "sent": { "hy": "Արձակված ֆոտոններ՝ {n}։ Յուրաքանչյուրը գնաց իր ճանապարհով։", "en": "Photons sent: {n}. Each went its own way." }
+        }
+      },
+      {
+        "title": { "hy": "Երկվորյակ ֆոտոնը", "en": "The twin photon" },
+        "hint": { "hy": "Ընտրիր, թե քանի ատոմ է գրգռված, և ֆոտոն ուղարկիր բյուրեղի միջով։", "en": "Set how many atoms are excited and send a photon through the crystal." },
+        "captions": [
+          { "hy": "Ընկնելու երկրորդ ձև էլ կա։ Կողքով անցնող ֆոտոնը կարող է ստիպել գրգռված ատոմին իջնել և արձակել երկվորյակ՝ նույն գույնի, նույն ուղղությամբ, համաքայլ։ Սա կոչվում է **հարկադրական ճառագայթում**։", "en": "There is a second way to fall. A passing photon can make an excited atom drop and send out a twin: the same colour, the same direction, in step. This is called **stimulated emission**." },
+          { "hy": "Բայց ֆոտոնը կարող է կլանվել նաև ներքևում գտնվող ատոմի կողմից։ Ուստի լույսն աճում է միայն այն դեպքում, երբ **վերևում ավելի շատ ատոմ կա, քան ներքևում**։", "en": "But a photon can also be swallowed by an atom that is down. So light only grows when **more atoms are up than down**." },
+          { "hy": "Այն նյութը, որում դա հնարավոր է անել, կոչվում է **ակտիվ միջավայր**։ Ռուբինը այդպիսի նյութ է․ նրա քրոմի ատոմները կարող են բավական երկար պահել էներգիան։", "en": "A material where we can manage that is called a **gain medium**. Ruby is one: its chromium atoms can hold the energy long enough." }
+        ],
+        "canvas": {
+          "twin": { "hy": "Հարկադրական ճառագայթում․ նույնական երկվորյակ", "en": "Stimulated emission: an identical twin" },
+          "waiting": { "hy": "Գրգռված ատոմ, որը սպասում է", "en": "An excited atom, waiting" },
+          "fewUp": { "hy": "Ներքևում ավելի շատ ատոմ կա, քան վերևում․ լույսը կլանվում է", "en": "More atoms down than up: the light is swallowed" },
+          "manyUp": { "hy": "Վերևում ավելի շատ ատոմ կա, քան ներքևում․ լույսն աճում է", "en": "More atoms up than down: the light grows" },
+          "out": { "hy": "Դուրս՝ {n}", "en": "Out: {n}" },
+          "crystal": { "hy": "Ռուբինի բյուրեղ", "en": "Ruby crystal" },
+          "upNow": { "hy": "Գրգռված ատոմներ՝ {n}-ը {total}-ից", "en": "Excited atoms: {n} of {total}" }
+        },
+        "try": {
+          "up": { "hy": "Գրգռված ատոմներ", "en": "Excited atoms" },
+          "upValue": { "hy": "{n}-ը {total}-ից", "en": "{n} of {total}" },
+          "send": { "hy": "Ուղարկել ֆոտոն", "en": "Send a photon" },
+          "inOut": { "hy": "Մուտք՝ 1 ֆոտոն։ Ելք՝ {n}։", "en": "In: 1 photon. Out: {n}." }
+        }
+      },
+      {
+        "title": { "hy": "Կառուցում ենք լազերը", "en": "Building the laser" },
+        "hint": { "hy": "Ընտրիր մղումը և դրա պայծառությունը և տես, թե երբ է լազերը սկսում աշխատել։", "en": "Choose the pump and its brightness, and see when the laser starts." },
+        "captions": [
+          { "hy": "Հիմա մոմը դուրս է։ Կիզակետային հեռավորության վրա դրված ոսպնյակը նրա լույսը դարձնում է **զուգահեռ ճառագայթներ**, և ձախ հայելին դրանք ներս է թողնում․ այն թողնում է մոմի գույները և անդրադարձնում լազերի կարմիրը։", "en": "Now the candle goes outside. A lens set one focal length away turns its light into **parallel rays**, and the left mirror lets them in: it lets the candle's colours through and reflects the laser's red." },
+          { "hy": "Մոմի լույսը ռուբինի ատոմները բարձրացնում է վերև։ Մի ֆոտոն, որը պատահաբար գնում է հայելիների ուղղությամբ, սկսում է **երկվորյակներ ստեղծել**։", "en": "The candle's light lifts ruby's atoms up. One photon that happens to run along the mirrors starts **making twins**." },
+          { "hy": "Բայց ամեն շրջապտույտի ժամանակ աջ հայելին դուրս է թողնում 10%։ Լույսն աճում է միայն այն դեպքում, երբ ռուբինն ավելին է ավելացնում, իսկ մոմը չի կարող բավականաչափ ատոմ բարձրացնել։ Իսկական լազերին **շատ ավելի պայծառ մղում** է պետք։", "en": "But each round trip the right mirror lets 10% out. The light only grows if the ruby adds more than that, and a candle cannot lift enough atoms. A real laser needs **a much brighter pump**." }
+        ],
+        "canvas": {
+          "focal": { "hy": "կիզակետային հեռավորություն", "en": "focal length" },
+          "leftMirror": { "hy": "Ներս է թողնում մոմի լույսը, պահում կարմիրը", "en": "Lets the candle in, keeps the red" },
+          "rightMirror": { "hy": "Դուրս է թողնում 10%", "en": "Lets 10% out" },
+          "medium": { "hy": "Ռուբին (ակտիվ միջավայր)", "en": "Ruby (the gain medium)" },
+          "lamp": { "hy": "Բռնկման լամպ", "en": "Flash lamp" },
+          "beam": { "hy": "Լազերային փունջ", "en": "Laser beam" },
+          "beamIs": { "hy": "մոնոքրոմատիկ (մեկ գույն) · կոհերենտ (համաքայլ) · մեկ ուղղություն", "en": "monochromatic (one colour) · coherent (in step) · one direction" },
+          "added": { "hy": "Ավելանում է մեկ շրջապտույտում՝ {p}%", "en": "Added in one round trip: {p}%" },
+          "lost": { "hy": "Դուրս է գնում մեկ շրջապտույտում՝ {p}%", "en": "Let out in one round trip: {p}%" }
+        },
+        "try": {
+          "pump": { "hy": "Մղում", "en": "Pump" },
+          "candle": { "hy": "Մոմ", "en": "Candle" },
+          "lamp": { "hy": "Բռնկման լամպ", "en": "Flash lamp" },
+          "bright": { "hy": "Պայծառություն", "en": "Brightness" },
+          "brightValue": { "hy": "{p}%", "en": "{p}%" },
+          "gauge": { "hy": "Ռուբինը մեկ շրջապտույտում ավելացնում է մինչև {p}%, իսկ աջ հայելին դուրս է թողնում {out}%։", "en": "The ruby adds up to {p}% per round trip; the right mirror lets {out}% out." },
+          "tooWeak": { "hy": "Շատ թույլ է․ լույսն ավելի արագ է մարում, քան ռուբինն այն ստեղծում է։ Փորձիր բռնկման լամպը։", "en": "Too weak: the light dies faster than the ruby makes it. Try the flash lamp." },
+          "lasing": { "hy": "Լազերն աշխատում է․ ռուբինն ավելին է ավելացնում, քան հայելին դուրս է թողնում, ուստի լույսը աճում և դառնում է փունջ։ Այս կետը կոչվում է շեմ։", "en": "The laser works: the ruby adds more than the mirror lets out, so the light grows into a beam. This point is called the threshold." },
+          "weak": { "hy": "Շեմից մի քիչ բարձր է․ ամեն բռնկման ժամանակ լույսը միայն մի փոքր է աճում։ Լամպն ավելի պայծառ դարձրու՝ ուժեղ փնջի համար։", "en": "Just over the threshold: in each flash the light grows only a little. Make the lamp brighter for a strong beam." },
+          "below": { "hy": "Շեմից ցածր է․ ռուբինն ավելի քիչ է ավելացնում, քան հայելին դուրս է թողնում, ուստի փունջ չկա։ Լամպն ավելի պայծառ դարձրու։", "en": "Below the threshold: the ruby adds less than the mirror lets out, so no beam. Make the lamp brighter." }
+        }
+      },
+      {
+        "title": { "hy": "Քո հերթն է", "en": "Your turn" },
+        "hint": { "hy": "Լաբորատորիայում իսկական լազերներ են․ բյուրեղներ, գազեր և ներկանյութեր՝ իրենց իսկական մղումներով և հայելիներով։", "en": "The lab has real lasers: crystals, gases and dyes, with their real pumps and mirrors." },
+        "captions": [
+          { "hy": "Հիմա **կառուցիր քո սեփական լազերը**․ ընտրիր բյուրեղ կամ գազ, մղիր այն և փոխիր հայելիները։", "en": "Now **build your own laser**: choose a crystal or a gas, pump it, and change the mirrors." }
+        ],
+        "canvas": {
+          "question": { "hy": "Ինչպե՞ս է աշխատում լազերը", "en": "How does a laser work?" },
+          "point1": { "hy": "1. Մղումը ատոմները բարձրացնում է վերև։", "en": "1. A pump lifts atoms up." },
+          "point2": { "hy": "2. Երկվորյակ ֆոտոնները բազմանում են երկու հայելիների միջև։", "en": "2. Twin photons multiply between two mirrors." },
+          "point3": { "hy": "3. Հայելիներից մեկը մի քիչ լույս է դուրս թողնում․ դա լազերային փունջն է։", "en": "3. One mirror lets a little out: the laser beam." }
+        },
+        "try": {
+          "open": { "hy": "Բացել լազերային լաբորատորիան", "en": "Open the laser lab" }
+        }
+      }
+    ]
   },
 
   "learn": {
