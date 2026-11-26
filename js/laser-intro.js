@@ -52,7 +52,7 @@
   // SECONDS_PER_WORD a word (about 200 words a minute), the picture comes
   // back and the film goes on. The caption stays up until the next one.
   var CAPTION_FADE = 3;
-  var SECONDS_PER_WORD = 0.3;
+  var SECONDS_PER_WORD = 0.2;
 
   var data = null;       // the laser page's words, from its newest build
   var pageButton = null; // the page's "Watch the introduction" button, newest build
@@ -262,15 +262,31 @@
     };
   }
 
-  // The button on the right: Skip while the step is watched (straight to
-  // its Try it part), Next once the step is finished (the owner's wish).
+  /* The button on the right: Skip while the step is watched, Next once
+     the step is finished (the owner's wish). Skip goes forward through the
+     captions as Back goes back (the owner's wish): from a caption's
+     reading (the picture blurred) to its picture, sharp at once; from a
+     picture to the next caption's reading; after the last caption, to the
+     step's Try it part. */
   function onNext() {
     if (trying) {
       go(index + 1);
       return;
     }
-    time = Math.max(time, step().watch);
-    startTrying();
+    var starts = step().captions;
+    var k = captionIndex();
+    if (reading) {
+      setReading(false);
+      captionAge = readingTime(ui.caption.getAttribute("data-text"));
+    } else if (k + 1 < starts.length) {
+      runTo(starts[k + 1]);
+      writeCaption();             // the next caption: its reading starts
+    } else {
+      time = Math.max(time, step().watch);
+      startTrying();
+    }
+    writeProgress();
+    draw();
     // the focus stays here, or goes to Back on the last step (no Next)
     var keep = ui.next.hidden ? ui.back : ui.next;
     if (keep.focus) keep.focus();
@@ -311,14 +327,7 @@
   // reading, or its picture with the caption already read.
   function seek(i, k, blurred) {
     startStep(i);
-    var target = k >= 0 ? step().captions[k] : 0;
-    var STEP = 1 / 30;
-    while (time < target) {
-      var dt = Math.min(STEP, target - time);
-      time += dt;
-      step().update(state, dt, env());
-    }
-    time = target;
+    runTo(k >= 0 ? step().captions[k] : 0);
     writeCaption();
     if (!blurred) {
       setReading(false);
@@ -326,6 +335,17 @@
     }
     writeProgress();
     draw();
+  }
+
+  // Runs the step forward (without drawing) to the film time `target`.
+  function runTo(target) {
+    var STEP = 1 / 30;
+    while (time < target) {
+      var dt = Math.min(STEP, target - time);
+      time += dt;
+      step().update(state, dt, env());
+    }
+    time = Math.max(time, target);
   }
 
   function go(i) {

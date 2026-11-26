@@ -129,10 +129,11 @@ function navButton(t) {
   return nav.children[nav.children.length - 1];
 }
 
-// From step 1 to step `index` + 1: Skip, then Next, for each step.
+// From step 1 to step `index` + 1: Skip until the step is finished, then
+// Next, for each step.
 function goToStep(t, index) {
   for (let i = 0; i < index; i++) {
-    navButton(t).fire("click");
+    for (let k = 0; k < 20 && !navButton(t).className.includes("btn--primary"); k++) navButton(t).fire("click");
     navButton(t).fire("click");
   }
 }
@@ -300,8 +301,8 @@ test("a new caption blurs the picture and stops the film until it has been read"
   const first = DATA.intro.steps[0].captions[0].en;
   for (let k = 0; k < 400 && caption.getAttribute("data-text") !== first; k++) play(t, 0.05);
   assert.equal(box.getAttribute("data-reading"), "true", "blurred while the caption comes in");
-  // 3 s of fading in, then 0.3 s a word
-  const need = 3 + words(first) * 0.3;
+  // 3 s of fading in, then 0.2 s a word (CAPTION_FADE, SECONDS_PER_WORD)
+  const need = 3 + words(first) * 0.2;
   play(t, need - 1);
   assert.equal(box.getAttribute("data-reading"), "true", "still blurred while it is read");
   play(t, 1.5);
@@ -313,28 +314,56 @@ test("a new caption blurs the picture and stops the film until it has been read"
   assert.equal(box.getAttribute("data-reading"), "false");
 });
 
-test("while a step is watched the button is Skip (straight to Try it), then the red Next", () => {
+test("Skip goes forward through the captions as Back goes back, then the red Next", () => {
   const t = setup();
   ready(t);
   t.button.fire("click", { currentTarget: t.button });
   const button = navButton(t);
+  const box = one(t, "laser-intro");
   const tryRow = one(t, "laser-intro__try");
   const count = one(t, "laser-intro__count");
+  const caption = one(t, "laser-intro__caption");
+  const captions = DATA.intro.steps[0].captions.map((c) => c.en);
   assert.equal(button.textContent, DATA.intro.skipStep.en);
   assert.doesNotMatch(button.className, /btn--primary/, "not the red button yet");
+  // the title card (no caption yet): Skip goes to the first caption's reading
   button.fire("click");
-  assert.equal(tryRow.hidden, false, "Skip goes straight to the Try it part");
+  assert.equal(caption.getAttribute("data-text"), captions[0]);
+  assert.equal(box.getAttribute("data-reading"), "true");
+  for (let k = 0; k < captions.length; k++) {
+    if (k > 0) {
+      // from the picture to the next caption's reading
+      button.fire("click");
+      assert.equal(caption.getAttribute("data-text"), captions[k]);
+      assert.equal(box.getAttribute("data-reading"), "true", "caption " + k + ": its reading");
+    }
+    // from the reading to its picture, sharp at once, same caption
+    button.fire("click");
+    assert.equal(box.getAttribute("data-reading"), "false");
+    assert.equal(caption.getAttribute("data-text"), captions[k]);
+    assert.equal(tryRow.hidden, true);
+  }
+  // after the last caption: the Try it part, and the red Next
+  button.fire("click");
+  assert.equal(tryRow.hidden, false);
   assert.equal(count.textContent, "Step 1 of 8", "on the same step");
   assert.equal(button.textContent, DATA.intro.next.en);
   assert.match(button.className, /btn--primary/);
   button.fire("click");
   assert.equal(count.textContent, "Step 2 of 8");
   assert.equal(button.textContent, DATA.intro.skipStep.en, "Skip again on the new step");
+  // step 2 opens in its first caption's reading; Skip shows its picture,
+  // and Back undoes that: the same caption's reading again
+  assert.equal(box.getAttribute("data-reading"), "true");
+  button.fire("click");
+  assert.equal(box.getAttribute("data-reading"), "false");
+  one(t, "laser-intro__nav").children[2].fire("click");
+  assert.equal(box.getAttribute("data-reading"), "true", "Back: that caption's reading again");
   // the last step: Skip while watched, no Next after
   goToStep(t, 6);
   assert.equal(count.textContent, "Step 8 of 8");
-  assert.equal(button.hidden, false);
-  button.fire("click");
+  for (let k = 0; k < 20 && tryRow.hidden; k++) button.fire("click");
+  assert.equal(tryRow.hidden, false);
   assert.equal(button.hidden, true);
 });
 

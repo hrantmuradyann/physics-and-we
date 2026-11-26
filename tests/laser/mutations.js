@@ -6802,6 +6802,12 @@ const MUTATIONS = [
     why: "the progress bar not moving while a step plays"
   },
   {
+    file: "js/laser-intro.js",
+    find: "    } else if (k + 1 < starts.length) {",
+    replace: "    } else if (false) {",
+    why: "Skip jumping straight to Try it instead of to the next caption"
+  },
+  {
     file: "js/laser-intro-steps.js",
     find: "    var gap = Math.round(760 * Math.pow(length / 0.3, 0.3));",
     replace: "    var gap = 760;",
