@@ -220,23 +220,16 @@ test("the laser of step 7, atom by atom: the candle lifts some atoms, never half
   assert.ok(candle > 0.1 && candle < 0.5, "a candle lifts some atoms: " + candle);
   // the lamp at its top keeps enough up to beat the mirror
   assert.ok(P.gainOfAtoms(P.upShare("lamp", 1) * N, N) > P.LETS_OUT);
-  // one round trip: every meeting happens (chance 0) ...
+  // a photon passing an atom: with chance 0 every meeting happens ...
   const sure = () => 0;
-  let up = [true, true, true, true];
-  let trip = P.roundTripAtoms(up, 1, { value: 0 }, sure);
-  assert.equal(trip.twins.length, 4, "each excited atom gives a twin");
-  assert.equal(trip.light + trip.out, 5);
-  assert.deepEqual(Array.from(up), [false, false, false, false], "and goes down");
-  up = [false, false, false];
-  trip = P.roundTripAtoms(up, 2, { value: 0 }, sure);
-  assert.equal(trip.taken.length, 2, "calm atoms take the photons (until none is left)");
-  assert.equal(trip.light, 0);
-  assert.deepEqual(Array.from(up), [true, true, false], "and go up");
-  // ... or none (chance 0.99): the light just loses at the mirror
-  const carry = { value: 0 };
-  trip = P.roundTripAtoms([true], 10, carry, () => 0.99);
-  assert.equal(trip.out, 1, "10% of 10 leaves");
-  assert.equal(trip.light, 9);
+  const up = [true, false];
+  assert.equal(P.photonMeets(up, 0, sure), "twin", "an excited atom gives a twin");
+  assert.equal(up[0], false, "and goes down");
+  assert.equal(P.photonMeets(up, 1, sure), "taken", "a calm atom swallows the photon");
+  assert.equal(up[1], true, "and goes up");
+  // ... with a chance over P_RUBY none does
+  assert.equal(P.photonMeets(up, 1, () => P.P_RUBY + 0.01), null);
+  assert.equal(up[1], true);
   // the lamp flashes: dark at the start of each flash, full at its top
   assert.equal(P.pumpNow("lamp", 1, 0), 0);
   let top = 0;
@@ -560,7 +553,7 @@ test("step 7 calls it a working laser only when the beam is there: a lamp just o
   assert.match(notes(), /The laser works/);
   slider.value = "0.05";
   slider.fire("input");
-  play(t, 7);
+  play(t, 25);   // the photons already between the mirrors take a while to die out
   assert.match(notes(), /Below the threshold/);
 });
 

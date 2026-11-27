@@ -6761,9 +6761,9 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "    carry.value += LETS_OUT * n;",
-    replace: "    carry.value += 0;",
-    why: "the mirror's loss forgotten in the round trip"
+    find: "        if (random() < LETS_OUT) {",
+    replace: "        if (random() < 0) {",
+    why: "step 7's right mirror never letting a photon out"
   },
   {
     file: "js/laser-intro.js",
@@ -6791,14 +6791,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "        n += 1;\n        twins.push(i);",
-    replace: "        twins.push(i);",
+    find: "          born.push({",
+    replace: "          if (false) born.push({",
     why: "step 7's photons never making twins"
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "        n -= 1;\n        taken.push(i);",
-    replace: "        taken.push(i);",
+    find: "          gone = true;",
+    replace: "          gone = false;",
     why: "step 7's calm atoms lifted by photons without swallowing them"
   },
   {

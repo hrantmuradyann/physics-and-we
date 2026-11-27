@@ -131,21 +131,24 @@
      down. The pump lifts a calm atom by chance, at PUMP_RATE (per second,
      at full brightness: a candle's light lifts few, a flash lamp's many);
      an excited atom falls back by itself after ATOM_LIFE seconds on
-     average, sending a photon in a random direction (TO_AXIS of them
-     happen to run along the mirrors). Between the mirrors, a photon
-     passing an atom acts on it with the chance P_RUBY: an excited atom
-     gives a twin, a calm one swallows the photon and goes up (the same
-     chance both ways, as in step 6). The right mirror lets LETS_OUT out. */
+     average, sending a photon in a random direction; TO_AXIS of them
+     happen to run along the mirrors and stay between them, the others
+     leave sideways or end at a mirror's edge. Each photon between the
+     mirrors is followed on its own: passing an atom it acts on it with
+     the chance P_RUBY: an excited atom gives a twin (flying with it), a
+     calm one swallows the photon and goes up (the same chance both ways,
+     as in step 6). The left mirror turns every photon back; at the right
+     one each leaves with the chance LETS_OUT. */
   var RUBY_ATOMS = 32;
   var PUMP_RATE = { candle: 0.15, lamp: 4 };
   var ATOM_LIFE = 2;        // seconds
-  var P_RUBY = 0.0125;      // smaller than P_MEET: the light passes many atoms
-  var TO_AXIS = 0.05;
+  var P_RUBY = 0.04;        // smaller than P_MEET: the light passes many atoms
+  var TO_AXIS = 0.12;
   var LETS_OUT = 0.1;
-  var ROUNDS = 40;          // round trips shown per second of screen time
   var FLASH_EVERY = 3;      // seconds between the lamp's flashes (screen time)
   var FLASH_RISE = 0.6;     // seconds to the flash's top
   var BEAM_SHOWN = 6;       // photons between the mirrors at which the beam is named
+  var MAX_PHOTONS = 60;     // the most followed between the mirrors (the pump limits them first)
 
   // How bright the pump is now (0..1): a candle burns steadily, the lamp
   // flashes again and again.
@@ -172,32 +175,14 @@
     return rate / (rate + 1 / ATOM_LIFE);
   }
 
-  // One round trip of the light (`light` photons) through the atoms (`up`,
-  // an array of true/false, changed in place). Returns the photons after
-  // it, the twins and the swallowed, and how many left through the mirror
-  // (`carry` is the fraction of a photon owed to the mirror: { value }).
-  function roundTripAtoms(up, light, carry, random) {
-    var n = light;
-    var twins = [];
-    var taken = [];
-    for (var i = 0; i < up.length; i++) {
-      if (n <= 0) break;
-      var chance = 1 - Math.pow(1 - P_RUBY, 2 * n);
-      if (random() >= chance) continue;
-      if (up[i]) {
-        up[i] = false;
-        n += 1;
-        twins.push(i);
-      } else {
-        up[i] = true;
-        n -= 1;
-        taken.push(i);
-      }
-    }
-    carry.value += LETS_OUT * n;
-    var out = Math.min(n, Math.floor(carry.value));
-    carry.value -= out;
-    return { light: n - out, twins: twins, taken: taken, out: out };
+  // A photon passing atom i (`up`: the atoms, changed in place): with the
+  // chance P_RUBY it acts on it. Returns "twin" (the atom was up: it gives
+  // a twin and goes down), "taken" (it was down: it swallows the photon
+  // and goes up), or null (nothing happened).
+  function photonMeets(up, i, random) {
+    if (random() >= P_RUBY) return null;
+    up[i] = !up[i];
+    return up[i] ? "taken" : "twin";
   }
 
   var physics = Object.freeze({
@@ -220,7 +205,7 @@
     pumpNow: pumpNow,
     gainOfAtoms: gainOfAtoms,
     upShare: upShare,
-    roundTripAtoms: roundTripAtoms
+    photonMeets: photonMeets
   });
 
   /* ---------- Small helpers ---------- */
@@ -1140,15 +1125,13 @@
     return {
       pump: pump, bright: bright, clock: 0, level: 0,
       up: up,                 // the ruby's atoms: excited or not
-      light: 0,               // photons between the mirrors
-      carry: 0,               // round trips owed to the frame
-      owed: { value: 0 },     // a fraction of a photon owed to the mirror
+      photons: [],            // photons between the mirrors: { x, y, dir }
+      light: 0,               // how many there are
       gain: 0,                // what the ruby adds per round trip now (0 when it takes)
       peak: 0, lightPeak: 0, lastPeak: 0, lastLightPeak: 0, peakAge: 0,
       sparks: [],             // atoms that just changed: { atom, kind, age }
       strays: [],             // photons atoms sent by themselves, flying off
       leaving: [],            // photons gone out through the right mirror
-      packet: { x: 0, dir: 1 },   // where the drawn group of photons is
       seeded: false
     };
   }
@@ -1187,52 +1170,95 @@
       } else if (random() < fall) {
         s.up[i] = false;
         // its photon flies off in a random direction; a few run along the
-        // mirrors and join the light there
+        // mirrors and stay between them
+        var at = atomPlace(i);
         if (random() < TO_AXIS) {
-          s.light += 1;
+          addPhoton(s, at.x, at.y, random() < 0.5 ? 1 : -1);
           spark(s, i, "twin");
         } else if (s.strays.length < 24) {
-          var angle = random() * Math.PI * 2;
-          var at = atomPlace(i);
+          // off the axis: at least 15° from it, so it leaves sideways or
+          // ends at a mirror's edge
+          var angle = (15 + random() * 150) * Math.PI / 180;
+          if (random() < 0.5) angle = -angle;
+          if (random() < 0.5) angle = Math.PI - angle;
           s.strays.push({ x: at.x, y: at.y, dx: Math.cos(angle), dy: Math.sin(angle), age: 0 });
         }
       }
     }
   }
 
-  var PACKET_SPEED = 900;   // px per second: the drawn group, far slower than light
-  var PACKET_MAX = 40;      // the most photons drawn
+  var PHOTON_SPEED = 900;   // px per second: far slower than light
 
-  function packetLeft() {
-    return L7.left.x + L7.left.w + 10;
+  function addPhoton(s, x, y, dir) {
+    if (s.photons.length >= MAX_PHOTONS) return;
+    s.photons.push({ x: x, y: y, dir: dir });
   }
 
-  function packetRight() {
-    return L7.right.x - 10;
+  // The photons between the mirrors, for dt seconds: each meets the atoms
+  // it passes (a twin flies on beside it; a swallowed one is gone), the
+  // left mirror turns it back, the right one lets it out by chance.
+  function movePhotons(s, dt, random) {
+    var left = L7.left.x + L7.left.w;
+    var right = L7.right.x;
+    var kept = [];
+    var born = [];
+    for (var i = 0; i < s.photons.length; i++) {
+      var p = s.photons[i];
+      var from = p.x;
+      p.x += p.dir * PHOTON_SPEED * dt;
+      var lo = Math.min(from, p.x);
+      var hi = Math.max(from, p.x);
+      var gone = false;
+      for (var a = 0; a < RUBY_ATOMS && !gone; a++) {
+        var ax = atomPlace(a).x;
+        if (ax <= lo || ax > hi) continue;
+        var what = photonMeets(s.up, a, random);
+        if (what === "twin") {
+          spark(s, a, "twin");
+          // the twin: the same direction, a little beside it
+          var side = random() < 0.5 ? -1 : 1;
+          born.push({ x: p.x, y: clamp(p.y + side * 4, L7.rod.y + 6, L7.rod.y + L7.rod.h - 6), dir: p.dir });
+        } else if (what === "taken") {
+          spark(s, a, "taken");
+          gone = true;
+        }
+      }
+      if (gone) continue;
+      if (p.x >= right) {
+        if (random() < LETS_OUT) {
+          s.leaving.push({ x: right + L7.right.w + 4, y: p.y });
+          continue;
+        }
+        p.x = right - (p.x - right);
+        p.dir = -1;
+      } else if (p.x <= left) {
+        p.x = left + (left - p.x);
+        p.dir = 1;
+      }
+      kept.push(p);
+    }
+    s.photons = kept;
+    for (var k = 0; k < born.length; k++) addPhoton(s, born[k].x, born[k].y, born[k].dir);
+    s.light = s.photons.length;
   }
 
   function moveVisuals(s, dt) {
     var i;
     for (i = 0; i < s.sparks.length; i++) s.sparks[i].age += dt;
     s.sparks = s.sparks.filter(function (k) { return k.age < 0.5; });
+    // photons flying off: one that reaches a mirror ends at its edge
+    var left = L7.left.x + L7.left.w;
+    var right = L7.right.x;
     for (i = 0; i < s.strays.length; i++) {
       var p = s.strays[i];
       p.x += p.dx * 260 * dt;
       p.y += p.dy * 260 * dt;
       p.age += dt;
+      if (p.x <= left || p.x >= right) p.age = 99;
     }
     s.strays = s.strays.filter(function (q) { return q.age < 1.4; });
-    for (i = 0; i < s.leaving.length; i++) s.leaving[i].x += PACKET_SPEED * dt;
+    for (i = 0; i < s.leaving.length; i++) s.leaving[i].x += PHOTON_SPEED * dt;
     s.leaving = s.leaving.filter(function (q) { return q.x < W + 40; });
-    var pk = s.packet;
-    pk.x += pk.dir * PACKET_SPEED * dt;
-    if (pk.x >= packetRight()) {
-      pk.x = packetRight();
-      pk.dir = -1;
-    } else if (pk.x <= packetLeft()) {
-      pk.x = packetLeft();
-      pk.dir = 1;
-    }
   }
 
   var step7 = {
@@ -1254,20 +1280,9 @@
       // the watching part: one photon happens to run along the mirrors
       if (!env.trying && env.t > 9 && !s.seeded) {
         s.seeded = true;
-        if (s.light < 1) s.light = 1;
+        if (s.photons.length === 0) addPhoton(s, L7.rod.x + 20, AXIS, 1);
       }
-      // the light's round trips through the atoms
-      s.carry += dt * ROUNDS;
-      while (s.carry >= 1) {
-        s.carry -= 1;
-        var trip = roundTripAtoms(s.up, s.light, s.owed, env.random);
-        s.light = trip.light;
-        for (var k = 0; k < trip.twins.length; k++) spark(s, trip.twins[k], "twin");
-        for (k = 0; k < trip.taken.length; k++) spark(s, trip.taken[k], "taken");
-        for (k = 0; k < Math.min(trip.out, 3); k++) {
-          s.leaving.push({ x: L7.right.x + L7.right.w + 6, y: AXIS + (k - 1) * 8 });
-        }
-      }
+      movePhotons(s, dt, env.random);
       s.gain = Math.max(0, gainOfAtoms(countUp(s), RUBY_ATOMS));
       // the most added in the last flash (or now, for the candle), and
       // the most light between the mirrors in that time
@@ -1366,12 +1381,11 @@
         D.glow(W - 80, AXIS, 60, c.beam, 0.4 * strength);
       }
       g.restore();
-      // the photons between the mirrors, drawn as a group running back and
-      // forth (far slower than light), and those leaving or flying off
-      var drawn = Math.min(PACKET_MAX, Math.round(s.light));
-      var spacing = Math.min(8, 56 / Math.max(drawn, 1));
-      for (var q = 0; q < drawn; q++) {
-        D.photon(s.packet.x, AXIS + (q - (drawn - 1) / 2) * spacing, s.packet.dir, 0, c.beam, show);
+      // the photons between the mirrors, each on its own (solid: laser
+      // light), those gone out through the right mirror, and those the
+      // atoms sent off sideways (dashed)
+      for (var q = 0; q < s.photons.length; q++) {
+        D.photon(s.photons[q].x, s.photons[q].y, s.photons[q].dir, 0, c.beam, show);
       }
       for (q = 0; q < s.leaving.length; q++) D.photon(s.leaving[q].x, s.leaving[q].y, 1, 0, c.beam, 0.8 * show);
       for (q = 0; q < s.strays.length; q++) {
@@ -1435,7 +1449,7 @@
     var g = D.context();
     var x0 = 430;
     var x1 = 850;
-    var full = gainOfAtoms(RUBY_ATOMS, RUBY_ATOMS);   // every atom up
+    var full = 1;   // the bars' scale: 100% (the ruby may add more; the bar stops there)
     var y = 90;
     g.save();
     g.globalAlpha = alpha;
