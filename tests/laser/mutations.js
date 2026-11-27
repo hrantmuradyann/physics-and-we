@@ -6749,21 +6749,21 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "        if (isUp(i, up, total)) n += 1;\n        else n -= 1;",
-    replace: "        if (isUp(i, up, total)) n += 1;",
+    find: "        atoms[i] = true;\n        n -= 1;",
+    replace: "        atoms[i] = true;",
     why: "calm atoms not swallowing photons: light grows with any atom up"
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "  var MAX_GAIN = { candle: 0.03, lamp: 0.4 };",
-    replace: "  var MAX_GAIN = { candle: 0.3, lamp: 0.4 };",
+    find: "  var PUMP_RATE = { candle: 0.15, lamp: 4 };",
+    replace: "  var PUMP_RATE = { candle: 4, lamp: 4 };",
     why: "a candle strong enough to start the laser"
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "    var next = light * (1 + gain / (1 + light) - LETS_OUT) + SEED * gain;",
-    replace: "    var next = light * (1 + gain / (1 + light)) + SEED * gain;",
-    why: "the mirror's loss forgotten in the round trip"
+    find: "        if (random() < LETS_OUT) {",
+    replace: "        if (random() < 0) {",
+    why: "step 7's right mirror never letting a photon out"
   },
   {
     file: "js/laser-intro.js",
@@ -6791,15 +6791,39 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "        p.n += 1;                       // a twin",
-    replace: "        p.n += 0;                       // a twin",
+    find: "          born.push({",
+    replace: "          if (false) born.push({",
     why: "step 7's photons never making twins"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "          gone = true;",
+    replace: "          gone = false;",
+    why: "step 7's calm atoms lifted by photons without swallowing them"
+  },
+  {
+    file: "js/laser-intro.js",
+    find: "    return function () {\n      startStep(i);",
+    replace: "    return function () {\n      startStep(i + 1);",
+    why: "the progress bar's circle opening the step after its own"
   },
   {
     file: "js/laser-intro.js",
     find: "      else if (i === index) share = trying ? 1 : Math.min(1, time / step().watch);",
     replace: "      else if (i === index) share = trying ? 1 : 0;",
     why: "the progress bar not moving while a step plays"
+  },
+  {
+    file: "js/laser-intro.js",
+    find: "    } else if (k + 1 < starts.length) {",
+    replace: "    } else if (false) {",
+    why: "Skip jumping straight to Try it instead of to the next caption"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "    return 1 - Math.pow(1 - P_MEET, n);",
+    replace: "    return 1;",
+    why: "every photon acting on every atom it passes, as if there were no chance"
   },
   {
     file: "js/laser-intro-steps.js",

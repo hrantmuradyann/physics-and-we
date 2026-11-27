@@ -348,7 +348,7 @@
         "title": { "hy": "Ատոմը ինքնուրույն", "en": "An atom on its own" },
         "hint": { "hy": "Սեղմիր ատոմի վրա՝ նրան էներգիա տալու համար, կամ գրգռիր բոլորին միանգամից։", "en": "Click an atom to give it energy, or excite them all at once." },
         "captions": [
-          { "hy": "Լույսը գալիս է ատոմներից։ Էներգիա կլանած ատոմը ցատկում է ավելի բարձր մակարդակ։", "en": "Light comes from atoms. An atom that takes in energy jumps up to a higher level." },
+          { "hy": "Լույսը գալիս է ատոմներից։ Ատոմը կարող է կլանել ֆոտոն և ցատկել ավելի բարձր մակարդակ, բայց **միայն ճիշտ գույնի ֆոտոն**, և այդ էլ ոչ ամեն անգամ․ շատերն անցնում են կողքով։", "en": "Light comes from atoms. An atom can take in a photon and jump up to a higher level, but **only a photon of the right colour**, and even then not every time: most fly past." },
           { "hy": "Որոշ ժամանակ անց այն ինքնիրեն ետ է ընկնում և էներգիան տալիս մեկ ֆոտոնի՝ լույսի փոքրիկ բաժնի տեսքով, **պատահական ուղղությամբ և պատահական պահին**։", "en": "After a while it falls back by itself and gives the energy out as one photon, a small piece of light, **in a random direction and at a random moment**." },
           { "hy": "Նույնիսկ եթե շատ ատոմներ միասին են ընկնում, յուրաքանչյուրն իր ֆոտոնը նետում է իր ուղղությամբ։ Սա դեռ նույն մոմի քաոսն է։", "en": "Even if many atoms fall together, each one throws its photon its own way. That is still the candle's chaos." }
         ],
@@ -367,12 +367,13 @@
         "hint": { "hy": "Ընտրիր, թե քանի ատոմ է գրգռված, և ֆոտոն ուղարկիր բյուրեղի միջով։", "en": "Set how many atoms are excited and send a photon through the crystal." },
         "captions": [
           { "hy": "Ընկնելու երկրորդ ձև էլ կա։ Կողքով անցնող ֆոտոնը կարող է ստիպել գրգռված ատոմին իջնել և արձակել երկվորյակ՝ նույն գույնի, նույն ուղղությամբ, համաքայլ։ Սա կոչվում է **հարկադրական ճառագայթում**։", "en": "There is a second way to fall. A passing photon can make an excited atom drop and send out a twin: the same colour, the same direction, in step. This is called **stimulated emission**." },
-          { "hy": "Բայց ֆոտոնը կարող է կլանվել նաև ներքևում գտնվող ատոմի կողմից։ Ուստի լույսն աճում է միայն այն դեպքում, երբ **վերևում ավելի շատ ատոմ կա, քան ներքևում**։", "en": "But a photon can also be swallowed by an atom that is down. So light only grows when **more atoms are up than down**." },
+          { "hy": "Բայց ֆոտոնը նույնքան հավանականությամբ կարող է կլանվել նաև ներքևում գտնվող ատոմի կողմից։ Ուստի լույսն աճում է միայն այն դեպքում, երբ **վերևում ավելի շատ ատոմ կա, քան ներքևում**։", "en": "But a photon can also be swallowed by an atom that is down, just as likely. So light only grows when **more atoms are up than down**." },
           { "hy": "Այն նյութը, որում դա հնարավոր է անել, կոչվում է **ակտիվ միջավայր**։ Ռուբինը այդպիսի նյութ է․ նրա քրոմի ատոմները կարող են բավական երկար պահել էներգիան։", "en": "A material where we can manage that is called a **gain medium**. Ruby is one: its chromium atoms can hold the energy long enough." }
         ],
         "canvas": {
           "twin": { "hy": "Հարկադրական ճառագայթում․ նույնական երկվորյակ", "en": "Stimulated emission: an identical twin" },
           "waiting": { "hy": "Գրգռված ատոմ, որը սպասում է", "en": "An excited atom, waiting" },
+          "passedBy": { "hy": "Այս մեկն անցավ կողքով․ երկվորյակ ամեն անգամ չի ծնվում։", "en": "This one flew past: a twin is not made every time." },
           "fewUp": { "hy": "Ներքևում ավելի շատ ատոմ կա, քան վերևում․ լույսը կլանվում է", "en": "More atoms down than up: the light is swallowed" },
           "manyUp": { "hy": "Վերևում ավելի շատ ատոմ կա, քան ներքևում․ լույսն աճում է", "en": "More atoms up than down: the light grows" },
           "out": { "hy": "Դուրս՝ {n}", "en": "Out: {n}" },
@@ -383,7 +384,9 @@
           "up": { "hy": "Գրգռված ատոմներ", "en": "Excited atoms" },
           "upValue": { "hy": "{n}-ը {total}-ից", "en": "{n} of {total}" },
           "send": { "hy": "Ուղարկել ֆոտոն", "en": "Send a photon" },
-          "inOut": { "hy": "Մուտք՝ 1 ֆոտոն։ Ելք՝ {n}։", "en": "In: 1 photon. Out: {n}." }
+          "inOut": { "hy": "Մուտք՝ 1 ֆոտոն։ Ելք՝ {n}։", "en": "In: 1 photon. Out: {n}." },
+          "again": { "hy": "Ամեն անգամ արդյունքը տարբեր է՝ պատահականությունից․ ուղարկիր նորից։", "en": "Each run comes out differently, by chance: send it again." },
+          "sendFirst": { "hy": "Ուղարկիր ֆոտոն և տես, թե քանիսը դուրս կգան։", "en": "Send a photon and see how many come out." }
         }
       },
       {
@@ -391,7 +394,7 @@
         "hint": { "hy": "Ընտրիր մղումը և դրա պայծառությունը և տես, թե երբ է լազերը սկսում աշխատել։", "en": "Choose the pump and its brightness, and see when the laser starts." },
         "captions": [
           { "hy": "Հիմա մոմը դուրս է։ Կիզակետային հեռավորության վրա դրված ոսպնյակը նրա լույսը դարձնում է **զուգահեռ ճառագայթներ**, և ձախ հայելին դրանք ներս է թողնում․ այն թողնում է մոմի գույները և անդրադարձնում լազերի կարմիրը։", "en": "Now the candle goes outside. A lens set one focal length away turns its light into **parallel rays**, and the left mirror lets them in: it lets the candle's colours through and reflects the laser's red." },
-          { "hy": "Մոմի լույսը ռուբինի ատոմները բարձրացնում է վերև։ Մի ֆոտոն, որը պատահաբար գնում է հայելիների ուղղությամբ, սկսում է **երկվորյակներ ստեղծել**։", "en": "The candle's light lifts ruby's atoms up. One photon that happens to run along the mirrors starts **making twins**." },
+          { "hy": "Մոմի լույսը ռուբինի ատոմների մի մասը բարձրացնում է վերև, և դրանք ինքնիրեն ետ են ընկնում՝ յուրաքանչյուր ֆոտոնն իր ուղղությամբ։ Այն մեկը, որը պատահաբար գնում է հայելիների ուղղությամբ, կարող է **երկվորյակներ ստեղծել**, բայց ներքևում մնացած շատ ատոմները նույնպես կլանում են ֆոտոններ։", "en": "The candle's light lifts some of ruby's atoms up, and they fall back by themselves, each photon going its own way. One that happens to run along the mirrors can **make twins**, but the many atoms still down swallow photons too." },
           { "hy": "Բայց ամեն շրջապտույտի ժամանակ աջ հայելին դուրս է թողնում 10%։ Լույսն աճում է միայն այն դեպքում, երբ ռուբինն ավելին է ավելացնում, իսկ մոմը չի կարող բավականաչափ ատոմ բարձրացնել։ Իսկական լազերին **շատ ավելի պայծառ մղում** է պետք։", "en": "But each round trip the right mirror lets 10% out. The light only grows if the ruby adds more than that, and a candle cannot lift enough atoms. A real laser needs **a much brighter pump**." }
         ],
         "canvas": {
@@ -402,8 +405,8 @@
           "lamp": { "hy": "Բռնկման լամպ", "en": "Flash lamp" },
           "beam": { "hy": "Լազերային փունջ", "en": "Laser beam" },
           "beamIs": { "hy": "մոնոքրոմատիկ (մեկ գույն) · կոհերենտ (համաքայլ) · մեկ ուղղություն", "en": "monochromatic (one colour) · coherent (in step) · one direction" },
-          "added": { "hy": "Ավելանում է մեկ շրջապտույտում՝ {p}%", "en": "Added in one round trip: {p}%" },
-          "lost": { "hy": "Դուրս է գնում մեկ շրջապտույտում՝ {p}%", "en": "Let out in one round trip: {p}%" }
+          "atomsUp": { "hy": "Գրգռված ատոմներ՝ {n}-ը {total}-ից (պետք է կեսից ավելին)", "en": "Atoms up: {n} of {total} (more than half needed)" },
+          "photons": { "hy": "Ֆոտոններ հայելիների միջև՝ {n}", "en": "Photons between the mirrors: {n}" }
         },
         "try": {
           "pump": { "hy": "Մղում", "en": "Pump" },
@@ -411,11 +414,10 @@
           "lamp": { "hy": "Բռնկման լամպ", "en": "Flash lamp" },
           "bright": { "hy": "Պայծառություն", "en": "Brightness" },
           "brightValue": { "hy": "{p}%", "en": "{p}%" },
-          "gauge": { "hy": "Ռուբինը մեկ շրջապտույտում ավելացնում է մինչև {p}%, իսկ աջ հայելին դուրս է թողնում {out}%։", "en": "The ruby adds up to {p}% per round trip; the right mirror lets {out}% out." },
+          "mostUp": { "hy": "Առավելագույնը {n}-ը {total}-ից ատոմ էր գրգռված․ լույսն աճում է միայն այն դեպքում, երբ կեսից ավելին են գրգռված։", "en": "At most {n} of {total} atoms were up; the light grows only when more than half are." },
           "tooWeak": { "hy": "Շատ թույլ է․ լույսն ավելի արագ է մարում, քան ռուբինն այն ստեղծում է։ Փորձիր բռնկման լամպը։", "en": "Too weak: the light dies faster than the ruby makes it. Try the flash lamp." },
-          "lasing": { "hy": "Լազերն աշխատում է․ ռուբինն ավելին է ավելացնում, քան հայելին դուրս է թողնում, ուստի լույսը աճում և դառնում է փունջ։ Այս կետը կոչվում է շեմ։", "en": "The laser works: the ruby adds more than the mirror lets out, so the light grows into a beam. This point is called the threshold." },
-          "weak": { "hy": "Շեմից մի քիչ բարձր է․ ամեն բռնկման ժամանակ լույսը միայն մի փոքր է աճում։ Լամպն ավելի պայծառ դարձրու՝ ուժեղ փնջի համար։", "en": "Just over the threshold: in each flash the light grows only a little. Make the lamp brighter for a strong beam." },
-          "below": { "hy": "Շեմից ցածր է․ ռուբինն ավելի քիչ է ավելացնում, քան հայելին դուրս է թողնում, ուստի փունջ չկա։ Լամպն ավելի պայծառ դարձրու։", "en": "Below the threshold: the ruby adds less than the mirror lets out, so no beam. Make the lamp brighter." }
+          "lasing": { "hy": "Լազերն աշխատում է․ ֆոտոններն ավելի շատ երկվորյակներ են ստանում, քան կորցնում են կլանման և հայելու պատճառով, և լույսը դառնում է փունջ։ Այս կետը կոչվում է շեմ։", "en": "The laser works: the photons gain more twins than they lose to calm atoms and the mirror, and the light grows into a beam. This point is called the threshold." },
+          "below": { "hy": "Շեմից ցածր է․ քիչ ատոմներ են գրգռված, ուստի ֆոտոններն ավելի արագ են կլանվում կամ դուրս գնում, քան երկվորյակներ են ստեղծվում։ Լամպն ավելի պայծառ դարձրու։", "en": "Below the threshold: too few atoms are up, so photons are swallowed or let out faster than twins are made. Make the lamp brighter." }
         }
       },
       {

@@ -11,14 +11,20 @@
    under the picture), then played with: its sliders and buttons appear
    in the "Try it" row once the watching part is over. Next and Back move
    between steps at any time; "Watch again" starts the step again. Skip
-   (top right) or Esc closes the tour.
+   (top right) or Esc closes the tour. While a step is watched, the
+   bottom-right button is a plain Skip that moves forward through the
+   captions (a caption's reading, then its picture, then the next
+   caption), and Back moves backward the same way, into the step before;
+   once the step is finished it becomes the red Next. A progress bar of
+   one segment per step fills as the step plays; the small circle before
+   each segment goes straight to that step.
 
    It opens by itself each time the laser page (?view=laser) comes on
    screen, a reload too (the owner's wish), not for a visitor who asked
    for less motion; the page's "Watch the introduction" button
-   (data-laser-intro in sections/laser.html) opens it any time. The
-   watching part runs at WATCH_PACE of the screen's clock, so there is
-   time to read; each new caption rises in slowly (css/laser.css).
+   (data-laser-intro in sections/laser.html) opens it any time. Each new
+   caption rises in slowly (css/laser.css) and the film stands still
+   while it is read.
    It closes if the visitor goes to another page meanwhile.
 
    The picture is drawn on a canvas, a 1280 x 720 board scaled to fit, in
@@ -43,16 +49,13 @@
   var W = 1280;          // the board's size
   var H = 720;
   var NOTES_EVERY = 0.25; // seconds between rewrites of the readouts
-  // The watching part runs slower than the screen's clock, so there is
-  // time to read each caption (the owner: "give more time to read").
-  var WATCH_PACE = 0.6;
   // A new caption fades in over CAPTION_FADE seconds (as css/laser.css)
   // while the picture is blurred and the film stands still (the owner: the
   // reader's eye goes to the words); once it can be read, at
   // SECONDS_PER_WORD a word (about 200 words a minute), the picture comes
   // back and the film goes on. The caption stays up until the next one.
   var CAPTION_FADE = 3;
-  var SECONDS_PER_WORD = 0.3;
+  var SECONDS_PER_WORD = 0.2;
 
   var data = null;       // the laser page's words, from its newest build
   var pageButton = null; // the page's "Watch the introduction" button, newest build
@@ -207,7 +210,6 @@
     box.hidden = true;
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
-    box.setAttribute("aria-labelledby", "laser-intro-title");
 
     var panel = make("div", "laser-intro__panel", box);
     var top = make("div", "laser-intro__top", panel);
@@ -219,13 +221,16 @@
     var skipWord = make("span", "", skip);
     skip.insertAdjacentHTML("beforeend", SKIP_ICON);
 
-    // the progress: one segment per step
+    // the progress: per step a circle that goes to it and a segment
     var progress = make("div", "laser-intro__progress", panel);
-    progress.setAttribute("aria-hidden", "true");
     var dotList = [];
     var fillList = [];
+    var jumpList = [];
     for (var i = 0; i < LaserIntro.steps.length; i++) {
-      var segment = make("span", "laser-intro__segment", progress);
+      var part = make("div", "laser-intro__part", progress);
+      jumpList.push(button("laser-intro__jump", part, jumpTo(i)));
+      var segment = make("span", "laser-intro__segment", part);
+      segment.setAttribute("aria-hidden", "true");
       dotList.push(segment);
       fillList.push(make("span", "laser-intro__fill", segment));
     }
@@ -256,21 +261,37 @@
 
     document.body.appendChild(box);
     return {
-      box: box, count: count, title: title, dots: dotList, fills: fillList, skip: skip, skipWord: skipWord,
+      box: box, count: count, title: title, dots: dotList, fills: fillList, jumps: jumpList, skip: skip, skipWord: skipWord,
       canvas: canvas, caption: caption, tryRow: tryRow, badge: badge, hint: hint, controlBox: controlBox,
       notes: notes, again: again, back: back, next: next
     };
   }
 
-  // The button on the right: Skip while the step is watched (straight to
-  // its Try it part), Next once the step is finished (the owner's wish).
+  /* The button on the right: Skip while the step is watched, Next once
+     the step is finished (the owner's wish). Skip goes forward through the
+     captions as Back goes back (the owner's wish): from a caption's
+     reading (the picture blurred) to its picture, sharp at once; from a
+     picture to the next caption's reading; after the last caption, to the
+     step's Try it part. */
   function onNext() {
     if (trying) {
       go(index + 1);
       return;
     }
-    time = Math.max(time, step().watch);
-    startTrying();
+    var starts = step().captions;
+    var k = captionIndex();
+    if (reading) {
+      setReading(false);
+      captionAge = readingTime(ui.caption.getAttribute("data-text"));
+    } else if (k + 1 < starts.length) {
+      runTo(starts[k + 1]);
+      writeCaption();             // the next caption: its reading starts
+    } else {
+      time = Math.max(time, step().watch);
+      startTrying();
+    }
+    writeProgress();
+    draw();
     // the focus stays here, or goes to Back on the last step (no Next)
     var keep = ui.next.hidden ? ui.back : ui.next;
     if (keep.focus) keep.focus();
@@ -311,14 +332,7 @@
   // reading, or its picture with the caption already read.
   function seek(i, k, blurred) {
     startStep(i);
-    var target = k >= 0 ? step().captions[k] : 0;
-    var STEP = 1 / 30;
-    while (time < target) {
-      var dt = Math.min(STEP, target - time);
-      time += dt;
-      step().update(state, dt, env());
-    }
-    time = target;
+    runTo(k >= 0 ? step().captions[k] : 0);
     writeCaption();
     if (!blurred) {
       setReading(false);
@@ -326,6 +340,24 @@
     }
     writeProgress();
     draw();
+  }
+
+  // Runs the step forward (without drawing) to the film time `target`.
+  function runTo(target) {
+    var STEP = 1 / 30;
+    while (time < target) {
+      var dt = Math.min(STEP, target - time);
+      time += dt;
+      step().update(state, dt, env());
+    }
+    time = Math.max(time, target);
+  }
+
+  // A click on a step's circle in the progress bar: that step, from its start.
+  function jumpTo(i) {
+    return function () {
+      startStep(i);
+    };
   }
 
   function go(i) {
@@ -348,7 +380,7 @@
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     // the step's own part of the board (its `view`: the heights it uses)
-    var view = (index !== null && LaserIntro.steps[index].view) || [0, H];
+    var view = LaserIntro.steps[index].view || [0, H];
     var tall = view[1] - view[0];
     var scale = Math.min(canvas.width / W, canvas.height / tall);
     board = {
@@ -441,7 +473,16 @@
     ui.back.textContent = word("intro.back");
     writeNext();
     for (var i = 0; i < ui.dots.length; i++) {
-      ui.dots[i].className = "laser-intro__segment" + (i === index ? " is-current" : i < index ? " is-done" : "");
+      var stateClass = i === index ? " is-current" : i < index ? " is-done" : "";
+      ui.dots[i].className = "laser-intro__segment" + stateClass;
+      ui.jumps[i].className = "laser-intro__jump" + stateClass;
+      // "Step 3 of 8: A candle between the mirrors"
+      var name = fill(word("intro.stepOf"), { n: i + 1, total: LaserIntro.steps.length }) +
+        ": " + word("intro.steps." + i + ".title");
+      ui.jumps[i].setAttribute("aria-label", name);
+      ui.jumps[i].setAttribute("title", name);
+      if (i === index) ui.jumps[i].setAttribute("aria-current", "step");
+      else ui.jumps[i].removeAttribute("aria-current");
     }
     writeProgress();
     for (var c = 0; c < controls.length; c++) {
@@ -491,11 +532,14 @@
 
   // How long (screen seconds) the picture stays blurred for a new
   // caption: its fade, then time to read it at an easy pace.
+  var readingCache = { words: null, time: 0 };
   function readingTime(words) {
+    if (words === readingCache.words) return readingCache.time;
     var count = words ? words.split(/\s+/).length : 0;
     // with less motion the caption is there at once (css/laser.css)
     var fade = asksForLessMotion() ? 0 : CAPTION_FADE;
-    return fade + count * SECONDS_PER_WORD;
+    readingCache = { words: words, time: fade + count * SECONDS_PER_WORD };
+    return readingCache.time;
   }
 
   // Blurs the picture while a caption is being read (css/laser.css).
@@ -597,10 +641,8 @@
     lastFrame = now;
     captionAge += dt;
     if (reading && captionAge >= readingTime(ui.caption.getAttribute("data-text"))) setReading(false);
-    // while watching, the step moves on the same slowed clock as its
-    // captions, and stands still while a new caption is read
+    // the step stands still while a new caption is read
     if (reading) dt = 0;
-    else if (!trying) dt *= WATCH_PACE;
     time += dt;
     resizeIfNeeded();
     if (!trying && time >= step().watch) startTrying();

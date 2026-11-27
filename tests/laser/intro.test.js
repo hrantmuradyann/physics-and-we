@@ -77,6 +77,8 @@ function setup(options) {
   browser.load("js/laser-intro-steps.js");
   browser.load("js/laser-intro.js");
   const added = browser.addedGlobals().filter((name) => !before.includes(name));
+  // the tour's chance, repeatable (it uses LaserIntro.random when set)
+  w.LaserIntro.random = w.LaserIntro.physics.seeded(2024);
   const button = fakeElement("button");
   button.focus = function () { w.document.activeElement = button; };
   return { browser, w, store, canvases, missing, added, button };
@@ -108,10 +110,6 @@ function one(t, name) {
   return list[0];
 }
 
-// The watching part runs at this share of the screen's clock (WATCH_PACE
-// in js/laser-intro.js), so there is time to read.
-const PACE = 0.6;
-
 // Plays a step's whole watching part, and a little more.
 // (each caption also holds the film until it has been read, so this plays
 // until the "Try it" part comes, at most two minutes)
@@ -129,10 +127,11 @@ function navButton(t) {
   return nav.children[nav.children.length - 1];
 }
 
-// From step 1 to step `index` + 1: Skip, then Next, for each step.
+// From step 1 to step `index` + 1: Skip until the step is finished, then
+// Next, for each step.
 function goToStep(t, index) {
   for (let i = 0; i < index; i++) {
-    navButton(t).fire("click");
+    for (let k = 0; k < 20 && !navButton(t).className.includes("btn--primary"); k++) navButton(t).fire("click");
     navButton(t).fire("click");
   }
 }
@@ -165,14 +164,37 @@ test("the numbers the words state: 7 and 22 bounces at 10%, 2 ns over 30 cm", ()
   assert.ok(P.bouncesUntil(0.01, 0.1) * P.roundTrip(0.3) < 1e-7);
 });
 
-test("twins in a row of ten atoms: the light grows only when more are up than down", () => {
+test("twins in a row of ten atoms, by chance: on average the light grows only when more are up than down", () => {
   const { w } = setup();
   const P = w.LaserIntro.physics;
-  const out = (up) => P.passRow(up, 10, 1)[9];
-  assert.equal(out(10), 11, "every atom adds a twin");
-  assert.equal(out(5), 1, "half up: as much out as in");
-  for (let up = 0; up < 5; up++) assert.equal(out(up), 0, up + " up: swallowed");
-  for (let up = 6; up <= 10; up++) assert.ok(out(up) > out(up - 1), up + " up: more than " + (up - 1));
+  // the chance is the same both ways, and more photons meet an atom more surely
+  assert.equal(P.meetChance(1), P.P_MEET);
+  assert.ok(Math.abs(P.meetChance(2) - (1 - (1 - P.P_MEET) ** 2)) < 1e-12);
+  // if every meeting happens, each excited atom adds one, each calm one takes one
+  const sure = () => 0;
+  assert.equal(P.passRow(10, 10, 1, sure)[9], 11, "every atom adds a twin");
+  for (let up = 0; up < 5; up++) assert.equal(P.passRow(up, 10, 1, sure)[9], 0, up + " up: swallowed");
+  // if none happens, the photon goes through alone
+  assert.equal(P.passRow(10, 10, 1, () => 0.99)[9], 1);
+  // the average of many runs (a repeatable chance)
+  const random = P.seeded(12345);
+  const mean = (up) => {
+    let sum = 0;
+    for (let k = 0; k < 4000; k++) sum += P.passRow(up, 10, 1, random)[9];
+    return sum / 4000;
+  };
+  const means = [];
+  for (let up = 0; up <= 10; up++) means.push(mean(up));
+  for (let up = 0; up <= 5; up++) assert.ok(means[up] < 1, up + " up: less out than in on average, " + means[up]);
+  for (let up = 6; up <= 10; up++) assert.ok(means[up] > 1, up + " up: more out than in, " + means[up]);
+  for (let up = 6; up <= 10; up++) assert.ok(means[up] > means[up - 1], up + " up: more than " + (up - 1));
+  // the watching part's two runs are typical ones
+  assert.equal(P.passRow(2, 10, 1, P.seeded(P.FEW_SEED))[9], 0, "2 up: swallowed");
+  assert.ok(P.passRow(9, 10, 1, P.seeded(P.MANY_SEED))[9] >= 5, "9 up: it grows");
+  // the same seed, the same numbers
+  const a = P.seeded(7);
+  const b = P.seeded(7);
+  for (let k = 0; k < 5; k++) assert.equal(a(), b());
   for (let up = 0; up <= 10; up++) {
     let count = 0;
     for (let i = 0; i < 10; i++) if (P.isUp(i, up, 10)) count += 1;
@@ -180,20 +202,26 @@ test("twins in a row of ten atoms: the light grows only when more are up than do
   }
 });
 
-test("the laser of step 7: the candle stays under the mirror's 10%, the flash lamp starts it", () => {
+test("the laser of step 7, atom by atom: the candle lifts some atoms, never half; the lamp lifts enough", () => {
   const { w } = setup();
   const P = w.LaserIntro.physics;
-  assert.ok(P.gainOf("candle", 1) < P.LETS_OUT, "a candle at full is too weak");
-  assert.ok(P.gainOf("lamp", 1) > P.LETS_OUT, "the lamp is strong enough");
-  const run = (gain, rounds) => {
-    let light = 0;
-    for (let i = 0; i < rounds; i++) light = P.roundTripLight(light, gain);
-    return light;
-  };
-  assert.ok(run(P.gainOf("candle", 1), 2000) < 0.01, "no beam with the candle");
-  assert.ok(run(P.gainOf("lamp", 1), 200) > 1, "a beam with the lamp");
-  assert.ok(run(0.099, 2000) < 0.05, "just under the threshold: none");
-  assert.ok(run(0.11, 2000) > 0.05, "just over it: some");
+  const N = P.RUBY_ATOMS;
+  assert.ok(N >= 30, "at least 30 atoms");
+  // the candle keeps some atoms up, but fewer than half: no gain
+  const candle = P.upShare("candle", 1);
+  assert.ok(candle > 0.1 && candle < 0.5, "a candle lifts some atoms: " + candle);
+  // the lamp at its top keeps enough up to beat the mirror
+  assert.ok(P.upShare("lamp", 1) > 0.5, "the lamp at its top keeps more than half up");
+  // a photon passing an atom: with chance 0 every meeting happens ...
+  const sure = () => 0;
+  const up = [true, false];
+  assert.equal(P.photonMeets(up, 0, sure), "twin", "an excited atom gives a twin");
+  assert.equal(up[0], false, "and goes down");
+  assert.equal(P.photonMeets(up, 1, sure), "taken", "a calm atom swallows the photon");
+  assert.equal(up[1], true, "and goes up");
+  // ... with a chance over P_RUBY none does
+  assert.equal(P.photonMeets(up, 1, () => P.P_RUBY + 0.01), null);
+  assert.equal(up[1], true);
   // the lamp flashes: dark at the start of each flash, full at its top
   assert.equal(P.pumpNow("lamp", 1, 0), 0);
   let top = 0;
@@ -201,9 +229,6 @@ test("the laser of step 7: the candle stays under the mirror's 10%, the flash la
   assert.ok(top > 0.99 && top <= 1, "the flash's top is the brightness: " + top);
   assert.equal(P.pumpNow("candle", 0.6, 1.234), 0.6, "a candle burns steadily");
 });
-
-/* ---------- 2. the words ---------- */
-
 test("data/laser.json: eight steps, each with its title, hint and captions in both languages", () => {
   const intro = DATA.intro;
   for (const key of ["label", "replay", "skip", "stepOf", "watchAgain", "back", "next"]) {
@@ -273,7 +298,7 @@ test("captions: none during the title card, then each fades in whole, key words 
   shown(t);
   const caption = one(t, "laser-intro__caption");
   assert.equal(caption.getAttribute("data-text"), "", "the title card has no caption");
-  play(t, 6 / PACE);   // past the card (5.5 s of the film)
+  play(t, 6);   // past the card (5.5 s of the film)
   assert.equal(caption.getAttribute("data-text"), DATA.intro.steps[0].captions[0].en);
   // one line, faded in as a whole (css/laser.css), its pieces in order
   assert.equal(caption.children.length, 1);
@@ -300,8 +325,8 @@ test("a new caption blurs the picture and stops the film until it has been read"
   const first = DATA.intro.steps[0].captions[0].en;
   for (let k = 0; k < 400 && caption.getAttribute("data-text") !== first; k++) play(t, 0.05);
   assert.equal(box.getAttribute("data-reading"), "true", "blurred while the caption comes in");
-  // 3 s of fading in, then 0.3 s a word
-  const need = 3 + words(first) * 0.3;
+  // 3 s of fading in, then 0.2 s a word (CAPTION_FADE, SECONDS_PER_WORD)
+  const need = 3 + words(first) * 0.2;
   play(t, need - 1);
   assert.equal(box.getAttribute("data-reading"), "true", "still blurred while it is read");
   play(t, 1.5);
@@ -313,74 +338,93 @@ test("a new caption blurs the picture and stops the film until it has been read"
   assert.equal(box.getAttribute("data-reading"), "false");
 });
 
-test("while a step is watched the button is Skip (straight to Try it), then the red Next", () => {
+test("Skip goes forward through the captions as Back goes back, then the red Next", () => {
   const t = setup();
   ready(t);
   t.button.fire("click", { currentTarget: t.button });
   const button = navButton(t);
+  const box = one(t, "laser-intro");
   const tryRow = one(t, "laser-intro__try");
   const count = one(t, "laser-intro__count");
+  const caption = one(t, "laser-intro__caption");
+  const captions = DATA.intro.steps[0].captions.map((c) => c.en);
   assert.equal(button.textContent, DATA.intro.skipStep.en);
   assert.doesNotMatch(button.className, /btn--primary/, "not the red button yet");
+  // the title card (no caption yet): Skip goes to the first caption's reading
   button.fire("click");
-  assert.equal(tryRow.hidden, false, "Skip goes straight to the Try it part");
+  assert.equal(caption.getAttribute("data-text"), captions[0]);
+  assert.equal(box.getAttribute("data-reading"), "true");
+  for (let k = 0; k < captions.length; k++) {
+    if (k > 0) {
+      // from the picture to the next caption's reading
+      button.fire("click");
+      assert.equal(caption.getAttribute("data-text"), captions[k]);
+      assert.equal(box.getAttribute("data-reading"), "true", "caption " + k + ": its reading");
+    }
+    // from the reading to its picture, sharp at once, same caption
+    button.fire("click");
+    assert.equal(box.getAttribute("data-reading"), "false");
+    assert.equal(caption.getAttribute("data-text"), captions[k]);
+    assert.equal(tryRow.hidden, true);
+  }
+  // after the last caption: the Try it part, and the red Next
+  button.fire("click");
+  assert.equal(tryRow.hidden, false);
   assert.equal(count.textContent, "Step 1 of 8", "on the same step");
   assert.equal(button.textContent, DATA.intro.next.en);
   assert.match(button.className, /btn--primary/);
   button.fire("click");
   assert.equal(count.textContent, "Step 2 of 8");
   assert.equal(button.textContent, DATA.intro.skipStep.en, "Skip again on the new step");
+  // step 2 opens in its first caption's reading; Skip shows its picture,
+  // and Back undoes that: the same caption's reading again
+  assert.equal(box.getAttribute("data-reading"), "true");
+  button.fire("click");
+  assert.equal(box.getAttribute("data-reading"), "false");
+  one(t, "laser-intro__nav").children[2].fire("click");
+  assert.equal(box.getAttribute("data-reading"), "true", "Back: that caption's reading again");
   // the last step: Skip while watched, no Next after
   goToStep(t, 6);
   assert.equal(count.textContent, "Step 8 of 8");
-  assert.equal(button.hidden, false);
-  button.fire("click");
+  for (let k = 0; k < 20 && tryRow.hidden; k++) button.fire("click");
+  assert.equal(tryRow.hidden, false);
   assert.equal(button.hidden, true);
 });
 
-test("step 7: the photons between the mirrors gain twins from glowing atoms and leak at the mirror", () => {
+test("step 7 runs atom by atom: the candle lifts some, photons are swallowed; the lamp makes twins and a beam", () => {
   const t = setup();
   const step = t.w.LaserIntro.steps[6];
-  const env = (time, trying) => ({ t: time, trying, random: () => 0.5, still: false, w: () => "", page: () => "" });
-  // the watching part, with the candle: a lone photon gets a few twins
-  let s = step.start(env(0, false));
-  let most = 0;
-  for (let time = 0; time < 24; time += 0.05) {
-    step.update(s, 0.05, env(time, false));
-    if (s.packet) most = Math.max(most, s.packet.n);
-  }
-  assert.ok(most >= 3 && most <= 4, "a candle's photon gets a few twins: " + most);
-  // with the candle the twins leak out and the group is never large
-  s = step.start(env(0, true));
-  const sizes = [];
-  for (let time = 0; time < 90; time += 0.05) {
-    step.update(s, 0.05, env(time, true));
-    sizes.push(s.packet ? s.packet.n : 0);
-  }
-  assert.ok(Math.max(...sizes) <= 4, "the candle never makes more than a few");
-  assert.ok(sizes.includes(0), "they leak out and the light dies");
-  assert.ok(s.leaving !== undefined);
-  // the flash lamp at full brightness: the group fills up
-  s = step.start(env(0, true));
-  step.set(s, "pump", "lamp");
-  let lampMost = 0;
-  for (let time = 0; time < 12; time += 0.05) {
-    step.update(s, 0.05, env(time, true));
-    if (s.packet) lampMost = Math.max(lampMost, s.packet.n);
-  }
-  assert.ok(lampMost >= 12, "the lamp fills the group with twins: " + lampMost);
-  // a dim lamp, under the threshold: no growth beyond the lone photon
-  s = step.start(env(0, true));
-  step.set(s, "pump", "lamp");
-  step.set(s, "bright", 0.15);
-  let dimMost = 0;
-  for (let time = 0; time < 12; time += 0.05) {
-    step.update(s, 0.05, env(time, true));
-    if (s.packet) dimMost = Math.max(dimMost, s.packet.n);
-  }
-  assert.equal(dimMost, 1, "under the threshold the photon finds no room for twins");
+  const P = t.w.LaserIntro.physics;
+  const runFor = (pump, bright, seconds) => {
+    const random = P.seeded(31);
+    const env = (time) => ({ t: time, trying: true, random, still: false, w: () => "", page: () => "" });
+    const s = step.start(env(0));
+    step.set(s, "pump", pump);
+    step.set(s, "bright", bright);
+    const seen = { up: 0, sumUp: 0, frames: 0, light: 0, twin: 0, taken: 0, pumped: 0 };
+    for (let time = 0; time < seconds; time += 1 / 30) {
+      step.update(s, 1 / 30, env(time));
+      const up = s.up.filter(Boolean).length;
+      seen.up = Math.max(seen.up, up);
+      seen.sumUp += up;
+      seen.frames += 1;
+      seen.light = Math.max(seen.light, s.light);
+      // the sparks made in this frame (they have aged one frame since)
+      for (const k of s.sparks) if (k.age <= 1 / 30 + 1e-9) seen[k.kind] += 1;
+    }
+    seen.meanUp = seen.sumUp / seen.frames;
+    return seen;
+  };
+  const candle = runFor("candle", 1, 60);
+  assert.ok(candle.pumped > 20, "the candle lifts atoms: " + candle.pumped);
+  assert.ok(candle.up >= 5, "some are up at once: " + candle.up);
+  assert.ok(candle.meanUp < P.RUBY_ATOMS / 2, "fewer than half on average: " + candle.meanUp);
+  assert.ok(candle.light < P.BEAM_SHOWN, "no beam with the candle: " + candle.light);
+  const lamp = runFor("lamp", 1, 15);
+  assert.ok(lamp.twin > 20, "the lamp's atoms give twins: " + lamp.twin);
+  assert.ok(lamp.taken > 0, "and photons lift some atoms: " + lamp.taken);
+  assert.ok(lamp.light >= P.BEAM_SHOWN, "a beam: " + lamp.light);
 });
-
 test("the progress bar fills the current step's segment as it plays", () => {
   const t = setup();
   ready(t);
@@ -399,6 +443,25 @@ test("the progress bar fills the current step's segment as it plays", () => {
   navButton(t).fire("click");
   assert.equal(share(0), 1, "a step done stays full");
   assert.equal(share(1), 0, "the next starts empty");
+});
+
+test("a circle before each step's segment goes straight to that step", () => {
+  const t = setup();
+  ready(t);
+  t.button.fire("click", { currentTarget: t.button });
+  const jumps = byClass(t, "laser-intro__jump");
+  assert.equal(jumps.length, 8);
+  assert.equal(jumps[5].getAttribute("aria-label"), "Step 6 of 8: " + DATA.intro.steps[5].title.en);
+  assert.equal(jumps[0].getAttribute("aria-current"), "step");
+  jumps[5].fire("click");
+  assert.match(one(t, "laser-intro__count").textContent, /Step 6 of 8/);
+  assert.equal(one(t, "laser-intro__title").textContent, DATA.intro.steps[5].title.en);
+  assert.equal(jumps[5].getAttribute("aria-current"), "step");
+  assert.equal(jumps[0].getAttribute("aria-current"), null);
+  assert.match(jumps[4].className, /is-done/);
+  assert.equal(one(t, "laser-intro__try").hidden, true, "from the step's start");
+  jumps[1].fire("click");
+  assert.match(one(t, "laser-intro__count").textContent, /Step 2 of 8/, "and back");
 });
 
 test("not by itself for a visitor who asked for less motion; another page closes it", () => {
@@ -481,7 +544,7 @@ test("an error in a step closes the tour, so the button can open it again", () =
   assert.equal(t.w.LaserIntro.isOpen(), true);
 });
 
-test("step 7 calls it a working laser only when the beam is there: a lamp just over the threshold is weak", () => {
+test("step 7 calls it a working laser only when the beam is there", () => {
   const t = setup();
   ready(t);
   t.button.fire("click", { currentTarget: t.button });
@@ -491,17 +554,13 @@ test("step 7 calls it a working laser only when the beam is there: a lamp just o
   assert.match(notes(), /Too weak/, "the candle");
   all(one(t, "laser-intro__controls")).find((el) => el.getAttribute && el.getAttribute("data-option") === "lamp").fire("click");
   const slider = one(t, "laser-intro__range");
-  slider.value = "0.3";
-  slider.fire("input");
-  play(t, 7);
-  assert.match(notes(), /Just over the threshold/, "brightness 0.3: the gain passes 10% only briefly");
   slider.value = "1";
   slider.fire("input");
   play(t, 7);
   assert.match(notes(), /The laser works/);
-  slider.value = "0.2";
+  slider.value = "0.05";
   slider.fire("input");
-  play(t, 7);
+  play(t, 25);   // the photons already between the mirrors take a while to die out
   assert.match(notes(), /Below the threshold/);
 });
 
@@ -545,11 +604,20 @@ test("step 6 shows on the picture the count the readout states", () => {
   goToStep(t, 5);
   watchStep(t, 5);
   const slider = one(t, "laser-intro__range");
+  const send = all(one(t, "laser-intro__controls")).find((el) => el.tagName === "BUTTON");
+  const recorder = t.canvases[0].recorder;
   for (const up of [3, 5, 8]) {
     slider.value = String(up);
     slider.fire("input");
-    const expected = t.w.LaserIntro.physics.passRow(up, 10, 1)[9];
-    assert.match(one(t, "laser-intro__notes").children[0].textContent, new RegExp("Out: " + expected + "\\."));
+    send.fire("click");
+    play(t, 7);   // the photons cross the row
+    const note = one(t, "laser-intro__notes").children[0].textContent;
+    const said = note.match(/Out: (\d+)\./);
+    assert.ok(said, up + " up: the readout gives the count: " + note);
+    recorder.calls.length = 0;
+    play(t, 0.1);
+    const drawn = recorder.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
+    assert.ok(drawn.includes("Out: " + said[1]), up + " up: the picture shows " + said[1] + ": " + drawn.join(" | "));
   }
 });
 
