@@ -209,7 +209,6 @@
     box.hidden = true;
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
-    box.setAttribute("aria-labelledby", "laser-intro-title");
 
     var panel = make("div", "laser-intro__panel", box);
     var top = make("div", "laser-intro__top", panel);
@@ -370,7 +369,7 @@
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     // the step's own part of the board (its `view`: the heights it uses)
-    var view = (index !== null && LaserIntro.steps[index].view) || [0, H];
+    var view = LaserIntro.steps[index].view || [0, H];
     var tall = view[1] - view[0];
     var scale = Math.min(canvas.width / W, canvas.height / tall);
     board = {
@@ -513,11 +512,14 @@
 
   // How long (screen seconds) the picture stays blurred for a new
   // caption: its fade, then time to read it at an easy pace.
+  var readingCache = { words: null, time: 0 };
   function readingTime(words) {
+    if (words === readingCache.words) return readingCache.time;
     var count = words ? words.split(/\s+/).length : 0;
     // with less motion the caption is there at once (css/laser.css)
     var fade = asksForLessMotion() ? 0 : CAPTION_FADE;
-    return fade + count * SECONDS_PER_WORD;
+    readingCache = { words: words, time: fade + count * SECONDS_PER_WORD };
+    return readingCache.time;
   }
 
   // Blurs the picture while a caption is being read (css/laser.css).

@@ -103,14 +103,30 @@
   // passes may add a twin (and fall down), each calm one may swallow a
   // photon (and go up), by chance (`random`, 0 to 1). Returns the count
   // after each atom (the last = out).
+  // n photons pass atom i of `atoms` (true: up; changed in place): with
+  // the chance meetChance(n) one of them acts on it. An excited atom gives
+  // a twin and goes down; a calm one swallows a photon and goes up.
+  // Returns the photons after it. Step 6's rows run on this.
+  function passAtom(atoms, i, n, random) {
+    if (n > 0 && random() < meetChance(n)) {
+      if (atoms[i]) {
+        atoms[i] = false;
+        n += 1;
+      } else {
+        atoms[i] = true;
+        n -= 1;
+      }
+    }
+    return n;
+  }
+
   function passRow(up, total, photonsIn, random) {
+    var atoms = [];
+    for (var a = 0; a < total; a++) atoms.push(isUp(a, up, total));
     var n = photonsIn;
     var counts = [];
     for (var i = 0; i < total; i++) {
-      if (n > 0 && random() < meetChance(n)) {
-        if (isUp(i, up, total)) n += 1;
-        else n -= 1;
-      }
+      n = passAtom(atoms, i, n, random);
       counts.push(n);
     }
     return counts;
@@ -210,14 +226,14 @@
     return f * f * (3 - 2 * f);
   }
 
-  // 1234567 -> "1 200 000": two significant digits, spaces between
-  // thousands (the same in both languages).
   // Puts a step's state back to a fresh one, in place (the frame keeps
   // the same object).
   function resetTo(s, fresh) {
     for (var key in fresh) s[key] = fresh[key];
   }
 
+  // 1234567 -> "1 200 000": two significant digits, spaces between
+  // thousands (the same in both languages).
   function bigNumber(value) {
     if (value < 100) return String(Math.round(value));
     var power = Math.pow(10, Math.floor(Math.log(value) / Math.LN10) - 1);
@@ -955,16 +971,7 @@
     if (row.x === null) return;
     row.x += GROUP_SPEED * dt;
     while (row.next < ROW && row.x >= ROW_X0 + row.next * ROW_STEP) {
-      var i = row.next;
-      if (row.n > 0 && random() < meetChance(row.n)) {
-        if (row.atoms[i]) {
-          row.atoms[i] = false;
-          row.n += 1;
-        } else {
-          row.atoms[i] = true;
-          row.n -= 1;
-        }
-      }
+      row.n = passAtom(row.atoms, row.next, row.n, random);
       row.next += 1;
     }
     if (row.next >= ROW && row.out === null) row.out = row.n;
@@ -1151,8 +1158,10 @@
 
   // The pump and the atoms falling by themselves, for dt seconds.
   function moveAtoms(s, dt, random) {
-    var lift = PUMP_RATE[s.pump] * s.level * dt;
-    var fall = dt / ATOM_LIFE;
+    // the chance of each in dt: 1 - e^(-rate dt), the same however the
+    // time is cut into frames
+    var lift = 1 - Math.exp(-PUMP_RATE[s.pump] * s.level * dt);
+    var fall = 1 - Math.exp(-dt / ATOM_LIFE);
     for (var i = 0; i < s.up.length; i++) {
       if (!s.up[i]) {
         if (random() < lift) {
@@ -1194,6 +1203,7 @@
     var right = L7.right.x;
     var kept = [];
     var born = [];
+    var count = s.photons.length;   // photons now, twins included
     for (var i = 0; i < s.photons.length; i++) {
       var p = s.photons[i];
       var from = p.x;
@@ -1204,20 +1214,26 @@
       for (var a = 0; a < RUBY_ATOMS && !gone; a++) {
         var ax = atomPlace(a).x;
         if (ax <= lo || ax > hi) continue;
+        // with no room for a twin, an excited atom is passed by (its
+        // energy is never lost without a photon)
+        if (s.up[a] && count >= MAX_PHOTONS) continue;
         var what = photonMeets(s.up, a, random);
         if (what === "twin") {
           spark(s, a, "twin");
-          // the twin: the same direction, a little beside it
+          count += 1;
+          // the twin: born at the atom, the same direction, a little beside it
           var side = random() < 0.5 ? -1 : 1;
-          born.push({ x: p.x, y: clamp(p.y + side * 4, L7.rod.y + 6, L7.rod.y + L7.rod.h - 6), dir: p.dir });
+          born.push({ x: ax, y: clamp(p.y + side * 4, L7.rod.y + 6, L7.rod.y + L7.rod.h - 6), dir: p.dir });
         } else if (what === "taken") {
           spark(s, a, "taken");
+          count -= 1;
           gone = true;
         }
       }
       if (gone) continue;
       if (p.x >= right) {
         if (random() < LETS_OUT) {
+          count -= 1;
           s.leaving.push({ x: right + L7.right.w + 4, y: p.y });
           continue;
         }
@@ -1230,7 +1246,7 @@
       kept.push(p);
     }
     s.photons = kept;
-    for (var k = 0; k < born.length; k++) addPhoton(s, born[k].x, born[k].y, born[k].dir);
+    for (var k = 0; k < born.length; k++) s.photons.push(born[k]);
     s.light = s.photons.length;
   }
 

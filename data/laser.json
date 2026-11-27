@@ -416,7 +416,7 @@
           "brightValue": { "hy": "{p}%", "en": "{p}%" },
           "mostUp": { "hy": "Առավելագույնը {n}-ը {total}-ից ատոմ էր գրգռված․ լույսն աճում է միայն այն դեպքում, երբ կեսից ավելին են գրգռված։", "en": "At most {n} of {total} atoms were up; the light grows only when more than half are." },
           "tooWeak": { "hy": "Շատ թույլ է․ լույսն ավելի արագ է մարում, քան ռուբինն այն ստեղծում է։ Փորձիր բռնկման լամպը։", "en": "Too weak: the light dies faster than the ruby makes it. Try the flash lamp." },
-          "lasing": { "hy": "Լազերն աշխատում է․ կեսից ավելի ատոմներ են գրգռված, ուստի ֆոտոններն ավելի շատ երկվորյակներ են ստանում, քան կորցնում են կլանման և հայելու պատճառով, և լույսը դառնում է փունջ։ Այս կետը կոչվում է շեմ։", "en": "The laser works: more than half the atoms are up, so the photons gain more twins than they lose to calm atoms and the mirror, and the light grows into a beam. This point is called the threshold." },
+          "lasing": { "hy": "Լազերն աշխատում է․ ֆոտոններն ավելի շատ երկվորյակներ են ստանում, քան կորցնում են կլանման և հայելու պատճառով, և լույսը դառնում է փունջ։ Այս կետը կոչվում է շեմ։", "en": "The laser works: the photons gain more twins than they lose to calm atoms and the mirror, and the light grows into a beam. This point is called the threshold." },
           "below": { "hy": "Շեմից ցածր է․ քիչ ատոմներ են գրգռված, ուստի ֆոտոններն ավելի արագ են կլանվում կամ դուրս գնում, քան երկվորյակներ են ստեղծվում։ Լամպն ավելի պայծառ դարձրու։", "en": "Below the threshold: too few atoms are up, so photons are swallowed or let out faster than twins are made. Make the lamp brighter." }
         }
       },

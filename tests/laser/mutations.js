@@ -6749,8 +6749,8 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "        if (isUp(i, up, total)) n += 1;\n        else n -= 1;",
-    replace: "        if (isUp(i, up, total)) n += 1;",
+    find: "        atoms[i] = true;\n        n -= 1;",
+    replace: "        atoms[i] = true;",
     why: "calm atoms not swallowing photons: light grows with any atom up"
   },
   {

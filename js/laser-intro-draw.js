@@ -71,8 +71,9 @@
   function arrowHead(x, y, dx, dy, size) {
     g.beginPath();
     g.moveTo(x, y);
-    g.lineTo(x - dx * size - dy * 0.55 * size, y - dy * size - dx * 0.55 * size);
-    g.lineTo(x - dx * size + dy * 0.55 * size, y - dy * size + dx * 0.55 * size);
+    // the base's two corners, on either side across (dx, dy): along (-dy, dx)
+    g.lineTo(x - dx * size - dy * 0.55 * size, y - dy * size + dx * 0.55 * size);
+    g.lineTo(x - dx * size + dy * 0.55 * size, y - dy * size - dx * 0.55 * size);
     g.closePath();
     g.fill();
   }
@@ -466,14 +467,15 @@
   function candle(x, flameY, baseY, flame, t, still) {
     var bodyW = 44;
     var bodyTop = flameY + 34;
+    var base = g.globalAlpha;   // the caller's fade: every alpha here is times it
     g.save();
     // the wax, a little darker on the right, with a melted rim on top
     g.fillStyle = colors.wax;
     g.fillRect(x - bodyW / 2, bodyTop, bodyW, baseY - bodyTop);
-    g.globalAlpha = 0.12;
+    g.globalAlpha = 0.12 * base;
     g.fillStyle = colors.shade;
     g.fillRect(x + bodyW / 6, bodyTop, bodyW / 3, baseY - bodyTop);
-    g.globalAlpha = 1;
+    g.globalAlpha = base;
     g.strokeStyle = colors.line;
     g.lineWidth = 1.2;
     g.strokeRect(x - bodyW / 2, bodyTop, bodyW, baseY - bodyTop);
@@ -501,7 +503,7 @@
     glow(x, bottom - h * 0.45, 50 + 40 * flame, colors.amberRaw, 0.45 * flame);
     // the blue at its root, under the flame
     g.save();
-    g.globalAlpha = 0.35;
+    g.globalAlpha = 0.35 * base;
     g.fillStyle = colors.flameBase;
     g.beginPath();
     g.ellipse(x, bottom - 4, w * 0.5, 5, 0, 0, Math.PI * 2);
@@ -509,7 +511,7 @@
     g.restore();
     flamePath(x, bottom, w * 1.15, h * 1.05, sway);
     g.save();
-    g.globalAlpha = 0.9;
+    g.globalAlpha = 0.9 * base;
     g.fillStyle = colors.flameEdge;
     g.fill();
     g.restore();
@@ -537,16 +539,17 @@
 
   // A convex lens seen edge-on, centred on (x, y), h tall.
   function lens(x, y, h) {
+    var base = g.globalAlpha;   // the caller's fade
     g.save();
     g.beginPath();
     g.moveTo(x, y - h / 2);
     g.quadraticCurveTo(x + 22, y, x, y + h / 2);
     g.quadraticCurveTo(x - 22, y, x, y - h / 2);
     g.closePath();
-    g.globalAlpha = 0.6;
+    g.globalAlpha = 0.6 * base;
     g.fillStyle = colors.lensGlass;
     g.fill();
-    g.globalAlpha = 1;
+    g.globalAlpha = base;
     g.strokeStyle = colors.mirrorEdge;
     g.lineWidth = 1.3;
     g.stroke();
