@@ -110,10 +110,6 @@ function one(t, name) {
   return list[0];
 }
 
-// The watching part runs at this share of the screen's clock (WATCH_PACE
-// in js/laser-intro.js), so there is time to read.
-const PACE = 0.6;
-
 // Plays a step's whole watching part, and a little more.
 // (each caption also holds the film until it has been read, so this plays
 // until the "Try it" part comes, at most two minutes)
@@ -211,15 +207,11 @@ test("the laser of step 7, atom by atom: the candle lifts some atoms, never half
   const P = w.LaserIntro.physics;
   const N = P.RUBY_ATOMS;
   assert.ok(N >= 30, "at least 30 atoms");
-  // half up: the ruby adds nothing; fewer: it swallows; all up: more than the mirror lets out
-  assert.equal(P.gainOfAtoms(N / 2, N), 0);
-  assert.ok(P.gainOfAtoms(N / 4, N) < 0);
-  assert.ok(P.gainOfAtoms(N, N) > P.LETS_OUT);
   // the candle keeps some atoms up, but fewer than half: no gain
   const candle = P.upShare("candle", 1);
   assert.ok(candle > 0.1 && candle < 0.5, "a candle lifts some atoms: " + candle);
   // the lamp at its top keeps enough up to beat the mirror
-  assert.ok(P.gainOfAtoms(P.upShare("lamp", 1) * N, N) > P.LETS_OUT);
+  assert.ok(P.upShare("lamp", 1) > 0.5, "the lamp at its top keeps more than half up");
   // a photon passing an atom: with chance 0 every meeting happens ...
   const sure = () => 0;
   const up = [true, false];
@@ -306,7 +298,7 @@ test("captions: none during the title card, then each fades in whole, key words 
   shown(t);
   const caption = one(t, "laser-intro__caption");
   assert.equal(caption.getAttribute("data-text"), "", "the title card has no caption");
-  play(t, 6 / PACE);   // past the card (5.5 s of the film)
+  play(t, 6);   // past the card (5.5 s of the film)
   assert.equal(caption.getAttribute("data-text"), DATA.intro.steps[0].captions[0].en);
   // one line, faded in as a whole (css/laser.css), its pieces in order
   assert.equal(caption.children.length, 1);
@@ -533,7 +525,7 @@ test("an error in a step closes the tour, so the button can open it again", () =
   assert.equal(t.w.LaserIntro.isOpen(), true);
 });
 
-test("step 7 calls it a working laser only when the beam is there: a lamp just over the threshold is weak", () => {
+test("step 7 calls it a working laser only when the beam is there", () => {
   const t = setup();
   ready(t);
   t.button.fire("click", { currentTarget: t.button });
@@ -543,10 +535,6 @@ test("step 7 calls it a working laser only when the beam is there: a lamp just o
   assert.match(notes(), /Too weak/, "the candle");
   all(one(t, "laser-intro__controls")).find((el) => el.getAttribute && el.getAttribute("data-option") === "lamp").fire("click");
   const slider = one(t, "laser-intro__range");
-  slider.value = "0.2";
-  slider.fire("input");
-  play(t, 7);
-  assert.match(notes(), /Just over the threshold/, "brightness 0.2: the gain passes 10% only briefly");
   slider.value = "1";
   slider.fire("input");
   play(t, 7);

@@ -11,14 +11,19 @@
    under the picture), then played with: its sliders and buttons appear
    in the "Try it" row once the watching part is over. Next and Back move
    between steps at any time; "Watch again" starts the step again. Skip
-   (top right) or Esc closes the tour.
+   (top right) or Esc closes the tour. While a step is watched, the
+   bottom-right button is a plain Skip that moves forward through the
+   captions (a caption's reading, then its picture, then the next
+   caption), and Back moves backward the same way, into the step before;
+   once the step is finished it becomes the red Next. A progress bar of
+   one segment per step fills as the step plays.
 
    It opens by itself each time the laser page (?view=laser) comes on
    screen, a reload too (the owner's wish), not for a visitor who asked
    for less motion; the page's "Watch the introduction" button
-   (data-laser-intro in sections/laser.html) opens it any time. The
-   watching part runs at WATCH_PACE of the screen's clock, so there is
-   time to read; each new caption rises in slowly (css/laser.css).
+   (data-laser-intro in sections/laser.html) opens it any time. Each new
+   caption rises in slowly (css/laser.css) and the film stands still
+   while it is read.
    It closes if the visitor goes to another page meanwhile.
 
    The picture is drawn on a canvas, a 1280 x 720 board scaled to fit, in
@@ -43,9 +48,6 @@
   var W = 1280;          // the board's size
   var H = 720;
   var NOTES_EVERY = 0.25; // seconds between rewrites of the readouts
-  // The watching part runs slower than the screen's clock, so there is
-  // time to read each caption (the owner: "give more time to read").
-  var WATCH_PACE = 0.6;
   // A new caption fades in over CAPTION_FADE seconds (as css/laser.css)
   // while the picture is blurred and the film stands still (the owner: the
   // reader's eye goes to the words); once it can be read, at
@@ -617,10 +619,8 @@
     lastFrame = now;
     captionAge += dt;
     if (reading && captionAge >= readingTime(ui.caption.getAttribute("data-text"))) setReading(false);
-    // while watching, the step moves on the same slowed clock as its
-    // captions, and stands still while a new caption is read
+    // the step stands still while a new caption is read
     if (reading) dt = 0;
-    else if (!trying) dt *= WATCH_PACE;
     time += dt;
     resizeIfNeeded();
     if (!trying && time >= step().watch) startTrying();

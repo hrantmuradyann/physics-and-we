@@ -159,14 +159,6 @@
     return brightness * f * Math.exp(1 - f);
   }
 
-  // What the ruby adds to the light in one round trip, as a share of it,
-  // with `up` of `total` atoms excited: each photon passes every atom
-  // twice; an excited one may add a twin, a calm one may take the photon.
-  // Below half up it is negative: the ruby swallows more than it adds.
-  function gainOfAtoms(up, total) {
-    return 2 * P_RUBY * (2 * up - total);
-  }
-
   // The share of atoms up once the pump has run a while at this level,
   // with no light between the mirrors: lifted at the pump's rate, falling
   // at 1 / ATOM_LIFE.
@@ -203,7 +195,6 @@
     LETS_OUT: LETS_OUT,
     BEAM_SHOWN: BEAM_SHOWN,
     pumpNow: pumpNow,
-    gainOfAtoms: gainOfAtoms,
     upShare: upShare,
     photonMeets: photonMeets
   });
@@ -1127,8 +1118,9 @@
       up: up,                 // the ruby's atoms: excited or not
       photons: [],            // photons between the mirrors: { x, y, dir }
       light: 0,               // how many there are
-      gain: 0,                // what the ruby adds per round trip now (0 when it takes)
-      peak: 0, lightPeak: 0, lastPeak: 0, lastLightPeak: 0, peakAge: 0,
+      // the most atoms up and photons between the mirrors in this flash and
+      // the one before (for the candle: in the last FLASH_EVERY seconds)
+      upPeak: 0, lightPeak: 0, lastUpPeak: 0, lastLightPeak: 0, peakAge: 0,
       sparks: [],             // atoms that just changed: { atom, kind, age }
       strays: [],             // photons atoms sent by themselves, flying off
       leaving: [],            // photons gone out through the right mirror
@@ -1283,19 +1275,16 @@
         if (s.photons.length === 0) addPhoton(s, L7.rod.x + 20, AXIS, 1);
       }
       movePhotons(s, dt, env.random);
-      s.gain = Math.max(0, gainOfAtoms(countUp(s), RUBY_ATOMS));
-      // the most added in the last flash (or now, for the candle), and
-      // the most light between the mirrors in that time
       s.peakAge += dt;
       if (s.peakAge > FLASH_EVERY) {
         // keep the flash just over for the notes: the new one starts dark
-        s.lastPeak = s.peak;
+        s.lastUpPeak = s.upPeak;
         s.lastLightPeak = s.lightPeak;
-        s.peak = 0;
+        s.upPeak = 0;
         s.lightPeak = 0;
         s.peakAge -= FLASH_EVERY;   // not 0: stays in time with the flashes
       }
-      s.peak = Math.max(s.peak, s.gain);
+      s.upPeak = Math.max(s.upPeak, countUp(s));
       s.lightPeak = Math.max(s.lightPeak, s.light);
       moveVisuals(s, dt);
     },
@@ -1347,8 +1336,7 @@
         var tint = sp.kind === "pumped" ? (lamp ? c.flashLine : c.amber) : c.beam;
         D.glow(at.x, at.y, sp.kind === "taken" ? 12 : 18, tint, 0.8 * fade);
       }
-      D.text(env.w("canvas.atomsUp", { n: countUp(s), total: RUBY_ATOMS }), L7.rod.x + L7.rod.w / 2, L7.rod.y - 16,
-        { size: 16, color: c.muted, alpha: show });
+
       D.mirror(L7.left, true, true, AXIS, 46);
       D.mirror(L7.right, false, false, AXIS, 30);
       if (!lamp) {
@@ -1393,9 +1381,9 @@
         D.photon(st.x, st.y, st.dx, st.dy, c.beam, show * (1 - st.age / 1.4), 0.8, true);
       }
 
-      // the gauge: added in one round trip against let out
-      if (env.trying || env.t > 15) {
-        drawGauge(s, env, env.trying ? 1 : fadeIn(env.t, 15, 0.8));
+      // the two counters: atoms up, photons between the mirrors
+      if (env.trying || env.t > 3) {
+        drawCounters(s, env, env.trying ? 1 : fadeIn(env.t, 3, 0.8));
       }
       // the labels of the parts, in the watching part
       if (!env.trying && env.t < 15) {
@@ -1433,39 +1421,26 @@
     },
     notes: function (s, env) {
       // this flash or the one just over, whichever was stronger
-      var peak = Math.max(s.peak, s.lastPeak);
+      var upPeak = Math.max(s.upPeak, s.lastUpPeak);
       var lightPeak = Math.max(s.lightPeak, s.lastLightPeak);
-      var lines = [env.w("try.gauge", { p: Math.round(peak * 100), out: Math.round(LETS_OUT * 100) })];
+      var lines = [env.w("try.mostUp", { n: upPeak, total: RUBY_ATOMS })];
       if (s.pump === "candle") lines.push(env.w("try.tooWeak"));
       else if (lightPeak >= BEAM_SHOWN) lines.push(env.w("try.lasing"));
-      else if (peak > LETS_OUT) lines.push(env.w("try.weak"));
       else lines.push(env.w("try.below"));
       return lines;
     }
   };
 
-  function drawGauge(s, env, alpha) {
+  // Above the bench: how many atoms are up (more than half are needed
+  // for the light to grow) and how many photons run between the mirrors.
+  function drawCounters(s, env, alpha) {
     var c = colours();
-    var g = D.context();
-    var x0 = 430;
-    var x1 = 850;
-    var full = 1;   // the bars' scale: 100% (the ruby may add more; the bar stops there)
-    var y = 90;
-    g.save();
-    g.globalAlpha = alpha;
-    g.strokeStyle = c.line;
-    g.lineWidth = 1.2;
-    g.strokeRect(x0, y, x1 - x0, 26);
-    g.strokeRect(x0, y + 56, x1 - x0, 26);
-    g.fillStyle = c.accent;
-    g.fillRect(x0, y, (x1 - x0) * clamp(s.gain / full, 0, 1), 26);
-    g.fillStyle = c.muted;
-    g.fillRect(x0, y + 56, (x1 - x0) * LETS_OUT / full, 26);
-    var mark = x0 + (x1 - x0) * LETS_OUT / full;
-    g.restore();
-    D.dashed(mark, y - 8, mark, y + 90, c.heading, 1.5);
-    D.text(env.w("canvas.added", { p: Math.round(s.gain * 100) }), x0 - 12, y + 13, { size: 17, align: "right", color: c.heading, alpha: alpha, maxWidth: 330 });
-    D.text(env.w("canvas.lost", { p: Math.round(LETS_OUT * 100) }), x0 - 12, y + 69, { size: 17, align: "right", color: c.heading, alpha: alpha, maxWidth: 330 });
+    var up = countUp(s);
+    var over = up > RUBY_ATOMS / 2;
+    D.text(env.w("canvas.atomsUp", { n: up, total: RUBY_ATOMS }), 640, 96,
+      { size: 28, color: over ? c.accent : c.heading, alpha: alpha, maxWidth: 900 });
+    D.text(env.w("canvas.photons", { n: s.photons.length }), 640, 138,
+      { size: 28, color: c.heading, alpha: alpha, maxWidth: 900 });
   }
 
   /* ======================================================================
