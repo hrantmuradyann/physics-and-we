@@ -166,14 +166,37 @@ test("the numbers the words state: 7 and 22 bounces at 10%, 2 ns over 30 cm", ()
   assert.ok(P.bouncesUntil(0.01, 0.1) * P.roundTrip(0.3) < 1e-7);
 });
 
-test("twins in a row of ten atoms: the light grows only when more are up than down", () => {
+test("twins in a row of ten atoms, by chance: on average the light grows only when more are up than down", () => {
   const { w } = setup();
   const P = w.LaserIntro.physics;
-  const out = (up) => P.passRow(up, 10, 1)[9];
-  assert.equal(out(10), 11, "every atom adds a twin");
-  assert.equal(out(5), 1, "half up: as much out as in");
-  for (let up = 0; up < 5; up++) assert.equal(out(up), 0, up + " up: swallowed");
-  for (let up = 6; up <= 10; up++) assert.ok(out(up) > out(up - 1), up + " up: more than " + (up - 1));
+  // the chance is the same both ways, and more photons meet an atom more surely
+  assert.equal(P.meetChance(1), P.P_MEET);
+  assert.ok(Math.abs(P.meetChance(2) - (1 - (1 - P.P_MEET) ** 2)) < 1e-12);
+  // if every meeting happens, each excited atom adds one, each calm one takes one
+  const sure = () => 0;
+  assert.equal(P.passRow(10, 10, 1, sure)[9], 11, "every atom adds a twin");
+  for (let up = 0; up < 5; up++) assert.equal(P.passRow(up, 10, 1, sure)[9], 0, up + " up: swallowed");
+  // if none happens, the photon goes through alone
+  assert.equal(P.passRow(10, 10, 1, () => 0.99)[9], 1);
+  // the average of many runs (a repeatable chance)
+  const random = P.seeded(12345);
+  const mean = (up) => {
+    let sum = 0;
+    for (let k = 0; k < 4000; k++) sum += P.passRow(up, 10, 1, random)[9];
+    return sum / 4000;
+  };
+  const means = [];
+  for (let up = 0; up <= 10; up++) means.push(mean(up));
+  for (let up = 0; up <= 5; up++) assert.ok(means[up] < 1, up + " up: less out than in on average, " + means[up]);
+  for (let up = 6; up <= 10; up++) assert.ok(means[up] > 1, up + " up: more out than in, " + means[up]);
+  for (let up = 6; up <= 10; up++) assert.ok(means[up] > means[up - 1], up + " up: more than " + (up - 1));
+  // the watching part's two runs are typical ones
+  assert.equal(P.passRow(2, 10, 1, P.seeded(P.FEW_SEED))[9], 0, "2 up: swallowed");
+  assert.ok(P.passRow(9, 10, 1, P.seeded(P.MANY_SEED))[9] >= 5, "9 up: it grows");
+  // the same seed, the same numbers
+  const a = P.seeded(7);
+  const b = P.seeded(7);
+  for (let k = 0; k < 5; k++) assert.equal(a(), b());
   for (let up = 0; up <= 10; up++) {
     let count = 0;
     for (let i = 0; i < 10; i++) if (P.isUp(i, up, 10)) count += 1;
@@ -574,11 +597,20 @@ test("step 6 shows on the picture the count the readout states", () => {
   goToStep(t, 5);
   watchStep(t, 5);
   const slider = one(t, "laser-intro__range");
+  const send = all(one(t, "laser-intro__controls")).find((el) => el.tagName === "BUTTON");
+  const recorder = t.canvases[0].recorder;
   for (const up of [3, 5, 8]) {
     slider.value = String(up);
     slider.fire("input");
-    const expected = t.w.LaserIntro.physics.passRow(up, 10, 1)[9];
-    assert.match(one(t, "laser-intro__notes").children[0].textContent, new RegExp("Out: " + expected + "\\."));
+    send.fire("click");
+    play(t, 7);   // the photons cross the row
+    const note = one(t, "laser-intro__notes").children[0].textContent;
+    const said = note.match(/Out: (\d+)\./);
+    assert.ok(said, up + " up: the readout gives the count: " + note);
+    recorder.calls.length = 0;
+    play(t, 0.1);
+    const drawn = recorder.calls.filter((c) => c.name === "fillText").map((c) => c.args[0]);
+    assert.ok(drawn.includes("Out: " + said[1]), up + " up: the picture shows " + said[1] + ": " + drawn.join(" | "));
   }
 });
 

@@ -6809,6 +6809,12 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro-steps.js",
+    find: "    return 1 - Math.pow(1 - P_MEET, n);",
+    replace: "    return 1;",
+    why: "every photon acting on every atom it passes, as if there were no chance"
+  },
+  {
+    file: "js/laser-intro-steps.js",
     find: "    var gap = Math.round(760 * Math.pow(length / 0.3, 0.3));",
     replace: "    var gap = 760;",
     why: "the mirrors not moving when the distance changes"

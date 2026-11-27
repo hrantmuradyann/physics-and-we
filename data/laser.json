@@ -348,7 +348,7 @@
         "title": { "hy": "Ատոմը ինքնուրույն", "en": "An atom on its own" },
         "hint": { "hy": "Սեղմիր ատոմի վրա՝ նրան էներգիա տալու համար, կամ գրգռիր բոլորին միանգամից։", "en": "Click an atom to give it energy, or excite them all at once." },
         "captions": [
-          { "hy": "Լույսը գալիս է ատոմներից։ Էներգիա կլանած ատոմը ցատկում է ավելի բարձր մակարդակ։", "en": "Light comes from atoms. An atom that takes in energy jumps up to a higher level." },
+          { "hy": "Լույսը գալիս է ատոմներից։ Ատոմը կարող է կլանել ֆոտոն և ցատկել ավելի բարձր մակարդակ, բայց **միայն ճիշտ գույնի ֆոտոն**, և այդ էլ ոչ ամեն անգամ․ շատերն անցնում են կողքով։", "en": "Light comes from atoms. An atom can take in a photon and jump up to a higher level, but **only a photon of the right colour**, and even then not every time: most fly past." },
           { "hy": "Որոշ ժամանակ անց այն ինքնիրեն ետ է ընկնում և էներգիան տալիս մեկ ֆոտոնի՝ լույսի փոքրիկ բաժնի տեսքով, **պատահական ուղղությամբ և պատահական պահին**։", "en": "After a while it falls back by itself and gives the energy out as one photon, a small piece of light, **in a random direction and at a random moment**." },
           { "hy": "Նույնիսկ եթե շատ ատոմներ միասին են ընկնում, յուրաքանչյուրն իր ֆոտոնը նետում է իր ուղղությամբ։ Սա դեռ նույն մոմի քաոսն է։", "en": "Even if many atoms fall together, each one throws its photon its own way. That is still the candle's chaos." }
         ],
@@ -367,12 +367,13 @@
         "hint": { "hy": "Ընտրիր, թե քանի ատոմ է գրգռված, և ֆոտոն ուղարկիր բյուրեղի միջով։", "en": "Set how many atoms are excited and send a photon through the crystal." },
         "captions": [
           { "hy": "Ընկնելու երկրորդ ձև էլ կա։ Կողքով անցնող ֆոտոնը կարող է ստիպել գրգռված ատոմին իջնել և արձակել երկվորյակ՝ նույն գույնի, նույն ուղղությամբ, համաքայլ։ Սա կոչվում է **հարկադրական ճառագայթում**։", "en": "There is a second way to fall. A passing photon can make an excited atom drop and send out a twin: the same colour, the same direction, in step. This is called **stimulated emission**." },
-          { "hy": "Բայց ֆոտոնը կարող է կլանվել նաև ներքևում գտնվող ատոմի կողմից։ Ուստի լույսն աճում է միայն այն դեպքում, երբ **վերևում ավելի շատ ատոմ կա, քան ներքևում**։", "en": "But a photon can also be swallowed by an atom that is down. So light only grows when **more atoms are up than down**." },
+          { "hy": "Բայց ֆոտոնը նույնքան հավանականությամբ կարող է կլանվել նաև ներքևում գտնվող ատոմի կողմից։ Ուստի լույսն աճում է միայն այն դեպքում, երբ **վերևում ավելի շատ ատոմ կա, քան ներքևում**։", "en": "But a photon can also be swallowed by an atom that is down, just as likely. So light only grows when **more atoms are up than down**." },
           { "hy": "Այն նյութը, որում դա հնարավոր է անել, կոչվում է **ակտիվ միջավայր**։ Ռուբինը այդպիսի նյութ է․ նրա քրոմի ատոմները կարող են բավական երկար պահել էներգիան։", "en": "A material where we can manage that is called a **gain medium**. Ruby is one: its chromium atoms can hold the energy long enough." }
         ],
         "canvas": {
           "twin": { "hy": "Հարկադրական ճառագայթում․ նույնական երկվորյակ", "en": "Stimulated emission: an identical twin" },
           "waiting": { "hy": "Գրգռված ատոմ, որը սպասում է", "en": "An excited atom, waiting" },
+          "passedBy": { "hy": "Այս մեկն անցավ կողքով․ երկվորյակ ամեն անգամ չի ծնվում։", "en": "This one flew past: a twin is not made every time." },
           "fewUp": { "hy": "Ներքևում ավելի շատ ատոմ կա, քան վերևում․ լույսը կլանվում է", "en": "More atoms down than up: the light is swallowed" },
           "manyUp": { "hy": "Վերևում ավելի շատ ատոմ կա, քան ներքևում․ լույսն աճում է", "en": "More atoms up than down: the light grows" },
           "out": { "hy": "Դուրս՝ {n}", "en": "Out: {n}" },
@@ -383,7 +384,9 @@
           "up": { "hy": "Գրգռված ատոմներ", "en": "Excited atoms" },
           "upValue": { "hy": "{n}-ը {total}-ից", "en": "{n} of {total}" },
           "send": { "hy": "Ուղարկել ֆոտոն", "en": "Send a photon" },
-          "inOut": { "hy": "Մուտք՝ 1 ֆոտոն։ Ելք՝ {n}։", "en": "In: 1 photon. Out: {n}." }
+          "inOut": { "hy": "Մուտք՝ 1 ֆոտոն։ Ելք՝ {n}։", "en": "In: 1 photon. Out: {n}." },
+          "again": { "hy": "Ամեն անգամ արդյունքը տարբեր է՝ պատահականությունից․ ուղարկիր նորից։", "en": "Each run comes out differently, by chance: send it again." },
+          "sendFirst": { "hy": "Ուղարկիր ֆոտոն և տես, թե քանիսը դուրս կգան։", "en": "Send a photon and see how many come out." }
         }
       },
       {

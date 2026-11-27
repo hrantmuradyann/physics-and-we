@@ -80,20 +80,50 @@
     return Math.floor((total - i) * up / total) > Math.floor((total - i - 1) * up / total);
   }
 
+  // The chance that one photon of the right energy, passing an atom, acts
+  // on it: a calm atom swallows it, an excited one gives a twin. The two
+  // chances are the same (Einstein's coefficients: absorption and
+  // stimulated emission are equally likely). For a real atom it is far
+  // smaller; 0.6 keeps it visible.
+  var P_MEET = 0.6;
+
+  // The watching part's two runs: seeds that give a typical run (2 up: the
+  // photon is swallowed; 9 up: it grows). tests/laser/intro.test.js
+  // checks both.
+  var FEW_SEED = 7;
+  var MANY_SEED = 7;
+
+  // The chance that at least one of n photons passing an atom acts on it
+  // (an atom can take or give only one).
+  function meetChance(n) {
+    return 1 - Math.pow(1 - P_MEET, n);
+  }
+
   // A photon group going through a row of atoms: each excited atom it
-  // reaches adds a twin (and falls down), each calm one swallows a photon
-  // (and goes up). Returns the count after each atom (the last = out).
-  function passRow(up, total, photonsIn) {
+  // passes may add a twin (and fall down), each calm one may swallow a
+  // photon (and go up), by chance (`random`, 0 to 1). Returns the count
+  // after each atom (the last = out).
+  function passRow(up, total, photonsIn, random) {
     var n = photonsIn;
     var counts = [];
     for (var i = 0; i < total; i++) {
-      if (n > 0) {
+      if (n > 0 && random() < meetChance(n)) {
         if (isUp(i, up, total)) n += 1;
         else n -= 1;
       }
       counts.push(n);
     }
     return counts;
+  }
+
+  // A repeatable source of chance (the same numbers from the same seed),
+  // for the watching parts: they show a typical run every time.
+  function seeded(seed) {
+    var x = seed;
+    return function () {
+      x = (x * 16807) % 2147483647;
+      return x / 2147483647;
+    };
   }
 
   // The laser of step 7: the most the ruby adds to the light in one round
@@ -136,6 +166,11 @@
     bouncesUntil: bouncesUntil,
     isUp: isUp,
     passRow: passRow,
+    meetChance: meetChance,
+    P_MEET: P_MEET,
+    seeded: seeded,
+    FEW_SEED: FEW_SEED,
+    MANY_SEED: MANY_SEED,
     MAX_GAIN: Object.freeze(MAX_GAIN),
     LETS_OUT: LETS_OUT,
     pumpNow: pumpNow,
@@ -739,8 +774,8 @@
 
   var step5 = {
     view: [110, 690],
-    watch: 16,
-    captions: [0, 4, 9.5],
+    watch: 18,
+    captions: [0, 5.5, 11.5],
     controls: [{ type: "button", name: "all" }],
     start: function () {
       return {
@@ -754,16 +789,26 @@
     },
     update: function (s, dt, env) {
       var t = env.t;
-      // the watching part's single atom: lit by a lamp's photon, falling
-      // back by itself, twice; then the grid, all excited at once
+      // the watching part's single atom: the lamp sends photons at it; one
+      // of a wrong colour flies through, one of the right colour flies past
+      // too (it is a chance), the next is taken and the atom goes up; it
+      // falls back by itself; once more; then the grid, all excited at once
       if (!env.trying && !s.grid) {
         var script = [
-          { at: 0.5, what: "in" }, { at: 2.4, what: "up" }, { at: 4.6, what: "down", angle: 2.3 },
-          { at: 5.4, what: "in" }, { at: 7.3, what: "up" }, { at: 8.6, what: "down", angle: -0.8 }
+          { at: 0.5, what: "in", lam: 450, pass: true },
+          { at: 1.6, what: "in", pass: true },
+          { at: 2.7, what: "in" }, { at: 4.1, what: "up" }, { at: 6.2, what: "down", angle: 2.3 },
+          { at: 6.8, what: "in", lam: 530, pass: true },
+          { at: 7.9, what: "in" }, { at: 9.3, what: "up" }, { at: 10.6, what: "down", angle: -0.8 }
         ];
         while (s.events < script.length && t >= script[s.events].at) {
           var e = script[s.events];
-          if (e.what === "in") s.photons.push({ x: 90, y: ONE.y, dx: 1, dy: 0, laser: false, stopAt: ONE.x - 22 });
+          if (e.what === "in") {
+            s.photons.push({
+              x: 90, y: ONE.y, dx: 1, dy: 0, laser: false, lam: e.lam || null,
+              stopAt: e.pass ? null : ONE.x - 22
+            });
+          }
           if (e.what === "up") s.one.up = true;
           if (e.what === "down") {
             s.one.up = false;
@@ -771,13 +816,13 @@
           }
           s.events += 1;
         }
-        if (t >= 9.5) {
+        if (t >= 11.5) {
           s.grid = true;
           s.photons = [];
         }
       }
       if (env.trying) s.grid = true;
-      if (s.grid && !env.trying && t >= 10 && !s.allDone) {
+      if (s.grid && !env.trying && t >= 12 && !s.allDone) {
         for (var i = 0; i < s.atoms.length; i++) excite(s.atoms[i], env.random);
         s.allDone = true;
       }
@@ -825,7 +870,10 @@
       }
       for (i = 0; i < s.photons.length; i++) {
         var p = s.photons[i];
-        D.photon(p.x, p.y, p.dx, p.dy, p.laser ? c.beam : c.amber, 1, 1, p.stray);
+        // the lamp's light is amber, the colour the atom can take; a photon
+        // of another colour (`lam`, nm) is drawn in its own
+        var colour = p.laser ? c.beam : p.lam ? waveColour(p.lam) : c.amber;
+        D.photon(p.x, p.y, p.dx, p.dy, colour, 1, 1, p.stray);
       }
       if (s.grid && env.trying) {
         D.text(env.w("canvas.click"), W / 2, 660, { size: 20, color: c.muted, maxWidth: 1000 });
@@ -877,12 +925,17 @@
     row.out = null;
   }
 
-  function moveGroup(row, dt) {
+  function sendLone(s) {
+    s.lone.photons.push({ x: 80, passed: false, twin: false });
+    s.lone.sent += 1;
+  }
+
+  function moveGroup(row, dt, random) {
     if (row.x === null) return;
     row.x += GROUP_SPEED * dt;
     while (row.next < ROW && row.x >= ROW_X0 + row.next * ROW_STEP) {
       var i = row.next;
-      if (row.n > 0) {
+      if (row.n > 0 && random() < meetChance(row.n)) {
         if (row.atoms[i]) {
           row.atoms[i] = false;
           row.n += 1;
@@ -916,8 +969,11 @@
     start: function () {
       return {
         up: 7,
-        lone: { up: true, glow: 1, x: null, twin: false },
+        // the excited atom of the watching part, and the two photons sent
+        // past it: the first flies by, the second gets a twin
+        lone: { up: true, glow: 1, photons: [], sent: 0, twin: false },
         row: null,
+        luck: null,      // the chance for the row's run (a repeatable one while watching)
         part: "lone"
       };
     },
@@ -926,43 +982,59 @@
       if (!env.trying) {
         if (t < 7.5) {
           s.part = "lone";
-          if (t >= 1 && s.lone.x === null) s.lone.x = 80;
+          if (t >= 1 && s.lone.sent === 0) sendLone(s);
+          if (t >= 3.4 && s.lone.sent === 1) sendLone(s);
         } else if (t < 14) {
           if (s.part !== "few") {
             s.part = "few";
             s.row = rowState(2);
+            s.luck = seeded(FEW_SEED);
           }
           if (t >= 8.3 && s.row.x === null && s.row.out === null) sendGroup(s.row);
         } else {
           if (s.part !== "many") {
             s.part = "many";
             s.row = rowState(9);
+            s.luck = seeded(MANY_SEED);
           }
           if (t >= 14.8 && s.row.x === null && s.row.out === null) sendGroup(s.row);
         }
       } else if (s.part !== "try") {
         s.part = "try";
         s.row = rowState(s.up);
+        s.luck = env.random;
       }
-      if (s.part === "lone" && s.lone.x !== null) {
-        s.lone.x += GROUP_SPEED * dt;
-        if (s.lone.x >= 640 && s.lone.up) {
-          s.lone.up = false;
-          s.lone.twin = true;
+      if (s.part === "lone") {
+        for (var k = 0; k < s.lone.photons.length; k++) {
+          var ph = s.lone.photons[k];
+          ph.x += GROUP_SPEED * dt;
+          // the first flies past; the second makes the atom give a twin
+          if (!ph.passed && ph.x >= 640) {
+            ph.passed = true;
+            if (k === 1 && s.lone.up) {
+              s.lone.up = false;
+              s.lone.twin = true;
+              ph.twin = true;
+            }
+          }
         }
         s.lone.glow += ((s.lone.up ? 1 : 0) - s.lone.glow) * Math.min(1, dt * 8);
       }
-      if (s.row) moveGroup(s.row, dt);
+      if (s.row) moveGroup(s.row, dt, s.luck || env.random);
     },
     draw: function (s, env) {
       var c = colours();
       if (s.part === "lone") {
         D.atom(640, AXIS, s.lone.glow, 28);
-        if (s.lone.x !== null && s.lone.x < W + 40) {
-          D.photon(s.lone.x, AXIS - (s.lone.twin ? 26 : 0), 1, 0, c.beam, 1, 1.8);
-          if (s.lone.twin) D.photon(s.lone.x, AXIS + 26, 1, 0, c.beam, 1, 1.8);
+        for (var k = 0; k < s.lone.photons.length; k++) {
+          var ph = s.lone.photons[k];
+          if (ph.x > W + 40) continue;
+          D.photon(ph.x, AXIS - (ph.twin ? 26 : 0), 1, 0, c.beam, 1, 1.8);
+          if (ph.twin) D.photon(ph.x, AXIS + 26, 1, 0, c.beam, 1, 1.8);
         }
+        var first = s.lone.photons[0];
         if (s.lone.twin) D.tag(env.w("canvas.twin"), 640, 430, { width: 420, alpha: 1 });
+        else if (first && first.passed) D.text(env.w("canvas.passedBy"), 640, 400, { size: 19, color: c.muted, maxWidth: 900 });
         else D.text(env.w("canvas.waiting"), 640, 380, { size: 19, color: c.muted });
         return;
       }
@@ -997,9 +1069,10 @@
     valueText: function (s, name, env) {
       return env.w("try.upValue", { n: s.up, total: ROW });
     },
+    // the last run's count, as the picture shows it (each run differs)
     notes: function (s, env) {
-      var out = passRow(s.up, ROW, 1)[ROW - 1];
-      return [env.w("try.inOut", { n: out })];
+      if (!s.row || s.row.out === null) return [env.w("try.sendFirst")];
+      return [env.w("try.inOut", { n: s.row.out }), env.w("try.again")];
     }
   };
 
@@ -1030,8 +1103,9 @@
 
   /* The photons between the mirrors, drawn as a group running back and
      forth (an illustration, much slower than real light). Passing a
-     glowing atom, the group gains a twin and the atom goes dark: it gave
-     its energy away. At the right mirror a tenth of them leave (carried
+     glowing atom, the group may gain a twin (by chance, likelier the more
+     photons pass: meetChance) and the atom goes dark: it gave its energy
+     away. At the right mirror a tenth of them leave (carried
      over as a fraction, so 10 photons lose one each time). How many
      there may be follows the round-trip model of the gauge (`light`), so
      the picture and the notes agree; the candle's few atoms give a few
@@ -1061,7 +1135,7 @@
     return clamp(1 + Math.round(PACKET_MAX * s.light / 1.5), 1, PACKET_MAX);
   }
 
-  function movePacket(s, dt, excited) {
+  function movePacket(s, dt, excited, random) {
     var lampOn = s.pump === "lamp" && s.level > 0.05;
     // the atoms the pump keeps up: the lamp lights them again soon after
     // they give a twin; the candle only while no photons are running
@@ -1083,7 +1157,7 @@
     var room = packetRoom(s);
     for (var b = 0; b < ATOMS7; b++) {
       var x = atomX(b);
-      if (x > lo && x <= hi && s.atoms[b] && p.n < room) {
+      if (x > lo && x <= hi && s.atoms[b] && p.n < room && random() < meetChance(p.n)) {
         p.n += 1;                       // a twin
         s.atoms[b] = false;
         s.dark[b] = s.pump === "lamp" ? RELIGHT / Math.max(s.level, 0.05) : 1e9;
@@ -1174,7 +1248,7 @@
       // the photons between the mirrors: the first sets off in the
       // watching part at 9 s; later, a new one a moment after the last
       // has gone (while the pump is on)
-      movePacket(s, dt, excitedShare(s));
+      movePacket(s, dt, excitedShare(s), env.random);
       if (!s.packet && on && (env.trying || env.t > 9)) {
         s.wait += dt;
         if (s.wait > (env.trying ? 1.5 : 0)) {
