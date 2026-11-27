@@ -6803,6 +6803,12 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro.js",
+    find: "    return function () {\n      startStep(i);",
+    replace: "    return function () {\n      startStep(i + 1);",
+    why: "the progress bar's circle opening the step after its own"
+  },
+  {
+    file: "js/laser-intro.js",
     find: "      else if (i === index) share = trying ? 1 : Math.min(1, time / step().watch);",
     replace: "      else if (i === index) share = trying ? 1 : 0;",
     why: "the progress bar not moving while a step plays"

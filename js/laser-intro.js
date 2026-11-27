@@ -16,7 +16,8 @@
    captions (a caption's reading, then its picture, then the next
    caption), and Back moves backward the same way, into the step before;
    once the step is finished it becomes the red Next. A progress bar of
-   one segment per step fills as the step plays.
+   one segment per step fills as the step plays; the small circle before
+   each segment goes straight to that step.
 
    It opens by itself each time the laser page (?view=laser) comes on
    screen, a reload too (the owner's wish), not for a visitor who asked
@@ -220,13 +221,16 @@
     var skipWord = make("span", "", skip);
     skip.insertAdjacentHTML("beforeend", SKIP_ICON);
 
-    // the progress: one segment per step
+    // the progress: per step a circle that goes to it and a segment
     var progress = make("div", "laser-intro__progress", panel);
-    progress.setAttribute("aria-hidden", "true");
     var dotList = [];
     var fillList = [];
+    var jumpList = [];
     for (var i = 0; i < LaserIntro.steps.length; i++) {
-      var segment = make("span", "laser-intro__segment", progress);
+      var part = make("div", "laser-intro__part", progress);
+      jumpList.push(button("laser-intro__jump", part, jumpTo(i)));
+      var segment = make("span", "laser-intro__segment", part);
+      segment.setAttribute("aria-hidden", "true");
       dotList.push(segment);
       fillList.push(make("span", "laser-intro__fill", segment));
     }
@@ -257,7 +261,7 @@
 
     document.body.appendChild(box);
     return {
-      box: box, count: count, title: title, dots: dotList, fills: fillList, skip: skip, skipWord: skipWord,
+      box: box, count: count, title: title, dots: dotList, fills: fillList, jumps: jumpList, skip: skip, skipWord: skipWord,
       canvas: canvas, caption: caption, tryRow: tryRow, badge: badge, hint: hint, controlBox: controlBox,
       notes: notes, again: again, back: back, next: next
     };
@@ -347,6 +351,13 @@
       step().update(state, dt, env());
     }
     time = Math.max(time, target);
+  }
+
+  // A click on a step's circle in the progress bar: that step, from its start.
+  function jumpTo(i) {
+    return function () {
+      startStep(i);
+    };
   }
 
   function go(i) {
@@ -462,7 +473,16 @@
     ui.back.textContent = word("intro.back");
     writeNext();
     for (var i = 0; i < ui.dots.length; i++) {
-      ui.dots[i].className = "laser-intro__segment" + (i === index ? " is-current" : i < index ? " is-done" : "");
+      var stateClass = i === index ? " is-current" : i < index ? " is-done" : "";
+      ui.dots[i].className = "laser-intro__segment" + stateClass;
+      ui.jumps[i].className = "laser-intro__jump" + stateClass;
+      // "Step 3 of 8: A candle between the mirrors"
+      var name = fill(word("intro.stepOf"), { n: i + 1, total: LaserIntro.steps.length }) +
+        ": " + word("intro.steps." + i + ".title");
+      ui.jumps[i].setAttribute("aria-label", name);
+      ui.jumps[i].setAttribute("title", name);
+      if (i === index) ui.jumps[i].setAttribute("aria-current", "step");
+      else ui.jumps[i].removeAttribute("aria-current");
     }
     writeProgress();
     for (var c = 0; c < controls.length; c++) {

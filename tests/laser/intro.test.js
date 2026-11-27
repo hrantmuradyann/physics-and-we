@@ -445,6 +445,25 @@ test("the progress bar fills the current step's segment as it plays", () => {
   assert.equal(share(1), 0, "the next starts empty");
 });
 
+test("a circle before each step's segment goes straight to that step", () => {
+  const t = setup();
+  ready(t);
+  t.button.fire("click", { currentTarget: t.button });
+  const jumps = byClass(t, "laser-intro__jump");
+  assert.equal(jumps.length, 8);
+  assert.equal(jumps[5].getAttribute("aria-label"), "Step 6 of 8: " + DATA.intro.steps[5].title.en);
+  assert.equal(jumps[0].getAttribute("aria-current"), "step");
+  jumps[5].fire("click");
+  assert.match(one(t, "laser-intro__count").textContent, /Step 6 of 8/);
+  assert.equal(one(t, "laser-intro__title").textContent, DATA.intro.steps[5].title.en);
+  assert.equal(jumps[5].getAttribute("aria-current"), "step");
+  assert.equal(jumps[0].getAttribute("aria-current"), null);
+  assert.match(jumps[4].className, /is-done/);
+  assert.equal(one(t, "laser-intro__try").hidden, true, "from the step's start");
+  jumps[1].fire("click");
+  assert.match(one(t, "laser-intro__count").textContent, /Step 2 of 8/, "and back");
+});
+
 test("not by itself for a visitor who asked for less motion; another page closes it", () => {
   const t = setup({ reducedMotion: true });
   ready(t);
