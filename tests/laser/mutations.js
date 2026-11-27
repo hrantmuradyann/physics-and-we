@@ -6755,14 +6755,14 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "  var MAX_GAIN = { candle: 0.03, lamp: 0.4 };",
-    replace: "  var MAX_GAIN = { candle: 0.3, lamp: 0.4 };",
+    find: "  var PUMP_RATE = { candle: 0.15, lamp: 4 };",
+    replace: "  var PUMP_RATE = { candle: 4, lamp: 4 };",
     why: "a candle strong enough to start the laser"
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "    var next = light * (1 + gain / (1 + light) - LETS_OUT) + SEED * gain;",
-    replace: "    var next = light * (1 + gain / (1 + light)) + SEED * gain;",
+    find: "    carry.value += LETS_OUT * n;",
+    replace: "    carry.value += 0;",
     why: "the mirror's loss forgotten in the round trip"
   },
   {
@@ -6791,9 +6791,15 @@ const MUTATIONS = [
   },
   {
     file: "js/laser-intro-steps.js",
-    find: "        p.n += 1;                       // a twin",
-    replace: "        p.n += 0;                       // a twin",
+    find: "        n += 1;\n        twins.push(i);",
+    replace: "        twins.push(i);",
     why: "step 7's photons never making twins"
+  },
+  {
+    file: "js/laser-intro-steps.js",
+    find: "        n -= 1;\n        taken.push(i);",
+    replace: "        taken.push(i);",
+    why: "step 7's calm atoms lifted by photons without swallowing them"
   },
   {
     file: "js/laser-intro.js",

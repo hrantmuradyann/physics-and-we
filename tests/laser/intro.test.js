@@ -77,6 +77,8 @@ function setup(options) {
   browser.load("js/laser-intro-steps.js");
   browser.load("js/laser-intro.js");
   const added = browser.addedGlobals().filter((name) => !before.includes(name));
+  // the tour's chance, repeatable (it uses LaserIntro.random when set)
+  w.LaserIntro.random = w.LaserIntro.physics.seeded(2024);
   const button = fakeElement("button");
   button.focus = function () { w.document.activeElement = button; };
   return { browser, w, store, canvases, missing, added, button };
@@ -204,20 +206,37 @@ test("twins in a row of ten atoms, by chance: on average the light grows only wh
   }
 });
 
-test("the laser of step 7: the candle stays under the mirror's 10%, the flash lamp starts it", () => {
+test("the laser of step 7, atom by atom: the candle lifts some atoms, never half; the lamp lifts enough", () => {
   const { w } = setup();
   const P = w.LaserIntro.physics;
-  assert.ok(P.gainOf("candle", 1) < P.LETS_OUT, "a candle at full is too weak");
-  assert.ok(P.gainOf("lamp", 1) > P.LETS_OUT, "the lamp is strong enough");
-  const run = (gain, rounds) => {
-    let light = 0;
-    for (let i = 0; i < rounds; i++) light = P.roundTripLight(light, gain);
-    return light;
-  };
-  assert.ok(run(P.gainOf("candle", 1), 2000) < 0.01, "no beam with the candle");
-  assert.ok(run(P.gainOf("lamp", 1), 200) > 1, "a beam with the lamp");
-  assert.ok(run(0.099, 2000) < 0.05, "just under the threshold: none");
-  assert.ok(run(0.11, 2000) > 0.05, "just over it: some");
+  const N = P.RUBY_ATOMS;
+  assert.ok(N >= 30, "at least 30 atoms");
+  // half up: the ruby adds nothing; fewer: it swallows; all up: more than the mirror lets out
+  assert.equal(P.gainOfAtoms(N / 2, N), 0);
+  assert.ok(P.gainOfAtoms(N / 4, N) < 0);
+  assert.ok(P.gainOfAtoms(N, N) > P.LETS_OUT);
+  // the candle keeps some atoms up, but fewer than half: no gain
+  const candle = P.upShare("candle", 1);
+  assert.ok(candle > 0.1 && candle < 0.5, "a candle lifts some atoms: " + candle);
+  // the lamp at its top keeps enough up to beat the mirror
+  assert.ok(P.gainOfAtoms(P.upShare("lamp", 1) * N, N) > P.LETS_OUT);
+  // one round trip: every meeting happens (chance 0) ...
+  const sure = () => 0;
+  let up = [true, true, true, true];
+  let trip = P.roundTripAtoms(up, 1, { value: 0 }, sure);
+  assert.equal(trip.twins.length, 4, "each excited atom gives a twin");
+  assert.equal(trip.light + trip.out, 5);
+  assert.deepEqual(Array.from(up), [false, false, false, false], "and goes down");
+  up = [false, false, false];
+  trip = P.roundTripAtoms(up, 2, { value: 0 }, sure);
+  assert.equal(trip.taken.length, 2, "calm atoms take the photons (until none is left)");
+  assert.equal(trip.light, 0);
+  assert.deepEqual(Array.from(up), [true, true, false], "and go up");
+  // ... or none (chance 0.99): the light just loses at the mirror
+  const carry = { value: 0 };
+  trip = P.roundTripAtoms([true], 10, carry, () => 0.99);
+  assert.equal(trip.out, 1, "10% of 10 leaves");
+  assert.equal(trip.light, 9);
   // the lamp flashes: dark at the start of each flash, full at its top
   assert.equal(P.pumpNow("lamp", 1, 0), 0);
   let top = 0;
@@ -225,9 +244,6 @@ test("the laser of step 7: the candle stays under the mirror's 10%, the flash la
   assert.ok(top > 0.99 && top <= 1, "the flash's top is the brightness: " + top);
   assert.equal(P.pumpNow("candle", 0.6, 1.234), 0.6, "a candle burns steadily");
 });
-
-/* ---------- 2. the words ---------- */
-
 test("data/laser.json: eight steps, each with its title, hint and captions in both languages", () => {
   const intro = DATA.intro;
   for (const key of ["label", "replay", "skip", "stepOf", "watchAgain", "back", "next"]) {
@@ -390,49 +406,40 @@ test("Skip goes forward through the captions as Back goes back, then the red Nex
   assert.equal(button.hidden, true);
 });
 
-test("step 7: the photons between the mirrors gain twins from glowing atoms and leak at the mirror", () => {
+test("step 7 runs atom by atom: the candle lifts some, photons are swallowed; the lamp makes twins and a beam", () => {
   const t = setup();
   const step = t.w.LaserIntro.steps[6];
-  const env = (time, trying) => ({ t: time, trying, random: () => 0.5, still: false, w: () => "", page: () => "" });
-  // the watching part, with the candle: a lone photon gets a few twins
-  let s = step.start(env(0, false));
-  let most = 0;
-  for (let time = 0; time < 24; time += 0.05) {
-    step.update(s, 0.05, env(time, false));
-    if (s.packet) most = Math.max(most, s.packet.n);
-  }
-  assert.ok(most >= 3 && most <= 4, "a candle's photon gets a few twins: " + most);
-  // with the candle the twins leak out and the group is never large
-  s = step.start(env(0, true));
-  const sizes = [];
-  for (let time = 0; time < 90; time += 0.05) {
-    step.update(s, 0.05, env(time, true));
-    sizes.push(s.packet ? s.packet.n : 0);
-  }
-  assert.ok(Math.max(...sizes) <= 4, "the candle never makes more than a few");
-  assert.ok(sizes.includes(0), "they leak out and the light dies");
-  assert.ok(s.leaving !== undefined);
-  // the flash lamp at full brightness: the group fills up
-  s = step.start(env(0, true));
-  step.set(s, "pump", "lamp");
-  let lampMost = 0;
-  for (let time = 0; time < 12; time += 0.05) {
-    step.update(s, 0.05, env(time, true));
-    if (s.packet) lampMost = Math.max(lampMost, s.packet.n);
-  }
-  assert.ok(lampMost >= 12, "the lamp fills the group with twins: " + lampMost);
-  // a dim lamp, under the threshold: no growth beyond the lone photon
-  s = step.start(env(0, true));
-  step.set(s, "pump", "lamp");
-  step.set(s, "bright", 0.15);
-  let dimMost = 0;
-  for (let time = 0; time < 12; time += 0.05) {
-    step.update(s, 0.05, env(time, true));
-    if (s.packet) dimMost = Math.max(dimMost, s.packet.n);
-  }
-  assert.equal(dimMost, 1, "under the threshold the photon finds no room for twins");
+  const P = t.w.LaserIntro.physics;
+  const runFor = (pump, bright, seconds) => {
+    const random = P.seeded(31);
+    const env = (time) => ({ t: time, trying: true, random, still: false, w: () => "", page: () => "" });
+    const s = step.start(env(0));
+    step.set(s, "pump", pump);
+    step.set(s, "bright", bright);
+    const seen = { up: 0, sumUp: 0, frames: 0, light: 0, twin: 0, taken: 0, pumped: 0 };
+    for (let time = 0; time < seconds; time += 1 / 30) {
+      step.update(s, 1 / 30, env(time));
+      const up = s.up.filter(Boolean).length;
+      seen.up = Math.max(seen.up, up);
+      seen.sumUp += up;
+      seen.frames += 1;
+      seen.light = Math.max(seen.light, s.light);
+      // the sparks made in this frame (they have aged one frame since)
+      for (const k of s.sparks) if (k.age <= 1 / 30 + 1e-9) seen[k.kind] += 1;
+    }
+    seen.meanUp = seen.sumUp / seen.frames;
+    return seen;
+  };
+  const candle = runFor("candle", 1, 60);
+  assert.ok(candle.pumped > 20, "the candle lifts atoms: " + candle.pumped);
+  assert.ok(candle.up >= 5, "some are up at once: " + candle.up);
+  assert.ok(candle.meanUp < P.RUBY_ATOMS / 2, "fewer than half on average: " + candle.meanUp);
+  assert.ok(candle.light < P.BEAM_SHOWN, "no beam with the candle: " + candle.light);
+  const lamp = runFor("lamp", 1, 15);
+  assert.ok(lamp.twin > 20, "the lamp's atoms give twins: " + lamp.twin);
+  assert.ok(lamp.taken > 0, "and photons lift some atoms: " + lamp.taken);
+  assert.ok(lamp.light >= P.BEAM_SHOWN, "a beam: " + lamp.light);
 });
-
 test("the progress bar fills the current step's segment as it plays", () => {
   const t = setup();
   ready(t);
@@ -543,15 +550,15 @@ test("step 7 calls it a working laser only when the beam is there: a lamp just o
   assert.match(notes(), /Too weak/, "the candle");
   all(one(t, "laser-intro__controls")).find((el) => el.getAttribute && el.getAttribute("data-option") === "lamp").fire("click");
   const slider = one(t, "laser-intro__range");
-  slider.value = "0.3";
+  slider.value = "0.2";
   slider.fire("input");
   play(t, 7);
-  assert.match(notes(), /Just over the threshold/, "brightness 0.3: the gain passes 10% only briefly");
+  assert.match(notes(), /Just over the threshold/, "brightness 0.2: the gain passes 10% only briefly");
   slider.value = "1";
   slider.fire("input");
   play(t, 7);
   assert.match(notes(), /The laser works/);
-  slider.value = "0.2";
+  slider.value = "0.05";
   slider.fire("input");
   play(t, 7);
   assert.match(notes(), /Below the threshold/);

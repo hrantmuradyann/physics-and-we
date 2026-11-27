@@ -394,7 +394,7 @@
         "hint": { "hy": "Ընտրիր մղումը և դրա պայծառությունը և տես, թե երբ է լազերը սկսում աշխատել։", "en": "Choose the pump and its brightness, and see when the laser starts." },
         "captions": [
           { "hy": "Հիմա մոմը դուրս է։ Կիզակետային հեռավորության վրա դրված ոսպնյակը նրա լույսը դարձնում է **զուգահեռ ճառագայթներ**, և ձախ հայելին դրանք ներս է թողնում․ այն թողնում է մոմի գույները և անդրադարձնում լազերի կարմիրը։", "en": "Now the candle goes outside. A lens set one focal length away turns its light into **parallel rays**, and the left mirror lets them in: it lets the candle's colours through and reflects the laser's red." },
-          { "hy": "Մոմի լույսը ռուբինի ատոմները բարձրացնում է վերև։ Մի ֆոտոն, որը պատահաբար գնում է հայելիների ուղղությամբ, սկսում է **երկվորյակներ ստեղծել**։", "en": "The candle's light lifts ruby's atoms up. One photon that happens to run along the mirrors starts **making twins**." },
+          { "hy": "Մոմի լույսը ռուբինի ատոմների մի մասը բարձրացնում է վերև, և դրանք ինքնիրեն ետ են ընկնում՝ յուրաքանչյուր ֆոտոնն իր ուղղությամբ։ Այն մեկը, որը պատահաբար գնում է հայելիների ուղղությամբ, կարող է **երկվորյակներ ստեղծել**, բայց ներքևում մնացած շատ ատոմները նույնպես կլանում են ֆոտոններ։", "en": "The candle's light lifts some of ruby's atoms up, and they fall back by themselves, each photon going its own way. One that happens to run along the mirrors can **make twins**, but the many atoms still down swallow photons too." },
           { "hy": "Բայց ամեն շրջապտույտի ժամանակ աջ հայելին դուրս է թողնում 10%։ Լույսն աճում է միայն այն դեպքում, երբ ռուբինն ավելին է ավելացնում, իսկ մոմը չի կարող բավականաչափ ատոմ բարձրացնել։ Իսկական լազերին **շատ ավելի պայծառ մղում** է պետք։", "en": "But each round trip the right mirror lets 10% out. The light only grows if the ruby adds more than that, and a candle cannot lift enough atoms. A real laser needs **a much brighter pump**." }
         ],
         "canvas": {
@@ -406,7 +406,8 @@
           "beam": { "hy": "Լազերային փունջ", "en": "Laser beam" },
           "beamIs": { "hy": "մոնոքրոմատիկ (մեկ գույն) · կոհերենտ (համաքայլ) · մեկ ուղղություն", "en": "monochromatic (one colour) · coherent (in step) · one direction" },
           "added": { "hy": "Ավելանում է մեկ շրջապտույտում՝ {p}%", "en": "Added in one round trip: {p}%" },
-          "lost": { "hy": "Դուրս է գնում մեկ շրջապտույտում՝ {p}%", "en": "Let out in one round trip: {p}%" }
+          "lost": { "hy": "Դուրս է գնում մեկ շրջապտույտում՝ {p}%", "en": "Let out in one round trip: {p}%" },
+          "atomsUp": { "hy": "Գրգռված ատոմներ՝ {n}-ը {total}-ից", "en": "Atoms up: {n} of {total}" }
         },
         "try": {
           "pump": { "hy": "Մղում", "en": "Pump" },
